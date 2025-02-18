@@ -11,9 +11,12 @@
   "dependencies": {
     "@emotion/cache": "^11.14.0",
     "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^6.4.4",
     "@mui/material": "^6.4.4",
     "@mui/material-nextjs": "^6.4.3",
     "next": "15.1.7",
+    "next-themes": "^0.4.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

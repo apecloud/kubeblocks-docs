@@ -1,6 +1,108 @@
+import { cookies } from 'next/headers'
 
-export default function Home() {
+export default async function Home() {
+  const cookieStore = await cookies()
+  console.log(cookieStore);
   return (
-    <div>Home</div>
+    <div>
+      1、Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+      Home
+      <br />
+    </div>
   );
 }
