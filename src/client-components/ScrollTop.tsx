@@ -1,6 +1,7 @@
-'use client';
+"use client";
 
-import { Box, Fade, useScrollTrigger } from "@mui/material";
+import { KeyboardArrowUp } from "@mui/icons-material";
+import { Box, Fab, Fade, useScrollTrigger } from "@mui/material";
 
 interface Props {
   /**
@@ -8,11 +9,10 @@ interface Props {
    * You won't need it on your project.
    */
   window?: () => Window;
-  children?: React.ReactElement<unknown>;
 }
 
 export default function ScrollTop(props: Props) {
-  const { children, window } = props;
+  const { window } = props;
   // Note that you normally won't need to set the window ref as useScrollTrigger
   // will default to window.
   // This is only being set here because the demo is in an iframe.
@@ -25,11 +25,11 @@ export default function ScrollTop(props: Props) {
   const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
     const anchor = (
       (event.target as HTMLDivElement).ownerDocument || document
-    ).querySelector('#back-to-top-anchor');
+    ).querySelector("#back-to-top-anchor");
 
     if (anchor) {
       anchor.scrollIntoView({
-        block: 'center',
+        block: "center",
       });
     }
   };
@@ -39,9 +39,11 @@ export default function ScrollTop(props: Props) {
       <Box
         onClick={handleClick}
         role="presentation"
-        sx={{ position: 'fixed', bottom: 16, right: 16 }}
+        sx={{ position: "fixed", bottom: 16, right: 16 }}
       >
-        {children}
+        <Fab color="primary">
+          <KeyboardArrowUp />
+        </Fab>
       </Box>
     </Fade>
   );
