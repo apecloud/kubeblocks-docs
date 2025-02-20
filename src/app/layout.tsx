@@ -3,16 +3,9 @@ import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 import { MuiThemeProvider } from "@/components/MuiThemeProvider";
 
 import HideOnScroll from "@/components/HideOnScroll";
-import {
-  AppBar,
-  Box,
-  CssBaseline,
-  Divider,
-  IconButton,
-  Toolbar,
-} from "@mui/material";
+import { AppBar, Box, CssBaseline, IconButton, Toolbar } from "@mui/material";
 import ScrollTop from "@/components/ScrollTop";
-import { Link } from "@/components/Link";
+import { NavLink } from "@/components/Link";
 import Image from "next/image";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
@@ -46,7 +39,7 @@ export default async function RootLayout({
                   <AppBar>
                     <Toolbar>
                       <Box>
-                        <Link href="/" style={{ display: "block" }}>
+                        <NavLink href="/" style={{ display: "block" }}>
                           <Image
                             src="/logo.png"
                             alt="KubeBlocks"
@@ -54,7 +47,7 @@ export default async function RootLayout({
                             height={36}
                             style={{ display: "block" }}
                           />
-                        </Link>
+                        </NavLink>
                       </Box>
                       <Box
                         sx={{
@@ -65,8 +58,8 @@ export default async function RootLayout({
                         }}
                         component="nav"
                       >
-                        <Link href="/docs">{t("navigation.docs")}</Link>
-                        <Link href="/">{t("navigation.databases")}</Link>
+                        <NavLink href="/docs">{t("navigation.docs")}</NavLink>
+                        <NavLink href="/">{t("navigation.databases")}</NavLink>
                       </Box>
                       <Box
                         sx={{
@@ -80,7 +73,6 @@ export default async function RootLayout({
                           <GitHub />
                         </IconButton>
                         <ThemeSwitcher />
-                        {/* <Divider orientation="vertical" sx={{ height: 20 }} /> */}
                         <LocaleSwitcher />
                       </Box>
                     </Toolbar>

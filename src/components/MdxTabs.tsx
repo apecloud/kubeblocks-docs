@@ -10,11 +10,7 @@ interface Props {
 
 export default function MdxTabs({ children }: Props) {
   const [value, setValue] = useState<number | undefined>(0);
-  const items = Array.isArray(children)
-    ? children.filter((child) => {
-        return child._owner.name === "MdxTabItem";
-      })
-    : [];
+  const items = Array.isArray(children) ? children : [];
 
   const handleChange = (event: React.SyntheticEvent, newValue: number) => {
     setValue(newValue);
@@ -22,7 +18,7 @@ export default function MdxTabs({ children }: Props) {
 
   useEffect(() => {
     const activeIndex = items.findIndex((item) => {
-      return item._owner?.props?.default;
+      return item?.props?.default;
     });
     if (activeIndex !== -1) {
       setValue(activeIndex);
@@ -34,7 +30,7 @@ export default function MdxTabs({ children }: Props) {
       <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
         <Tabs value={value} onChange={handleChange}>
           {items.map((item, index) => {
-            return <Tab key={index} label={item._owner?.props?.label} />;
+            return <Tab key={index} label={item?.props?.label} />;
           })}
         </Tabs>
       </Box>

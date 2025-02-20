@@ -1,7 +1,7 @@
 import { createTheme } from "@mui/material/styles";
 import { alpha } from "@mui/material";
 
-const borderColor = "#21262A";
+const borderColor = "#1D2226";
 
 export default createTheme({
   // cssVariables: {
@@ -13,26 +13,26 @@ export default createTheme({
       main: "#7c48ff",
     },
     background: {
-      default: "#000",
-      paper: "#16181B",
+      default: "#0E1214",
+      paper: "#1A1E22",
     },
     action: {},
     text: {},
     divider: borderColor,
   },
   typography: {
-    // fontSize: 12,
+    fontSize: 14,
   },
   components: {
     MuiAppBar: {
       styleOverrides: {
         root: {
-          background: '#101214',
-          color: 'inherit',
+          background: "#0E1214",
+          color: "inherit",
           boxShadow: "none",
-          borderBottom: `1px solid #21262A`,
-        }
-      }
+          borderBottom: `1px solid ${borderColor}`,
+        },
+      },
     },
     MuiTableCell: {
       styleOverrides: {
@@ -41,17 +41,24 @@ export default createTheme({
         },
       },
     },
+    MuiTab: {
+      styleOverrides: {
+        root: {
+          textTransform: "none",
+        },
+      },
+    },
     MuiButton: {
       styleOverrides: {
         root: {
-          textTransform: 'none'
-        }
-      }
+          textTransform: "none",
+        },
+      },
     },
     MuiPaper: {
       styleOverrides: {
         root: {
-          backgroundImage: 'none',
+          backgroundImage: "none",
         },
       },
     },
@@ -73,8 +80,8 @@ export default createTheme({
     },
     MuiLink: {
       defaultProps: {
-        underline: 'hover'
-      }
-    }
+        underline: "hover",
+      },
+    },
   },
 });

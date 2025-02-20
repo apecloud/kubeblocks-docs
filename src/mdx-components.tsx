@@ -20,7 +20,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     },
     img: (props: ImageProps) => (
       <Image
-        style={{ width: "100%", height: "auto" }}
+        style={{ maxWidth: "100%", height: "auto" }}
         width={props.width || 500}
         {...props}
         alt={props.alt}
@@ -32,7 +32,13 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     tr: (props) => <TableRow {...props} />,
     td: (props) => <TableCell {...props} />,
     th: (props) => <TableCell {...props} />,
-    code: (props) => <code style={{ fontSize: "0.9em" }} {...props} />,
+    code: (props) => {
+      return (
+        <code style={{ fontSize: "0.9em" }} {...props}>
+          {props.children}
+        </code>
+      );
+    },
     hr: (props) => <Divider {...props} sx={{ marginBlock: 2 }} />,
     p: (props) => <Typography {...props} sx={{ marginBlock: 2 }} />,
     h1: (props) => <h1 {...props} id={_.kebabCase(props.children)} />,

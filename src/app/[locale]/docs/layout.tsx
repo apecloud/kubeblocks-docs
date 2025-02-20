@@ -1,6 +1,7 @@
 import { Box } from "@mui/material";
 
-import "highlight.js/styles/tomorrow-night-bright.css";
+import "highlight.js/styles/github-dark.css";
+import "./style.css";
 
 export default function DocsLayout({
   children,
