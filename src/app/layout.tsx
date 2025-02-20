@@ -8,6 +8,7 @@ import {
   Box,
   CssBaseline,
   Divider,
+  IconButton,
   Toolbar,
 } from "@mui/material";
 import ScrollTop from "@/components/ScrollTop";
@@ -18,6 +19,7 @@ import LocaleSwitcher from "@/components/LocaleSwitcher";
 import { getCurrentLocale, getI18n } from "@/locales/server";
 import I18nProvider from "@/components/I18nProvider";
 import { NextThemeProvider } from "@/components/NextThemeProvider";
+import { GitHub } from "@mui/icons-material";
 
 export const metadata: Metadata = {
   title: "KubeBlocks",
@@ -74,8 +76,11 @@ export default async function RootLayout({
                           justifyContent: "center",
                         }}
                       >
+                        <IconButton href="https://github.com" target="_blank">
+                          <GitHub />
+                        </IconButton>
                         <ThemeSwitcher />
-                        <Divider orientation="vertical" sx={{ height: 20 }} />
+                        {/* <Divider orientation="vertical" sx={{ height: 20 }} /> */}
                         <LocaleSwitcher />
                       </Box>
                     </Toolbar>

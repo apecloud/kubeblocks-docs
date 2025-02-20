@@ -1,7 +1,7 @@
 "use client";
-import { Button, ListItemIcon, MenuItem, MenuList } from "@mui/material";
+import { IconButton, ListItemIcon, MenuItem, MenuList } from "@mui/material";
 import { useChangeLocale, useCurrentLocale } from "../locales/client";
-import { Check } from "@mui/icons-material";
+import { Check, Language } from "@mui/icons-material";
 import { DropDown } from "./DropDown";
 
 type LangType = "en" | "zh";
@@ -21,9 +21,9 @@ export default function LocaleSwitcher() {
     <DropDown
       offset={[0, 16]}
       trigger={
-        <Button variant="text" sx={{ width: 80 }}>
-          {lang[currentLocale]}
-        </Button>
+        <IconButton>
+          <Language />
+        </IconButton>
       }
     >
       <MenuList>
