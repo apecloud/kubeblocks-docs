@@ -3,14 +3,33 @@ import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 import { MuiThemeProvider } from "@/components/MuiThemeProvider";
 
 import HideOnScroll from "@/components/HideOnScroll";
-import { ThemeProvider as NextThemeProvider } from "next-themes";
-import { AppBar, Box, CssBaseline, Divider, Toolbar } from "@mui/material";
+import {
+  AppBar,
+  Box,
+  Button,
+  CssBaseline,
+  Divider,
+  MenuList,
+  Toolbar,
+} from "@mui/material";
 import ScrollTop from "@/components/ScrollTop";
 import { Link } from "@/components/Link";
 import Image from "next/image";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
-import { getScopedI18n } from "@/locales/server";
+import { getCurrentLocale, getI18n } from "@/locales/server";
+import { DropDown } from "@/components/DropDown";
+import I18nProvider from "@/components/I18nProvider";
+import { NextThemeProvider } from "@/components/NextThemeProvider";
+
+type LangType = "en" | "zh";
+
+const lang: {
+  [key in LangType]: string;
+} = {
+  en: "English",
+  zh: "简体中文",
+} as const;
 
 export const metadata: Metadata = {
   title: "KubeBlocks",
@@ -22,62 +41,65 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const i18nNavigation = await getScopedI18n("navigation");
+  const t = await getI18n();
+  const currentLocale = await getCurrentLocale();
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={currentLocale} suppressHydrationWarning>
       <body>
-        <AppRouterCacheProvider options={{ key: "css" }}>
-          <NextThemeProvider>
-            <MuiThemeProvider>
-              <CssBaseline />
-              <HideOnScroll>
-                <AppBar>
-                  <Toolbar>
-                    <Box>
-                      <Link href="/" style={{ display: "block" }}>
-                        <Image
-                          src="/logo.png"
-                          alt="KubeBlocks"
-                          width={165}
-                          height={36}
-                          style={{ display: "block" }}
-                        />
-                      </Link>
-                    </Box>
-                    <Box
-                      sx={{
-                        flexGrow: 1,
-                        paddingInline: 4,
-                        display: "flex",
-                        gap: 4,
-                      }}
-                      component="nav"
-                    >
-                      <Link href="/docs">{i18nNavigation("docs")}</Link>
-                      <Link href="/">{i18nNavigation("databases")}</Link>
-                    </Box>
-                    <Box
-                      sx={{
-                        gap: 2,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <ThemeSwitcher />
-                      <Divider orientation="vertical" sx={{ height: 20 }} />
-                      <LocaleSwitcher />
-                    </Box>
-                  </Toolbar>
-                </AppBar>
-              </HideOnScroll>
-              <Toolbar id="back-to-top-anchor" />
-              <main>{children}</main>
-              <ScrollTop />
-            </MuiThemeProvider>
-          </NextThemeProvider>
-        </AppRouterCacheProvider>
+        <I18nProvider locale={currentLocale}>
+          <AppRouterCacheProvider options={{ key: "css" }}>
+            <NextThemeProvider>
+              <MuiThemeProvider>
+                <CssBaseline />
+                <HideOnScroll>
+                  <AppBar>
+                    <Toolbar>
+                      <Box>
+                        <Link href="/" style={{ display: "block" }}>
+                          <Image
+                            src="/logo.png"
+                            alt="KubeBlocks"
+                            width={165}
+                            height={36}
+                            style={{ display: "block" }}
+                          />
+                        </Link>
+                      </Box>
+                      <Box
+                        sx={{
+                          flexGrow: 1,
+                          paddingInline: 4,
+                          display: "flex",
+                          gap: 4,
+                        }}
+                        component="nav"
+                      >
+                        <Link href="/docs">{t("navigation.docs")}</Link>
+                        <Link href="/">{t("navigation.databases")}</Link>
+                      </Box>
+                      <Box
+                        sx={{
+                          gap: 2,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <ThemeSwitcher />
+                        <Divider orientation="vertical" sx={{ height: 20 }} />
+                        <LocaleSwitcher />
+                      </Box>
+                    </Toolbar>
+                  </AppBar>
+                </HideOnScroll>
+                <Toolbar id="back-to-top-anchor" />
+                <main>{children}</main>
+                <ScrollTop />
+              </MuiThemeProvider>
+            </NextThemeProvider>
+          </AppRouterCacheProvider>
+        </I18nProvider>
       </body>
     </html>
   );

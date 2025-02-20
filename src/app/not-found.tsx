@@ -4,7 +4,6 @@ import { Box } from "@mui/material";
 
 export default async function NotFound() {
   const t = await getScopedI18n("404");
-
   return (
     <Box>
       <h2>Not Found</h2>

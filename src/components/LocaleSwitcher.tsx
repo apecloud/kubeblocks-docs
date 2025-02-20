@@ -14,15 +14,12 @@ const lang: {
 } as const;
 
 export default function LocaleSwitcher() {
-  // const [open, setOpen] = useState(false);
-
   const currentLocale = useCurrentLocale();
   const changeLocale = useChangeLocale();
 
   return (
     <DropDown
       offset={[0, 16]}
-      // onChange={(val) => setOpen(val)}
       trigger={
         <Button variant="text" sx={{ width: 80 }}>
           {lang[currentLocale]}
