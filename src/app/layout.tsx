@@ -6,10 +6,8 @@ import HideOnScroll from "@/components/HideOnScroll";
 import {
   AppBar,
   Box,
-  Button,
   CssBaseline,
   Divider,
-  MenuList,
   Toolbar,
 } from "@mui/material";
 import ScrollTop from "@/components/ScrollTop";
@@ -18,18 +16,8 @@ import Image from "next/image";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
 import { getCurrentLocale, getI18n } from "@/locales/server";
-import { DropDown } from "@/components/DropDown";
 import I18nProvider from "@/components/I18nProvider";
 import { NextThemeProvider } from "@/components/NextThemeProvider";
-
-type LangType = "en" | "zh";
-
-const lang: {
-  [key in LangType]: string;
-} = {
-  en: "English",
-  zh: "简体中文",
-} as const;
 
 export const metadata: Metadata = {
   title: "KubeBlocks",
