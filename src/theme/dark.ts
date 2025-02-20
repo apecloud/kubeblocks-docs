@@ -13,7 +13,7 @@ export default createTheme({
       main: "#7c48ff",
     },
     background: {
-      default: "#101214",
+      default: "#000",
       paper: "#16181B",
     },
     action: {},
@@ -21,15 +21,14 @@ export default createTheme({
     divider: borderColor,
   },
   typography: {
-    // fontSize: 13,
+    // fontSize: 12,
   },
   components: {
     MuiAppBar: {
       styleOverrides: {
         root: {
-          background: alpha('#101214', 0.05),
+          background: '#101214',
           color: 'inherit',
-          backdropFilter: "blur(10px)",
           boxShadow: "none",
           borderBottom: `1px solid #21262A`,
         }
@@ -41,6 +40,13 @@ export default createTheme({
           borderColor,
         },
       },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none'
+        }
+      }
     },
     MuiPaper: {
       styleOverrides: {

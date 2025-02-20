@@ -1,7 +1,7 @@
 import { createTheme } from "@mui/material/styles";
 import { alpha } from "@mui/material";
 
-const borderColor = "#21262A";
+const borderColor = "#CCC";
 
 export default createTheme({
   // cssVariables: {
@@ -21,15 +21,14 @@ export default createTheme({
     divider: borderColor,
   },
   typography: {
-    // fontSize: 13,
+    // fontSize: 12,
   },
   components: {
     MuiAppBar: {
       styleOverrides: {
         root: {
-          background: alpha("#FFF", 0.05),
+          background: "#FFF",
           color: "inherit",
-          backdropFilter: "blur(10px)",
           boxShadow: "none",
           borderBottom: `1px solid #E7EAEE`,
         },
@@ -41,6 +40,13 @@ export default createTheme({
           borderColor,
         },
       },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none'
+        }
+      }
     },
     MuiPaper: {
       styleOverrides: {
