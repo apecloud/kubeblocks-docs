@@ -17,7 +17,19 @@ KubeBlocks is Kubernetes-native, you can use Helm or kubectl with a YAML file to
 
 To try out KubeBlocks on your local host, you can use the [Playground](./../try-out-on-playground/try-kubeblocks-on-your-laptop.md) or [create a local Kubernetes test cluster first](./prepare-a-local-k8s-cluster/prepare-a-local-k8s-cluster.md) and then follow the steps in this tutorial to install KubeBlocks.
 
-:::note
+> "In a few moments he was barefoot, his stockings folded in his pockets and his
+  canvas shoes dangling by their knotted laces over his shoulders and, picking a
+  pointed salt-eaten stick out of the jetsam among the rocks, he clambered down
+  the slope of the breakwater."
+
+
+> "In a few moments he was barefoot, his stockings folded in his pockets and his
+  canvas shoes dangling by their knotted laces over his shoulders and, picking a
+  pointed salt-eaten stick out of the jetsam among the rocks, he clambered down
+  the slope of the breakwater."
+
+
+:::tip
 
 - Note that you install and uninstall KubeBlocks with the same tool. For example, if you install KubeBlocks with Helm, to uninstall it, you have to use Helm too.
 - Make sure you have [kubectl](https://kubernetes.io/docs/tasks/tools/), [Helm](https://helm.sh/docs/intro/install/), or [kbcli](./install-kbcli.md) installed.
@@ -179,7 +191,7 @@ Follow these steps to install KubeBlocks using Helm.
       helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace --version=<VERSION>
       ```
 
-     :::note
+     :::caution
 
      By default, the latest release version is installed.
 

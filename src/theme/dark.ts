@@ -44,7 +44,7 @@ export default createTheme({
     MuiTab: {
       styleOverrides: {
         root: {
-          textTransform: "none",
+          // textTransform: "none",
         },
       },
     },

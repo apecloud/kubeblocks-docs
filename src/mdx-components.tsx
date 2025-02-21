@@ -3,7 +3,9 @@ import { Link } from "@/components/Link";
 import Image, { ImageProps } from "next/image";
 import _ from "lodash";
 
+
 import {
+  Box,
   Divider,
   Table,
   TableBody,
@@ -12,6 +14,7 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
+import NoteBox from "./components/NoteBox";
 
 export function useMDXComponents(components: MDXComponents): MDXComponents {
   return {
@@ -41,12 +44,22 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     },
     hr: (props) => <Divider {...props} sx={{ marginBlock: 2 }} />,
     p: (props) => <Typography {...props} sx={{ marginBlock: 2 }} />,
-    h1: (props) => <h1 {...props} id={_.kebabCase(props.children)} />,
-    h2: (props) => <h2 {...props} id={_.kebabCase(props.children)} />,
-    h3: (props) => <h3 {...props} id={_.kebabCase(props.children)} />,
-    h4: (props) => <h4 {...props} id={_.kebabCase(props.children)} />,
-    h5: (props) => <h5 {...props} id={_.kebabCase(props.children)} />,
-    h6: (props) => <h6 {...props} id={_.kebabCase(props.children)} />,
+    div: (props) => {
+      if(props.className === 'tip') {
+        return <NoteBox type="success" title="TIP">{props.children}</NoteBox>
+      }
+      if(props.className === 'note') {
+        return <NoteBox type="info" title="NOTE">{props.children}</NoteBox>
+      }
+      if(props.className === 'warning') {
+        return <NoteBox type="warning" title="WARNING">{props.children}</NoteBox>
+      }
+      if(props.className === 'caution') {
+        return <NoteBox type="error" title="CAUTION">{props.children}</NoteBox>
+      }
+      return <Box {...props} />
+    },
+    blockquote: (props) => <NoteBox {...props} />,
     ...components,
   };
 }
