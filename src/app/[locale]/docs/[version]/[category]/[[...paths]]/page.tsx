@@ -13,10 +13,13 @@ export default async function MarkdownPage({
   const currentLocale = await getCurrentLocale();
   const { version, category, paths } = await params;
   const relativePath = path.join(currentLocale, version, category, ...paths);
-  const filePath = path.join(DOCS_DIR, `${relativePath}.mdx`);
-  const isExists = fs.existsSync(filePath);
-  if (isExists) {
+  const mdxPath = path.join(DOCS_DIR, `${relativePath}.mdx`);
+  const mdPath = path.join(DOCS_DIR, `${relativePath}.md`);
+  if (fs.existsSync(mdxPath)) {
     const { default: MDXContent } = await import(`@docs/${relativePath}.mdx`);
+    return <MDXContent />;
+  } else if(fs.existsSync(mdPath)) {
+    const { default: MDXContent } = await import(`@docs/${relativePath}.md`);
     return <MDXContent />;
   } else {
     notFound();

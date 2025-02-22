@@ -39,7 +39,7 @@
 
 /* markdown style */
 .markdown-body table {
-  display: table;
+  display: block;
   width: 100%;
   border-collapse: collapse;
   border-spacing: 0;
@@ -48,6 +48,7 @@
   background: var(--css-palette-background-paper);
   border-radius: var(--css-shape-borderRadius);
   box-shadow: 0 0 0 1px var(--css-palette-divider);
+  overflow: auto;
 }
 
 .markdown-body table tr {
@@ -68,6 +69,9 @@
   color: var(--css-palette-text-primary);
   line-height: 1.5rem;
   border-right: 1px solid var(--css-palette-divider);
+}
+.markdown-body table th p, .markdown-body table td p {
+  margin: 0;
 }
 
 .markdown-body table th {

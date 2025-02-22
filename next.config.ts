@@ -63,7 +63,9 @@ const withMDX = createMDX({
         },
       ],
     ],
-    rehypePlugins: [rehypeHighlight, rehypeToc],
+    rehypePlugins: [rehypeHighlight, [rehypeToc, {
+      headings: ["h2", "h3", "h4", "h5", "h6"]
+    }]],
   },
 });
 

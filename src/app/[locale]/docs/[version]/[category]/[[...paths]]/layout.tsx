@@ -3,7 +3,7 @@ import fs from "fs";
 import "highlight.js/styles/github-dark.css";
 import "./style.css";
 import Footer from "@/components/Footer";
-
+import { SidebarMenu } from "@/components/SidebarMenu";
 import path from "path";
 import { getCurrentLocale } from "@/locales/server";
 import { MarkdownPageParams, DOCS_DIR, getMarkDownSideBar } from "@/utils/markdown";
@@ -18,17 +18,16 @@ export default async function DocsLayout({
   const currentLocale = await getCurrentLocale();
   const { version, category } = await params;
   const dir = path.join(DOCS_DIR, currentLocale, version, category);
-  const sidebarData = fs.existsSync(dir) ? await getMarkDownSideBar(dir) : [];
-  console.log(sidebarData);
+  const menu = fs.existsSync(dir) ? await getMarkDownSideBar(dir) : [];
   return (
     <>
       <Stack
         direction="row"
         divider={<Divider orientation="vertical" flexItem />}
       >
-        {sidebarData.length && (
-          <Box component="aside" sx={{ width: 240 }}>
-            sidebar
+        {menu.length && (
+          <Box component="aside" sx={{ width: 300 }}>
+            <SidebarMenu data={menu} />
           </Box>
         )}
         <Container sx={{ marginTop: 3, marginBottom: 3 }}>
