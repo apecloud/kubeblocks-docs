@@ -2,7 +2,7 @@
 
 import { KeyboardArrowUp } from "@mui/icons-material";
 import { Box, Fab, Fade, useScrollTrigger } from "@mui/material";
-
+import { animateScroll } from "react-scroll";
 interface Props {
   /**
    * Injected by the documentation to work in an iframe.
@@ -22,22 +22,14 @@ export default function ScrollTop(props: Props) {
     threshold: 100,
   });
 
-  const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    const anchor = (
-      (event.target as HTMLDivElement).ownerDocument || document
-    ).querySelector("#back-to-top-anchor");
-
-    if (anchor) {
-      anchor.scrollIntoView({
-        block: "center",
-      });
-    }
-  };
-
   return (
     <Fade in={trigger}>
       <Box
-        onClick={handleClick}
+        onClick={() =>
+          animateScroll.scrollToTop({
+            duration: 300,
+          })
+        }
         role="presentation"
         sx={{ position: "fixed", bottom: 16, right: 16 }}
       >

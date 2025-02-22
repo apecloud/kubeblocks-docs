@@ -1,65 +1,91 @@
-import type { MDXComponents } from "mdx/types";
-import { Link } from "@/components/Link";
-import Image, { ImageProps } from "next/image";
-import _ from "lodash";
-
-
 import {
-  Box,
-  Divider,
+  Tooltip,
   Table,
-  TableBody,
-  TableCell,
   TableHead,
+  TableBody,
   TableRow,
+  TableCell,
+  Divider,
   Typography,
+  Box,
 } from "@mui/material";
+import type { MDXComponents } from "mdx/types";
+import { JSX } from "react";
 import NoteBox from "./components/NoteBox";
-
+import { Link } from "./components/Link";
 export function useMDXComponents(components: MDXComponents): MDXComponents {
   return {
-    a: ({ href, children }) => {
-      return <Link href={href}>{children}</Link>;
+    a: (props: JSX.IntrinsicElements["a"]) => {
+      const target = props.href?.match(/^http/) ? "_blank" : "_self";
+      const url = props.href?.replace(/\.md/, "");
+      const isNavLink = props.className?.includes("toc-link")
+      return (
+        <Tooltip
+          title={props.children}
+          placement={isNavLink ? "left" : "top"}
+          arrow
+        >
+          <Link {...props} href={url || "/"} target={target} />
+        </Tooltip>
+      );
     },
-    img: (props: ImageProps) => (
-      <Image
-        style={{ maxWidth: "100%", height: "auto" }}
-        width={props.width || 500}
-        {...props}
-        alt={props.alt}
-      />
+    table: (props: JSX.IntrinsicElements["table"]) => <Table {...props} />,
+    thead: (props: JSX.IntrinsicElements["thead"]) => <TableHead {...props} />,
+    tbody: (props: JSX.IntrinsicElements["tbody"]) => <TableBody {...props} />,
+    tr: (props: JSX.IntrinsicElements["tr"]) => <TableRow {...props} />,
+    td: (props: JSX.IntrinsicElements["td"]) => (
+      <TableCell>{props.children}</TableCell>
     ),
-    table: (props) => <Table {...props} />,
-    thead: (props) => <TableHead {...props} />,
-    tbody: (props) => <TableBody {...props} />,
-    tr: (props) => <TableRow {...props} />,
-    td: (props) => <TableCell {...props} />,
-    th: (props) => <TableCell {...props} />,
-    code: (props) => {
+    th: (props: JSX.IntrinsicElements["th"]) => (
+      <TableCell>{props.children}</TableCell>
+    ),
+    code: (props: JSX.IntrinsicElements["code"]) => {
       return (
         <code style={{ fontSize: "0.9em" }} {...props}>
           {props.children}
         </code>
       );
     },
-    hr: (props) => <Divider {...props} sx={{ marginBlock: 2 }} />,
-    p: (props) => <Typography {...props} sx={{ marginBlock: 2 }} />,
-    div: (props) => {
-      if(props.className === 'tip') {
-        return <NoteBox type="success" title="TIP">{props.children}</NoteBox>
+    hr: (props: JSX.IntrinsicElements["hr"]) => (
+      <Divider {...props} sx={{ marginBlock: 2 }} />
+    ),
+    p: (props: JSX.IntrinsicElements["p"]) => (
+      <Typography {...props} sx={{ marginBlock: 2 }} />
+    ),
+    div: (props: JSX.IntrinsicElements["div"]) => {
+      if (props.className === "tip") {
+        return (
+          <NoteBox type="success" title="TIP">
+            {props.children}
+          </NoteBox>
+        );
       }
-      if(props.className === 'note') {
-        return <NoteBox type="info" title="NOTE">{props.children}</NoteBox>
+      if (props.className === "note") {
+        return (
+          <NoteBox type="info" title="NOTE">
+            {props.children}
+          </NoteBox>
+        );
       }
-      if(props.className === 'warning') {
-        return <NoteBox type="warning" title="WARNING">{props.children}</NoteBox>
+      if (props.className === "warning") {
+        return (
+          <NoteBox type="warning" title="WARNING">
+            {props.children}
+          </NoteBox>
+        );
       }
-      if(props.className === 'caution') {
-        return <NoteBox type="error" title="CAUTION">{props.children}</NoteBox>
+      if (props.className === "caution") {
+        return (
+          <NoteBox type="error" title="CAUTION">
+            {props.children}
+          </NoteBox>
+        );
       }
-      return <Box {...props} />
+      return <Box {...props} />;
     },
-    blockquote: (props) => <NoteBox {...props} />,
+    blockquote: (props: JSX.IntrinsicElements["blockquote"]) => (
+      <NoteBox {...props} />
+    ),
     ...components,
   };
 }

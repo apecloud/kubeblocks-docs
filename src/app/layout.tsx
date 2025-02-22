@@ -58,7 +58,7 @@ export default async function RootLayout({
                         }}
                         component="nav"
                       >
-                        <NavLink href="/docs">{t("navigation.docs")}</NavLink>
+                        <NavLink href="/docs/preview/user_docs">{t("navigation.docs")}</NavLink>
                         <NavLink href="/">{t("navigation.databases")}</NavLink>
                       </Box>
                       <Box
@@ -78,8 +78,8 @@ export default async function RootLayout({
                     </Toolbar>
                   </AppBar>
                 </HideOnScroll>
-                <Toolbar id="back-to-top-anchor" />
-                <main>{children}</main>
+                <Toolbar />
+                <Box component="main">{children}</Box>
                 <ScrollTop />
               </MuiThemeProvider>
             </NextThemeProvider>

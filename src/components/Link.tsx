@@ -3,7 +3,7 @@
 import { Link as MuiLink, LinkProps as MuiLinkProps, useTheme } from "@mui/material";
 import NextLink, { LinkProps as NextLinkProps } from "next/link";
 
-type LinkProps = MuiLinkProps & NextLinkProps;
+export type LinkProps = MuiLinkProps & NextLinkProps;
 
 export function Link(props: LinkProps) {
   return <MuiLink {...props} component={NextLink} />;

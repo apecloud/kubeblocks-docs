@@ -1,12 +1,11 @@
 import { createTheme } from "@mui/material/styles";
-import { alpha } from "@mui/material";
 
 const borderColor = "#1D2226";
 
 export default createTheme({
-  // cssVariables: {
-  //   cssVarPrefix: "css",
-  // },
+  cssVariables: {
+    cssVarPrefix: "css",
+  },
   palette: {
     mode: "dark",
     primary: {

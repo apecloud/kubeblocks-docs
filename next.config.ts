@@ -1,14 +1,18 @@
 import type { NextConfig } from "next";
 import createMDX from "@next/mdx";
+import { h } from "hastscript";
+import { visit } from "unist-util-visit";
+import _ from "lodash";
+
 import remarkGfm from "remark-gfm";
 import remarkHeaderId from "remark-heading-id";
 import remarkGithubAdmonitionsToDirectives from "remark-github-admonitions-to-directives";
 import remarkDirective from "remark-directive";
-import { h } from "hastscript";
-import { visit } from "unist-util-visit";
+import remarkFrontmatter from "remark-frontmatter";
+import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 
 import rehypeHighlight from "rehype-highlight";
-import _ from "lodash";
+import rehypeToc from "@jsdevtools/rehype-toc";
 
 const nextConfig: NextConfig = {
   // Configure `pageExtensions` to include markdown and MDX files
@@ -21,6 +25,7 @@ const nextConfig: NextConfig = {
     });
     return config;
   },
+  basePath: '',
 };
 
 const withMDX = createMDX({
@@ -29,6 +34,8 @@ const withMDX = createMDX({
   options: {
     remarkPlugins: [
       remarkGfm,
+      remarkFrontmatter,
+      remarkMdxFrontmatter,
       remarkGithubAdmonitionsToDirectives,
       remarkDirective,
       () => {
@@ -56,7 +63,7 @@ const withMDX = createMDX({
         },
       ],
     ],
-    rehypePlugins: [rehypeHighlight],
+    rehypePlugins: [rehypeHighlight, rehypeToc],
   },
 });
 

@@ -18,6 +18,8 @@ export default function HideOnScroll(props: Props) {
   // This is only being set here because the demo is in an iframe.
   const trigger = useScrollTrigger({
     target: window ? window() : undefined,
+    disableHysteresis: true,
+    threshold: 100,
   });
 
   return (

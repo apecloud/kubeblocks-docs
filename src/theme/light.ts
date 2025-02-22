@@ -1,12 +1,11 @@
 import { createTheme } from "@mui/material/styles";
-import { alpha } from "@mui/material";
 
 const borderColor = "#E7EAEE";
 
 export default createTheme({
-  // cssVariables: {
-  //   cssVarPrefix: "css",
-  // },
+  cssVariables: {
+    cssVarPrefix: "css",
+  },
   palette: {
     mode: "light",
     primary: {

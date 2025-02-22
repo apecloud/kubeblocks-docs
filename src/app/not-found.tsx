@@ -1,14 +1,16 @@
 import { Link } from "@/components/Link";
 import { getScopedI18n } from "@/locales/server";
-import { Box } from "@mui/material";
 
-export default async function NotFound() {
+import { Result } from "@/components/Result";
+
+export default async function NotFoundPage() {
   const t = await getScopedI18n("404");
   return (
-    <Box>
-      <h2>Not Found</h2>
-      <p>Could not find requested resource</p>
-      <Link href="/">{t("back")}</Link>
-    </Box>
-  )
+    <Result
+      status="notfound"
+      title="404"
+      description="Could not find requested resource"
+      actions={<Link href="/">{t("back")}</Link>}
+    />
+  );
 }
