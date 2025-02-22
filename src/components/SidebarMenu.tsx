@@ -1,17 +1,19 @@
 "use client";
 
-import { Box, Stack, Typography, useTheme } from "@mui/material";
+import { Box, Stack, Tooltip, Typography, useTheme } from "@mui/material";
 import { Link } from "./Link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import _ from "lodash";
 import Collapse from "@mui/material/Collapse";
 import { ExpandMore } from "@mui/icons-material";
+import { usePathname } from "next/navigation";
 
 export type SidebarMenuItem = {
   label?: string;
   children?: SidebarMenuItem[];
   href?: string;
   position: number;
+  description?: string;
 };
 
 type SidebatMenuItemProps = {
@@ -20,30 +22,64 @@ type SidebatMenuItemProps = {
   children?: React.ReactNode;
 };
 
+const checkOpen = (item: SidebarMenuItem, pathname: string): boolean => {
+  const child = item.children?.find((d) => {
+    return (
+      (d.href && new RegExp(d.href).test(pathname)) || checkOpen(d, pathname)
+    );
+  });
+  return Boolean(child);
+};
+
 export function SidebarMenuItem({ level = 1, item }: SidebatMenuItemProps) {
-  const [open, setOpen] = useState<boolean>(true);
+  const pathname = usePathname();
+  const [open, setOpen] = useState<boolean>(false);
   const theme = useTheme();
   const sx = {
     display: "block",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-    padding: "6px",
+    padding: 1,
+    marginBlock: "1px",
     paddingLeft: level * 2,
     transitionDuration: "0.3s",
-    fontSize: '0.9em',
+    fontSize: "0.9em",
     cursor: "pointer",
+    color: theme.palette.text.secondary,
+    borderLeft: `2px solid transparent`,
     "&:hover": {
       background: theme.palette.divider,
+      color: theme.palette.text.primary,
+    },
+    "&.active": {
+      background: theme.palette.divider,
+      color: theme.palette.text.primary,
+      borderLeftColor: theme.palette.primary.main,
     },
   };
+
+  useEffect(() => {
+    const isOpen = checkOpen(item, pathname);
+    if (isOpen) {
+      setOpen(true);
+    }
+  }, [pathname, item]);
+
   return (
     <Box className="item">
       <Box>
         {item.href && _.isEmpty(item.children) ? (
-          <Link href={item.href} sx={sx} underline="none" color="textPrimary">
-            {item.label}
-          </Link>
+          <Tooltip title={item.description} placement="right" arrow>
+            <Link
+              className={new RegExp(item.href).test(pathname) ? "active" : undefined}
+              href={item.href}
+              sx={sx}
+              underline="none"
+            >
+              {item.label}
+            </Link>
+          </Tooltip>
         ) : (
           <Stack
             direction="row"
@@ -61,7 +97,7 @@ export function SidebarMenuItem({ level = 1, item }: SidebatMenuItemProps) {
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
-                fontSize: '0.9em',
+                fontSize: "0.9em",
               }}
             >
               {item.label}

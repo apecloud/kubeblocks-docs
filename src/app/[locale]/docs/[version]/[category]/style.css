@@ -1,0 +1,90 @@
+/* code hightlight */
+.hljs, pre code {
+  border-radius: var(--css-shape-borderRadius);
+  background: #1A1E22;
+  overflow: auto;
+  display: block;
+  overflow-x: auto;
+  padding: 1em;
+}
+
+/* markdown navigation */
+.toc {
+  border-left: 1px solid var(--css-palette-divider);
+  position: fixed;
+  width: 300px;
+  right: 0;
+  font-size: 13px;
+}
+
+.toc .toc-level {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.toc .toc-item {
+  list-style: none;
+  padding-block: 4px;
+  box-sizing: content-box;
+}
+
+.toc .toc-item a {
+  color: var(--css-palette-text-secondary);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 20px;
+}
+
+.toc .toc-item a:hover {
+  color: var(--css-palette-text-primary);
+}
+
+/* markdown style */
+.markdown-body table {
+  display: block;
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  margin-block: 24px;
+  font-size: 0.875rem;
+  background: var(--css-palette-background-paper);
+  border-radius: var(--css-shape-borderRadius);
+  box-shadow: 0 0 0 1px var(--css-palette-divider);
+  overflow: auto;
+}
+
+.markdown-body table tr {
+  color: inherit;
+  display: table-row;
+  vertical-align: middle;
+  outline: 0;
+}
+
+.markdown-body table tr:last-child td {
+  border-bottom: none;
+}
+
+.markdown-body table th, .markdown-body table td {
+  border-bottom: 1px solid var(--css-palette-divider);
+  text-align: left;
+  padding: 16px;
+  color: var(--css-palette-text-primary);
+  line-height: 1.5rem;
+  border-right: 1px solid var(--css-palette-divider);
+}
+.markdown-body table th p, .markdown-body table td p {
+  margin: 0;
+}
+
+.markdown-body table th {
+  font-weight: bold;
+}
+.markdown-body table th:last-child {
+  border-right: none;
+}
+
+.markdown-body table td:last-child {
+  border-right: none;
+}

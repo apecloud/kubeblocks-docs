@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "format-api-reference-docs": "node ./scripts/format-api-reference-docs.js"
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",

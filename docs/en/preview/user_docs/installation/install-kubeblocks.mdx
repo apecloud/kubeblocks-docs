@@ -11,7 +11,6 @@ import TabItem from '@theme/TabItem';
 
 # Install KubeBlocks
 
-
 The quickest way to try out KubeBlocks is to create a new Kubernetes cluster and install KubeBlocks using the playground. However, production environments are more complex, with applications running in different namespaces and with resource or permission limitations. This document explains how to deploy KubeBlocks on an existing Kubernetes cluster.
 
 KubeBlocks is Kubernetes-native, you can use Helm or kubectl with a YAML file to install it. You can also use kbcli, an intuitive CLI tool, to install KubeBlocks.
@@ -27,15 +26,6 @@ To try out KubeBlocks on your local host, you can use the [Playground](./../try-
 :::
 
 ## Environment preparation
-
-| Methods     | Descriptions | Applicability |
-| :---------- | :----------- | :------------ |
-| Unix Signal | For example, PostgreSQL. <br /> If you need to reload the configuration file after parameter configuration, send a `SIGHUP` signal to PG. | Applicable to engines that support Unix Signal updates. |
-| SQL         | For example, MySQL. <br /> Perform parameter configurations through the SQL statement `SET GLOBAL <var> =<value>`. | Applicable to most RDBMS engines. <br /> **Note**: The `execSQL` interface is required. Currently, KubeBlocks only supports MySQL and PostgreSQL. |
-| Tools       | For example, Redis or MongoDB. <br /> Related tools are provided for configuring parameters. | Implemented via custom scripts or local tools, highly versatile. |
-| Auto        | The engine itself watches for changes in configuration files, and updates automatically when a change is detected. | Dependent on whether the engine supports automatic loading. |
-
-
 
 <table>
 	<tr>

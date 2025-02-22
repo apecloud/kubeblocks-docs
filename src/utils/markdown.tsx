@@ -11,12 +11,8 @@ export const MARKDOWN_SUEFIX_REG = /\.(md|mdx)$/;
 export type MarkdownPageParams = {
   version: string;
   category: string;
-  paths: string[];
+  paths?: string[];
 };
-
-const insertStr = (str: string, index: number, insertStr: string) => {
-  return str.substring(0, index) + insertStr + str.substring(index);
-}
 
 export const getMarkDownSideBar = async (dir: string) => {
   const fns: Promise<SidebarMenuItem>[] = [];
@@ -32,7 +28,8 @@ export const getMarkDownSideBar = async (dir: string) => {
           Object.assign(item, {
             position: metadata.sidebar_position || metadata.position || 0,
             label: metadata.title || metadata.sidebar_label,
-            href: insertStr(urlPath, 3, '/docs'),
+            href: urlPath.replace(/^\/(en|zh)/, "/docs"),
+            description: metadata.description,
           });
           resolve(item);
         })

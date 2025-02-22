@@ -6,7 +6,8 @@ export default {
     back: "Return Home",
   },
   navigation: {
-    docs: "User Docs",
+    user: "User Docs",
+    developer: "Developer Docs",
     databases: "Databases",
   }
 } as const;
