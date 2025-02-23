@@ -1,6 +1,15 @@
 "use client";
 
-import { Link as MuiLink, LinkProps as MuiLinkProps, useTheme } from "@mui/material";
+import {
+  Button,
+  ButtonProps,
+  CardActionArea,
+  CardActionAreaProps,
+  ListItemButton,
+  ListItemButtonProps,
+  Link as MuiLink,
+  LinkProps as MuiLinkProps,
+} from "@mui/material";
 import NextLink, { LinkProps as NextLinkProps } from "next/link";
 
 export type LinkProps = MuiLinkProps & NextLinkProps;
@@ -9,13 +18,17 @@ export function Link(props: LinkProps) {
   return <MuiLink {...props} component={NextLink} />;
 }
 
-export function NavLink(props: LinkProps) {
-  const token = useTheme();
-  return <Link {...props} underline="none" sx={{
-    color: token.palette.text.primary,
-    fontSize: token.typography.fontSize,
-    "&:hover": {
-      color: token.palette.text.primary,
-    }
-  }} />;
-}
+type LinkButtonProps = ButtonProps & LinkProps;
+export const LinkButton = (props: LinkButtonProps) => {
+  return <Button {...props} component={Link} />;
+};
+
+export type LinkCardActionAreaProps = CardActionAreaProps & LinkProps;
+export const LinkCardActionArea = (props: LinkCardActionAreaProps) => {
+  return <CardActionArea {...props} component={Link} />;
+};
+
+export type LinkListItemButtonProps = ListItemButtonProps & LinkProps;
+export const LinkListItemButton = (props: LinkListItemButtonProps) => {
+  return <ListItemButton {...props} component={Link} />;
+};

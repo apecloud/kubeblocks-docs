@@ -43,8 +43,6 @@ export function SidebarMenuItem({ level = 1, item }: SidebatMenuItemProps) {
     padding: 1,
     marginBlock: "1px",
     paddingLeft: level * 2,
-    transitionDuration: "0.3s",
-    fontSize: "0.9em",
     cursor: "pointer",
     color: theme.palette.text.secondary,
     borderLeft: `2px solid transparent`,
@@ -97,7 +95,6 @@ export function SidebarMenuItem({ level = 1, item }: SidebatMenuItemProps) {
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
-                fontSize: "0.9em",
               }}
             >
               {item.label}

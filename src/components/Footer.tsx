@@ -18,9 +18,7 @@ export default function Footer() {
         borderTop: 1,
         borderColor: "divider",
         height: "var(--footer-height)",
-        zIndex: "var(--css-zIndex-appBar)",
         background: theme.palette.background.default,
-        position: 'relative',
       }}
     >
       <Container>

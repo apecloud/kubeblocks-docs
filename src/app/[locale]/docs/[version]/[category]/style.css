@@ -42,6 +42,11 @@
 }
 
 /* markdown style */
+.markdown a {
+  color: var(--css-palette-primary-main);
+  text-decoration: none;
+
+}
 .markdown-body table {
   display: block;
   width: 100%;

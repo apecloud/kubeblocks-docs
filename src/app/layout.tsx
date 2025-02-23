@@ -1,19 +1,38 @@
 import type { Metadata } from "next";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 import { MuiThemeProvider } from "@/components/MuiThemeProvider";
-
-import { AppBar, Box, CssBaseline, IconButton, Toolbar } from "@mui/material";
+import {
+  AppBar,
+  Avatar,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CssBaseline,
+  Divider,
+  IconButton,
+  Stack,
+  Toolbar,
+  Typography,
+} from "@mui/material";
 import ScrollTop from "@/components/ScrollTop";
-import { NavLink } from "@/components/Link";
+import { LinkButton, LinkCardActionArea } from "@/components/Link";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
 import { getCurrentLocale, getI18n } from "@/locales/server";
 import I18nProvider from "@/components/I18nProvider";
 import { NextThemeProvider } from "@/components/NextThemeProvider";
-import { GitHub } from "@mui/icons-material";
+import {
+  CodeOutlined,
+  GitHub,
+  SupervisorAccountOutlined,
+  TerminalOutlined,
+} from "@mui/icons-material";
+import uniqolor from "uniqolor";
+import Logo from "@/components/Logo";
+import { DropDown } from "@/components/DropDown";
 
 import "./global.css";
-import Logo from "@/components/Logo";
 
 export const metadata: Metadata = {
   title: "KubeBlocks",
@@ -27,6 +46,27 @@ export default async function RootLayout({
 }) {
   const t = await getI18n();
   const currentLocale = await getCurrentLocale();
+
+  const documentations = [
+    {
+      title: t("navigation.user"),
+      description: t("navigation.user"),
+      icon: <SupervisorAccountOutlined />,
+      href: "/docs/preview/user_docs/overview/introduction",
+    },
+    {
+      title: t("navigation.developer"),
+      description: t("navigation.developer"),
+      icon: <CodeOutlined />,
+      href: "/docs/preview/developer_docs/overview",
+    },
+    {
+      title: "Command Line",
+      description: "Command Line",
+      icon: <TerminalOutlined />,
+      href: "/docs/preview/cli/cli",
+    },
+  ];
 
   return (
     <html lang={currentLocale} suppressHydrationWarning>
@@ -44,17 +84,78 @@ export default async function RootLayout({
                         flexGrow: 1,
                         paddingInline: 4,
                         display: "flex",
-                        gap: 4,
+                        gap: 1,
                       }}
                       component="nav"
+                      alignItems="center"
                     >
-                      <NavLink href="/docs/preview/user_docs/overview/introduction">
-                        {t("navigation.user")}
-                      </NavLink>
-                      <NavLink href="/docs/preview/developer_docs/overview">
-                        {t("navigation.developer")}
-                      </NavLink>
-                      <NavLink href="/">{t("navigation.databases")}</NavLink>
+                      <DropDown
+                        offset={[0, 16]}
+                        trigger={
+                          <Button color="inherit" sx={{ paddingInline: 2 }}>
+                            {t("navigation.documentation")}
+                          </Button>
+                        }
+                        sx={{ width: 400 }}
+                        placement="bottom-start"
+                      >
+                        <Stack divider={<Divider />}>
+                          {documentations.map((item, index) => (
+                            <Card key={index} sx={{ boxShadow: "none" }}>
+                              <LinkCardActionArea
+                                href={item.href}
+                                underline="none"
+                              >
+                                <CardContent>
+                                  <Stack
+                                    direction="row"
+                                    alignItems="center"
+                                    gap={2}
+                                  >
+                                    <Avatar
+                                      sx={{
+                                        // background: uniqolor(item.title).color,
+                                      }}
+                                    >
+                                      {item.icon}
+                                    </Avatar>
+                                    <Box>
+                                      <Typography>{item.title}</Typography>
+                                      <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                      >
+                                        {item.description}
+                                      </Typography>
+                                    </Box>
+                                  </Stack>
+                                </CardContent>
+                              </LinkCardActionArea>
+                            </Card>
+                          ))}
+                        </Stack>
+                      </DropDown>
+                      <LinkButton
+                        color="inherit"
+                        href="/"
+                        sx={{ paddingInline: 2 }}
+                      >
+                        {t("navigation.databases")}
+                      </LinkButton>
+                      <LinkButton
+                        color="inherit"
+                        href="/"
+                        sx={{ paddingInline: 2 }}
+                      >
+                        Blogs
+                      </LinkButton>
+                      <LinkButton
+                        color="inherit"
+                        href="/"
+                        sx={{ paddingInline: 2 }}
+                      >
+                        Cloud
+                      </LinkButton>
                     </Box>
                     <Box
                       sx={{
@@ -64,7 +165,10 @@ export default async function RootLayout({
                         justifyContent: "center",
                       }}
                     >
-                      <IconButton href="https://github.com" target="_blank">
+                      <IconButton
+                        href="https://github.com/apecloud/kubeblocks"
+                        target="_blank"
+                      >
                         <GitHub />
                       </IconButton>
                       <ThemeSwitcher />
@@ -73,9 +177,7 @@ export default async function RootLayout({
                   </Toolbar>
                 </AppBar>
                 <Toolbar />
-                <Box component="main">
-                  {children}
-                </Box>
+                <Box component="main">{children}</Box>
                 <ScrollTop />
               </MuiThemeProvider>
             </NextThemeProvider>

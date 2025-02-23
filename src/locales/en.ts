@@ -6,6 +6,7 @@ export default {
     back: "Return Home",
   },
   navigation: {
+    documentation: "Documentation",
     user: "User Docs",
     developer: "Developer Docs",
     databases: "Databases",

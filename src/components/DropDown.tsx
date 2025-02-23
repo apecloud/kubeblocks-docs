@@ -78,7 +78,6 @@ export const DropDown = ({
                 sx={{
                   ...sx,
                   minWidth: 220,
-                  maxWidth: { xs: 320, md: 380 },
                 }}
               >
                 {children}

@@ -1,11 +1,11 @@
 import { Box } from "@mui/material";
-import { NavLink } from "./Link";
 import Image from "next/image";
+import { Link } from "./Link";
 
 export default function Logo() {
   return (
     <Box>
-      <NavLink href="/" style={{ display: "block" }}>
+      <Link href="/" style={{ display: "block" }} underline="none" color="textPrimary">
         <Image
           src="/logo.png"
           alt="KubeBlocks"
@@ -13,7 +13,7 @@ export default function Logo() {
           height={36}
           style={{ display: "block" }}
         />
-      </NavLink>
+      </Link>
     </Box>
   );
 }

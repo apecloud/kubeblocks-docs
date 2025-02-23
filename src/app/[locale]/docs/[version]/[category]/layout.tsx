@@ -1,4 +1,4 @@
-import { Box, Chip, Stack, Toolbar } from "@mui/material";
+import { Box, Stack, Toolbar } from "@mui/material";
 import fs from "fs";
 import { SidebarMenu } from "@/components/SidebarMenu";
 import path from "path";
@@ -8,10 +8,10 @@ import {
   DOCS_DIR,
   getMarkDownSideBar,
 } from "@/utils/markdown";
+import Footer from "@/components/Footer";
 
 import "highlight.js/styles/github-dark.css";
 import "./style.css";
-import Footer from "@/components/Footer";
 
 export default async function DocsLayout({
   children,
@@ -26,13 +26,11 @@ export default async function DocsLayout({
   const menu = fs.existsSync(dir) ? await getMarkDownSideBar(dir) : [];
   return (
     <>
-      {menu.length && (
+      {menu.length ? (
         <Stack
           component="aside"
           sx={{
             width: "300px",
-            borderRight: 1,
-            borderColor: "var(--css-palette-divider)",
             position: "fixed",
             left: 0,
             top: 0,
@@ -40,24 +38,31 @@ export default async function DocsLayout({
           }}
         >
           <Toolbar />
-          <Box flex={1} sx={{ overflow: "auto" }} pt={1} pb={1}>
+          <Box
+            flex={1}
+            sx={{
+              overflow: "auto",
+              borderRight: 1,
+              borderColor: "var(--css-palette-divider)",
+            }}
+            pt={1}
+            pb={1}
+          >
             <SidebarMenu data={menu} />
           </Box>
         </Stack>
-      )}
-      <Box sx={{ marginLeft: menu.length ? "300px" : 0, marginRight: "300px" }}>
+      ) : null}
+      <Box sx={{ marginInline: menu.length ? "300px" : 0 }}>
         <Box
           sx={{
             padding: 3,
-            maxWidth: "1440px",
+            maxWidth: "980px",
             marginInline: "auto",
             minHeight: "calc(100vh - 265px)",
           }}
+          className="markdown-body"
         >
-          <Chip color="primary" size="small" label={`Version: ${version}`} />
-          <Box className="markdown-body">
-            {children}
-          </Box>
+          {children}
         </Box>
         <Footer />
       </Box>
