@@ -25,6 +25,7 @@ import { NextThemeProvider } from "@/components/NextThemeProvider";
 import {
   CodeOutlined,
   GitHub,
+  LaunchOutlined,
   SupervisorAccountOutlined,
   TerminalOutlined,
 } from "@mui/icons-material";
@@ -90,9 +91,13 @@ export default async function RootLayout({
                       alignItems="center"
                     >
                       <DropDown
-                        offset={[0, 16]}
+                        offset={[0, 14]}
                         trigger={
-                          <Button color="inherit" sx={{ paddingInline: 2 }}>
+                          <Button
+                            color="inherit"
+                            sx={{ paddingInline: 2 }}
+                            size="large"
+                          >
                             {t("navigation.documentation")}
                           </Button>
                         }
@@ -113,9 +118,11 @@ export default async function RootLayout({
                                     gap={2}
                                   >
                                     <Avatar
-                                      sx={{
-                                        // background: uniqolor(item.title).color,
-                                      }}
+                                      sx={
+                                        {
+                                          // background: uniqolor(item.title).color,
+                                        }
+                                      }
                                     >
                                       {item.icon}
                                     </Avatar>
@@ -138,6 +145,7 @@ export default async function RootLayout({
                       <LinkButton
                         color="inherit"
                         href="/"
+                        size="large"
                         sx={{ paddingInline: 2 }}
                       >
                         {t("navigation.databases")}
@@ -145,16 +153,20 @@ export default async function RootLayout({
                       <LinkButton
                         color="inherit"
                         href="/"
+                        size="large"
                         sx={{ paddingInline: 2 }}
                       >
                         Blogs
                       </LinkButton>
                       <LinkButton
                         color="inherit"
-                        href="/"
+                        href="https://console.kubeblocks.io"
+                        target="_blank"
+                        endIcon={<LaunchOutlined />}
                         sx={{ paddingInline: 2 }}
+                        size="large"
                       >
-                        Cloud
+                        Kubeblocks Cloud
                       </LinkButton>
                     </Box>
                     <Box
