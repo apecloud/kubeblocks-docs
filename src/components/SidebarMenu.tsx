@@ -25,7 +25,7 @@ type SidebatMenuItemProps = {
 const checkOpen = (item: SidebarMenuItem, pathname: string): boolean => {
   const child = item.children?.find((d) => {
     return (
-      (d.href && new RegExp(d.href).test(pathname)) || checkOpen(d, pathname)
+      (d.href && d.href === pathname) || checkOpen(d, pathname)
     );
   });
   return Boolean(child);
@@ -70,7 +70,7 @@ export function SidebarMenuItem({ level = 1, item }: SidebatMenuItemProps) {
         {item.href && _.isEmpty(item.children) ? (
           <Tooltip title={item.description} placement="right" arrow>
             <Link
-              className={new RegExp(item.href).test(pathname) ? "active" : undefined}
+              className={ item.href === pathname ? "active" : undefined}
               href={item.href}
               sx={sx}
               underline="none"
