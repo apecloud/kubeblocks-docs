@@ -85,7 +85,7 @@ export default async function RootLayout({
                         flexGrow: 1,
                         paddingInline: 4,
                         display: "flex",
-                        gap: 1,
+                        gap: "2px",
                       }}
                       component="nav"
                       alignItems="center"
@@ -95,7 +95,7 @@ export default async function RootLayout({
                         trigger={
                           <Button
                             color="inherit"
-                            sx={{ paddingInline: 2 }}
+                            sx={{ paddingInline: 3 }}
                             size="large"
                           >
                             {t("navigation.documentation")}
@@ -146,7 +146,7 @@ export default async function RootLayout({
                         color="inherit"
                         href="/"
                         size="large"
-                        sx={{ paddingInline: 2 }}
+                        sx={{ paddingInline: 3 }}
                       >
                         {t("navigation.databases")}
                       </LinkButton>
@@ -154,7 +154,7 @@ export default async function RootLayout({
                         color="inherit"
                         href="/"
                         size="large"
-                        sx={{ paddingInline: 2 }}
+                        sx={{ paddingInline: 3 }}
                       >
                         Blogs
                       </LinkButton>
@@ -163,7 +163,7 @@ export default async function RootLayout({
                         href="https://console.kubeblocks.io"
                         target="_blank"
                         endIcon={<LaunchOutlined />}
-                        sx={{ paddingInline: 2 }}
+                        sx={{ paddingInline: 3 }}
                         size="large"
                       >
                         Kubeblocks Cloud
