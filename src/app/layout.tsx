@@ -64,6 +64,7 @@ export default async function RootLayout({
                       <Button
                         component={Link}
                         color="inherit"
+                        size="large"
                         href="/blog"
                         sx={{ paddingInline: 2 }}
                       >
@@ -72,6 +73,7 @@ export default async function RootLayout({
                       <Button
                         component={Link}
                         color="inherit"
+                        size="large"
                         href="https://console.kubeblocks.io"
                         target="_blank"
                         endIcon={<LaunchOutlined />}

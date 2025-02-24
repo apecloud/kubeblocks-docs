@@ -82,10 +82,11 @@ export default function DatabasesNav() {
 
   return (
     <DropDown
-      offset={[0, 15]}
+      offset={[0, 13]}
       trigger={
         <Button
           color="inherit"
+          size="large"
           sx={{
             paddingInline: 2,
             bgcolor: open ? theme.palette.action.hover : "transparent",

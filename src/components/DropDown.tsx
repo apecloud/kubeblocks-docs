@@ -1,5 +1,5 @@
 'use client';
-
+import { alpha } from "@mui/material";
 import {
   Box,
   ClickAwayListener,
@@ -7,6 +7,7 @@ import {
   Popper,
   PopperPlacementType,
   SxProps,
+  useTheme,
 } from "@mui/material";
 import { useRef, useState } from "react";
 import { Transitions } from "./Transitions";
@@ -78,6 +79,9 @@ export const DropDown = ({
                 sx={{
                   ...sx,
                   minWidth: 220,
+                  boxShadow: 'none',
+                  border: 1,
+                  borderColor: "divider",
                 }}
               >
                 {children}

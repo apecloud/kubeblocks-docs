@@ -53,7 +53,7 @@ export default async function BlogsPage() {
         return (
           <Grid key={index} size={{ md: 4, sm: 6, xs: 12 }}>
             <Tooltip title={blog.title} placement="top" arrow enterDelay={1000}>
-              <Card>
+              <Card sx={{ boxShadow: "none", border: '1px solid var(--css-palette-divider)' }}>
                 <CardActionArea
                   component={Link}
                   href={`/blog/${blog.name}`}
