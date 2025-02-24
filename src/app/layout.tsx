@@ -19,10 +19,11 @@ import { NextThemeProvider } from "@/components/NextThemeProvider";
 import { GitHub, LaunchOutlined } from "@mui/icons-material";
 import Logo from "@/components/Logo";
 import DocumentationNav from "@/components/Navigation/Documentation";
-
-import "./global.css";
 import DatabasesNav from "@/components/Navigation/Databases";
 import { Link } from "@/components/Link";
+
+import "highlight.js/styles/github-dark.css";
+import "./global.css";
 
 export const metadata: Metadata = {
   title: "KubeBlocks",
@@ -94,7 +95,7 @@ export default async function RootLayout({
                         <GitHub />
                       </IconButton>
                       <ThemeSwitcher />
-                      {/* <LocaleSwitcher /> */}
+                      <LocaleSwitcher />
                     </Box>
                   </Toolbar>
                 </AppBar>

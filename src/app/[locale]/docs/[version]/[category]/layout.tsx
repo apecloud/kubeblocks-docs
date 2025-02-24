@@ -10,9 +10,6 @@ import {
 } from "@/utils/markdown";
 import Footer from "@/components/Footer";
 
-import "highlight.js/styles/github-dark.css";
-import "./style.css";
-
 export default async function DocsLayout({
   children,
   params,

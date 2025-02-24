@@ -8,8 +8,10 @@ authors:
   url: https://github.com/skyrise-l
   image_url: https://avatars.githubusercontent.com/u/57531827?v=4
 tags: [Kubernetes, operator, MySQL, KubeBlocks, WordPress]
-image: /img/blogs/blog-wordpress.png
+image: /img/blogs/thumbnails/blog-wordpress.png
 ---
+
+# Deploy a High-Availability WordPress Site on Kubernetes with KubeBlocks MySQL Operator
 
 ## Introduction
 
@@ -93,7 +95,7 @@ Before deploying WordPress, you need to create a database cluster to manage the 
    kubectl get pods
    ```
 
-   ![Figure 1](./../static/images/blog-wordpress-1.png)
+   ![Figure 1](/img/blogs/blog-wordpress-1.png)
 
 2. Get access address
 
@@ -105,7 +107,7 @@ Before deploying WordPress, you need to create a database cluster to manage the 
    kubectl get services
    ```
 
-   ![Figure 2](./../static/images/blog-wordpress-2.png)
+   ![Figure 2](/img/blogs/blog-wordpress-2.png)
 
 ### Install WordPress
 
@@ -170,7 +172,7 @@ You can create a secret to be referenced later during the WordPress installation
       kubectl get pods
       ```
 
-      ![Figure 3](./../static/images/blog-wordpress-3.png)
+      ![Figure 3](/img/blogs/blog-wordpress-3.png)
 
    3. Enter the WordPress container. You can view the database remotely and view the database information of WordPress.
 
@@ -179,7 +181,7 @@ You can create a secret to be referenced later during the WordPress installation
       mysql -h  apecloud-mysql.default.svc.cluster.local  -u Wordpress
       ```
 
-      ![Figure 4](./../static/images/blog-wordpress-4.png)
+      ![Figure 4](/img/blogs/blog-wordpress-4.png)
 
 Now, WordPress and the database cluster are deployed successfully.
 
@@ -193,13 +195,13 @@ kubectl delete pod apecloud-mysql-0
 
 After deleting the Pod `apecloud-mysql-0`, you can see that it has 3 out of 4 containers ready, with the MySQL container being unavailable.
 
-![Figure 5](./../static/images/blog-wordpress-5.png)
+![Figure 5](/img/blogs/blog-wordpress-5.png)
 
 However, this does not affect the overall database connectivity.
 
 Additionally, you can observe that `apecloud-mysql-1` become the leader Pod, demonstrating the powerful failover capabilities of KuebBlocks.
 
-![Figure 6](./../static/images/blog-wordpress-6.png)
+![Figure 6](/img/blogs/blog-wordpress-6.png)
 
 ### Scale a cluster
 

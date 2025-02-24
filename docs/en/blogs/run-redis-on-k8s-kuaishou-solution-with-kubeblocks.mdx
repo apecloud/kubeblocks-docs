@@ -6,7 +6,7 @@ date: 2024-11-25
 authors:
   name: Yuxing Liu
 tags: [Redis, Kubernetes, Kuaishou, Stateful service, StatefulSet, Large-scale Redis, Operator, Database]
-image: /img/blogs/blog-redis-kuaishou-cover.jpeg
+image: /img/blogs/thumbnails/blog-redis-kuaishou-cover.jpeg
 ---
 
 # Managing Large-Scale Redis Clusters on Kubernetes with an Operator: Kuaishou's Approach
@@ -35,7 +35,7 @@ Taking Redis as an example, it is one of the most widely used stateful services 
 
 To meet the need for flexible shard management and support for hotspot migration and isolation, Kuaishou adopts a horizontally sharded, master-slave high-availability Redis architecture consisting of three components: Server, Sentinel, and Proxy.
 
-![Figure 2](./../static/images/blog-redis-kuaishou-2.png)
+![Figure 2](/img/blogs/blog-redis-kuaishou-2.png)
 
 ### Analysis: What Does Kuaishou Require from a Redis Operator?
 
@@ -87,7 +87,7 @@ This hierarchical design simplifies scaling, enhances lifecycle management, and 
 
 Through close collaboration with the KubeBlocks community, we implemented the orchestration of a Redis cluster in the following ways:
 
-![Figure 3](./../static/images/blog-redis-kuaishou-3.png)
+![Figure 3](/img/blogs/blog-redis-kuaishou-3.png)
 
 There are three Components in a Redis Cluster: `redis-server`, `redis-sentinel`, and `redis-proxy`. Within each Component, Pods are managed using **InstanceSet** instead of **StatefulSet**.
 
@@ -104,7 +104,7 @@ Fortunately, Kuaishou's Kubernetes infrastructure team provides a mature Kuberne
 
 So, the question becomes how can the Redis cluster management solution based on KubeBlocks be integrated into Kuaishou's internal federation cluster architecture? Below is the overall architecture:
 
-![Figure 4](./../static/images/blog-redis-kuaishou-4.png)
+![Figure 4](/img/blogs/blog-redis-kuaishou-4.png)
 
 The Federation Kubernetes Cluster serves as the central control plane for managing multiple member clusters. It is responsible for cross-cluster orchestration, resource distribution, and lifecycle management of the Redis cluster. Its responsibilities include:
 
@@ -136,7 +136,7 @@ To manage instance partitioning and ensure global uniqueness and proper ordering
 
 The **Fed-InstanceSet Controller** uses this field to assign unique index ranges to each Member Cluster, ensuring instance uniqueness and correct ordering across clusters.
 
-![Figure 5](./../static/images/blog-redis-kuaishou-5.png)
+![Figure 5](/img/blogs/blog-redis-kuaishou-5.png)
 
 ## Discussion: Are Stateful Services Fit for Kubernetes?
 
@@ -154,7 +154,7 @@ Although running stateful services on Kubernetes offers significant benefits, th
 2. **Stability concerns**: Building the database platform (DBaaS) on the Kubernetes infrastructure raises concerns about whether the stability (availability and reliability) of databases or Redis might be affected.
 3. **Increased Operational Complexity**: In the event of an issue, would it require experts with both database and K8s technology expertise to effectively identify and resolve the problem?
 
-![Figure 1](./../static/images/blog-redis-kuaishou-1.png)
+![Figure 1](/img/blogs/blog-redis-kuaishou-1.png)
 
 The following sections explore these risks in more detail.
 
@@ -179,7 +179,7 @@ For example, in Kuaishou's cloud-native Redis solution:
 - **Redis Team**: Focused on defining Redis cluster objects and encapsulating their operational expertise into declarative configurations.
 - **Container Cloud Team**: Managed the Kubernetes side, including developing and maintaining the Operator, handling scheduling, and ensuring the cluster's lifecycle.
 
-![Figure 6](./../static/images/blog-redis-kuaishou-6.png)
+![Figure 6](/img/blogs/blog-redis-kuaishou-6.png)
 
 ## Conclusion
 

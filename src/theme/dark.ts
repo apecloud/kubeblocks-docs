@@ -27,7 +27,7 @@ export default createTheme({
     MuiAppBar: {
       styleOverrides: {
         root: {
-          background: alpha("#0E1214", 0.05),
+          background: alpha("#0E1214", 0.8),
           color: "inherit",
           backdropFilter: "blur(10px)",
           boxShadow: "none",

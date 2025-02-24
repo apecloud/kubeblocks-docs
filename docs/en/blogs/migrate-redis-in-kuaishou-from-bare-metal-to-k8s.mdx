@@ -6,7 +6,7 @@ date: 2024-09-03
 authors:
   name: Xueqiang Wu & Yuxing Liu
 tags: [redis, kuaishou, migration, bare metal, k8s]
-image: /img/blogs/blog-kubecon-kuaishou.png
+image: /img/blogs/thumbnails/blog-kubecon-kuaishou.png
 ---
 
 # Resource Utilization Boost: Large-Scale Redis Migration from Bare Metal to Kubernetes
@@ -23,7 +23,7 @@ In simple terms, KubeBlocks is a Kubernetes Operator, but it stands out from oth
 
 To achieve this, we structured the KubeBlocks API, or Custom Resource Definitions (CRDs), into two main categories. The first category is the **"Add-on Provider API"**. These APIs allow database providers to easily integrate their databases into the KubeBlocks ecosystem. The second category is the **"Developer & DevOps API"**, which gives users and operators the ability to manage databases — whether it’s creating a new cluster, scaling, performing backups and restores, and more. Additionally, these declarative APIs make KubeBlocks easily integrable with other tools and systems in the Kubernetes ecosystem, such as kubectl, Argo CD, Terraform, and others.
 
-![What is KubeBlocks](./../static/images/redis-kuaishou-1.png)
+![What is KubeBlocks](/img/blogs/redis-kuaishou-1.png)
 
 ## Problems solved by KubeBlocks: a single Redis cluster perspective
 
@@ -35,7 +35,7 @@ Running databases on Kubernetes comes with its own set of challenges, one of the
 
 Consider a typical setup, as shown in the image below, where a single instance of Redis is running in a StatefulSet with only one replica. This configuration presents several issues:
 
-![Data replication](./../static/images/redis-kuaishou-2.png)
+![Data replication](/img/blogs/redis-kuaishou-2.png)
 
 1. This is a single point of failure - the system is highly vulnerable to outages.
 2. The throughput of a single Redis instance is inherently limited. 
@@ -59,7 +59,7 @@ And third, **the role label allows us to better define update strategies**. For 
 
 Through this role-based design, KubeBlocks not only simplifies the management of replication relationships but also significantly enhances the overall availability of the Redis cluster.
 
-![Role](./../static/images/redis-kuaishou-3.png)
+![Role](/img/blogs/redis-kuaishou-3.png)
 
 ### How to achieve high availability?
 
@@ -69,7 +69,7 @@ In addition to the role-based update strategies, the InstanceSet introduces two 
 
 The first is called "[In-place Instance Update](https://kubeblocks.io/docs/preview/api_docs/maintenance/in-place-update/overview)". The concept of in-place updates for Pods and Volume Resizing of Persistent Volume Claims (PVCs) in Kubernetes is not new, and KubeBlocks leverages these capabilities. However, KubeBlocks takes it a step further by addressing a unique challenge in database management: configuration changes. Databases often require updates to configuration parameters, and traditionally, these changes necessitate a full database restart, which can severely impact the availability of the Redis cluster. To mitigate this, KubeBlocks introduces In-place Config Updates.
 
-![In-place update](./../static/images/redis-kuaishou-4.png)
+![In-place update](/img/blogs/redis-kuaishou-4.png)
 
 We divide database parameters into three types: **Immutable**, **Static** and **Dynamic**. 
 
@@ -81,7 +81,7 @@ Based on this, the InstanceSet can perform configuration updates without requiri
 
 The second feature is called "**instance rebuild**". Many databases still operate on Local Persistent Volumes (LocalPVs), which poses a challenge: if a Node fails, the Pods running on it cannot be rescheduled automatically. Instance Rebuild addresses this by automatically rebuilding the PVs and Pods on other Nodes, allowing the Redis cluster to recover and return to a normal state.
 
-![Instance rebuilding](./../static/images/redis-kuaishou-5.png)
+![Instance rebuilding](/img/blogs/redis-kuaishou-5.png)
 
 ### How to handle a large-scale cluster?
 
@@ -101,11 +101,11 @@ Thirdly, **we asynchronized some of the heavier operations in the Prepare phase*
 
 With these optimizations, we're able to handle the P10K scenario quite well.
 
-![Operator P10K](./../static/images/redis-kuaishou-6.png)
+![Operator P10K](/img/blogs/redis-kuaishou-6.png)
 
 In summary, KubeBlocks provides powerful features for managing Redis clusters on Kubernetes. **The role-based capabilities of InstanceSet enable efficient management of master-slave replication relationships of our Redis servers**. The in-place instance updates and instance rebuild features significantly enhance the availability of Redis servers. Lastly, the optimizations for the P10K problem demonstrate KubeBlocks’ ability to handle extreme scenarios involving massive numbers of Pods in a single cluster.
 
-![Summary](./../static/images/redis-kuaishou-7.png)
+![Summary](/img/blogs/redis-kuaishou-7.png)
 
 Now, I'd like to invite Yuxing back to the stage, to share some of his experience of running multiple Redis clusters across multiple Kubernetes clusters.
 
@@ -123,7 +123,7 @@ So, how do you improve resource utilization? You might already have some ideas. 
 
 In summary, we embarked on a cloud-native transformation to optimize costs. To do this effectively, we involved both the Redis team and the cloud-native team.
 
-![Redis in Kuaishou](./../static/images/redis-kuaishou-8.png)
+![Redis in Kuaishou](/img/blogs/redis-kuaishou-8.png)
 
 ### Why KubeBlocks?
 
@@ -137,7 +137,7 @@ At first glance, the difference might seem as simple as whether or not the servi
 
 Furthermore, KubeBlocks supports multiple databases, **eliminating the need to create a dedicated operator for each one**. It also provides **process-oriented APIs through OpsRequest**, simplifying database migration. For those interested in the specifics, you can delve deeper into [KubeBlocks APIs in the official documentation](https://kubeblocks.io/docs/preview/developer_docs/api-reference/cluster).
 
-![Why KubeBlocks](./../static/images/redis-kuaishou-9.png)
+![Why KubeBlocks](/img/blogs/redis-kuaishou-9.png)
 
 ### Redis Cluster Orchestration Definition
 
@@ -156,7 +156,7 @@ Here’s how the relationships between objects are structured within the Redis S
 - **InstanceTemplate**: Specifies different configurations within the same component.
 - **InstanceSet**: The final workload that’s automatically generated, providing the role-based management capabilities mentioned earlier.
 
-![Cluster Orchestration](./../static/images/redis-kuaishou-10.png)
+![Cluster Orchestration](/img/blogs/redis-kuaishou-10.png)
 
 ### Role management
 
@@ -167,7 +167,7 @@ When it comes to role-based management, two key aspects stand out:
 
 Let's focus on how to maintain the correct role relationships. One critical point to consider is the importance of the master node information within a shard. If this information is incorrect or inaccessible, it can lead to severe issues.To safeguard business stability, we opt to split the data plane from the control plane. This approach is also why we don't rely on KubeBlocks for master node information.
 
-![Role management](./../static/images/redis-kuaishou-11.png)
+![Role management](/img/blogs/redis-kuaishou-11.png)
 
 ### Deployment architecture
 
@@ -182,7 +182,7 @@ To simplify things, we decided to hide the complexity of multi-cluster managemen
 
 How do we solve it? Here's the overall architecture.
 
-![Overall architecture](./../static/images/redis-kuaishou-12.png)
+![Overall architecture](/img/blogs/redis-kuaishou-12.png)
 
 We split the KubeBlocks operator into two parts. **The Cluster Operator and Component Operator are deployed in the federated cluster, while the InstanceSet Controller resides in the member clusters.** Between these, we introduced a component called the **Federated InstanceSet Controller**, which is responsible for distributing the InstanceSet object from the federated cluster to the member clusters. So, how does the Federated InstanceSet Controller function?
 
@@ -193,7 +193,7 @@ Just like StatefulSets, InstanceSets have numbered names for each instance. To m
 
 With this architecture, we enabled KubeBlocks to operate across multiple Kubernetes clusters without requiring major changes.
 
-![Multi cluster distribution](./../static/images/redis-kuaishou-13.png)
+![Multi cluster distribution](/img/blogs/redis-kuaishou-13.png)
 
 ### Stability guarantee
 
@@ -205,7 +205,7 @@ Additionally, we provide load-balancing scheduling capabilities based on CPU, me
 
 Next, let’s discuss runtime control. While the automation Kubernetes brings is beneficial, it also introduces risks — small changes can potentially lead to large-scale failures. To mitigate these risks, we’ve implemented several controls over running instances, including concurrency control and enforcing in-place updates only. There are many other measures we've taken, but due to time constraints, I won’t go through each one here.
 
-![Stability guarantee](./../static/images/redis-kuaishou-14.png)
+![Stability guarantee](/img/blogs/redis-kuaishou-14.png)
 
 ## Summary
 
@@ -218,4 +218,4 @@ While KubeBlocks' API seems to support nearly all stateful services, there’s s
 
 To date, Kuaishou has partnered with KubeBlocks on various features, such as **managing Pods and PVCs directly through InstanceSet**, **Instance Template (formerly heterogeneous Pod)**, and **Federated cluster integration**.
 
-![Cooperation](./../static/images/redis-kuaishou-15.png)
+![Cooperation](/img/blogs/redis-kuaishou-15.png)

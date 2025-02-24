@@ -8,7 +8,7 @@ authors:
   url: https://github.com/free6om
   image_url: https://avatars.githubusercontent.com/u/28781141?v=4
 tags: [pod, pods stuck in terminating, K8s]
-image: /img/blogs/blog-pod-terminating.png
+image: /img/blogs/thumbnails/blog-pod-terminating.png
 ---
 
 # How to Fix Pods Stuck in Terminating Status in Kubernetes?
@@ -51,7 +51,7 @@ It seems the kubelet’s current behavior doesn’t align with the documentation
 ### Kubelet Logs
 
 Once again, we’re faced with a lengthy log file, but luckily, the error message appears near the end:
-![](./../static/images/blog-pod-terminating-1.png)
+![](/img/blogs/blog-pod-terminating-1.png)
 
 It seems that while the kubelet was attempting to unmount the data volume, it encountered an error because it couldn’t find the corresponding Hostpath CSI Driver. After some checking, we confirmed that the Hostpath CSI Driver had indeed been removed during one of the earlier steps. So, we quickly reinstalled it.
 
@@ -61,15 +61,15 @@ kbcli addon enable csi-hostpath-driver
 
 Unfortunately, while the unmounting process no longer threw errors, the Pod and PVC were still stuck in the Terminating status:
 
-![](./../static/images/blog-pod-terminating-2.jpeg)
+![](/img/blogs/blog-pod-terminating-2.jpeg)
 
-![](./../static/images/blog-pod-terminating-3.jpeg)
+![](/img/blogs/blog-pod-terminating-3.jpeg)
 
-![](./../static/images/blog-pod-terminating-4.jpeg)
+![](/img/blogs/blog-pod-terminating-4.jpeg)
 
 The kubelet logs didn’t provide any further clues.
 
-![](./../static/images/blog-pod-terminating-5.png)
+![](/img/blogs/blog-pod-terminating-5.png)
 
 ### Kubelet Verbose Logs
 
@@ -199,7 +199,7 @@ Based on the earlier suspicions, we used the error messages to trace the corresp
 
 Code Location 1:
 
-![](./../static/images/blog-pod-terminating-6.png)
+![](/img/blogs/blog-pod-terminating-6.png)
 
 Here, it’s clear that during the Pod termination process, the kubelet checks every 100ms whether the volume has been cleaned up. Until the method returns `true`, this loop continues, meaning the kubelet remains stuck at this point. As a result, the Pod deletion process cannot proceed, and the Pod remains in the Terminating status.
 
@@ -207,7 +207,7 @@ This behavior matches what we observed and also the logs in Suspicion 1.
 
 Code Location 2:
 
-![](./../static/images/blog-pod-terminating-7.png)
+![](/img/blogs/blog-pod-terminating-7.png)
 
 Here, we see that the kubelet indeed attempts to delete the directory corresponding to the PVC. Looking further up the code, we find that if the deletion fails, the kubelet employs an exponential retry mechanism.
 
@@ -231,8 +231,8 @@ However, we must consider that the CSI Driver is Hostpath, which, according to t
 
 To confirm, we conducted further code investigation.
 
-![](./../static/images/blog-pod-terminating-8.png)
-![](./../static/images/blog-pod-terminating-9.png)
+![](/img/blogs/blog-pod-terminating-8.png)
+![](/img/blogs/blog-pod-terminating-9.png)
 
 It appears the state metadata is indeed stored in a file. Upon opening the file, we found the entry: `"Published": null`.
 

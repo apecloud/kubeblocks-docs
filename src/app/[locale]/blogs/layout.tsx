@@ -8,7 +8,7 @@ export default function BlogsLayout({
 }) {
   return (
     <>
-      <Container sx={{ minHeight: "calc(100vh - 265px)", paddingBlock: 4 }}>
+      <Container sx={{ minHeight: "calc(100vh - 265px)", paddingBlock: 4 }} className="markdown-body">
         {children}
       </Container>
       <Footer />
