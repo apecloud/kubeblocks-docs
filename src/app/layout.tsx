@@ -64,7 +64,7 @@ export default async function RootLayout({
                       <Button
                         component={Link}
                         color="inherit"
-                        href="/blogs"
+                        href="/blog"
                         sx={{ paddingInline: 2 }}
                       >
                         {t("navigation.blogs")}

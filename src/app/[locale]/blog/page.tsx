@@ -56,7 +56,7 @@ export default async function BlogsPage() {
               <Card>
                 <CardActionArea
                   component={Link}
-                  href={`/blogs/${blog.name}`}
+                  href={`/blog/${blog.name}`}
                   underline="none"
                 >
                   <CardMedia sx={{ height: 200 }} image={blog.image} />
