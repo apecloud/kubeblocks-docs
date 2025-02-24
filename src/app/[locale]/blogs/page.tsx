@@ -27,7 +27,9 @@ export default async function BlogsPage() {
 
   const blogs = await Promise.all(
     files.map(async (file) => {
-      return await getMarkDownMetaData(path.join(blogsDir, file));
+      const data = await getMarkDownMetaData(path.join(blogsDir, file));
+      data.name = file.replace(/\.mdx$/, "")
+      return data;
     })
   );
 
@@ -37,9 +39,9 @@ export default async function BlogsPage() {
         return (
           <Grid key={index} size={{ md: 4, sm: 6, xs: 12 }}>
             <Card>
-              <CardActionArea component={Link} href="/blogs/" underline="none">
-                <CardMedia sx={{ height: 200 }} image={blog.image} />
-                <CardContent sx={{ height: 140 }}>
+              <CardActionArea component={Link} href={`/blogs/${blog.name}`} underline="none">
+                <CardMedia sx={{ height: 220 }} image={blog.image} />
+                <CardContent sx={{ height: 150 }}>
                   <Typography
                     gutterBottom
                     variant="h6"

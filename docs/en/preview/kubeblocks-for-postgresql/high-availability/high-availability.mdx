@@ -43,7 +43,7 @@ KubeBlocks integrates [the open-source Patroni solution](https://patroni.readthe
    kubectl -n demo get pod -L kubeblocks.io/role
    ```
 
-   ![PostgreSQL cluster original status](./../../../img/api-ha-pg-original-status.png)
+   ![PostgreSQL cluster original status](/img/docs/api-ha-pg-original-status.png)
 
    Currently, `mycluster-postgresql-0` is the primary pod and `mycluster-postgresql-1` is the secondary pod.
 
@@ -107,7 +107,7 @@ KubeBlocks integrates [the open-source Patroni solution](https://patroni.readthe
    postgres=# select * from pg_stat_replication;
    ```
 
-   ![PostgreSQL replication info](./../../../img/api-ha-pg-replication-info.png)
+   ![PostgreSQL replication info](/img/docs/api-ha-pg-replication-info.png)
 
    From the output, `mycluster-postgresql-0` has been assigned as the secondary pod.
 
@@ -119,7 +119,7 @@ KubeBlocks integrates [the open-source Patroni solution](https://patroni.readthe
    kubectl -n demo get pod -L kubeblocks.io/role
    ```
 
-   ![PostgreSQL cluster status after HA](./../../../img/api-ha-pg-after.png)
+   ![PostgreSQL cluster status after HA](/img/docs/api-ha-pg-after.png)
 
    After the failover, `mycluster-postgresql-0` becomes the secondary pod and `mycluster-postgresql-1` becomes the primary pod.
 
@@ -133,7 +133,7 @@ KubeBlocks integrates [the open-source Patroni solution](https://patroni.readthe
    kbcli cluster describe mycluster -n demo
    ```
 
-   ![PostgreSQL cluster original status](../../../img/pgsql-ha-before.png)
+   ![PostgreSQL cluster original status](/img/docs/pgsql-ha-before.png)
 
    Currently, `mycluster-postgresql-1` is the primary pod and `mycluster-postgresql-0` is the secondary pod.
 
@@ -187,7 +187,7 @@ KubeBlocks integrates [the open-source Patroni solution](https://patroni.readthe
    postgres=# select * from pg_stat_replication;
    ```
 
-   ![PostgreSQL replication info](../../../img/pgsql-ha-pg_stat_replication.png)
+   ![PostgreSQL replication info](/img/docs/pgsql-ha-pg_stat_replication.png)
 
    From the output, `mycluster-postgresql-1` has been assigned as the secondary pod.
 
@@ -197,7 +197,7 @@ KubeBlocks integrates [the open-source Patroni solution](https://patroni.readthe
    kbcli cluster describe mycluster -n demo
    ```
 
-   ![PostgreSQL cluster status after HA](../../../img/pgsql-ha-after.png)
+   ![PostgreSQL cluster status after HA](/img/docs/pgsql-ha-after.png)
 
    After the failover, `mycluster-postgresql-1` becomes the secondary pod and `mycluster-postgresql-0` becomes the primary pod.
 

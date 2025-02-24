@@ -13,6 +13,7 @@ import type { MDXComponents } from "mdx/types";
 import { JSX } from "react";
 import NoteBox from "./components/NoteBox";
 import { Link } from "./components/Link";
+
 export function useMDXComponents(components: MDXComponents): MDXComponents {
   return {
     a: (props: JSX.IntrinsicElements["a"]) => {

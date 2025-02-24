@@ -42,7 +42,9 @@
 }
 
 /* markdown style */
-
+.markdown-body img {
+  max-width: 100%;
+}
 .markdown-body table {
   display: block;
   width: 100%;

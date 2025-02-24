@@ -94,7 +94,7 @@ export default async function RootLayout({
                         <GitHub />
                       </IconButton>
                       <ThemeSwitcher />
-                      <LocaleSwitcher />
+                      {/* <LocaleSwitcher /> */}
                     </Box>
                   </Toolbar>
                 </AppBar>

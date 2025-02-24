@@ -5,7 +5,6 @@ import { Result } from "@/components/Result";
 
 export default async function NotFoundPage() {
   const t = await getScopedI18n("404");
-  
   return (
     <Result
       status="notfound"
