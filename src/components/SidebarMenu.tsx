@@ -44,15 +44,13 @@ export function SidebarMenuItem({ level = 1, item }: SidebatMenuItemProps) {
     marginBlock: "1px",
     paddingLeft: level * 2,
     cursor: "pointer",
-    color: theme.palette.text.secondary,
+    color: theme.palette.text.primary,
     borderLeft: `2px solid transparent`,
     "&:hover": {
-      background: theme.palette.divider,
-      color: theme.palette.text.primary,
+      background: theme.palette.action.hover,
     },
     "&.active": {
-      background: theme.palette.divider,
-      color: theme.palette.text.primary,
+      background: theme.palette.action.hover,
       borderLeftColor: theme.palette.primary.main,
     },
   };
@@ -90,7 +88,6 @@ export function SidebarMenuItem({ level = 1, item }: SidebatMenuItemProps) {
             alignItems="center"
           >
             <Typography
-              color="textSecondary"
               sx={{
                 overflow: "hidden",
                 textOverflow: "ellipsis",

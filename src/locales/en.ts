@@ -10,5 +10,6 @@ export default {
     user: "User Docs",
     developer: "Developer Docs",
     databases: "Databases",
+    blogs: "Blogs",
   }
 } as const;

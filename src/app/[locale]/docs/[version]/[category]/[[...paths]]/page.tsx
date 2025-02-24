@@ -25,7 +25,6 @@ export default async function MarkdownPage({
     return <MDXContent />;
   } else if (fs.existsSync(mdPath)) {
     const { default: MDXContent } = await import(`@docs/${relativePath}.md`);
-    fs.renameSync(mdPath, mdxPath);
     return <MDXContent />;
   } else {
     notFound();

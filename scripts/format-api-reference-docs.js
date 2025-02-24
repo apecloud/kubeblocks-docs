@@ -9,7 +9,9 @@ const files = [
   `${ROOT_DIR}/docs/en/preview/developer_docs/api-reference/cluster.md`,
 ]
 
-files.forEach(file => {
+files
+.filter(file => fs.existsSync(file)) // check exists
+.forEach(file => {
   const content = String(fs.readFileSync(file))
     .replace(/<h3([^>]*)>/g, (match, attr) => '<h3' + attr + '>\n')
     .replace(/<\/h3>/g, '\n</h3>')
