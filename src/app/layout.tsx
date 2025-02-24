@@ -4,13 +4,13 @@ import { MuiThemeProvider } from "@/components/MuiThemeProvider";
 import {
   AppBar,
   Box,
+  Button,
   CssBaseline,
   IconButton,
   Stack,
   Toolbar,
 } from "@mui/material";
 import ScrollTop from "@/components/ScrollTop";
-import { LinkButton } from "@/components/Link";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
 import { getCurrentLocale, getI18n } from "@/locales/server";
@@ -22,6 +22,7 @@ import DocumentationNav from "@/components/Navigation/Documentation";
 
 import "./global.css";
 import DatabasesNav from "@/components/Navigation/Databases";
+import { Link } from "@/components/Link";
 
 export const metadata: Metadata = {
   title: "KubeBlocks",
@@ -55,28 +56,28 @@ export default async function RootLayout({
                       component="nav"
                       direction="row"
                       alignItems="center"
-                      gap={0.5}
+                      gap={1}
                     >
                       <DocumentationNav />
                       <DatabasesNav />
-                      <LinkButton
+                      <Button
+                        component={Link}
                         color="inherit"
-                        href="/"
-                        size="large"
+                        href="/blogs"
                         sx={{ paddingInline: 2 }}
                       >
                         {t("navigation.blogs")}
-                      </LinkButton>
-                      <LinkButton
+                      </Button>
+                      <Button
+                        component={Link}
                         color="inherit"
                         href="https://console.kubeblocks.io"
                         target="_blank"
                         endIcon={<LaunchOutlined />}
                         sx={{ paddingInline: 2 }}
-                        size="large"
                       >
                         Kubeblocks Cloud
-                      </LinkButton>
+                      </Button>
                     </Stack>
                     <Box
                       sx={{

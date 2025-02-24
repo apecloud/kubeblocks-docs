@@ -1,15 +1,16 @@
 "use client";
 
 import {
+  Avatar,
   Button,
-  List,
-  ListItem,
-  ListItemIcon,
   ListItemText,
+  MenuItem,
+  MenuList,
+  Stack,
   useTheme,
 } from "@mui/material";
 import { DropDown } from "../DropDown";
-import { LinkListItemButton } from "../Link";
+import { Link } from "../Link";
 import { useI18n } from "@/locales/client";
 import {
   CodeOutlined,
@@ -18,6 +19,7 @@ import {
   TerminalOutlined,
 } from "@mui/icons-material";
 import { useState } from "react";
+import uniqolor from "uniqolor";
 
 export default function DocumentationNav() {
   const [open, setOpen] = useState<boolean>(false);
@@ -28,24 +30,24 @@ export default function DocumentationNav() {
       title: t("navigation.user"),
       description: t("navigation.user"),
       icon: <SupervisorAccountOutlined />,
-      href: "/docs/preview/user_docs/overview/introduction",
+      href: "/docs/preview/user_docs",
     },
     {
       title: t("navigation.developer"),
       description: t("navigation.developer"),
       icon: <CodeOutlined />,
-      href: "/docs/preview/developer_docs/overview",
+      href: "/docs/preview/developer_docs",
     },
     {
       title: "KubeBlocks CLI",
       description: "KubeBlocks CLI",
       icon: <TerminalOutlined />,
-      href: "/docs/preview/cli/cli",
+      href: "/docs/preview/cli",
     },
   ];
   return (
     <DropDown
-      offset={[0, 14]}
+      offset={[0, 15]}
       trigger={
         <Button
           color="inherit"
@@ -54,7 +56,6 @@ export default function DocumentationNav() {
             bgcolor: open ? theme.palette.action.hover : "transparent",
             "&:hover": { bgcolor: theme.palette.action.hover },
           }}
-          size="large"
           endIcon={
             <ExpandMore
               sx={{
@@ -73,17 +74,32 @@ export default function DocumentationNav() {
       sx={{ width: 280 }}
       placement="bottom-start"
     >
-      <List>
-        
+      <MenuList dense>
         {documentations.map((item, index) => (
-          <ListItem key={index} disablePadding>
-            <LinkListItemButton href={item.href}>
-              <ListItemIcon>{item.icon}</ListItemIcon>
+          <MenuItem
+            key={index}
+            component={Link}
+            href={item.href}
+            sx={{ paddingBlock: 1.2 }}
+          >
+            <Stack direction="row" gap={1.5} alignItems="center">
+              <Avatar
+                variant="rounded"
+                sx={{
+                  bgcolor: uniqolor(item.href).color,
+                  width: 32,
+                  height: 32,
+                  color: '#FFF',
+                }}
+              >
+                {item.icon}
+              </Avatar>
+
               <ListItemText>{item.title}</ListItemText>
-            </LinkListItemButton>
-          </ListItem>
+            </Stack>
+          </MenuItem>
         ))}
-      </List>
+      </MenuList>
     </DropDown>
   );
 }

@@ -2,7 +2,7 @@ import path from "path";
 import fs from "fs";
 import readYamlFile from "read-yaml-file";
 import grayMatter from "gray-matter";
-import { SidebarMenuItem } from '@/components/SidebarMenu';
+import { SidebarMenuItem } from "@/components/SidebarMenu";
 
 export const ROOT_DIR = process.cwd();
 export const DOCS_DIR = path.join(ROOT_DIR, "docs");
@@ -14,7 +14,23 @@ export type MarkdownPageParams = {
   paths?: string[];
 };
 
-export const getMarkDownSideBar = async (dir: string) => {
+export const getFirstMenuItem = (
+  items?: SidebarMenuItem[]
+): SidebarMenuItem | undefined => {
+  let result;
+  try {
+    items?.forEach((item) => {
+      result = item.href ? item : getFirstMenuItem(item.children);
+      if (result) throw new Error();
+    });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (err) {}
+  return result;
+};
+
+export const getMarkDownSideBar = async (
+  dir: string
+): Promise<SidebarMenuItem[]> => {
   const fns: Promise<SidebarMenuItem>[] = [];
   fs.readdirSync(dir).forEach((child) => {
     const filepath = path.join(dir, child);
@@ -24,7 +40,9 @@ export const getMarkDownSideBar = async (dir: string) => {
       fns.push(
         new Promise(async (resolve) => {
           const metadata = await getMarkDownMetaData(filepath);
-          const urlPath = filepath.replace(DOCS_DIR, "").replace(MARKDOWN_SUEFIX_REG, "");
+          const urlPath = filepath
+            .replace(DOCS_DIR, "")
+            .replace(MARKDOWN_SUEFIX_REG, "");
           Object.assign(item, {
             position: metadata.sidebar_position || metadata.position || 0,
             label: metadata.title || metadata.sidebar_label,

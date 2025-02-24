@@ -1,6 +1,6 @@
 import { Box, Stack, Toolbar } from "@mui/material";
 import fs from "fs";
-import { SidebarMenu } from "@/components/SidebarMenu";
+import { SidebarMenu, SidebarMenuItem } from "@/components/SidebarMenu";
 import path from "path";
 import { getCurrentLocale } from "@/locales/server";
 import {
@@ -22,8 +22,18 @@ export default async function DocsLayout({
 }>) {
   const currentLocale = await getCurrentLocale();
   const { version, category } = await params;
+  
   const dir = path.join(DOCS_DIR, currentLocale, version, category);
-  const menu = fs.existsSync(dir) ? await getMarkDownSideBar(dir) : [];
+  const defaultEnDir = path.join(DOCS_DIR, "en", version, category);
+
+  let menu: SidebarMenuItem[] = [];
+
+  if (fs.existsSync(dir)) {
+    menu = await getMarkDownSideBar(dir);
+  } else if (fs.existsSync(defaultEnDir)) {
+    menu = await getMarkDownSideBar(defaultEnDir);
+  }
+
   return (
     <>
       {menu.length ? (

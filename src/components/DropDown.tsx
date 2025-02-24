@@ -65,7 +65,7 @@ export const DropDown = ({
         {({ TransitionProps }) => (
           <Transitions
             type="grow"
-            position="top-right"
+            position="top-left"
             in={open}
             {...TransitionProps}
           >

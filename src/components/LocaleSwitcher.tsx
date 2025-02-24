@@ -1,5 +1,5 @@
 "use client";
-import { IconButton, ListItemIcon, MenuItem, MenuList } from "@mui/material";
+import { IconButton, ListItemIcon, ListItemText, MenuItem, MenuList } from "@mui/material";
 import { useChangeLocale, useCurrentLocale } from "../locales/client";
 import { Check, Language } from "@mui/icons-material";
 import { DropDown } from "./DropDown";
@@ -19,22 +19,22 @@ export default function LocaleSwitcher() {
 
   return (
     <DropDown
-      offset={[0, 16]}
+      offset={[0, 14]}
       trigger={
         <IconButton>
           <Language />
         </IconButton>
       }
     >
-      <MenuList>
+      <MenuList dense>
         {Object.keys(lang).map((l) => {
           const locale = l as LangType;
           return (
-            <MenuItem key={locale} onClick={() => changeLocale(locale)}>
+            <MenuItem key={locale} onClick={() => changeLocale(locale)} sx={{ paddingBlock: 1.2 }}>
               <ListItemIcon>
-                {currentLocale === locale && <Check />}
+                <Check sx={{ visibility: currentLocale === locale ? "visible" : "hidden" }} />
               </ListItemIcon>
-              {lang[locale]}
+              <ListItemText>{lang[locale]}</ListItemText>
             </MenuItem>
           );
         })}

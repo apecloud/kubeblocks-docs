@@ -22,25 +22,27 @@ type SidebatMenuItemProps = {
   children?: React.ReactNode;
 };
 
-const checkOpen = (item: SidebarMenuItem, pathname: string): boolean => {
-  const child = item.children?.find((d) => {
-    return (
-      (d.href && d.href === pathname) || checkOpen(d, pathname)
-    );
-  });
+const isActive = (pathname: string, href?: string) => {
+  return href && href === pathname.replace(/^\/(en|zh)/, "");
+};
+
+const checkOpen = (pathname: string, item: SidebarMenuItem): boolean => {
+  const child = item.children?.find(
+    (d) => isActive(pathname, d.href) || checkOpen(pathname, d)
+  );
   return Boolean(child);
 };
 
 export function SidebarMenuItem({ level = 1, item }: SidebatMenuItemProps) {
   const pathname = usePathname();
-  const [open, setOpen] = useState<boolean>(false);
+  const [open, setOpen] = useState<boolean>(checkOpen(pathname, item));
   const theme = useTheme();
   const sx = {
     display: "block",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-    padding: 1,
+    padding: 1.2,
     marginBlock: "1px",
     paddingLeft: level * 2,
     cursor: "pointer",
@@ -56,7 +58,7 @@ export function SidebarMenuItem({ level = 1, item }: SidebatMenuItemProps) {
   };
 
   useEffect(() => {
-    const isOpen = checkOpen(item, pathname);
+    const isOpen = checkOpen(pathname, item);
     if (isOpen) {
       setOpen(true);
     }
@@ -68,7 +70,7 @@ export function SidebarMenuItem({ level = 1, item }: SidebatMenuItemProps) {
         {item.href && _.isEmpty(item.children) ? (
           <Tooltip title={item.description} placement="right" arrow>
             <Link
-              className={ item.href === pathname ? "active" : undefined}
+              className={isActive(pathname, item.href) ? "active" : undefined}
               href={item.href}
               sx={sx}
               underline="none"

@@ -1,23 +1,88 @@
 "use client";
 
 import {
+  Avatar,
+  Box,
   Button,
+  Grid2 as Grid,
+  ListItemText,
+  MenuItem,
+  Stack,
   useTheme,
 } from "@mui/material";
 import { DropDown } from "../DropDown";
 import { useI18n } from "@/locales/client";
-import {
-  ExpandMore,
-} from "@mui/icons-material";
+import { ExpandMore, Storage } from "@mui/icons-material";
 import { useState } from "react";
+import uniqolor from "uniqolor";
+import { Link } from "../Link";
 
 export default function DatabasesNav() {
   const [open, setOpen] = useState<boolean>(false);
   const t = useI18n();
   const theme = useTheme();
+
+  const databases = [
+    {
+      title: "ApeCloud MySQL",
+      icon: <Storage />,
+      href: "/docs/preview/kubeblocks-for-apecloud-mysql",
+    },
+    {
+      title: "MySQL Community Edition",
+      icon: <Storage />,
+      href: "/docs/preview/kubeblocks-for-mysql-community-edition",
+    },
+    {
+      title: "Kafka",
+      icon: <Storage />,
+      href: "/docs/preview/kubeblocks-for-kafka",
+    },
+    {
+      title: "Milvus",
+      icon: <Storage />,
+      href: "/docs/preview/kubeblocks-for-milvus",
+    },
+    {
+      title: "MongoDB",
+      icon: <Storage />,
+      href: "/docs/preview/kubeblocks-for-mongodb",
+    },
+    {
+      title: "PostgreSQL",
+      icon: <Storage />,
+      href: "/docs/preview/kubeblocks-for-postgresql",
+    },
+    {
+      title: "Pulsar",
+      icon: <Storage />,
+      href: "/docs/preview/kubeblocks-for-pulsar",
+    },
+    {
+      title: "Qdrant",
+      icon: <Storage />,
+      href: "/docs/preview/kubeblocks-for-qdrant",
+    },
+    {
+      title: "RabbitMQ",
+      icon: <Storage />,
+      href: "/docs/preview/kubeblocks-for-rabbitmq",
+    },
+    {
+      title: "StarRocks",
+      icon: <Storage />,
+      href: "/docs/preview/kubeblocks-for-starrocks",
+    },
+    {
+      title: "ElasticSearch",
+      icon: <Storage />,
+      href: "/docs/preview/kubeblocks-for-elasticsearch",
+    },
+  ];
+
   return (
     <DropDown
-      offset={[0, 14]}
+      offset={[0, 15]}
       trigger={
         <Button
           color="inherit"
@@ -26,7 +91,6 @@ export default function DatabasesNav() {
             bgcolor: open ? theme.palette.action.hover : "transparent",
             "&:hover": { bgcolor: theme.palette.action.hover },
           }}
-          size="large"
           endIcon={
             <ExpandMore
               sx={{
@@ -42,10 +106,38 @@ export default function DatabasesNav() {
         </Button>
       }
       onChange={(v) => setOpen(v)}
-      sx={{ width: 280 }}
+      sx={{ width: 760 }}
       placement="bottom-start"
     >
-      asdasd
+      <Box p={1.5}>
+        <Grid container spacing={1}>
+          {databases.map((item, index) => (
+            <Grid size={4} key={index}>
+              <MenuItem
+                dense
+                component={Link}
+                href={item.href}
+                sx={{ borderRadius: 1, padding: 1 }}
+              >
+                <Stack direction="row" gap={1.5} alignItems="center">
+                  <Avatar
+                    variant="rounded"
+                    sx={{
+                      bgcolor: uniqolor(item.href).color,
+                      width: 32,
+                      height: 32,
+                      color: '#FFF',
+                    }}
+                  >
+                    {item.icon}
+                  </Avatar>
+                  <ListItemText>{item.title}</ListItemText>
+                </Stack>
+              </MenuItem>
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
     </DropDown>
   );
 }
