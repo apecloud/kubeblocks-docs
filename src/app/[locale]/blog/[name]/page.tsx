@@ -36,8 +36,6 @@ export default async function BlogDetail({
   const defaultRelativeEnPath = path.join("en", "blogs");
   const defaultMdxEnPath = path.join(DOCS_DIR, `${defaultRelativeEnPath}/${name}.mdx`);
 
-  console.log(defaultMdxEnPath)
-
   if (fs.existsSync(mdxPath)) {
     const { default: MDXContent } = await import(
       `@docs/${relativePath}/${name}.mdx`
