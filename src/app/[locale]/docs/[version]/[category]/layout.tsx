@@ -19,7 +19,7 @@ export default async function DocsLayout({
 }>) {
   const currentLocale = await getCurrentLocale();
   const { version, category } = await params;
-  
+
   const dir = path.join(DOCS_DIR, currentLocale, version, category);
   const defaultEnDir = path.join(DOCS_DIR, "en", version, category);
 

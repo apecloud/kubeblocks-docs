@@ -1,5 +1,3 @@
-import { getCurrentLocale } from "@/locales/server";
-
 import { notFound, redirect } from "next/navigation";
 import path from "path";
 import fs from "fs";
@@ -13,19 +11,22 @@ import {
 import _ from "lodash";
 import { SidebarMenuItem } from "@/components/SidebarMenu";
 
+export async function generateStaticParams() {
+  return [];
+}
+
 export default async function MarkdownPage({
   params,
 }: {
   params: Promise<MarkdownPageParams>;
 }) {
-  const currentLocale = await getCurrentLocale();
-  const { version, category, paths = [] } = await params;
+  const { locale, version, category, paths = [] } = await params;
 
   /**
    * redirect to default document when docs path is empty;
    */
   if (_.isEmpty(paths)) {
-    const dir = path.join(DOCS_DIR, currentLocale, version, category);
+    const dir = path.join(DOCS_DIR, locale, version, category);
     const defaultEnDir = path.join(DOCS_DIR, "en", version, category);
     let menu: SidebarMenuItem[] = [];
     if (fs.existsSync(dir)) {
@@ -42,7 +43,7 @@ export default async function MarkdownPage({
   /**
    * render markdown.
    */
-  const relativePath = path.join(currentLocale, version, category, ...paths);
+  const relativePath = path.join(locale, version, category, ...paths);
   const mdxPath = path.join(DOCS_DIR, `${relativePath}.mdx`);
 
   const defaultRelativeEnPath = path.join("en", version, category, ...paths);
@@ -66,10 +67,9 @@ export async function generateMetadata({
 }: {
   params: Promise<MarkdownPageParams>;
 }) {
-  const currentLocale = await getCurrentLocale();
-  const { version, category, paths = [] } = await params;
+  const { locale, version, category, paths = [] } = await params;
   const mdxPath =
-    path.join(DOCS_DIR, currentLocale, version, category, ...paths) + ".mdx";
+    path.join(DOCS_DIR, locale, version, category, ...paths) + ".mdx";
 
   const defaultDdxEnPath =
     path.join(DOCS_DIR, "en", version, category, ...paths) + ".mdx";

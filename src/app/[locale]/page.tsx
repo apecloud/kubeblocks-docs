@@ -6,7 +6,11 @@ import Features from "./features";
 import Contact from "./contact";
 import BlogsPreview from "./blogs-preview";
 import { getBlogs } from "@/utils/markdown";
+import { getStaticParams } from "@/locales/server";
 
+export function generateStaticParams() {
+  return getStaticParams();
+}
 
 export default async function HomePage({
   params,
