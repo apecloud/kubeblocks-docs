@@ -1,6 +1,27 @@
-import { getScopedI18n } from "@/locales/server";
+import Footer from "@/components/Footer";
+import {
+  Box,
+  Divider,
+} from "@mui/material";
+import WhyNeedKubeBlocks from "./why-need-kubeblocks";
+import Banner from "./banner";
+import Features from "./features";
+import Contact from "./contact";
 
-export default async function Home() {
-  const t = await getScopedI18n("HomePage");
-  return <h1>{t("title")}</h1>;
+export default function HomePage() {
+
+
+  return (
+    <>
+      <Box style={{ minHeight: "calc(100vh - 265px)" }}>
+        <Banner />
+        <Divider />
+        <WhyNeedKubeBlocks />
+
+        <Features />
+        <Contact />
+      </Box>
+      <Footer />
+    </>
+  );
 }

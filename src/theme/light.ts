@@ -9,7 +9,7 @@ export default createTheme({
   palette: {
     mode: "light",
     primary: {
-      main: "#7c48ff",
+      main: "#0165CB",
     },
     background: {
       default: "#FFF",
