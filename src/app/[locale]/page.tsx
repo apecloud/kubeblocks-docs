@@ -7,7 +7,6 @@ import Contact from "./contact";
 import BlogsPreview from "./blogs-preview";
 import { getBlogs } from "@/utils/markdown";
 
-import { setStaticParamsLocale } from "next-international/server";
 
 export default async function HomePage({
   params,
@@ -15,7 +14,6 @@ export default async function HomePage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  setStaticParamsLocale(locale);
 
   const blogs = await getBlogs(locale);
   return (

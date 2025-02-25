@@ -13,15 +13,15 @@ import {
   Typography,
 } from "@mui/material";
 import { Link } from "@/components/Link";
-import { setStaticParamsLocale } from 'next-international/server'
+import { getStaticParams } from "@/locales/server";
+
+
+export function generateStaticParams() {
+  return getStaticParams();
+}
 
 export default async function BlogsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-
-  console.log(locale, 123123123123123)
-
-  setStaticParamsLocale(locale)
-  
   const blogs = await getBlogs(locale);
 
   return (

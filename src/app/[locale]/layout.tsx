@@ -13,7 +13,7 @@ import {
 import ScrollTop from "@/components/ScrollTop";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
-import { getCurrentLocale, getI18n, getStaticParams } from "@/locales/server";
+import { getI18n } from "@/locales/server";
 import I18nProvider from "@/components/I18nProvider";
 import { NextThemeProvider } from "@/components/NextThemeProvider";
 import { GitHub, LaunchOutlined } from "@mui/icons-material";
@@ -21,6 +21,7 @@ import Logo from "@/components/Logo";
 import DocumentationNav from "@/components/Navigation/Documentation";
 import DatabasesNav from "@/components/Navigation/Databases";
 import { Link } from "@/components/Link";
+import { setStaticParamsLocale } from "next-international/server";
 
 import "highlight.js/styles/github-dark.css";
 import "./global.css";
@@ -30,22 +31,22 @@ export const metadata: Metadata = {
   description: "Run Any Database on Kubernetes",
 };
 
-export function generateStaticParams() {
-  return getStaticParams()
-}
-
 export default async function RootLayout({
   children,
+  params,
 }: {
   children: React.ReactNode;
+  params: Promise<{ locale: "zh" | "en" }>;
 }) {
+  const { locale } = await params;
+  setStaticParamsLocale(locale);
+
   const t = await getI18n();
-  const currentLocale = await getCurrentLocale();
 
   return (
-    <html lang={currentLocale} suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <body>
-        <I18nProvider locale={currentLocale}>
+        <I18nProvider locale={locale}>
           <AppRouterCacheProvider options={{ key: "css" }}>
             <NextThemeProvider>
               <MuiThemeProvider>

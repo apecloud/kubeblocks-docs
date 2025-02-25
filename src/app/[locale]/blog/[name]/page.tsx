@@ -1,15 +1,14 @@
-import { getCurrentLocale } from "@/locales/server";
+
 import { DOCS_DIR } from "@/utils/markdown";
 import { notFound } from "next/navigation";
 import path from "path";
 import fs from "fs";
 import { Box } from "@mui/material";
 
-export default async function BlogDetail({ params }: { params: Promise<{ name: string }> }) {
-  const currentLocale = await getCurrentLocale();
-  const { name } = await params;
+export default async function BlogDetail({ params }: { params: Promise<{ name: string, locale: string }> }) {
+  const { name, locale } = await params;
 
-  const relativePath = path.join(currentLocale, "blogs");
+  const relativePath = path.join(locale, "blogs");
   const mdxPath = path.join(DOCS_DIR, `${relativePath}/${name}.mdx`);
 
   const defaultRelativeEnPath = path.join("en", "blogs");
