@@ -1,7 +1,10 @@
 "use client";
 import {
   CableOutlined,
+  Diversity2Outlined,
   ExtensionOutlined,
+  HubOutlined,
+  NetworkCheckOutlined,
   WebhookOutlined,
 } from "@mui/icons-material";
 import { alpha, Avatar, Stack } from "@mui/material";
@@ -15,7 +18,25 @@ import {
   useTheme,
 } from "@mui/material";
 
-const data = [
+const mainData = [
+  {
+    title: "High Availability",
+    icon: <NetworkCheckOutlined sx={{ color: "#FFF" }} />,
+    description:
+      "KubeBlocks provides a decentralized, Kubernetes-native high availability architecture, perfect for managing large-scale database clusters, particularly MySQL and Redis primary-replica clusters. Its design enhances fault tolerance. Additionally, its lightweight nature reduces resource strain, boosting overall efficiency. This makes KubeBlocks highly effective for handling extensive database clusters.",
+  },
+  {
+    title: "Flexible Cluster Topology",
+    icon: <HubOutlined sx={{ color: "#FFF" }} />,
+    description:
+      "KubeBlocks' modular design allows you to customize cluster topologies according to your needs. This flexibility lets you create database clusters tailored to specific requirements, enhancing system adaptability and functionality. For instance, when creating a Redis cluster, you can choose from single-node, primary-replica, and Redis Cluster topologies, and configure them with your preferred proxy components.",
+  },
+  {
+    title: "Versatile Network Modes",
+    icon: <Diversity2Outlined sx={{ color: "#FFF" }} />,
+    description:
+      "KubeBlocks offers multiple network modes, allowing you to select network configurations when creating database clusters. For example, MongoDB can be launched using host or container network modes. This flexibility ensures efficient communication and performance optimization across various environments, adapting to complex network architectures and requirements.",
+  },
   {
     title: "Beyond StatefulSet",
     icon: <WebhookOutlined sx={{ color: "#FFF" }} />,
@@ -55,7 +76,7 @@ export default function WhyNeedKubeBlocks() {
   return (
     <Box
       sx={{
-        paddingBlock: 8,
+        paddingBlock: 10,
         background: alpha(theme.palette.background.paper, 0.2),
       }}
     >
@@ -68,24 +89,26 @@ export default function WhyNeedKubeBlocks() {
             Run Databases on Kubernetes? Run with KubeBlocks.
           </Typography>
         </Box>
-        <Stack spacing={4}>
-          {data.map((item, index) => (
+
+        <Stack mb={4} spacing={3}>
+          {mainData.map((item, index) => (
             <Card
               key={index}
               sx={{
                 borderRadius: 2,
                 padding: 2,
                 border: 1,
-                borderColor: 'divider',
+                borderColor: "divider",
                 boxShadow: `none`,
+                background: "none",
+                "&:hover": {
+                  background: theme.palette.divider,
+                },
               }}
             >
               <CardContent>
                 <Stack direction="row" alignItems="center" spacing={2} mb={2}>
-                  <Avatar
-                    variant="rounded"
-                    sx={{ bgcolor: theme.palette.primary.main }}
-                  >
+                  <Avatar sx={{ bgcolor: theme.palette.primary.main }}>
                     {item.icon}
                   </Avatar>
                   <Typography variant="h5">{item.title}</Typography>

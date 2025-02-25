@@ -1,0 +1,140 @@
+"use client";
+import {
+  Box,
+  BoxProps,
+  Card,
+  CardActionArea,
+  CardContent,
+  CardMedia,
+  Container,
+  Tooltip,
+  Typography,
+  useTheme,
+  alpha,
+  Divider,
+} from "@mui/material";
+import Slider from "react-slick";
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
+import { Link } from "@/components/Link";
+import { KeyboardArrowLeft, KeyboardArrowRight } from "@mui/icons-material";
+
+const NextArrow = (props: BoxProps) => (
+  <Box
+    className={props.className}
+    onClick={props.onClick}
+    sx={{
+      "&:before": {
+        display: "none",
+      },
+    }}
+  >
+    <KeyboardArrowRight color="action" />
+  </Box>
+);
+const PrevArrow = (props: BoxProps) => (
+  <Box
+    className={props.className}
+    onClick={props.onClick}
+    sx={{
+      "&:before": {
+        display: "none",
+      },
+    }}
+  >
+    <KeyboardArrowLeft color="action" />
+  </Box>
+);
+
+export default function BlogsPreview({ blogs }: { blogs: any[] }) {
+  const theme = useTheme();
+  const settings = {
+    dots: false,
+    speed: 600,
+    slidesToShow: 4,
+    slidesToScroll: 4,
+    autoplay: true,
+    nextArrow: <NextArrow />,
+    prevArrow: <PrevArrow />,
+    appendDots: (dots: any) => <Box component="ul">{dots}</Box>,
+    customPaging: () => (
+      <Box
+        component={"button"}
+        sx={{
+          "&:before": {
+            color: `${theme.palette.text.disabled} !important`,
+          },
+        }}
+      />
+    ),
+    responsive: [
+      {
+        breakpoint: 800,
+        settings: {
+          slidesToShow: 1,
+          slidesToScroll: 1,
+          initialSlide: 1,
+        },
+      },
+    ],
+  };
+  return (
+    <Box sx={{ paddingBlock: 10, background: alpha(theme.palette.background.paper, 0.2), }}>
+      <Container>
+        <Box textAlign="center" mb={4}>
+          <Typography variant="h4">Explore KubeBlocks Insights</Typography>
+        </Box>
+        <Box className="slider-container">
+          <Slider {...settings}>
+            {blogs.map((blog, index) => (
+              <Box key={index} sx={{ padding: 1 }}>
+                <Tooltip title={blog.title} placement="top" arrow>
+                  <Card
+                    sx={{
+                      boxShadow: "none",
+                      border: 1,
+                      borderColor: "divider",
+                    }}
+                  >
+                    <CardActionArea
+                      component={Link}
+                      href={`/blog/${blog.name}`}
+                      underline="none"
+                      target="_blank"
+                    >
+                      <CardMedia
+                        component="img"
+                        height="140"
+                        image={blog.image}
+                        alt={blog.title}
+                      />
+                      <CardContent>
+                        <Typography
+                          gutterBottom
+                          sx={{
+                            overflow: "hidden",
+                            whiteSpace: "nowrap",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {blog.title}
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          color="textSecondary"
+                          sx={{ height: 40, overflow: "hidden" }}
+                        >
+                          {blog.description}
+                        </Typography>
+                      </CardContent>
+                    </CardActionArea>
+                  </Card>
+                </Tooltip>
+              </Box>
+            ))}
+          </Slider>
+        </Box>
+      </Container>
+    </Box>
+  );
+}

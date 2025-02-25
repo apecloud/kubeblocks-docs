@@ -87,7 +87,7 @@ export default function DocumentationNav() {
               <Avatar
                 variant="rounded"
                 sx={{
-                  bgcolor: uniqolor(item.href).color,
+                  bgcolor: theme.palette.primary.main,
                   width: 32,
                   height: 32,
                   color: '#FFF',

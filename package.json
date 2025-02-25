@@ -34,6 +34,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-scroll": "^1.9.3",
+    "react-slick": "^0.30.3",
     "read-yaml-file": "^2.1.0",
     "rehype-highlight": "^7.0.2",
     "remark-directive": "^3.0.1",
@@ -43,6 +44,7 @@
     "remark-github-admonitions-to-directives": "^2.1.0",
     "remark-heading-id": "^1.0.1",
     "remark-mdx-frontmatter": "^5.0.0",
+    "slick-carousel": "^1.8.1",
     "uniqolor": "^1.1.1",
     "unist-util-visit": "^5.0.0"
   },
@@ -53,6 +55,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/react-slick": "^0.23.13",
     "eslint": "^9",
     "eslint-config-next": "15.1.7",
     "typescript": "^5"

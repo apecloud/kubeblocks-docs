@@ -24,8 +24,8 @@ export default function Contact() {
       sx={{
         backgroundImage: `url("${texture}"), linear-gradient(40deg, ${alpha(
           background,
-          1
-        )} 0%, ${alpha(background, 0.7)} 100%)`,
+          0.7
+        )} 0%, ${alpha(background, 1)} 100%)`,
         backgroundPosition: "center center",
         backgroundSize: "cover",
         paddingBlock: 6,
@@ -34,16 +34,14 @@ export default function Contact() {
       <Container>
         <Box>
           <Stack
-            spacing={2}
-            justifyContent="space-between"
+            spacing={4}
             alignItems="center"
-            direction="row"
           >
             <Stack flex={1}>
               <Typography variant="h4" sx={{ color }} gutterBottom>
-                Book a demo?
+                Try our services risk-free with a trial, including migration assistance and support.
               </Typography>
-              <Stack direction="row" spacing={3} alignItems="center">
+              <Stack direction="row" spacing={3} alignItems="center" sx={{ width: '100%' }} justifyContent="center">
                 <Typography sx={{ color: colorSecondary }}>MySQL</Typography>
                 <Typography sx={{ color: colorSecondary }}>
                   PostgreSQL
@@ -56,12 +54,21 @@ export default function Contact() {
             <Button
               variant="contained"
               size="large"
-              sx={{ paddingInline: 6 }}
               href="mailto:marcom@apecloud.com"
               component={Link}
               color="warning"
+              sx={{
+                border: 2,
+                borderColor: "#FFF",
+                paddingInline: 4,
+                borderRadius: 100,
+                background: 'none',
+                color: '#FFF',
+                boxShadow: 'none',
+                fontSize: '1.1em',
+              }}
             >
-              CONTACT US
+              Begin immediately, at no cost!
             </Button>
           </Stack>
         </Box>

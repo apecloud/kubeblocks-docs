@@ -4,23 +4,31 @@ import {
   AssessmentOutlined,
   AutoModeOutlined,
   BackupOutlined,
+
   ChatOutlined,
   DatasetLinkedOutlined,
   EnhancedEncryptionOutlined,
+
   MedicationLiquidOutlined,
   SecurityOutlined,
   TerminalOutlined,
+
 } from "@mui/icons-material";
 import {
+
   Box,
+
   Container,
   Grid2 as Grid,
+
   Typography,
   useTheme,
 } from "@mui/material";
 
 export default function Features() {
   const theme = useTheme();
+
+  
   const FeatureList = [
     {
       title: "Intuitive CLI",
@@ -67,17 +75,20 @@ export default function Features() {
   ];
 
   return (
-    <Box sx={{ paddingBlock: 8 }} textAlign="center">
+    <Box sx={{ paddingBlock: 10 }}>
       <Container>
-        <Typography color="primary" gutterBottom>
-          ALMOST COVERED EVERYTHING
-        </Typography>
-        <Typography variant="h4">
-          Other Amazing Features & Flexibility Provided
-        </Typography>
+        <Box textAlign="center" mb={4}>
+          <Typography color="primary" gutterBottom>
+            ALMOST COVERED EVERYTHING
+          </Typography>
+          <Typography variant="h4">
+            Other Amazing Features & Flexibility Provided
+          </Typography>
+        </Box>
+        
         <Grid
           container
-          mt={4}
+          textAlign="center"
           sx={{
             "--Grid-borderWidth": "1px",
             borderTop: "var(--Grid-borderWidth) solid",
@@ -104,7 +115,7 @@ export default function Features() {
                   background: theme.palette.divider,
                 },
                 paddingBlock: 3,
-                paddingInline: 2
+                paddingInline: 2,
               }}
             >
               <Box mb={2}>{feature.icon}</Box>
