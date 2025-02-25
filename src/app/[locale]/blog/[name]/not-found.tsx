@@ -3,8 +3,9 @@ import { getScopedI18n } from "@/locales/server";
 
 import { Result } from "@/components/Result";
 
-export default async function NotFoundPage() {
+export default async function NotFoundPage({}: { params: Promise<{ locale: string }> }) {
   const t = await getScopedI18n("404");
+
   return (
     <Result
       status="notfound"

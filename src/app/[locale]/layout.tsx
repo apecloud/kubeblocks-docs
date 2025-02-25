@@ -13,7 +13,7 @@ import {
 import ScrollTop from "@/components/ScrollTop";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
-import { getCurrentLocale, getI18n } from "@/locales/server";
+import { getCurrentLocale, getI18n, getStaticParams } from "@/locales/server";
 import I18nProvider from "@/components/I18nProvider";
 import { NextThemeProvider } from "@/components/NextThemeProvider";
 import { GitHub, LaunchOutlined } from "@mui/icons-material";
@@ -29,6 +29,10 @@ export const metadata: Metadata = {
   title: "KubeBlocks",
   description: "Run Any Database on Kubernetes",
 };
+
+export function generateStaticParams() {
+  return getStaticParams()
+}
 
 export default async function RootLayout({
   children,

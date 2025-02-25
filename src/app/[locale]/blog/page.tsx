@@ -1,4 +1,3 @@
-import { getCurrentLocale } from "@/locales/server";
 import { getBlogs } from "@/utils/markdown";
 import {
   Avatar,
@@ -14,10 +13,16 @@ import {
   Typography,
 } from "@mui/material";
 import { Link } from "@/components/Link";
+import { setStaticParamsLocale } from 'next-international/server'
 
-export default async function BlogsPage() {
-  const currentLocale = await getCurrentLocale();
-  const blogs = await getBlogs(currentLocale)
+export default async function BlogsPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+
+  console.log(locale, 123123123123123)
+
+  setStaticParamsLocale(locale)
+  
+  const blogs = await getBlogs(locale);
 
   return (
     <Grid container spacing={4}>

@@ -5,12 +5,19 @@ import Banner from "./banner";
 import Features from "./features";
 import Contact from "./contact";
 import BlogsPreview from "./blogs-preview";
-import { getCurrentLocale } from "@/locales/server";
 import { getBlogs } from "@/utils/markdown";
 
-export default async function HomePage() {
-  const currentLocale = await getCurrentLocale();
-  const blogs = await getBlogs(currentLocale);
+import { setStaticParamsLocale } from "next-international/server";
+
+export default async function HomePage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setStaticParamsLocale(locale);
+
+  const blogs = await getBlogs(locale);
   return (
     <>
       <Box style={{ minHeight: "calc(100vh - 265px)" }}>

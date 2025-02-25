@@ -5,11 +5,7 @@ import path from "path";
 import fs from "fs";
 import { Box } from "@mui/material";
 
-export default async function BlogDetail({
-  params
-}: {
-  params: Promise<{ name: string }>
-}) {
+export default async function BlogDetail({ params }: { params: Promise<{ name: string }> }) {
   const currentLocale = await getCurrentLocale();
   const { name } = await params;
 
