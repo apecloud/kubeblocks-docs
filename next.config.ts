@@ -26,7 +26,7 @@ const nextConfig: NextConfig = {
     return config;
   },
   basePath: '',
-  output: 'export',
+  // output: 'export',
 };
 
 const withMDX = createMDX({

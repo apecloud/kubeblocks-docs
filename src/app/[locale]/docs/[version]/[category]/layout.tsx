@@ -2,13 +2,13 @@ import { Box, Stack, Toolbar } from "@mui/material";
 import fs from "fs";
 import { SidebarMenu, SidebarMenuItem } from "@/components/SidebarMenu";
 import path from "path";
-import { getCurrentLocale } from "@/locales/server";
 import {
   MarkdownPageParams,
   DOCS_DIR,
   getMarkDownSideBar,
 } from "@/utils/markdown";
 import Footer from "@/components/Footer";
+import { setStaticParamsLocale } from "next-international/server";
 
 export default async function DocsLayout({
   children,
@@ -17,10 +17,10 @@ export default async function DocsLayout({
   children: React.ReactNode;
   params: Promise<MarkdownPageParams>;
 }>) {
-  const currentLocale = await getCurrentLocale();
-  const { version, category } = await params;
+  const { locale, version, category } = await params;
+  setStaticParamsLocale(locale);
 
-  const dir = path.join(DOCS_DIR, currentLocale, version, category);
+  const dir = path.join(DOCS_DIR, locale, version, category);
   const defaultEnDir = path.join(DOCS_DIR, "en", version, category);
 
   let menu: SidebarMenuItem[] = [];

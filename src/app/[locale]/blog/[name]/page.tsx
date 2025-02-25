@@ -5,7 +5,7 @@ import fs from "fs";
 import { Box } from "@mui/material";
 import { getStaticParams } from "@/locales/server";
 
-type ParamsProps = { name: string; locale: string }
+type ParamsProps = { name: string; locale: string };
 
 export async function generateStaticParams() {
   const localesParams = getStaticParams();
@@ -13,13 +13,13 @@ export async function generateStaticParams() {
   const data = await Promise.all(fns);
   const result: ParamsProps[] = [];
   localesParams.forEach((item, index) => {
-    data[index].forEach(blog => {
+    data[index].forEach((blog) => {
       result.push({
         locale: item.locale,
-        name: blog.name
-      })
-    })
-  })
+        name: blog.name,
+      });
+    });
+  });
   return result;
 }
 
@@ -34,12 +34,9 @@ export default async function BlogDetail({
   const mdxPath = path.join(DOCS_DIR, `${relativePath}/${name}.mdx`);
 
   const defaultRelativeEnPath = path.join("en", "blogs");
-  const defaultMdxEnPath = path.join(
-    DOCS_DIR,
-    "en",
-    "blogs",
-    `${relativePath}/${name}.mdx`
-  );
+  const defaultMdxEnPath = path.join(DOCS_DIR, `${defaultRelativeEnPath}/${name}.mdx`);
+
+  console.log(defaultMdxEnPath)
 
   if (fs.existsSync(mdxPath)) {
     const { default: MDXContent } = await import(
@@ -52,7 +49,7 @@ export default async function BlogDetail({
     );
   } else if (fs.existsSync(defaultMdxEnPath)) {
     const { default: MDXContent } = await import(
-      `@docs/${defaultRelativeEnPath}.mdx`
+      `@docs/${defaultRelativeEnPath}/${name}.mdx`
     );
     return (
       <Box pr="300px">
