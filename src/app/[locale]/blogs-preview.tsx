@@ -11,13 +11,13 @@ import {
   Typography,
   useTheme,
   alpha,
-  Divider,
 } from "@mui/material";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { Link } from "@/components/Link";
 import { KeyboardArrowLeft, KeyboardArrowRight } from "@mui/icons-material";
+import { BlogMetadata } from "@/utils/markdown";
 
 const NextArrow = (props: BoxProps) => (
   <Box
@@ -46,7 +46,7 @@ const PrevArrow = (props: BoxProps) => (
   </Box>
 );
 
-export default function BlogsPreview({ blogs }: { blogs: any[] }) {
+export default function BlogsPreview({ blogs }: { blogs: BlogMetadata[] }) {
   const theme = useTheme();
   const settings = {
     dots: false,
@@ -56,7 +56,7 @@ export default function BlogsPreview({ blogs }: { blogs: any[] }) {
     autoplay: true,
     nextArrow: <NextArrow />,
     prevArrow: <PrevArrow />,
-    appendDots: (dots: any) => <Box component="ul">{dots}</Box>,
+    appendDots: (dots: never) => <Box component="ul">{dots}</Box>,
     customPaging: () => (
       <Box
         component={"button"}

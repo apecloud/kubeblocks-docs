@@ -11,7 +11,6 @@ import { getBlogs } from "@/utils/markdown";
 export default async function HomePage() {
   const currentLocale = await getCurrentLocale();
   const blogs = await getBlogs(currentLocale);
-
   return (
     <>
       <Box style={{ minHeight: "calc(100vh - 265px)" }}>

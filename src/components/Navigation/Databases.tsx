@@ -14,7 +14,6 @@ import { DropDown } from "../DropDown";
 import { useI18n } from "@/locales/client";
 import { ExpandMore, Storage } from "@mui/icons-material";
 import { useState } from "react";
-import uniqolor from "uniqolor";
 import { Link } from "../Link";
 
 export default function DatabasesNav() {

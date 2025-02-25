@@ -16,7 +16,7 @@ import { SidebarMenuItem } from "@/components/SidebarMenu";
 export default async function MarkdownPage({
   params,
 }: {
-  params: MarkdownPageParams;
+  params: Promise<MarkdownPageParams>;
 }) {
   const currentLocale = await getCurrentLocale();
   const { version, category, paths = [] } = await params;

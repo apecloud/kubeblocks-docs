@@ -23,6 +23,7 @@ export default function MdxTabs({ children }: Props) {
     if (activeIndex !== -1) {
       setValue(activeIndex);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

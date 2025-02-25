@@ -19,7 +19,6 @@ import {
   TerminalOutlined,
 } from "@mui/icons-material";
 import { useState } from "react";
-import uniqolor from "uniqolor";
 
 export default function DocumentationNav() {
   const [open, setOpen] = useState<boolean>(false);

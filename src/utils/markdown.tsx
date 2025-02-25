@@ -10,6 +10,7 @@ export const DOCS_DIR = path.join(ROOT_DIR, "docs");
 export const MARKDOWN_SUEFIX_REG = /\.(md|mdx)$/;
 
 export type MarkdownPageParams = {
+  locale: string;
   version: string;
   category: string;
   paths?: string[];
@@ -87,7 +88,20 @@ export const getMarkDownMetaData = async (filepath: string) => {
   }
 };
 
-export const getBlogs = async (currentLocale: string) => {
+export type BlogMetadata = {
+  name: string,
+  title: string,
+  description: string,
+  date: string,
+  image: string,
+  datetime: string,
+  authors?: {
+    image_url: string,
+    name: string,
+  }
+}
+
+export const getBlogs = async (currentLocale: string): Promise<BlogMetadata[]> => {
   let blogsDir = path.join(DOCS_DIR, currentLocale, "blogs");
   if (!fs.existsSync(blogsDir)) {
     blogsDir = path.join(DOCS_DIR, "en", "blogs");
@@ -100,7 +114,7 @@ export const getBlogs = async (currentLocale: string) => {
   const blogs = (
     await Promise.all(
       files.map(async (file) => {
-        const data = await getMarkDownMetaData(path.join(blogsDir, file));
+        const data = (await getMarkDownMetaData(path.join(blogsDir, file))) as BlogMetadata;
         data.name = file.replace(/\.mdx$/, "");
         return data;
       })
