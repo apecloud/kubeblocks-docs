@@ -3,6 +3,7 @@ import fs from "fs";
 import readYamlFile from "read-yaml-file";
 import grayMatter from "gray-matter";
 import { SidebarMenuItem } from "@/components/SidebarMenu";
+import moment from "moment";
 
 export const ROOT_DIR = process.cwd();
 export const DOCS_DIR = path.join(ROOT_DIR, "docs");
@@ -23,7 +24,7 @@ export const getFirstMenuItem = (
       result = item.href ? item : getFirstMenuItem(item.children);
       if (result) throw new Error();
     });
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (err) {}
   return result;
 };
@@ -84,4 +85,32 @@ export const getMarkDownMetaData = async (filepath: string) => {
   } else {
     return {};
   }
+};
+
+export const getBlogs = async (currentLocale: string) => {
+  let blogsDir = path.join(DOCS_DIR, currentLocale, "blogs");
+  if (!fs.existsSync(blogsDir)) {
+    blogsDir = path.join(DOCS_DIR, "en", "blogs");
+  }
+  moment.locale(currentLocale);
+  const files = fs
+    .readdirSync(blogsDir)
+    .filter((file) => file.endsWith(".mdx"));
+
+  const blogs = (
+    await Promise.all(
+      files.map(async (file) => {
+        const data = await getMarkDownMetaData(path.join(blogsDir, file));
+        data.name = file.replace(/\.mdx$/, "");
+        return data;
+      })
+    )
+  )
+    .map((blog) => {
+      blog.datetime = moment(blog.date).format("LL");
+      return blog;
+    })
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  return blogs;
 };

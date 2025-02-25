@@ -39,7 +39,7 @@ export default function Contact() {
           >
             <Stack flex={1}>
               <Typography variant="h4" sx={{ color }} gutterBottom>
-                Try our services risk-free with a trial, including migration assistance and support.
+              Get started with KubeBlocks today, with risk-free trial and migration support.
               </Typography>
               <Stack direction="row" spacing={3} alignItems="center" sx={{ width: '100%' }} justifyContent="center">
                 <Typography sx={{ color: colorSecondary }}>MySQL</Typography>
@@ -68,7 +68,7 @@ export default function Contact() {
                 fontSize: '1.1em',
               }}
             >
-              Begin immediately, at no cost!
+              Start Now, at No Cost!
             </Button>
           </Stack>
         </Box>
