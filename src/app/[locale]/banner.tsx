@@ -8,7 +8,7 @@ export default function Banner() {
   return (
     <Box
       sx={{
-        backgroundImage: `url("/pages/home-rectangles.svg")`,
+        backgroundImage: `url("/site/home-rectangles.svg")`,
         backgroundPosition: "center center",
         backgroundRepeat: "no-repeat",
         paddingBlock: 14,

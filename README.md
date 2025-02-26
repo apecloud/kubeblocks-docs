@@ -1,36 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Introduction
+
+This repo contains the source code of kubeblocks docs. It's built by [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
+UI framework uses [MUI](https://mui.com/material-ui/all-components/), you can use MUI components directly in mdx documents.
+
 
 ## Getting Started
+
+Requirements:
+
+* Install [Node.js](https://nodejs.org/en/download/) version >= 20.0.0, which can be checked by running `node -v`).
+* yarn
 
 First, run the development server:
 
 ```bash
-npm run dev
-# or
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+You can start editing the docs by modifying `/docs`. The page auto-updates as you edit the file.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Learn More
+## The structure of files
 
-To learn more about Next.js, take a look at the following resources:
+```
+kubeblocks-docs
+└─blogs
+│  └─en
+│  │  │ blog_1.mdx
+│  │  │ blog_2.mdx
+│  └─zh
+│     │ blog_1.mdx
+│     │ ...
+│
+└─docs
+│  └─ en
+│  │  └─ preview
+│  │  │    └─<topbar_category>
+│  │  │        └─<sidebar_menu_1>
+│  │  │        │    │ doc_1.mdx
+│  │  │        │    │ doc_2.mdx
+│  │  │        └─<sidebar_menu_2>
+│  │  │             │ doc_1.mdx
+│  │  │             │ doc_2.mdx
+│  │  │   
+│  │  └─ release-0.9
+|  |
+│  └── zh
+│      └─ preview
+│      └─ release-0.9
+│ 
+└─publics
+│   └──img                        # markdown assets
+│
+└─src                             # source code for enginer
+│   └─app
+│   └─components
+│   └─locales
+|   └─theme
+│   └─...
+│
+│ README.md
+│ packages.json
+│ next.config.ts
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deploy
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+yarn build
+yarn start
+```
 
-## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+docker run -p 3000:3000 apecloud/kubeblocks-docs@latest
+```
