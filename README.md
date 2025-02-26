@@ -75,7 +75,7 @@ yarn build
 yarn start
 ```
 
-
-```
+```bash
+make docker-build TAG=latest
 docker run -p 3000:3000 apecloud/kubeblocks-docs@latest
 ```

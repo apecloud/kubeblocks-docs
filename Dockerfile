@@ -14,5 +14,5 @@ EXPOSE 3000
 
 # server.js is created by next build from the standalone output
 # https://nextjs.org/docs/pages/api-reference/config/next-config-js/output
-CMD ["node", "server.js"]
+CMD ["nohup", "node", "server.js >> app.log 2>&1 &"]
 
