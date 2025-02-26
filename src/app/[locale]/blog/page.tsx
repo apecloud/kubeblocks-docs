@@ -15,7 +15,6 @@ import {
 import { Link } from "@/components/Link";
 import { getStaticParams } from "@/locales/server";
 
-
 export function generateStaticParams() {
   return getStaticParams();
 }

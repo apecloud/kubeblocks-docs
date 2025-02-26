@@ -1,4 +1,4 @@
-import { DOCS_DIR, getBlogs } from "@/utils/markdown";
+import { BLOGS_DIR, getBlogs } from "@/utils/markdown";
 import { notFound } from "next/navigation";
 import path from "path";
 import fs from "fs";
@@ -30,25 +30,19 @@ export default async function BlogDetail({
 }) {
   const { name, locale } = await params;
 
-  const relativePath = path.join(locale, "blogs");
-  const mdxPath = path.join(DOCS_DIR, `${relativePath}/${name}.mdx`);
-
-  const defaultRelativeEnPath = path.join("en", "blogs");
-  const defaultMdxEnPath = path.join(DOCS_DIR, `${defaultRelativeEnPath}/${name}.mdx`);
+  const mdxPath = path.join(BLOGS_DIR, locale, `${name}.mdx`);
+  const defaultMdxEnPath = path.join(BLOGS_DIR, 'en', `${name}.mdx`);
 
   if (fs.existsSync(mdxPath)) {
-    const { default: MDXContent } = await import(
-      `@docs/${relativePath}/${name}.mdx`
-    );
+    const { default: MDXContent } = await import(`@blogs/${locale}/${name}.mdx`);
     return (
       <Box pr="300px">
         <MDXContent />
       </Box>
     );
   } else if (fs.existsSync(defaultMdxEnPath)) {
-    const { default: MDXContent } = await import(
-      `@docs/${defaultRelativeEnPath}/${name}.mdx`
-    );
+    const _locale = 'en';
+    const { default: MDXContent } = await import(`@blogs/${_locale}/${name}.mdx`);
     return (
       <Box pr="300px">
         <MDXContent />

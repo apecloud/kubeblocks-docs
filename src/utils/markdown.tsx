@@ -7,6 +7,8 @@ import moment from "moment";
 
 export const ROOT_DIR = process.cwd();
 export const DOCS_DIR = path.join(ROOT_DIR, "docs");
+export const BLOGS_DIR = path.join(ROOT_DIR, "blogs");
+
 export const MARKDOWN_SUEFIX_REG = /\.(md|mdx)$/;
 
 export type MarkdownPageParams = {
@@ -101,12 +103,12 @@ export type BlogMetadata = {
   }
 }
 
-export const getBlogs = async (currentLocale: string): Promise<BlogMetadata[]> => {
-  let blogsDir = path.join(DOCS_DIR, currentLocale, "blogs");
+export const getBlogs = async (locale: string): Promise<BlogMetadata[]> => {
+  let blogsDir = path.join(BLOGS_DIR, locale);
   if (!fs.existsSync(blogsDir)) {
-    blogsDir = path.join(DOCS_DIR, "en", "blogs");
+    blogsDir = path.join(BLOGS_DIR, "en");
   }
-  moment.locale(currentLocale);
+  moment.locale(locale);
   const files = fs
     .readdirSync(blogsDir)
     .filter((file) => file.endsWith(".mdx"));
