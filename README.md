@@ -9,12 +9,13 @@ UI framework uses [MUI](https://mui.com/material-ui/all-components/), you can us
 
 Requirements:
 
-* Install [Node.js](https://nodejs.org/en/download/) version >= 20.0.0, which can be checked by running `node -v`).
+* Install [Node.js](https://nodejs.org/en/download/) version >= 20.0.0, which can be checked by running `node -v`.
 * yarn
 
 First, run the development server:
 
 ```bash
+yarn install
 yarn dev
 ```
 
