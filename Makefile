@@ -1,6 +1,6 @@
 # Build configuration
 TAG ?= latest
-IMG ?= apecloud/kubeblocks-docs
+IMG ?= apecloud/kubeblocks-docs:{TAG}
 BUILDX_NAME = kubeblocks-docs-xbuilder
 
 # Tool configurations
@@ -37,6 +37,6 @@ docker-build: build docker-buildx-setup ## 构建并推送 Docker 镜像
 		--platform=$(PLATFORMS) \
 		-f Dockerfile \
 		--push \
-		-t $(IMG):$(TAG) .
+		-t $(IMG) .
 	$(DOCKER) buildx rm $(BUILDX_NAME)
 
