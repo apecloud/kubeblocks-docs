@@ -133,7 +133,7 @@ This section takes the cluster `redis-cluster` in the namespace `default` as an 
    kbcli cluster describe redis-cluster
    ```
 
-   ![Redis cluster original status](../../../img/redis-ha-before.png)
+   ![Redis cluster original status](../.././img/redis-ha-before.png)
 
    Currently, `redis-cluster-redis-0` is the primary pod and `redis-cluster-redis-1` is the secondary pod.
 
@@ -172,7 +172,7 @@ This section takes the cluster `redis-cluster` in the namespace `default` as an 
    127.0.0.1:6379> info replication
    ```
 
-   ![Redis info replication](/img/docs/redis-ha-info-replication.png)
+   ![Redis info replication](/img/docs/en/redis-ha-info-replication.png)
 
    From the output, `redis-cluster-redis-1` has been assigned as the primary's pod.
 
@@ -182,7 +182,7 @@ This section takes the cluster `redis-cluster` in the namespace `default` as an 
    kbcli cluster describe redis-cluster
    ```
 
-   ![Redis cluster status after HA](/img/docs/redis-ha-after.png)
+   ![Redis cluster status after HA](/img/docs/en/redis-ha-after.png)
 
    After the failover, `redis-cluster-redis-0` becomes the secondary pod and `redis-cluster-redis-1` becomes the primary pod.
 

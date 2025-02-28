@@ -50,14 +50,14 @@ The faults here are all simulated by deleting a pod. When there are sufficient r
     kubectl get pods --show-labels -n demo | grep role
     ```
 
-    ![describe_pod](/img/docs/api-mysql-ha-grep-role.png)
+    ![describe_pod](/img/docs/en/api-mysql-ha-grep-role.png)
 2. Delete the primary pod `mycluster-mysql-0` to simulate a pod fault.
 
     ```bash
     kubectl delete pod mycluster-mysql-0 -n demo
     ```
 
-    ![delete_pod](/img/docs/api-mysql-ha-delete-primary-pod.png)
+    ![delete_pod](/img/docs/en/api-mysql-ha-delete-primary-pod.png)
 3. Check the status of the pods and Replication Cluster connection.
 
     The following example shows that the roles of pods have changed after the old primary pod was deleted and `mycluster-mysql-1` is elected as the new primary pod.
@@ -66,7 +66,7 @@ The faults here are all simulated by deleting a pod. When there are sufficient r
     kubectl get pods --show-labels -n demo | grep role
     ```
 
-    ![describe_cluster_after](/img/docs/api-mysql-ha-delete-primary-pod-after.png)
+    ![describe_cluster_after](/img/docs/en/api-mysql-ha-delete-primary-pod-after.png)
 
 </TabItem>
 
@@ -78,14 +78,14 @@ The faults here are all simulated by deleting a pod. When there are sufficient r
     kbcli cluster describe mycluster
     ```
 
-    ![describe_cluster](/img/docs/ha-mysql-describe-cluster.png)
+    ![describe_cluster](/img/docs/en/ha-mysql-describe-cluster.png)
 2. Delete the primary pod `mycluster-mysql-0` to simulate a pod fault.
 
     ```bash
     kubectl delete pod mycluster-mysql-0
     ```
 
-    ![delete_pod](/img/docs/ha-mysql-delete-primary-pod.png)
+    ![delete_pod](/img/docs/en/ha-mysql-delete-primary-pod.png)
 3. Run `kbcli cluster describe` to check the status of the pods and Replication Cluster connection.
 
     ***Results***
@@ -96,7 +96,7 @@ The faults here are all simulated by deleting a pod. When there are sufficient r
     kbcli cluster describe mycluster
     ```
 
-    ![describe_cluster_after](/img/docs/ha-mysql-primary-pod-describe-after.png)
+    ![describe_cluster_after](/img/docs/en/ha-mysql-primary-pod-describe-after.png)
 
     It shows that this MySQL Replication Cluster can be connected within seconds.
 
@@ -122,25 +122,25 @@ After the primary pod is deleted, the MySQL Replication Cluster elects a new pri
     kubectl get pods --show-labels -n demo | grep role
     ```
 
-    ![describe_cluster](/img/docs/api-mysql-ha-grep-role-secondary-pod.png)
+    ![describe_cluster](/img/docs/en/api-mysql-ha-grep-role-secondary-pod.png)
 2. Delete the secondary pod `mycluster-mysql-0`.
 
     ```bash
     kubectl delete pod mycluster-mysql-0 -n demo
     ```
 
-    ![delete_secondary_pod](/img/docs/api-ysql-ha-delete-secondary-pod.png)
+    ![delete_secondary_pod](/img/docs/en/api-ysql-ha-delete-secondary-pod.png)
 3. Open another terminal page and view the pod status. You can find the secondary pod `mycluster-mysql-0` is `Terminating`.
 
     ```bash
     kubectl get pod -n demo
     ```
 
-    ![view_cluster_secondary_status](/img/docs/api-mysql-ha-secondary-pod-status.png)
+    ![view_cluster_secondary_status](/img/docs/en/api-mysql-ha-secondary-pod-status.png)
 
     View the pod roles again.
 
-    ![describe_cluster_secondary](/img/docs/api-mysql-ha-secondary-pod-grep-role-after.png)
+    ![describe_cluster_secondary](/img/docs/en/api-mysql-ha-secondary-pod-grep-role-after.png)
 
 </TabItem>
 
@@ -152,21 +152,21 @@ After the primary pod is deleted, the MySQL Replication Cluster elects a new pri
     kbcli cluster describe mycluster
     ```
 
-    ![describe_cluster](/img/docs/ha-mysql-primary-pod-describe-after.png)
+    ![describe_cluster](/img/docs/en/ha-mysql-primary-pod-describe-after.png)
 2. Delete the secondary pod mycluster-mysql-0.
 
     ```bash
     kubectl delete pod mycluster-mysql-0
     ```
 
-    ![delete_secondary_pod](/img/docs/ha-mysql-delete-secondary.png)
+    ![delete_secondary_pod](/img/docs/en/ha-mysql-delete-secondary.png)
 3. View the Replication Cluster status and you can find the secondary pod is being terminated in `Component.Instance`.
 
     ```bash
     kbcli cluster describe mycluster
     ```
 
-    ![describe_cluster_secondary](/img/docs/ha-mysql-delete-secondary-after.png)
+    ![describe_cluster_secondary](/img/docs/en/ha-mysql-delete-secondary-after.png)
 
 </TabItem>
 
@@ -190,28 +190,28 @@ One secondary pod exception doesn't trigger re-electing of the primary pod or ac
     kubectl get pods --show-labels -n demo | grep role
     ```
 
-    ![describe_cluster](/img/docs/api-mysql-ha-both-pods-grep-role.png)
+    ![describe_cluster](/img/docs/en/api-mysql-ha-both-pods-grep-role.png)
 2. Delete both pods.
 
     ```bash
     kubectl delete pod mycluster-mysql-0 mycluster-mysql-1 -n demo
     ```
 
-    ![delete_both_pods](/img/docs/api-mysql-ha-delete-both-pods.png)
+    ![delete_both_pods](/img/docs/en/api-mysql-ha-delete-both-pods.png)
 3. Open another terminal page and view the pod status. You can find the pods are terminating.
 
     ```bash
     kubectl get pod -n demo
     ```
 
-    ![describe_both_clusters](/img/docs/api-mysql-ha-both-pods-status.png)
+    ![describe_both_clusters](/img/docs/en/api-mysql-ha-both-pods-status.png)
 4. View the pod roles and you can find a new primary pod is elected.
 
     ```bash
     kubectl get pods --show-labels -n demo | grep role
     ```
 
-    ![describe_cluster](/img/docs/api-mysql-ha-both-pods-grep-role-after.png)
+    ![describe_cluster](/img/docs/en/api-mysql-ha-both-pods-grep-role-after.png)
 
 </TabItem>
 
@@ -223,21 +223,21 @@ One secondary pod exception doesn't trigger re-electing of the primary pod or ac
     kbcli cluster describe mycluster
     ```
 
-    ![describe_cluster](/img/docs/ha-mysql-delete-secondary-after.png)
+    ![describe_cluster](/img/docs/en/ha-mysql-delete-secondary-after.png)
 2. Delete all pods.
 
     ```bash
     kubectl delete pod mycluster-mysql-1 mycluster-mysql-0
     ```
 
-    ![delete_three_pods](/img/docs/ha-mysql-delete-both-pods.png)
+    ![delete_three_pods](/img/docs/en/ha-mysql-delete-both-pods.png)
 3. Run the command below to view the deleting process. You can find the pods are pending.
 
     ```bash
     kbcli cluster describe mycluster
     ```
 
-    ![describe_three_clusters](/img/docs/ha-mysql-delete-both-pods-after.png)
+    ![describe_three_clusters](/img/docs/en/ha-mysql-delete-both-pods-after.png)
 
 </TabItem>
 

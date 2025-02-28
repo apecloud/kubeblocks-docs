@@ -19,7 +19,7 @@ KubeBlocks is an open-source Kubernetes operator for databases (more specificall
 
 In contrast, KubeBlocks is designed to be a **general-purpose database operator**. This means that when designing the KubeBlocks API, we didn’t tie it to any specific database. Instead, we abstracted the common features of various databases, resulting in a universal, engine-agnostic API. Consequently, the operator implementation developed around this abstract API is also agnostic to the specific database engine.
 
-![Design of KubeBlocks, a general purpose database operator](/img/docs/kubeblocks_general_purpose_arch.png)
+![Design of KubeBlocks, a general purpose database operator](/img/docs/en/kubeblocks_general_purpose_arch.png)
 
 In above diagram, Cluster, Component, and InstanceSet are all CRDs provided by KubeBlocks. If you'd like to learn more about them, please refer to [concepts](concept.md).
 
@@ -230,4 +230,4 @@ In a production environment, we recommend deploying the KubeBlocks Operator (alo
 
 Each database replica runs within its own Pod. In addition to the container running the database process, the Pod includes several sidecar containers: one called `lorry` (which will be renamed to kbagent starting from KubeBlocks v1.0) that executes Action commands from the KubeBlocks controller, and another called `config-manager` that manages database configuration files and supports hot updates. Optionally, The engine's Addon may have an exporter container to collect metrics for Prometheus monitoring.
 
-![KubeBlocks Architecture](/img/docs/kubeblocks-architecture-ha.png)
+![KubeBlocks Architecture](/img/docs/en/kubeblocks-architecture-ha.png)

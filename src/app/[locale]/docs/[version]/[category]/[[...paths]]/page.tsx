@@ -48,8 +48,9 @@ export default async function MarkdownPage({
 
   const defaultRelativeEnPath = path.join("en", version, category, ...paths);
   const defaultMdxEnPath = path.join(DOCS_DIR, `${defaultRelativeEnPath}.mdx`);
-
+  console.log(mdxPath)
   if (fs.existsSync(mdxPath)) {
+
     const { default: MDXContent } = await import(`@docs/${relativePath}.mdx`);
     return <MDXContent />;
   } else if (fs.existsSync(defaultMdxEnPath)) {

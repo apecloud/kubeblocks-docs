@@ -23,7 +23,7 @@ First, take a look at the overall architecture of NebulaGraph.
 
 NebulaGraph applies the separation of storage and computing architecture and consists of three services: the Graph Service, the Meta Service, and the Storage Service. The following figure shows the architecture of a typical NebulaGraph cluster.
 
-![NebulaGraph Architecture (source: https://github.com/vesoft-inc/nebula)](/img/docs/nebula-aichitecture.png)
+![NebulaGraph Architecture (source: https://github.com/vesoft-inc/nebula)](/img/docs/en/nebula-aichitecture.png)
 
 - Metad: It is a component based on the Raft protocol and is responsible for data management tasks such as Schema operations, cluster management, and user permission management.
 - Graphd: It is the compute component and is responsible for handling query requests, including query parsing, validation, and generating and executing query plans.
@@ -103,7 +103,7 @@ As discovered, components may refer to each other and the figure below shows the
 2. Nebula-Graphd needs to know the DNS of each Pod of Nebula-Metad. 
 3. Nebula-Storaged also needs to know the DNS of each Pod of Nebula-Metad.
 
-![Nebula Inter-Component References](/img/docs/nebula-inter-component-ref.png)
+![Nebula Inter-Component References](/img/docs/en/nebula-inter-component-ref.png)
 
 Therefore, three common types of inter-component references are:
 
