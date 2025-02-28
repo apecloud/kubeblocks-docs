@@ -74,7 +74,7 @@ export default async function ReportsList({
               }}
             >
               <Chip
-                label={report.version}
+                label={report.version.replace(/-/g, '.')}
                 color="primary"
                 size="small"
                 sx={{
