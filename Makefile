@@ -1,6 +1,6 @@
 # Build configuration
-TAG ?= latest
-IMG ?= apecloud/kubeblocks-docs:{TAG}
+VERSION ?= latest
+IMG ?= apecloud/kubeblocks-docs:{VERSION}
 BUILDX_NAME = kubeblocks-docs-xbuilder
 
 # Tool configurations
