@@ -1,6 +1,6 @@
 # Build configuration
 VERSION ?= latest
-IMG ?= apecloud/kubeblocks-docs:{VERSION}
+IMG ?= apecloud/kubeblocks-docs
 BUILDX_NAME = kubeblocks-docs-xbuilder
 
 # Tool configurations
@@ -37,6 +37,6 @@ docker-build: build docker-buildx-setup ## 构建并推送 Docker 镜像
 		--platform=$(PLATFORMS) \
 		-f Dockerfile \
 		--push \
-		-t $(IMG) .
+		-t $(IMG):$(VERSION) .
 	$(DOCKER) buildx rm $(BUILDX_NAME)
 
