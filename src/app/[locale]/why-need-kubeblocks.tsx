@@ -7,7 +7,7 @@ import {
   NetworkCheckOutlined,
   WebhookOutlined,
 } from "@mui/icons-material";
-import { alpha, Avatar, Stack } from "@mui/material";
+import { Avatar, Stack } from "@mui/material";
 
 import {
   Container,
@@ -77,7 +77,6 @@ export default function WhyNeedKubeBlocks() {
     <Box
       sx={{
         paddingBlock: 10,
-        background: alpha(theme.palette.background.paper, 0.2),
       }}
     >
       <Container>
@@ -102,7 +101,8 @@ export default function WhyNeedKubeBlocks() {
                 boxShadow: `none`,
                 background: "none",
                 "&:hover": {
-                  background: theme.palette.divider,
+                  background: theme.palette.background.paper,
+                  borderColor: theme.palette.primary.main,
                 },
               }}
             >

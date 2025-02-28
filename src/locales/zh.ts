@@ -11,5 +11,9 @@ export default {
     developer: "开发者文档",
     databases: "数据库",
     blogs: "博客",
+    reports: '测试报告'
+  },
+  ReportPage: {
+    report: "KubeBlocks 测试报告"
   },
 } as const;

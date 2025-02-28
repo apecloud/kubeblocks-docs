@@ -28,10 +28,8 @@ export default async function HomePage({
         <WhyNeedKubeBlocks />
         <Divider />
         <Features />
-        <Divider />
-        <BlogsPreview blogs={blogs} />
-        <Divider />
         <Contact />
+        <BlogsPreview blogs={blogs} />
       </Box>
       <Footer />
     </>

@@ -14,7 +14,7 @@ export default createTheme({
     },
     background: {
       default: "#0E1214",
-      paper: "#1A1E22",
+      paper: "#121619",
     },
     action: {},
     text: {},

@@ -24,7 +24,7 @@ export default function Contact() {
       sx={{
         backgroundImage: `url("${texture}"), linear-gradient(40deg, ${alpha(
           background,
-          0.7
+          1
         )} 0%, ${alpha(background, 1)} 100%)`,
         backgroundPosition: "center center",
         backgroundSize: "cover",
@@ -33,15 +33,19 @@ export default function Contact() {
     >
       <Container>
         <Box>
-          <Stack
-            spacing={4}
-            alignItems="center"
-          >
+          <Stack spacing={4} alignItems="center">
             <Stack flex={1}>
               <Typography variant="h4" sx={{ color }} gutterBottom>
-              Get started with KubeBlocks today, with risk-free trial and migration support.
+                Get started with KubeBlocks today, with risk-free trial and
+                migration support.
               </Typography>
-              <Stack direction="row" spacing={3} alignItems="center" sx={{ width: '100%' }} justifyContent="center">
+              <Stack
+                direction="row"
+                spacing={3}
+                alignItems="center"
+                sx={{ width: "100%" }}
+                justifyContent="center"
+              >
                 <Typography sx={{ color: colorSecondary }}>MySQL</Typography>
                 <Typography sx={{ color: colorSecondary }}>
                   PostgreSQL
@@ -62,10 +66,10 @@ export default function Contact() {
                 borderColor: "#FFF",
                 paddingInline: 4,
                 borderRadius: 100,
-                background: 'none',
-                color: '#FFF',
-                boxShadow: 'none',
-                fontSize: '1.1em',
+                background: "none",
+                color: "#FFF",
+                boxShadow: "none",
+                fontSize: "1.1em",
               }}
             >
               Start Now, at No Cost!

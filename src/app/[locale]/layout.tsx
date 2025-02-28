@@ -17,11 +17,11 @@ import { getI18n } from "@/locales/server";
 import I18nProvider from "@/components/I18nProvider";
 import { NextThemeProvider } from "@/components/NextThemeProvider";
 import { GitHub, LaunchOutlined } from "@mui/icons-material";
-import Logo from "@/components/Logo";
-import DocumentationNav from "@/components/Navigation/Documentation";
-import DatabasesNav from "@/components/Navigation/Databases";
 import { Link } from "@/components/Link";
 import { setStaticParamsLocale } from "next-international/server";
+import DocumentationNav from "./nav-document";
+import DatabasesNav from "./nav-databases";
+import Logo from "./logo";
 
 import "highlight.js/styles/github-dark.css";
 import "./global.css";

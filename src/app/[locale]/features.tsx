@@ -91,12 +91,12 @@ export default function Features() {
           textAlign="center"
           sx={{
             "--Grid-borderWidth": "1px",
-            borderTop: "var(--Grid-borderWidth) solid",
-            borderLeft: "var(--Grid-borderWidth) solid",
+            borderTop: "1px solid",
+            borderLeft: "1px solid",
             borderColor: "divider",
             "& > div": {
-              borderRight: "var(--Grid-borderWidth) solid",
-              borderBottom: "var(--Grid-borderWidth) solid",
+              borderRight: "1px solid",
+              borderBottom: "1px solid",
               borderColor: "divider",
             },
           }}
@@ -112,7 +112,8 @@ export default function Features() {
               }}
               sx={{
                 "&:hover": {
-                  background: theme.palette.divider,
+                  background: theme.palette.background.paper,
+                  boxShadow: `inset 0 0 0 1px ${theme.palette.primary.main}`
                 },
                 paddingBlock: 3,
                 paddingInline: 2,

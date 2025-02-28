@@ -11,5 +11,9 @@ export default {
     developer: "Developer Docs",
     databases: "Databases",
     blogs: "Blogs",
-  }
+    reports: 'Test Reports'
+  },
+  ReportPage: {
+    report: "KubeBlocks Test Reports"
+  },
 } as const;

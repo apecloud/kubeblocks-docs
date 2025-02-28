@@ -3,22 +3,24 @@
 import {
   Avatar,
   Button,
+  Divider,
   ListItemText,
   MenuItem,
   MenuList,
   Stack,
   useTheme,
 } from "@mui/material";
-import { DropDown } from "../DropDown";
-import { Link } from "../Link";
 import { useI18n } from "@/locales/client";
 import {
   CodeOutlined,
   ExpandMore,
+  ScienceOutlined,
   SupervisorAccountOutlined,
   TerminalOutlined,
 } from "@mui/icons-material";
 import { useState } from "react";
+import { DropDown } from "@/components/DropDown";
+import { Link } from "@/components/Link";
 
 export default function DocumentationNav() {
   const [open, setOpen] = useState<boolean>(false);
@@ -42,6 +44,15 @@ export default function DocumentationNav() {
       description: "KubeBlocks CLI",
       icon: <TerminalOutlined />,
       href: "/docs/preview/cli",
+    },
+    {
+      type: "divider",
+    },
+    {
+      title: t("navigation.reports"),
+      description: t("navigation.reports"),
+      icon: <ScienceOutlined />,
+      href: "/reports",
     },
   ];
   return (
@@ -75,30 +86,36 @@ export default function DocumentationNav() {
       placement="bottom-start"
     >
       <MenuList dense>
-        {documentations.map((item, index) => (
-          <MenuItem
-            key={index}
-            component={Link}
-            href={item.href}
-            sx={{ paddingBlock: 1.2 }}
-          >
-            <Stack direction="row" gap={1.5} alignItems="center">
-              <Avatar
-                variant="rounded"
-                sx={{
-                  bgcolor: theme.palette.primary.main,
-                  width: 32,
-                  height: 32,
-                  color: '#FFF',
-                }}
+        {documentations.map((item, index) => {
+          if (item.type === "divider") {
+            return <Divider key={index} />;
+          } else if (item.href) {
+            return (
+              <MenuItem
+                key={index}
+                component={Link}
+                href={item.href}
+                sx={{ paddingBlock: 1.2 }}
               >
-                {item.icon}
-              </Avatar>
+                <Stack direction="row" gap={1.5} alignItems="center">
+                  <Avatar
+                    variant="rounded"
+                    sx={{
+                      bgcolor: theme.palette.primary.main,
+                      width: 32,
+                      height: 32,
+                      color: "#FFF",
+                    }}
+                  >
+                    {item.icon}
+                  </Avatar>
 
-              <ListItemText>{item.title}</ListItemText>
-            </Stack>
-          </MenuItem>
-        ))}
+                  <ListItemText>{item.title}</ListItemText>
+                </Stack>
+              </MenuItem>
+            );
+          }
+        })}
       </MenuList>
     </DropDown>
   );

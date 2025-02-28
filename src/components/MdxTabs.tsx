@@ -5,7 +5,7 @@ import React from "react";
 import { useEffect, useState } from "react";
 
 interface Props {
-  children?: React.ReactElement<unknown>;
+  children?: React.ReactNode;
 }
 
 export default function MdxTabs({ children }: Props) {

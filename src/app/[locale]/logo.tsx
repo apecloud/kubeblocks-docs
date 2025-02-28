@@ -1,6 +1,6 @@
+import { Link } from "@/components/Link";
 import { Box } from "@mui/material";
 import Image from "next/image";
-import { Link } from "./Link";
 
 export default function Logo() {
   return (

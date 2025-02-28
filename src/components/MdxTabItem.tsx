@@ -1,12 +1,13 @@
 "use client";
 
-import { Box } from "@mui/material";
+import { Box, BoxProps } from "@mui/material";
 
 interface Props {
-  children?: React.ReactElement<unknown>;
+  label: string
+  children?: React.ReactNode;
 }
 
-export default function MdxTabItem(props: Props) {
+export default function MdxTabItem(props: Props & BoxProps) {
   const { children } = props;
-  return <Box>{children}</Box>;
+  return <Box {...props}>{children}</Box>;
 }

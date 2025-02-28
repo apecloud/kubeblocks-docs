@@ -10,11 +10,12 @@ import {
   Stack,
   useTheme,
 } from "@mui/material";
-import { DropDown } from "../DropDown";
 import { useI18n } from "@/locales/client";
 import { ExpandMore, Storage } from "@mui/icons-material";
 import { useState } from "react";
-import { Link } from "../Link";
+import { Link } from "@/components/Link";
+import { DropDown } from "@/components/DropDown";
+
 
 export default function DatabasesNav() {
   const [open, setOpen] = useState<boolean>(false);

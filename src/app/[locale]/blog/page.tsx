@@ -19,7 +19,11 @@ export function generateStaticParams() {
   return getStaticParams();
 }
 
-export default async function BlogsPage({ params }: { params: Promise<{ locale: string }> }) {
+export default async function BlogsPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
   const { locale } = await params;
   const blogs = await getBlogs(locale);
 
@@ -29,7 +33,12 @@ export default async function BlogsPage({ params }: { params: Promise<{ locale: 
         return (
           <Grid key={index} size={{ md: 4, sm: 6, xs: 12 }}>
             <Tooltip title={blog.title} placement="top" arrow enterDelay={1000}>
-              <Card sx={{ boxShadow: "none", border: '1px solid var(--css-palette-divider)' }}>
+              <Card
+                sx={{
+                  boxShadow: "none",
+                  border: "1px solid var(--css-palette-divider)",
+                }}
+              >
                 <CardActionArea
                   component={Link}
                   href={`/blog/${blog.name}`}
