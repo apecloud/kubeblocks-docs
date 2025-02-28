@@ -38,4 +38,5 @@ jobs:
       IMG: "apecloud/kubeblocks-docs"
       VERSION: "${{ needs.image-tag.outputs.tag-name }}"
       NODE_VERSION: "20"
+      REMOVE_PREFIX: false
     secrets: inherit
