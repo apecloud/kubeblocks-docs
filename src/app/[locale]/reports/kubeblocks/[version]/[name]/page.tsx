@@ -4,11 +4,13 @@ import * as cheerio from "cheerio";
 import { Box, Divider, Stack, Typography, Button } from "@mui/material";
 import { Link } from "@/components/Link";
 import { ArrowBack } from "@mui/icons-material";
+import { getI18n } from "@/locales/server";
 export default async function ReportDetail({
   params,
 }: {
   params: Promise<{ name: string; version: string; locale: string }>;
 }) {
+  const t = await getI18n();
   const { name, version, locale } = await params;
   const filename =
     path.join(process.cwd(), "reports", "kubeblocks", locale, version, name) +
@@ -57,11 +59,10 @@ export default async function ReportDetail({
       <Box sx={{ marginBottom: 4 }}>
         <Button
           startIcon={<ArrowBack />}
-          variant="outlined"
           component={Link}
           href="/reports"
         >
-          返回
+          {t("actions.back")}
         </Button>
       </Box>
       <Typography variant="h3" align="center" gutterBottom>
@@ -80,15 +81,15 @@ export default async function ReportDetail({
         sx={{ marginBlock: 4, paddingInline: 4 }}
       >
         <Box>
-          <Typography variant="h6">准备人</Typography>
+          <Typography variant="h6">{t("ReportPage.tester")}</Typography>
           <Typography>{tester}</Typography>
         </Box>
         <Box>
-          <Typography variant="h6">审核人</Typography>
+          <Typography variant="h6">{t("ReportPage.admin")}</Typography>
           <Typography>{admin}</Typography>
         </Box>
         <Box>
-          <Typography variant="h6">批准人</Typography>
+          <Typography variant="h6">{t("ReportPage.owner")}</Typography>
           <Typography>{owner}</Typography>
         </Box>
       </Stack>

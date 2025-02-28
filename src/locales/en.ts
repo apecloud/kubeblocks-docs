@@ -14,6 +14,12 @@ export default {
     reports: 'Test Reports'
   },
   ReportPage: {
-    report: "KubeBlocks Test Reports"
+    report: "KubeBlocks Test Reports",
+    owner: "Approved by",
+    admin: "Reviewed by",
+    tester: "Prepared by",
+  },
+  actions: {
+    back: "Back"
   },
 } as const;

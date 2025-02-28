@@ -14,6 +14,12 @@ export default {
     reports: '测试报告'
   },
   ReportPage: {
-    report: "KubeBlocks 测试报告"
+    report: "KubeBlocks 测试报告",
+    owner: "批准人",
+    admin: "审核人",
+    tester: "准备人",
+  },
+  actions: {
+    back: "返回"
   },
 } as const;
