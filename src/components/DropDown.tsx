@@ -1,4 +1,4 @@
-'use client';
+"use client";
 import {
   Box,
   ClickAwayListener,
@@ -16,6 +16,7 @@ export type DropDownProps = {
   trigger?: React.ReactNode;
   offset?: number[];
   placement?: PopperPlacementType;
+  position?: string,
   onChange?: (open: boolean) => void;
   sx?: SxProps;
 };
@@ -24,22 +25,29 @@ export const DropDown = ({
   trigger,
   offset,
   placement = "bottom-end",
+  position = "top",
   onChange = () => {},
-  sx
+  sx,
 }: DropDownProps) => {
   const [visible, setVisible] = useState<boolean>(false);
   const anchorRef = useRef(null);
+
+  const handleClose = () => {
+    setVisible(false);
+    onChange(false);
+  };
+
+  const handleOpen = () => {
+    setVisible(true);
+    onChange(true);
+  };
+
   return (
     <>
       <Box
-        onClick={() => {
-          setVisible(true);
-          onChange(true);
-        }}
+        onClick={handleOpen}
         ref={anchorRef}
-        sx={{
-          display: 'inline-block',
-        }}
+        sx={{ display: "inline-block" }}
       >
         {trigger}
       </Box>
@@ -48,8 +56,8 @@ export const DropDown = ({
         open={visible}
         anchorEl={anchorRef.current}
         role={undefined}
-        transition
         disablePortal
+        onClick={handleClose}
         popperOptions={{
           modifiers: [
             {
@@ -63,21 +71,18 @@ export const DropDown = ({
       >
         {({ TransitionProps }) => (
           <Transitions
-            type="grow"
-            position="top-left"
+            type="collapse"
+            position={position}
             in={open}
             {...TransitionProps}
           >
-            <ClickAwayListener onClickAway={() => {
-              setVisible(false);
-              onChange(false);
-            }}>
+            <ClickAwayListener onClickAway={handleClose}>
               <Paper
                 role="presentation"
                 sx={{
                   ...sx,
                   minWidth: 220,
-                  boxShadow: 'none',
+                  boxShadow: "none",
                   border: 1,
                   borderColor: "divider",
                 }}

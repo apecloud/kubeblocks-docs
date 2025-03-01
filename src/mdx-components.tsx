@@ -8,6 +8,7 @@ import {
   Divider,
   Typography,
   Box,
+  TableContainer,
 } from "@mui/material";
 import type { MDXComponents } from "mdx/types";
 import { JSX } from "react";
@@ -19,7 +20,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     a: (props: JSX.IntrinsicElements["a"]) => {
       const target = props.href?.match(/^http/) ? "_blank" : "_self";
       const url = props.href?.replace(/\.md/, "");
-      const isNavLink = props.className?.includes("toc-link")
+      const isNavLink = props.className?.includes("toc-link");
       return (
         <Tooltip
           title={props.children}
@@ -30,7 +31,11 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
         </Tooltip>
       );
     },
-    table: (props: JSX.IntrinsicElements["table"]) => <Table {...props} />,
+    table: (props: JSX.IntrinsicElements["table"]) => (
+      <TableContainer sx={{ marginBlock: 4 }}>
+        <Table {...props} />
+      </TableContainer>
+    ),
     thead: (props: JSX.IntrinsicElements["thead"]) => <TableHead {...props} />,
     tbody: (props: JSX.IntrinsicElements["tbody"]) => <TableBody {...props} />,
     tr: (props: JSX.IntrinsicElements["tr"]) => <TableRow {...props} />,

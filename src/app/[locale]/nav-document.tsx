@@ -94,7 +94,7 @@ export default function DocumentationNav() {
                 key={index}
                 component={Link}
                 href={item.href}
-                sx={{ paddingBlock: 1.2 }}
+                sx={{ paddingBlock: 1.5 }}
               >
                 <ListItemIcon>
                 {item.icon}
