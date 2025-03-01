@@ -9,7 +9,7 @@ on:
       image_tag:
         description: 'The tag name of image'
         required: true
-        default: ''
+        default: 'latest'
   release:
     types:
       - published
