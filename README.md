@@ -68,12 +68,23 @@ kubeblocks-docs
 
 ## Deploy
 
-```bash
-yarn build
-yarn start
-```
+
+### build
 
 ```bash
 make docker-build TAG=main
+```
+
+```bash
 docker run --name kubeblocks-docs -p 3000:3000 apecloud/kubeblocks-docs:main
+```
+
+### deploy & upgrade
+
+```bash
+helm upgrade --install kubeblocks-docs ./helm/kubeblocks-docs --set image.tag=main --set service.type=LoadBalancer --create-namespace -n kubeblocks-docs
+```
+
+```bash
+kubectl port-forward svc/kubeblocks-docs 3000:3000 -n kubeblocks-docs
 ```
