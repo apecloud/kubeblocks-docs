@@ -1,22 +1,21 @@
 "use client";
 
 import {
-  Avatar,
   Button,
   Divider,
+  ListItemIcon,
   ListItemText,
   MenuItem,
   MenuList,
-  Stack,
   useTheme,
 } from "@mui/material";
 import { useI18n } from "@/locales/client";
 import {
   CodeOutlined,
+  DataObjectOutlined,
   ExpandMore,
-  ScienceOutlined,
-  SupervisorAccountOutlined,
-  TerminalOutlined,
+  PermIdentityOutlined,
+  PestControlOutlined,
 } from "@mui/icons-material";
 import { useState } from "react";
 import { DropDown } from "@/components/DropDown";
@@ -30,7 +29,7 @@ export default function DocumentationNav() {
     {
       title: t("navigation.user"),
       description: t("navigation.user"),
-      icon: <SupervisorAccountOutlined />,
+      icon: <PermIdentityOutlined />,
       href: "/docs/preview/user_docs",
     },
     {
@@ -42,7 +41,7 @@ export default function DocumentationNav() {
     {
       title: "KubeBlocks CLI",
       description: "KubeBlocks CLI",
-      icon: <TerminalOutlined />,
+      icon: <DataObjectOutlined />,
       href: "/docs/preview/cli",
     },
     {
@@ -51,7 +50,7 @@ export default function DocumentationNav() {
     {
       title: t("navigation.reports"),
       description: t("navigation.reports"),
-      icon: <ScienceOutlined />,
+      icon: <PestControlOutlined />,
       href: "/reports",
     },
   ];
@@ -97,21 +96,10 @@ export default function DocumentationNav() {
                 href={item.href}
                 sx={{ paddingBlock: 1.2 }}
               >
-                <Stack direction="row" gap={1.5} alignItems="center">
-                  <Avatar
-                    variant="rounded"
-                    sx={{
-                      bgcolor: theme.palette.primary.main,
-                      width: 32,
-                      height: 32,
-                      color: "#FFF",
-                    }}
-                  >
-                    {item.icon}
-                  </Avatar>
-
-                  <ListItemText>{item.title}</ListItemText>
-                </Stack>
+                <ListItemIcon>
+                {item.icon}
+                </ListItemIcon>
+                <ListItemText>{item.title}</ListItemText>
               </MenuItem>
             );
           }

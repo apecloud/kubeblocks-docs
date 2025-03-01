@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Avatar,
   Box,
   Button,
   Grid2 as Grid,
@@ -11,10 +10,11 @@ import {
   useTheme,
 } from "@mui/material";
 import { useI18n } from "@/locales/client";
-import { ExpandMore, Storage } from "@mui/icons-material";
+import { ExpandMore } from "@mui/icons-material";
 import { useState } from "react";
 import { Link } from "@/components/Link";
 import { DropDown } from "@/components/DropDown";
+import { ApeCloudMySQLIcon, ElasticSearchIcon, KafkaIcon, MilvusIcon, MongodbIcon, MySQLIcon, PostgreSQLIcon, PulsarIcon, QdrantIcon, RabbitMQIcon, StarRocksIcon } from "@/components/icons";
 
 
 export default function DatabasesNav() {
@@ -22,60 +22,62 @@ export default function DatabasesNav() {
   const t = useI18n();
   const theme = useTheme();
 
+  const iconProps = { sx: { fontSize: 30 }}
+
   const databases = [
     {
       title: "ApeCloud MySQL",
-      icon: <Storage />,
+      icon: <ApeCloudMySQLIcon {...iconProps} />,
       href: "/docs/preview/kubeblocks-for-apecloud-mysql",
     },
     {
       title: "MySQL Community Edition",
-      icon: <Storage />,
+      icon: <MySQLIcon {...iconProps}/>,
       href: "/docs/preview/kubeblocks-for-mysql-community-edition",
     },
     {
       title: "Kafka",
-      icon: <Storage />,
+      icon: <KafkaIcon {...iconProps}/>,
       href: "/docs/preview/kubeblocks-for-kafka",
     },
     {
       title: "Milvus",
-      icon: <Storage />,
+      icon: <MilvusIcon {...iconProps}/>,
       href: "/docs/preview/kubeblocks-for-milvus",
     },
     {
       title: "MongoDB",
-      icon: <Storage />,
+      icon: <MongodbIcon {...iconProps}/>,
       href: "/docs/preview/kubeblocks-for-mongodb",
     },
     {
       title: "PostgreSQL",
-      icon: <Storage />,
+      icon: <PostgreSQLIcon {...iconProps}/>,
       href: "/docs/preview/kubeblocks-for-postgresql",
     },
     {
       title: "Pulsar",
-      icon: <Storage />,
+      icon: <PulsarIcon {...iconProps}/>,
       href: "/docs/preview/kubeblocks-for-pulsar",
     },
     {
       title: "Qdrant",
-      icon: <Storage />,
+      icon: <QdrantIcon {...iconProps}/>,
       href: "/docs/preview/kubeblocks-for-qdrant",
     },
     {
       title: "RabbitMQ",
-      icon: <Storage />,
+      icon: <RabbitMQIcon {...iconProps}/>,
       href: "/docs/preview/kubeblocks-for-rabbitmq",
     },
     {
       title: "StarRocks",
-      icon: <Storage />,
+      icon: <StarRocksIcon {...iconProps}/>,
       href: "/docs/preview/kubeblocks-for-starrocks",
     },
     {
       title: "ElasticSearch",
-      icon: <Storage />,
+      icon: <ElasticSearchIcon {...iconProps}/>,
       href: "/docs/preview/kubeblocks-for-elasticsearch",
     },
   ];
@@ -118,20 +120,10 @@ export default function DatabasesNav() {
                 dense
                 component={Link}
                 href={item.href}
-                sx={{ borderRadius: 1, padding: 1 }}
+                sx={{ borderRadius: 1 }}
               >
-                <Stack direction="row" gap={1.5} alignItems="center">
-                  <Avatar
-                    variant="rounded"
-                    sx={{
-                      bgcolor: theme.palette.primary.main,
-                      width: 32,
-                      height: 32,
-                      color: '#FFF',
-                    }}
-                  >
-                    {item.icon}
-                  </Avatar>
+                <Stack direction="row" spacing={2} alignItems="center">
+                  {item.icon}
                   <ListItemText>{item.title}</ListItemText>
                 </Stack>
               </MenuItem>

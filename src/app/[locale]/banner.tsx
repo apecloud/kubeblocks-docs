@@ -33,7 +33,7 @@ export default function Banner() {
   };
 
   const textColor = '#FFF';
-  const textSecondaryColor = alpha(textColor, 0.6);
+  const textSecondaryColor = alpha(textColor, 0.8);
 
   return (
     <Box sx={isDark ? bgDark : bgLight}>
