@@ -1,6 +1,5 @@
 :root {
-  --header-height: 65px;
-  --footer-height: 200px;
+  --container-min-height: calc(100vh - 151px);
 }
 
 /* code hightlight */

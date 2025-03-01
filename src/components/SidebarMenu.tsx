@@ -47,13 +47,12 @@ export function SidebarMenuItem({ level = 1, item }: SidebatMenuItemProps) {
     paddingLeft: level * 2,
     cursor: "pointer",
     color: theme.palette.text.primary,
-    borderLeft: `2px solid transparent`,
     "&:hover": {
       background: theme.palette.action.hover,
     },
     "&.active": {
-      background: theme.palette.action.hover,
-      borderLeftColor: theme.palette.primary.main,
+      background: theme.palette.mode.includes('dark') ? theme.palette.primary.dark : theme.palette.primary.main,
+      color: "#FFF",
     },
   };
 

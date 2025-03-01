@@ -65,13 +65,13 @@ export default async function DocsLayout({
             padding: 3,
             maxWidth: "980px",
             marginInline: "auto",
-            minHeight: "calc(100vh - 265px)",
+            minHeight: "var(--container-min-height)",
           }}
           className="markdown-body"
         >
           {children}
         </Box>
-        <Footer />
+        <Footer border={false} />
       </Box>
     </>
   );

@@ -55,18 +55,14 @@ export default async function ReportDetail({
     .join("");
 
   return (
-    <>
+    <Box>
       <Box sx={{ marginBottom: 4 }}>
-        <Button
-          startIcon={<ArrowBack />}
-          component={Link}
-          href="/reports"
-        >
+        <Button startIcon={<ArrowBack />} component={Link} href="/reports">
           {t("actions.back")}
         </Button>
       </Box>
       <Typography variant="h3" align="center" gutterBottom>
-        {title} {version.replace(/-/g, '.')}
+        {title} {version.replace(/-/g, ".")}
       </Typography>
       <Divider>
         <Typography align="center" variant="body2" color="textSecondary">
@@ -104,6 +100,6 @@ export default async function ReportDetail({
       <Typography align="center" color="textDisabled" sx={{ marginBlock: 4 }}>
         {datetime}
       </Typography>
-    </>
+    </Box>
   );
 }

@@ -1,5 +1,5 @@
 # Build configuration
-VERSION ?= latest
+VERSION ?= main
 IMG ?= apecloud/kubeblocks-docs
 BUILDX_NAME = kubeblocks-docs-xbuilder
 
@@ -20,7 +20,7 @@ all: docker-build ## 默认目标：构建 Docker 镜像
 .PHONY: build
 build: ## 构建源代码
 	@echo "Building source code..."
-	$(YARN) install && $(YARN) build
+	$(YARN) build
 
 # Docker targets
 .PHONY: docker-buildx-setup

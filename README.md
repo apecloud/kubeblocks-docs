@@ -1,9 +1,6 @@
 # Introduction
 
-This repo contains the source code of kubeblocks docs. It's built by [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
-
-UI framework uses [MUI](https://mui.com/material-ui/all-components/), you can use MUI components directly in mdx documents.
-
+This repo contains the source code of kubeblocks docs. It's built by [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app), and you can use [MUI](https://mui.com/material-ui/all-components/) components directly in mdx files.
 
 ## Getting Started
 
@@ -15,7 +12,6 @@ Requirements:
 First, run the development server:
 
 ```bash
-yarn install
 yarn dev
 ```
 
@@ -53,6 +49,8 @@ kubeblocks-docs
 │      └─ preview
 │      └─ release-0.9
 │ 
+└─docs                            # kubeblocks reports
+│ 
 └─publics
 │   └──img                        # markdown assets
 │
@@ -76,6 +74,6 @@ yarn start
 ```
 
 ```bash
-make docker-build TAG=latest
-docker run --name kubeblocks-docs -p 3000:3000 apecloud/kubeblocks-docs:latest
+make docker-build TAG=main
+docker run --name kubeblocks-docs -p 3000:3000 apecloud/kubeblocks-docs:main
 ```

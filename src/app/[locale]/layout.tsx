@@ -11,8 +11,6 @@ import {
   Toolbar,
 } from "@mui/material";
 import ScrollTop from "@/components/ScrollTop";
-import ThemeSwitcher from "@/components/ThemeSwitcher";
-import LocaleSwitcher from "@/components/LocaleSwitcher";
 import { getI18n } from "@/locales/server";
 import I18nProvider from "@/components/I18nProvider";
 import { NextThemeProvider } from "@/components/NextThemeProvider";
@@ -25,6 +23,8 @@ import Logo from "./logo";
 
 import "highlight.js/styles/github-dark.css";
 import "./global.css";
+import LocaleSwitcher from "./locale-switch";
+import ThemeSwitcher from "./theme-switch";
 
 export const metadata: Metadata = {
   title: "KubeBlocks",

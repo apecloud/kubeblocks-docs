@@ -22,7 +22,7 @@ export default async function HomePage({
   const blogs = await getBlogs(locale);
   return (
     <>
-      <Box style={{ minHeight: "calc(100vh - 265px)" }}>
+      <Box style={{ minHeight: "var(--container-min-height)" }}>
         <Banner />
         <Divider />
         <WhyNeedKubeBlocks />

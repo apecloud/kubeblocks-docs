@@ -1,8 +1,10 @@
 "use client";
 import { IconButton, ListItemIcon, ListItemText, MenuItem, MenuList } from "@mui/material";
-import { useChangeLocale, useCurrentLocale } from "../locales/client";
+
 import { Check, Language } from "@mui/icons-material";
-import { DropDown } from "./DropDown";
+import { useChangeLocale, useCurrentLocale } from "@/locales/client";
+import { DropDown } from "@/components/DropDown";
+
 
 type LangType = "en" | "zh";
 

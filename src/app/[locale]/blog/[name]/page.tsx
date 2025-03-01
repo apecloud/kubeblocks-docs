@@ -1,27 +1,10 @@
-import { BLOGS_DIR, getBlogs } from "@/utils/markdown";
+import { BLOGS_DIR } from "@/utils/markdown";
 import { notFound } from "next/navigation";
 import path from "path";
 import fs from "fs";
 import { Box } from "@mui/material";
-import { getStaticParams } from "@/locales/server";
 
 type ParamsProps = { name: string; locale: string };
-
-export async function generateStaticParams() {
-  const localesParams = getStaticParams();
-  const fns = localesParams.map(async (item) => await getBlogs(item.locale));
-  const data = await Promise.all(fns);
-  const result: ParamsProps[] = [];
-  localesParams.forEach((item, index) => {
-    data[index].forEach((blog) => {
-      result.push({
-        locale: item.locale,
-        name: blog.name,
-      });
-    });
-  });
-  return result;
-}
 
 export default async function BlogDetail({
   params,

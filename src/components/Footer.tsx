@@ -2,33 +2,35 @@
 import {
   Box,
   Container,
-  Divider,
-  Stack,
   Typography,
   useTheme,
 } from "@mui/material";
 
-export default function Footer() {
+export default function Footer({
+  border = true
+}: {
+  border?: boolean
+}) {
   const theme = useTheme();
   return (
     <Box
       component="footer"
       sx={{
         padding: 4,
-        borderTop: 1,
+        borderTop: border ? 1 : 0,
         borderColor: "divider",
-        height: "var(--footer-height)",
         background: theme.palette.background.default,
       }}
     >
       <Container>
-        <Stack
+        {/* <Stack
           direction="row"
           divider={<Divider orientation="vertical" flexItem />}
           justifyContent="space-between"
         >
           <Box>
-            <Typography color="textSecondary">Products</Typography>
+            <Typography variant="h6" gutterBottom>Products</Typography>
+            <Link href="https://kubeblocks.io" variant="body2" underline="hover" color="textSecondary">KubeBlocks</Link>
           </Box>
           <Box>
             <Typography color="textSecondary">Resources</Typography>
@@ -39,9 +41,9 @@ export default function Footer() {
           <Box>
             <Typography color="textSecondary">Contact us</Typography>
           </Box>
-        </Stack>
-        <Typography align="center" mt={8} color="textDisabled">
-          © 2024 ApeCloud PTE. Ltd.
+        </Stack> */}
+        <Typography align="center" color="textDisabled">
+          © {(new Date()).getFullYear()} ApeCloud PTE. Ltd.
         </Typography>
       </Container>
     </Box>

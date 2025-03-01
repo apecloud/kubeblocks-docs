@@ -11,9 +11,6 @@ import {
 import _ from "lodash";
 import { SidebarMenuItem } from "@/components/SidebarMenu";
 
-export async function generateStaticParams() {
-  return [];
-}
 
 export default async function MarkdownPage({
   params,
