@@ -111,9 +111,11 @@ export default function Features() {
                 lg: 3,
               }}
               sx={{
+                transition: 'scale 0.2s',
                 "&:hover": {
                   background: theme.palette.background.paper,
-                  boxShadow: `inset 0 0 0 1px ${theme.palette.primary.main}`
+                  boxShadow: `inset 0 0 0 1px ${theme.palette.primary.main}`,
+                  scale: 1.05
                 },
                 paddingBlock: 3,
                 paddingInline: 2,
