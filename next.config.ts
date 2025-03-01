@@ -13,6 +13,7 @@ import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 
 import rehypeHighlight from "rehype-highlight";
 import rehypeToc from "@jsdevtools/rehype-toc";
+import rehypeHighlightLines from "rehype-highlight-code-lines";
 
 const nextConfig: NextConfig = {
   // Configure `pageExtensions` to include markdown and MDX files
@@ -64,7 +65,7 @@ const withMDX = createMDX({
         },
       ],
     ],
-    rehypePlugins: [rehypeHighlight, [rehypeToc, {
+    rehypePlugins: [rehypeHighlight, rehypeHighlightLines, [rehypeToc, {
       headings: ["h2", "h3", "h4", "h5", "h6"]
     }]],
   },
