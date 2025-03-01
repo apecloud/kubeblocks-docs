@@ -41,8 +41,8 @@ export default async function ReportDetail({
   const title = $("h1").eq(0).text();
   const team = $("h2").eq(0).text();
   const tester = $("h4").eq(0).text();
-  const owner = $("h4").eq(1).text();
-  const admin = $("h4").eq(2).text();
+  const admin = $("h4").eq(1).text();
+  const owner = $("h4").eq(2).text();
   const datetime = $("body > center").first().text();
 
   const html = $("body > center")

@@ -30,6 +30,7 @@ export default async function ReportsList({
     version: string;
     tester: string;
     owner: string;
+    admin: string;
   }[] = [];
 
   versions.forEach((version) =>
@@ -47,7 +48,8 @@ export default async function ReportsList({
           title: $("h1").eq(0).text(),
           version,
           tester: $("h4").eq(0).text(),
-          owner: $("h4").eq(1).text(),
+          admin: $("h4").eq(1).text(),
+          owner: $("h4").eq(2).text(),
           datetime: $("body > center").first().text(),
         });
       })
@@ -57,7 +59,7 @@ export default async function ReportsList({
     <>
       <Banner />
       <Grid container spacing={3}>
-        {reports.map((report, reportIndex) => (
+        {reports.reverse().map((report, reportIndex) => (
           <Grid
             key={reportIndex}
             size={{
@@ -112,14 +114,21 @@ export default async function ReportsList({
                     color="textSecondary"
                     gutterBottom
                   >
-                    {report.owner}
+                    {report.tester}
                   </Typography>
                   <Typography
                     variant="body2"
                     color="textSecondary"
                     gutterBottom
                   >
-                    {report.tester}
+                    {report.admin}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="textSecondary"
+                    gutterBottom
+                  >
+                    {report.owner}
                   </Typography>
                   <Typography
                     variant="body2"
