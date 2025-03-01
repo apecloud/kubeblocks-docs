@@ -58,11 +58,11 @@
 }
 
 /* markdown style */
-.markdown-body a {
+.markdown-body a:not(.MuiLink-root) {
   color: var(--css-palette-primary-main);
   text-decoration: none;
 }
-.markdown-body a:hover {
+.markdown-body a:not(.MuiLink-root):hover {
   text-decoration: underline;
 }
 

@@ -17,7 +17,7 @@ export default async function BlogsDetail({
 
   return (
     <>
-      <Box sx={{ marginBottom: 4 }}>
+      <Box sx={{ marginBottom: 4 }} className="markdown-body">
         <Button startIcon={<ArrowBack />} component={Link} href="/blog">
           {t("actions.back")}
         </Button>

@@ -8,7 +8,7 @@ export default async function BlogsLayout({ children, params }: { children: Reac
 
   return (
     <>
-      <Container sx={{ minHeight: "var(--container-min-height)", paddingBlock: 4 }} className="markdown-body">
+      <Container sx={{ minHeight: "var(--container-min-height)", paddingBlock: 4 }}>
         {children}
       </Container>
       <Footer />
