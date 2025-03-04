@@ -21,4 +21,7 @@ export default {
   actions: {
     back: "Back"
   },
+  text: {
+    version: "Version"
+  },
 } as const;

@@ -4,9 +4,9 @@ const fs = require("fs");
 
 const ROOT_DIR = process.cwd();
 const files = [
-  `${ROOT_DIR}/docs/en/preview/developer_docs/api-reference/add-on.md`,
-  `${ROOT_DIR}/docs/en/preview/developer_docs/api-reference/backup.md`,
-  `${ROOT_DIR}/docs/en/preview/developer_docs/api-reference/cluster.md`,
+  `${ROOT_DIR}/docs/en/release-0-9/user_docs/developer/api-reference/add-on.mdx`,
+  `${ROOT_DIR}/docs/en/release-0-9/user_docs/developer/api-reference/backup.mdx`,
+  `${ROOT_DIR}/docs/en/release-0-9/user_docs/developer/api-reference/cluster.mdx`,
 ]
 
 files

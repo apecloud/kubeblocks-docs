@@ -9,6 +9,7 @@ import {
 } from "@/utils/markdown";
 import Footer from "@/components/Footer";
 import { setStaticParamsLocale } from "next-international/server";
+import VersionList from "./version";
 
 export default async function DocsLayout({
   children,
@@ -17,6 +18,7 @@ export default async function DocsLayout({
   children: React.ReactNode;
   params: Promise<MarkdownPageParams>;
 }>) {
+
   const { locale, version, category } = await params;
   setStaticParamsLocale(locale);
 
@@ -30,6 +32,8 @@ export default async function DocsLayout({
   } else if (fs.existsSync(defaultEnDir)) {
     menu = await getMarkDownSideBar(defaultEnDir);
   }
+
+  const versions = fs.readdirSync(path.join(DOCS_DIR, locale));
 
   return (
     <>
@@ -45,6 +49,8 @@ export default async function DocsLayout({
           }}
         >
           <Toolbar />
+
+          <VersionList version={version} versions={versions} category={category} />
           <Box
             flex={1}
             sx={{
@@ -52,8 +58,8 @@ export default async function DocsLayout({
               borderRight: 1,
               borderColor: "var(--css-palette-divider)",
             }}
-            pt={1}
             pb={1}
+            pt={1}
           >
             <SidebarMenu data={menu} />
           </Box>

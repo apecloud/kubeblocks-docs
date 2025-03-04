@@ -21,4 +21,7 @@ export default {
   actions: {
     back: "返回"
   },
+  text: {
+    version: "版本"
+  },
 } as const;
