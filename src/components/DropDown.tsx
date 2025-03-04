@@ -58,6 +58,9 @@ export const DropDown = ({
         role={undefined}
         disablePortal
         onClick={handleClose}
+        sx={{
+          zIndex: 1100
+        }}
         popperOptions={{
           modifiers: [
             {

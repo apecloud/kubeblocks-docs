@@ -50,7 +50,7 @@ export default async function DocsLayout({
         >
           <Toolbar />
 
-          <VersionList version={version} versions={versions} category={category} />
+          <VersionList version={version} versions={versions} />
           <Box
             flex={1}
             sx={{

@@ -51,8 +51,7 @@ export function SidebarMenuItem({ level = 1, item }: SidebatMenuItemProps) {
       background: theme.palette.action.hover,
     },
     "&.active": {
-      background: theme.palette.mode.includes('dark') ? theme.palette.primary.dark : theme.palette.primary.main,
-      color: "#FFF",
+      background: theme.palette.action.hover,
     },
   };
 
