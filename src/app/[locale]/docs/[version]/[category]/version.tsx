@@ -14,6 +14,7 @@ import {
   MenuList,
   Chip,
 } from "@mui/material";
+import _ from "lodash";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
@@ -25,7 +26,9 @@ export default function VersionList({ version, versions }: Props) {
   const [open, setOpen] = useState<boolean>(false);
   const t = useI18n();
   const theme = useTheme();
-  const pathnames = usePathname().split("/");
+  const pathnames = usePathname()
+    .split("/")
+    .filter((item) => !_.includes(["zh", "en"], item));
 
   return (
     <DropDown
