@@ -8,7 +8,6 @@ export default {
   navigation: {
     documentation: "文档",
     user: "用户文档",
-    developer: "开发者文档",
     databases: "数据库",
     blogs: "博客",
     reports: '测试报告'

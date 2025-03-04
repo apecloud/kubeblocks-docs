@@ -8,7 +8,6 @@ export default {
   navigation: {
     documentation: "Documentation",
     user: "User Docs",
-    developer: "Developer Docs",
     databases: "Databases",
     blogs: "Blogs",
     reports: 'Test Reports'

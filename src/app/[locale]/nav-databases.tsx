@@ -14,7 +14,7 @@ import { ExpandMore } from "@mui/icons-material";
 import { useState } from "react";
 import { Link } from "@/components/Link";
 import { DropDown } from "@/components/DropDown";
-import { ApeCloudMySQLIcon, ElasticSearchIcon, KafkaIcon, MilvusIcon, MongodbIcon, MySQLIcon, PostgreSQLIcon, PulsarIcon, QdrantIcon, RabbitMQIcon, StarRocksIcon } from "@/components/icons";
+import { ElasticSearchIcon, KafkaIcon, MilvusIcon, MongodbIcon, MySQLIcon, PostgreSQLIcon, QdrantIcon, RabbitMQIcon, StarRocksIcon } from "@/components/icons";
 
 
 export default function DatabasesNav() {
@@ -26,14 +26,24 @@ export default function DatabasesNav() {
 
   const databases = [
     {
-      title: "ApeCloud MySQL",
-      icon: <ApeCloudMySQLIcon {...iconProps} />,
-      href: "/docs/preview/kubeblocks-for-apecloud-mysql",
-    },
-    {
-      title: "MySQL Community Edition",
+      title: "MySQL",
       icon: <MySQLIcon {...iconProps}/>,
       href: "/docs/preview/kubeblocks-for-mysql-community-edition",
+    },
+    {
+      title: "PostgreSQL",
+      icon: <PostgreSQLIcon {...iconProps}/>,
+      href: "/docs/preview/kubeblocks-for-postgresql",
+    },
+    {
+      title: "StarRocks",
+      icon: <StarRocksIcon {...iconProps}/>,
+      href: "/docs/preview/kubeblocks-for-starrocks",
+    },
+    {
+      title: "MongoDB",
+      icon: <MongodbIcon {...iconProps}/>,
+      href: "/docs/preview/kubeblocks-for-mongodb",
     },
     {
       title: "Kafka",
@@ -46,21 +56,6 @@ export default function DatabasesNav() {
       href: "/docs/preview/kubeblocks-for-milvus",
     },
     {
-      title: "MongoDB",
-      icon: <MongodbIcon {...iconProps}/>,
-      href: "/docs/preview/kubeblocks-for-mongodb",
-    },
-    {
-      title: "PostgreSQL",
-      icon: <PostgreSQLIcon {...iconProps}/>,
-      href: "/docs/preview/kubeblocks-for-postgresql",
-    },
-    {
-      title: "Pulsar",
-      icon: <PulsarIcon {...iconProps}/>,
-      href: "/docs/preview/kubeblocks-for-pulsar",
-    },
-    {
       title: "Qdrant",
       icon: <QdrantIcon {...iconProps}/>,
       href: "/docs/preview/kubeblocks-for-qdrant",
@@ -69,11 +64,6 @@ export default function DatabasesNav() {
       title: "RabbitMQ",
       icon: <RabbitMQIcon {...iconProps}/>,
       href: "/docs/preview/kubeblocks-for-rabbitmq",
-    },
-    {
-      title: "StarRocks",
-      icon: <StarRocksIcon {...iconProps}/>,
-      href: "/docs/preview/kubeblocks-for-starrocks",
     },
     {
       title: "ElasticSearch",

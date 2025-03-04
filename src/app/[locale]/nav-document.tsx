@@ -11,7 +11,6 @@ import {
 } from "@mui/material";
 import { useI18n } from "@/locales/client";
 import {
-  CodeOutlined,
   DataObjectOutlined,
   ExpandMore,
   PermIdentityOutlined,
@@ -31,12 +30,6 @@ export default function DocumentationNav() {
       description: t("navigation.user"),
       icon: <PermIdentityOutlined />,
       href: "/docs/preview/user_docs",
-    },
-    {
-      title: t("navigation.developer"),
-      description: t("navigation.developer"),
-      icon: <CodeOutlined />,
-      href: "/docs/preview/developer_docs",
     },
     {
       title: "KubeBlocks CLI",

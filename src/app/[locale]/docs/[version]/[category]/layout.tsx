@@ -1,4 +1,4 @@
-import { Box, Stack, Toolbar } from "@mui/material";
+import { Box, Container, Stack, Toolbar } from "@mui/material";
 import fs from "fs";
 import { SidebarMenu, SidebarMenuItem } from "@/components/SidebarMenu";
 import path from "path";
@@ -60,17 +60,12 @@ export default async function DocsLayout({
         </Stack>
       ) : null}
       <Box sx={{ marginInline: menu.length ? "300px" : 0 }}>
-        <Box
-          sx={{
-            padding: 3,
-            maxWidth: "980px",
-            marginInline: "auto",
-            minHeight: "var(--container-min-height)",
-          }}
+        <Container
+          sx={{ minHeight: "var(--container-min-height)", paddingBlock: 3}}
           className="markdown-body"
         >
           {children}
-        </Box>
+        </Container>
         <Footer border={false} />
       </Box>
     </>

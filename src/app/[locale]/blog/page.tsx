@@ -6,6 +6,7 @@ import {
   CardActions,
   CardContent,
   CardMedia,
+  Container,
   Divider,
   Grid2 as Grid,
   Stack,
@@ -28,66 +29,73 @@ export default async function BlogsPage({
   const blogs = await getBlogs(locale);
 
   return (
-    <Grid container spacing={4}>
-      {blogs.map((blog, index) => {
-        return (
-          <Grid key={index} size={{ md: 4, sm: 6, xs: 12 }}>
-            <Tooltip title={blog.title} placement="top" arrow enterDelay={1000}>
-              <Card
-                sx={{
-                  boxShadow: "none",
-                  border: "1px solid var(--css-palette-divider)",
-                }}
+    <Container sx={{ minHeight: "var(--container-min-height)", paddingBlock: 3 }}>
+      <Grid container spacing={4}>
+        {blogs.map((blog, index) => {
+          return (
+            <Grid key={index} size={{ md: 4, sm: 6, xs: 12 }}>
+              <Tooltip
+                title={blog.title}
+                placement="top"
+                arrow
+                enterDelay={1000}
               >
-                <CardActionArea
-                  component={Link}
-                  href={`/blog/${blog.name}`}
-                  underline="none"
+                <Card
+                  sx={{
+                    boxShadow: "none",
+                    border: "1px solid var(--css-palette-divider)",
+                  }}
                 >
-                  <CardMedia sx={{ height: 200 }} image={blog.image} />
-                  <CardContent sx={{ height: 160 }}>
-                    <Typography
-                      gutterBottom
-                      variant="h6"
-                      sx={{
-                        overflow: "hidden",
-                        whiteSpace: "nowrap",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {blog.title}
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      sx={{ color: "text.secondary" }}
-                    >
-                      {blog.description}
-                    </Typography>
-                  </CardContent>
-                  <Divider />
-                  <CardActions sx={{ justifyContent: "space-between" }}>
-                    <Stack direction="row" gap={2} alignItems="center">
-                      <Avatar src={blog.authors?.image_url} />
+                  <CardActionArea
+                    component={Link}
+                    href={`/blog/${blog.name}`}
+                    underline="none"
+                  >
+                    <CardMedia sx={{ height: 200 }} image={blog.image} />
+                    <CardContent sx={{ height: 160 }}>
+                      <Typography
+                        gutterBottom
+                        variant="h6"
+                        sx={{
+                          overflow: "hidden",
+                          whiteSpace: "nowrap",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {blog.title}
+                      </Typography>
                       <Typography
                         variant="body2"
                         sx={{ color: "text.secondary" }}
                       >
-                        {blog.authors?.name}
+                        {blog.description}
                       </Typography>
-                    </Stack>
-                    <Typography
-                      variant="body2"
-                      sx={{ color: "text.secondary" }}
-                    >
-                      {blog.datetime}
-                    </Typography>
-                  </CardActions>
-                </CardActionArea>
-              </Card>
-            </Tooltip>
-          </Grid>
-        );
-      })}
-    </Grid>
+                    </CardContent>
+                    <Divider />
+                    <CardActions sx={{ justifyContent: "space-between" }}>
+                      <Stack direction="row" gap={2} alignItems="center">
+                        <Avatar src={blog.authors?.image_url} />
+                        <Typography
+                          variant="body2"
+                          sx={{ color: "text.secondary" }}
+                        >
+                          {blog.authors?.name}
+                        </Typography>
+                      </Stack>
+                      <Typography
+                        variant="body2"
+                        sx={{ color: "text.secondary" }}
+                      >
+                        {blog.datetime}
+                      </Typography>
+                    </CardActions>
+                  </CardActionArea>
+                </Card>
+              </Tooltip>
+            </Grid>
+          );
+        })}
+      </Grid>
+    </Container>
   );
 }

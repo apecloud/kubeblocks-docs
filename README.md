@@ -49,7 +49,7 @@ kubeblocks-docs
 │      └─ preview
 │      └─ release-0.9
 │ 
-└─docs                            # kubeblocks reports
+└─reports                         # kubeblocks reports
 │ 
 └─publics
 │   └──img                        # markdown assets
