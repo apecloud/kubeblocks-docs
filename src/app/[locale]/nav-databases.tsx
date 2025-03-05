@@ -83,6 +83,9 @@ export default function DatabasesNav() {
             paddingInline: 2,
             bgcolor: open ? theme.palette.action.hover : "transparent",
             "&:hover": { bgcolor: theme.palette.action.hover },
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
           }}
           endIcon={
             <ExpandMore
@@ -99,13 +102,13 @@ export default function DatabasesNav() {
         </Button>
       }
       onChange={(v) => setOpen(v)}
-      sx={{ width: 760 }}
+      sx={{ maxWidth: 760 }}
       placement="bottom-start"
     >
       <Box p={1.5}>
         <Grid container spacing={1}>
           {databases.map((item, index) => (
-            <Grid size={4} key={index}>
+            <Grid size={{ lg: 4, md: 4, sm: 6, xs: 6 }} key={index}>
               <MenuItem
                 dense
                 component={Link}

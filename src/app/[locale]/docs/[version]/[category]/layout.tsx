@@ -65,7 +65,7 @@ export default async function DocsLayout({
           </Box>
         </Stack>
       ) : null}
-      <Box sx={{ marginInline: menu.length ? "300px" : 0 }}>
+      <Box sx={{ marginLeft: menu.length ? "300px" : 0 }}>
         <Container
           sx={{ minHeight: "var(--container-min-height)", paddingBlock: 3}}
           className="markdown-body"

@@ -71,7 +71,12 @@ export default async function RootLayout({
                         color="inherit"
                         size="large"
                         href="/blog"
-                        sx={{ paddingInline: 2 }}
+                        sx={{
+                          paddingInline: 2,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
                       >
                         {t("navigation.blogs")}
                       </Button>
@@ -82,7 +87,12 @@ export default async function RootLayout({
                         href="https://console.kubeblocks.io"
                         target="_blank"
                         endIcon={<LaunchOutlined />}
-                        sx={{ paddingInline: 2 }}
+                        sx={{
+                          paddingInline: 2,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
                       >
                         Kubeblocks Cloud
                       </Button>

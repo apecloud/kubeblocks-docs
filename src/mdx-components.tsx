@@ -14,9 +14,21 @@ import type { MDXComponents } from "mdx/types";
 import { JSX } from "react";
 import NoteBox from "./components/NoteBox";
 import { Link } from "./components/Link";
+import Sticky from "./components/Sticky";
 
 export function useMDXComponents(components: MDXComponents): MDXComponents {
   return {
+    nav: (props: JSX.IntrinsicElements["nav"]) => {
+      if (props.className === "toc") {
+        return (
+          <Sticky enabled={true} top={80} >
+            <nav {...props} />
+          </Sticky>
+        );
+      } else {
+        return <nav {...props} />;
+      }
+    },
     a: (props: JSX.IntrinsicElements["a"]) => {
       const target = props.href?.match(/^http/) ? "_blank" : "_self";
       const url = props.href?.replace(/\.md/, "");

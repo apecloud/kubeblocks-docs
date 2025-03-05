@@ -16,7 +16,7 @@ export default async function BlogsDetail({
   const t = await getI18n();
 
   return (
-    <Box sx={{ marginRight: '300px', paddingBlock: 3 }}>
+    <Box sx={{ paddingBlock: 3 }}>
       <Container
         sx={{ minHeight: "var(--container-min-height)"}}
         className="markdown-body"

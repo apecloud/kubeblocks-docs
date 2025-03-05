@@ -58,6 +58,9 @@ export default function DocumentationNav() {
             paddingInline: 2,
             bgcolor: open ? theme.palette.action.hover : "transparent",
             "&:hover": { bgcolor: theme.palette.action.hover },
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
           }}
           endIcon={
             <ExpandMore

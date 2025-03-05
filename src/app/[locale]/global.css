@@ -25,14 +25,34 @@
 }
 
 /* markdown navigation */
+@media screen and (min-width: 0) {
+  .markdown-body > *:not(.sticky-outer-wrapper) {
+    margin-right: auto;
+  }
+  .markdown-body .toc {
+    position: static;
+    display: none;
+  }
+}
 
-.toc {
-  border-left: 1px solid var(--css-palette-divider);
-  position: fixed;
-  width: 300px;
-  right: 0;
+@media screen and (min-width: 980px) {
+  .markdown-body > *:not(.sticky-outer-wrapper) {
+    margin-right: 300px;
+  }
+  .markdown-body .toc {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 280px;
+    display: block;
+    border-left: 1px solid var(--css-palette-divider);
+  }
+}
+
+.markdown-body .toc {
   font-size: 13px;
 }
+
 .toc .toc-level {
   margin: 0;
   padding-left: 20px;

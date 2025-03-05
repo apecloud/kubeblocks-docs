@@ -66,6 +66,7 @@ const withMDX = createMDX({
       ],
     ],
     rehypePlugins: [rehypeHighlight, rehypeHighlightLines, [rehypeToc, {
+      // position: 'beforebegin', // "beforebegin" | "afterbegin" | "beforeend" | "afterend"
       headings: ["h2", "h3", "h4", "h5", "h6"]
     }]],
   },
