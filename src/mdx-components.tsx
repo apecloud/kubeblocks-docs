@@ -44,7 +44,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       );
     },
     table: (props: JSX.IntrinsicElements["table"]) => (
-      <TableContainer sx={{ marginBlock: 4 }}>
+      <TableContainer sx={{ marginBlock: 4, width: 'auto' }}>
         <Table {...props} />
       </TableContainer>
     ),
