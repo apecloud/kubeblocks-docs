@@ -26,20 +26,20 @@
 
 /* markdown navigation */
 @media screen and (min-width: 0) {
-  .markdown-body > *:not(.sticky-outer-wrapper) {
+  .markdown-body.with-sidebar > *:not(.sticky-outer-wrapper) {
     margin-right: auto;
   }
-  .markdown-body .toc {
+  .markdown-body.with-sidebar .toc {
     position: static;
     display: none;
   }
 }
 
 @media screen and (min-width: 980px) {
-  .markdown-body > *:not(.sticky-outer-wrapper) {
+  .markdown-body.with-sidebar > *:not(.sticky-outer-wrapper) {
     margin-right: 300px;
   }
-  .markdown-body .toc {
+  .markdown-body.with-sidebar .toc {
     position: absolute;
     right: 0;
     top: 0;

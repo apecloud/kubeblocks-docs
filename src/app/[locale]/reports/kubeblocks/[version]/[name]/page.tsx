@@ -94,6 +94,7 @@ export default async function ReportDetail({
 
       <Box
         className="markdown-body"
+        sx={{ marginRight: 0 }}
         dangerouslySetInnerHTML={{ __html: html || "" }}
       />
 

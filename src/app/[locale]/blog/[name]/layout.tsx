@@ -19,7 +19,7 @@ export default async function BlogsDetail({
     <Box sx={{ paddingBlock: 3 }}>
       <Container
         sx={{ minHeight: "var(--container-min-height)"}}
-        className="markdown-body"
+        className="markdown-body with-sidebar"
       >
         <Box sx={{ marginBottom: 4 }}>
           <Button startIcon={<ArrowBack />} component={Link} href="/blog">
