@@ -1,8 +1,8 @@
 ---
-title: Restart PostgreSQL cluster
+title: Restart
 description: How to restart a PostgreSQL cluster
 keywords: [postgresql, restart]
-sidebar_position: 4
+sidebar_position: 5
 sidebar_label: Restart
 ---
 
@@ -36,7 +36,7 @@ The pod role may change after the cluster restarts.
      namespace: demo
    spec:
      clusterName: mycluster
-     type: Restart 
+     type: Restart
      restart:
      - componentName: postgresql
    EOF

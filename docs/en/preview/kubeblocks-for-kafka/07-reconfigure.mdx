@@ -1,14 +1,14 @@
 ---
-title: Configure cluster parameters
+title: Reconfigure
 description: Configure cluster parameters
 keywords: [kafka, parameter, configuration, reconfiguration]
-sidebar_position: 1
+sidebar_position: 7
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# Configure cluster parameters
+# Reconfigure cluster parameters
 
 The KubeBlocks configuration function provides a set of consistent default configuration generation strategies for all the databases running on KubeBlocks and also provides a unified parameter configuration interface to facilitate managing parameter configuration, searching the parameter user guide, and validating parameter effectiveness.
 
@@ -158,7 +158,7 @@ You can also view the details of this configuration file and parameters.
   ```
 
 * View the user guide of a specified parameter.
-  
+
   ```bash
   kbcli cluster explain-config mycluster -n demo --param=log.cleanup.policy
   ```
@@ -177,9 +177,9 @@ You can also view the details of this configuration file and parameters.
     Scope:              Global
     Dynamic:            false
     Type:               string
-    Description:        The default cleanup policy for segments beyond the retention window. A comma separated list of valid policies. 
+    Description:        The default cleanup policy for segments beyond the retention window. A comma separated list of valid policies.
   ```
-  
+
   </details>
 
   * Allowed Values: It defines the valid value range of this parameter.
@@ -314,7 +314,7 @@ After the configuration is completed, you can search the configuration history a
 View the parameter configuration history.
 
 ```bash
-kbcli cluster describe-config mycluster -n demo                 
+kbcli cluster describe-config mycluster -n demo
 ```
 
 From the above results, there are three parameter modifications.

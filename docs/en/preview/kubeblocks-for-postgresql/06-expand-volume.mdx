@@ -2,7 +2,7 @@
 title: Expand volume
 description: How to expand the volume of a PostgreSQL cluster
 keywords: [postgresql, expand volume]
-sidebar_position: 3
+sidebar_position: 6
 sidebar_label: Expand volume
 ---
 
@@ -98,7 +98,7 @@ mycluster   demo        postgresql           postgresql-14.8.0   Delete         
 
 <TabItem value="Edit cluster YAML file" label="Edit cluster YAML file">
 
-1. Change the value of `spec.components.volumeClaimTemplates.spec.resources` in the cluster YAML file. 
+1. Change the value of `spec.components.volumeClaimTemplates.spec.resources` in the cluster YAML file.
 
    `spec.components.volumeClaimTemplates.spec.resources` is the storage resource information of the pod and changing this value triggers the volume expansion of a cluster.
 

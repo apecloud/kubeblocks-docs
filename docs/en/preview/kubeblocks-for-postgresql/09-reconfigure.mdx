@@ -1,14 +1,14 @@
 ---
-title: Configure cluster parameters
+title: Reconfigure
 description: Configure cluster parameters
 keywords: [postgresql, parameter, configuration, reconfiguration]
-sidebar_position: 1
+sidebar_position: 9
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# Configure cluster parameters
+# Reconfigure cluster parameters
 
 This guide shows how to configure cluster parameters.
 
@@ -202,15 +202,15 @@ You can also view the details of this configuration file and parameters.
   ```
 
 * View the user guide of a specified parameter.
-  
+
   ```bash
   kbcli cluster explain-config mycluster -n demo --param=max_connections
   ```
-  
+
   <details>
 
   <summary>Output</summary>
-  
+
   ```bash
   template meta:
     ConfigSpec: postgresql-configuration ComponentName: postgresql ClusterName: mycluster
