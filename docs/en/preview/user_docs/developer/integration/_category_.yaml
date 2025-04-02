@@ -1,4 +1,5 @@
 position: 3
 label: Add an add-on to KubeBlocks
-collapsible: true 
+collapsible: true
 collapsed: true
+hidden: true
