@@ -1,8 +1,8 @@
 ---
-title: Create a cluster for Kafka
+title: Provision
 description: Guide for cluster creation for kafka
 keywords: [kafka, cluster, management]
-sidebar_position: 1
+sidebar_position: 2
 sidebar_label: Create
 ---
 
@@ -37,7 +37,7 @@ This document shows how to create a Kafka cluster.
   ```bash
   kbcli addon list
   >
-  NAME                           TYPE   STATUS     EXTRAS         AUTO-INSTALL  
+  NAME                           TYPE   STATUS     EXTRAS         AUTO-INSTALL
   ...
   kafka                          Helm   Enabled                   true
   ...
@@ -119,7 +119,7 @@ This document shows how to create a Kafka cluster.
                  resources:
                    requests:
                      storage: 1Gi
-         - name: kafka-exporter 
+         - name: kafka-exporter
            replicas: 1
            resources:
              limits:

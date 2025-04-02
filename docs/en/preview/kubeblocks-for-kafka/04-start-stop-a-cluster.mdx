@@ -1,19 +1,21 @@
 ---
-title: Stop/Start a PostgreSQL cluster
-description: How to start/stop a PostgreSQL cluster
-keywords: [postgresql, stop a cluster, start a cluster]
-sidebar_position: 5
+title: Stop/Start
+description: How to start/stop a Kafka cluster
+keywords: [kafka, stop a kafka cluster, start a kafka cluster]
+sidebar_position: 4
 sidebar_label: Stop/Start
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# Stop/Start PostgreSQL Cluster
+# Stop/Start a Kafka Cluster
 
-You can stop/start a cluster to save computing resources. When a cluster is stopped, the computing resources of this cluster are released, which means the pods of Kubernetes are released, but the storage resources are reserved. You can start this cluster again to restore it to the state it was in before it was stopped.
+You can stop/start a cluster to save computing resources. When a cluster is stopped, the computing resources of this cluster are released, which means the pods of Kubernetes are released, but the storage resources are reserved. Start this cluster again if you want to restore the cluster resources from the original storage by snapshots.
 
 ## Stop a cluster
+
+***Steps:***
 
 1. Configure the name of your cluster and run the command below to stop this cluster.
 
@@ -21,7 +23,7 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
 
    <TabItem value="OpsRequest" label="OpsRequest" default>
 
-   Apply an OpsRequest to stop a cluster.
+   Run the command below to stop a cluster.
 
    ```bash
    kubectl apply -f - <<EOF
@@ -40,24 +42,22 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
 
    <TabItem value="Edit cluster YAML file" label="Edit cluster YAML file">
 
-   Configure replicas as 0 to delete pods.
-
    ```bash
    kubectl edit cluster mycluster -n demo
    ```
 
-   Edit the value of `spec.componentSpecs.replicas`.
+   Configure the value of `spec.componentSpecs.replicas` as 0 to delete pods.
 
    ```yaml
    ...
    spec:
-     clusterDefinitionRef: postgresql
-     clusterVersionRef: postgresql-14.8.0
+     clusterDefinitionRef: kafka
+     clusterVersionRef: kafka-3.3.2
      terminationPolicy: Delete
      componentSpecs:
-     - name: postgresql
-       componentDefRef: postgresql
-       disableExporter: true  
+     - name: kafka
+       componentDefRef: kafka
+       disableExporter: true
        replicas: 0 # Change this value
    ...
    ```
@@ -104,6 +104,8 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
 
    <TabItem value="OpsRequest" label="OpsRequest" default>
 
+   Apply an OpsRequest to start the cluster.
+
    ```bash
    kubectl apply -f - <<EOF
    apiVersion: apps.kubeblocks.io/v1alpha1
@@ -114,30 +116,28 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
    spec:
      clusterName: mycluster
      type: Start
-   EOF 
+   EOF
    ```
 
    </TabItem>
-  
-   <TabItem value="Edit cluster YAML file" label="Edit cluster YAML file">
 
-   Change replicas back to the original amount to start this cluster again.
+   <TabItem value="Edit cluster YAML file" label="Edit cluster YAML File">
 
    ```bash
    kubectl edit cluster mycluster -n demo
    ```
 
-   Edit the value of `spec.componentSpecs.replicas`.
+   Change the value of `spec.componentSpecs.replicas` back to the original amount to start this cluster again.
 
    ```yaml
    ...
    spec:
-     clusterDefinitionRef: postgresql
-     clusterVersionRef: postgresql-14.8.0
+     clusterDefinitionRef: kafka
+     clusterVersionRef: kafka-3.3.2
      terminationPolicy: Delete
      componentSpecs:
-     - name: mysql
-       componentDefRef: mysql
+     - name: kafka
+       componentDefRef: kafka
        disableExporter: true
        replicas: 1 # Change this value
    ...

@@ -1,15 +1,15 @@
 ---
-title: Switch over a PostgreSQL cluster
+title: Switchover
 description: How to switch over a PostgreSQL cluster
 keywords: [postgresql, switch over a cluster, switchover]
-sidebar_position: 6
+sidebar_position: 8
 sidebar_label: Switchover
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# Switch over a PostgreSQL cluster
+# Switchover PostgreSQL cluster
 
 You can initiate a switchover for a PostgreSQL Replication Cluster by executing the kbcli or kubectl command. Then KubeBlocks modifies the instance roles.
 
@@ -111,7 +111,7 @@ Check the instance status to verify whether the switchover is performed successf
 ```bash
 kubectl get cluster mycluster -n demo
 
-kubectl -n demo get po -L kubeblocks.io/role 
+kubectl -n demo get po -L kubeblocks.io/role
 ```
 
 </TabItem>

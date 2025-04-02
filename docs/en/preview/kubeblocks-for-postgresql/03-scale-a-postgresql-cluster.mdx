@@ -1,15 +1,15 @@
 ---
-title: Scale for a PostgreSQL cluster
-description: How to vertically scale a PostgreSQL cluster
+title: Scale
+description: How to scale a PostgreSQL cluster
 keywords: [postgresql, vertical scale]
-sidebar_position: 2
+sidebar_position: 3
 sidebar_label: Scale
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# Scale a PostgreSQL cluster
+# Scaling PostgreSQL cluster
 
 You can scale a PostgreSQL cluster in two ways, vertical scaling and horizontal scaling.
 
@@ -70,7 +70,7 @@ mycluster   demo        postgresql           postgresql-14.8.0   Delete         
      namespace: demo
    spec:
      clusterName: mycluster
-     type: VerticalScaling 
+     type: VerticalScaling
      verticalScaling:
      - componentName: postgresql
        requests:
@@ -119,7 +119,7 @@ mycluster   demo        postgresql           postgresql-14.8.0   Delete         
 
 <TabItem value="Edit cluster YAML file" label="Edit cluster YAML file">
 
-1. Change the configuration of `spec.componentSpecs.resources` in the YAML file. 
+1. Change the configuration of `spec.componentSpecs.resources` in the YAML file.
 
    `spec.components.resources` controls the requirement and limit of resources and changing them triggers a vertical scaling.
 
@@ -327,7 +327,7 @@ mycluster   demo        postgresql           postgresql-14.8.0   Delete         
     ```
 
 </TabItem>
-  
+
 <TabItem value="Edit cluster YAML file" label="Edit cluster YAML file">
 
 1. Change the configuration of `spec.componentSpecs.replicas` in the YAML file.
@@ -407,7 +407,7 @@ In the example below, a snapshot exception occurs.
 
 ```bash
 Status:
-  conditions: 
+  conditions:
   - lastTransitionTime: "2023-04-08T04:20:26Z"
     message: VolumeSnapshot/mycluster-postgresql-scaling-dbqgp: Failed to set default snapshot
       class with error cannot find default snapshot class
@@ -441,7 +441,7 @@ This exception occurs because the `VolumeSnapshotClass` is not configured. This 
 
     ```bash
     kubectl delete backup -l app.kubernetes.io/instance=mycluster
-   
+
     kubectl delete volumesnapshot -l app.kubernetes.io/instance=mycluster
     ```
 

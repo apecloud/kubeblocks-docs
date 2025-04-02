@@ -1,23 +1,23 @@
 ---
-title: Delete a kafka Cluster
-description: How to delete a kafka Cluster
-keywords: [kafka, delete a cluster, delete protection]
-sidebar_position: 7
+title: Delete
+description: How to delete a PostgreSQL Cluster
+keywords: [postgresql, delete a cluster]
+sidebar_position: 10
 sidebar_label: Delete protection
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# Delete a Kafka cluster
-
-## Termination policy
+# Delete PostgreSQL Cluster
 
 :::note
 
-The termination policy determines how a cluster is deleted. Set the policy when creating a cluster.
+The termination policy determines how a cluster is deleted.
 
 :::
+
+## Termination policy
 
 | **terminationPolicy** | **Deleting Operation**                           |
 |:----------------------|:-------------------------------------------------|
@@ -34,8 +34,8 @@ To check the termination policy, execute the following command.
 ```bash
 kubectl -n demo get cluster mycluster
 >
-NAME           CLUSTER-DEFINITION   VERSION        TERMINATION-POLICY   STATUS     AGE
-mycluster      kafka                kafka-3.3.2    Delete               Running    19m
+NAME        CLUSTER-DEFINITION   VERSION             TERMINATION-POLICY   STATUS    AGE
+mycluster   postgresql           postgresql-14.8.0   Delete               Running   29m
 ```
 
 </TabItem>
@@ -45,15 +45,15 @@ mycluster      kafka                kafka-3.3.2    Delete               Running 
 ```bash
 kbcli cluster list mycluster -n demo
 >
-NAME        NAMESPACE   CLUSTER-DEFINITION   VERSION       TERMINATION-POLICY   STATUS    CREATED-TIME
-mycluster   demo        kafka                kafka-3.3.2   Delete               Running   Sep 27,2024 15:15 UTC+0800
+NAME        NAMESPACE   CLUSTER-DEFINITION   VERSION             TERMINATION-POLICY   STATUS    CREATED-TIME
+mycluster   demo        postgresql           postgresql-14.8.0   Delete               Running   Sep 28,2024 16:47 UTC+0800
 ```
 
 </TabItem>
 
 </Tabs>
 
-## Steps
+## Step
 
 Run the command below to delete a specified cluster.
 
@@ -62,10 +62,10 @@ Run the command below to delete a specified cluster.
 <TabItem value="kubectl" label="kubectl" default>
 
 ```bash
-kubectl delete -n demo cluster mycluster
+kubectl delete cluster mycluster -n demo
 ```
 
-If you want to delete a cluster and its all related resources, you can set the termination policy to `WipeOut`, then delete the cluster.
+If you want to delete a cluster and its all related resources, you can modify the termination policy to `WipeOut`, and then delete the cluster.
 
 ```bash
 kubectl patch -n demo cluster mycluster -p '{"spec":{"terminationPolicy":"WipeOut"}}' --type="merge"
@@ -78,7 +78,7 @@ kubectl delete -n demo cluster mycluster
 <TabItem value="kbcli" label="kbcli">
 
 ```bash
-kbcli cluster delete mycluster
+kbcli cluster delete mycluster -n demo
 ```
 
 </TabItem>

@@ -2,7 +2,7 @@
 title: PostgreSQL connection pool
 description: Connect to PgBouncer to reduce too many PostgreSQL connections and to improve the throughput and stability of the database.
 keywords: [postgresql, connection pool, pgbouncer]
-sidebar_position: 1
+sidebar_position: 11
 sidebar_label: Connection pool
 ---
 
@@ -35,7 +35,7 @@ When creating a PostgreSQL cluster with KubeBlocks, PgBouncer is installed by de
     kubectl get services mycluster-postgresql -n demo
     >
     NAME                   TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)             AGE
-    mycluster-postgresql   ClusterIP   10.97.123.178   <none>        5432/TCP,6432/TCP   39m       
+    mycluster-postgresql   ClusterIP   10.97.123.178   <none>        5432/TCP,6432/TCP   39m
     ```
 
 3. Run the command below to get the `username` and `password` for the `kubectl exec` command.
@@ -76,7 +76,7 @@ When creating a PostgreSQL cluster with KubeBlocks, PgBouncer is installed by de
    pgbouncer=# show help;
    >
    NOTICE:  Console usage
-   DETAIL:  
+   DETAIL:
            SHOW HELP|CONFIG|DATABASES|POOLS|CLIENTS|SERVERS|USERS|VERSION
            SHOW PEERS|PEER_POOLS
            SHOW FDS|SOCKETS|ACTIVE_SOCKETS|LISTS|MEM|STATE
@@ -114,9 +114,9 @@ When creating a PostgreSQL cluster with KubeBlocks, PgBouncer is installed by de
     kbcli cluster describe mycluster -n demo
     >
     Endpoints:
-    COMPONENT    MODE        INTERNAL                                              EXTERNAL   
-    postgresql   ReadWrite   mycluster-postgresql.default.svc.cluster.local:5432   <none>     
-                             mycluster-postgresql.default.svc.cluster.local:6432         
+    COMPONENT    MODE        INTERNAL                                              EXTERNAL
+    postgresql   ReadWrite   mycluster-postgresql.default.svc.cluster.local:5432   <none>
+                             mycluster-postgresql.default.svc.cluster.local:6432
     ```
 
 3. Connect the cluster with PgBouncer.
@@ -154,7 +154,7 @@ When creating a PostgreSQL cluster with KubeBlocks, PgBouncer is installed by de
    pgbouncer=# show help;
    >
    NOTICE:  Console usage
-   DETAIL:  
+   DETAIL:
            SHOW HELP|CONFIG|DATABASES|POOLS|CLIENTS|SERVERS|USERS|VERSION
            SHOW PEERS|PEER_POOLS
            SHOW FDS|SOCKETS|ACTIVE_SOCKETS|LISTS|MEM|STATE
