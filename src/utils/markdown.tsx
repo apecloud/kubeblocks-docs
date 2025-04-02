@@ -52,6 +52,7 @@ export const getMarkDownSideBar = async (
             label: metadata.title || metadata.sidebar_label,
             href: urlPath.replace(/^\/(en|zh)/, "/docs"),
             description: metadata.description,
+            hidden: Boolean(metadata.hidden),
           });
           resolve(item);
         })

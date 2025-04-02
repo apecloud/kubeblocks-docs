@@ -14,6 +14,7 @@ export type SidebarMenuItem = {
   href?: string;
   position: number;
   description?: string;
+  hidden?: boolean,
 };
 
 type SidebatMenuItemProps = {
@@ -38,7 +39,7 @@ export function SidebarMenuItem({ level = 1, item }: SidebatMenuItemProps) {
   const [open, setOpen] = useState<boolean>(checkOpen(pathname, item));
   const theme = useTheme();
   const sx = {
-    display: "block",
+    display: item.hidden ? "none" : "block",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
@@ -63,7 +64,9 @@ export function SidebarMenuItem({ level = 1, item }: SidebatMenuItemProps) {
   }, [pathname, item]);
 
   return (
-    <Box className="item">
+    <Box className="item" sx={{
+      display: item.hidden ? 'none' : 'block'
+    }}>
       <Box>
         {item.href && _.isEmpty(item.children) ? (
           <Tooltip title={item.description} placement="right" arrow>
