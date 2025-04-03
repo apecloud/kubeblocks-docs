@@ -1,8 +1,8 @@
 ---
 title: 删除
 description: 如何删除集群
-keywords: [mysql, 删除集群]
-sidebar_position: 7
+keywords: [kafka, 删除集群, 删除保护]
+sidebar_position: 10
 sidebar_label: 删除保护
 ---
 
@@ -15,7 +15,7 @@ import TabItem from '@theme/TabItem';
 
 :::note
 
-终止策略决定了删除集群的方式。
+终止策略决定了删除集群的方式，可在创建集群时进行设置。
 
 :::
 
@@ -26,7 +26,7 @@ import TabItem from '@theme/TabItem';
 | `Delete`              | `Delete` 在 `Halt` 的基础上，删除 PVC 及所有持久数据。                              |
 | `WipeOut`             | `WipeOut`  删除所有集群资源，包括外部存储中的卷快照和备份。使用该策略将会删除全部数据，特别是在非生产环境，该策略将会带来不可逆的数据丢失。请谨慎使用。   |
 
-执行以下命令查看当前集群的终止策略。
+执行以下命令查看终止策略。
 
 <Tabs>
 
@@ -35,8 +35,8 @@ import TabItem from '@theme/TabItem';
 ```bash
 kubectl -n demo get cluster mycluster
 >
-NAME        CLUSTER-DEFINITION   VERSION        TERMINATION-POLICY   STATUS    AGE
-mycluster   mysql                mysql-8.0.30   Delete               Running   67m
+NAME           CLUSTER-DEFINITION   VERSION        TERMINATION-POLICY   STATUS     AGE
+mycluster      kafka                kafka-3.3.2    Delete               Running    19m
 ```
 
 </TabItem>
@@ -46,8 +46,8 @@ mycluster   mysql                mysql-8.0.30   Delete               Running   6
 ```bash
 kbcli cluster list mycluster -n demo
 >
-NAME        NAMESPACE   CLUSTER-DEFINITION   VERSION        TERMINATION-POLICY   STATUS    CREATED-TIME
-mycluster   demo        mysql                mysql-8.0.33   Delete               Running   Jul 05,2024 18:46 UTC+0800
+NAME        NAMESPACE   CLUSTER-DEFINITION   VERSION       TERMINATION-POLICY   STATUS    CREATED-TIME
+mycluster   demo        kafka                kafka-3.3.2   Delete               Running   Sep 27,2024 15:15 UTC+0800
 ```
 
 </TabItem>
@@ -63,7 +63,7 @@ mycluster   demo        mysql                mysql-8.0.33   Delete              
 <TabItem value="kubectl" label="kubectl" default>
 
 ```bash
-kubectl delete cluster mycluster -n demo
+kubectl delete -n demo cluster mycluster
 ```
 
 如果想删除集群和所有相关资源，可以将终止策略修改为 `WipeOut`，然后再删除该集群。
@@ -79,7 +79,7 @@ kubectl delete -n demo cluster mycluster
 <TabItem value="kbcli" label="kbcli">
 
 ```bash
-kbcli cluster delete mycluster -n demo
+kbcli cluster delete mycluster
 ```
 
 </TabItem>

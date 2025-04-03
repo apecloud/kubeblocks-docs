@@ -1,0 +1,25 @@
+---
+title: 连接
+description: How to Connect Qdrant on KubeBlocks
+keywords: [Qdrant, vector database, control plane]
+sidebar_position: 11
+sidebar_label: Connect Qdrant with KubeBlocks
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## 连接到 Qdrant 集群
+
+Qdrant 提供两种客户端访问协议：HTTP 和 gRPC，它们分别使用端口 6333 和 6334 进行通信。根据客户端所在的位置，你可以使用不同的方法连接到 Qdrant 集群。
+
+:::note
+
+如果你的集群在 AWS 上，请先安装 AWS 负载均衡控制器。
+
+:::
+
+- 如果客户端在 K8s 集群内部，执行 `kbcli cluster describe qdrant` 命令获取集群的 ClusterIP 地址或相应的 K8s 集群域名。
+- 如果客户端在 K8s 集群外部但在同一 VPC 内，执行 `kbcli cluster expose qdrant --enable=true --type=vpc` 命令获取数据库集群的 VPC 负载均衡器地址。
+- 如果客户端在 VPC 外部，执行 `kbcli cluster expose qdrant --enable=true --type=internet` 命令打开数据库集群的公共网络可达地址。
+

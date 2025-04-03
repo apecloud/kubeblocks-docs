@@ -2,3 +2,4 @@ position: 3
 label: 外部组件
 collapsible: true
 collapsed: true
+hidden: true

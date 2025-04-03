@@ -1,17 +1,17 @@
 ---
 title: 删除
-description: 如何删除集群
-keywords: [mysql, 删除集群]
-sidebar_position: 7
-sidebar_label: 删除保护
+description: How to Delete RabbitMQ on KubeBlocks
+keywords: [RabbitMQ, vector database, control plane]
+sidebar_position: 10
+sidebar_label: Delete RabbitMQ with KubeBlocks
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# 删除集群
+## 删除集群
 
-## 终止策略
+### 终止策略
 
 :::note
 
@@ -26,41 +26,18 @@ import TabItem from '@theme/TabItem';
 | `Delete`              | `Delete` 在 `Halt` 的基础上，删除 PVC 及所有持久数据。                              |
 | `WipeOut`             | `WipeOut`  删除所有集群资源，包括外部存储中的卷快照和备份。使用该策略将会删除全部数据，特别是在非生产环境，该策略将会带来不可逆的数据丢失。请谨慎使用。   |
 
-执行以下命令查看当前集群的终止策略。
-
-<Tabs>
-
-<TabItem value="kubectl" label="kubectl" default>
+执行以下命令查看终止策略。
 
 ```bash
-kubectl -n demo get cluster mycluster
+kubectl get cluster mycluster -n demo
 >
-NAME        CLUSTER-DEFINITION   VERSION        TERMINATION-POLICY   STATUS    AGE
-mycluster   mysql                mysql-8.0.30   Delete               Running   67m
+NAME        CLUSTER-DEFINITION    VERSION        TERMINATION-POLICY     STATUS    AGE
+mycluster                                        Delete                 Running   47m
 ```
 
-</TabItem>
-
-<TabItem value="kbcli" label="kbcli">
-
-```bash
-kbcli cluster list mycluster -n demo
->
-NAME        NAMESPACE   CLUSTER-DEFINITION   VERSION        TERMINATION-POLICY   STATUS    CREATED-TIME
-mycluster   demo        mysql                mysql-8.0.33   Delete               Running   Jul 05,2024 18:46 UTC+0800
-```
-
-</TabItem>
-
-</Tabs>
-
-## 步骤
+### 步骤
 
 执行以下命令，删除集群。
-
-<Tabs>
-
-<TabItem value="kubectl" label="kubectl" default>
 
 ```bash
 kubectl delete cluster mycluster -n demo
@@ -73,15 +50,3 @@ kubectl patch -n demo cluster mycluster -p '{"spec":{"terminationPolicy":"WipeOu
 
 kubectl delete -n demo cluster mycluster
 ```
-
-</TabItem>
-
-<TabItem value="kbcli" label="kbcli">
-
-```bash
-kbcli cluster delete mycluster -n demo
-```
-
-</TabItem>
-
-</Tabs>

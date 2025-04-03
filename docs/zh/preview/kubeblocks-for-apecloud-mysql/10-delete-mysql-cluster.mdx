@@ -2,7 +2,7 @@
 title: 删除
 description: 如何删除集群
 keywords: [mysql, 删除集群]
-sidebar_position: 7
+sidebar_position: 10
 sidebar_label: 删除保护
 ---
 
@@ -33,10 +33,10 @@ import TabItem from '@theme/TabItem';
 <TabItem value="kubectl" label="kubectl" default>
 
 ```bash
-kubectl -n demo get cluster mycluster
+kubectl get cluster mycluster -n demo
 >
-NAME        CLUSTER-DEFINITION   VERSION        TERMINATION-POLICY   STATUS    AGE
-mycluster   mysql                mysql-8.0.30   Delete               Running   67m
+NAME        CLUSTER-DEFINITION   VERSION           TERMINATION-POLICY   STATUS    AGE
+mycluster   apecloud-mysql       ac-mysql-8.0.30   Delete               Running   27m
 ```
 
 </TabItem>
@@ -44,10 +44,10 @@ mycluster   mysql                mysql-8.0.30   Delete               Running   6
 <TabItem value="kbcli" label="kbcli">
 
 ```bash
-kbcli cluster list mycluster -n demo
+kbcli cluster list -n demo
 >
-NAME        NAMESPACE   CLUSTER-DEFINITION   VERSION        TERMINATION-POLICY   STATUS    CREATED-TIME
-mycluster   demo        mysql                mysql-8.0.33   Delete               Running   Jul 05,2024 18:46 UTC+0800
+NAME        NAMESPACE   CLUSTER-DEFINITION   VERSION           TERMINATION-POLICY   STATUS    CREATED-TIME
+mycluster   demo        apecloud-mysql       ac-mysql-8.0.30   Delete               Running   Sep 19,2024 16:01 UTC+0800
 ```
 
 </TabItem>
@@ -61,10 +61,6 @@ mycluster   demo        mysql                mysql-8.0.33   Delete              
 <Tabs>
 
 <TabItem value="kubectl" label="kubectl" default>
-
-```bash
-kubectl delete cluster mycluster -n demo
-```
 
 如果想删除集群和所有相关资源，可以将终止策略修改为 `WipeOut`，然后再删除该集群。
 

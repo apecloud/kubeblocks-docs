@@ -1,0 +1,41 @@
+---
+title: Milvus
+description: Milvus
+keywords: [Milvus]
+sidebar_position: 1
+---
+
+# Milvus
+
+Milvus is an open source (Apache-2.0 licensed) vector database built to power embedding similarity search and AI applications. Milvus's architecture is designed to handle large-scale vector datasets and includes various deployment modes:  Milvus Standalone, and Milvus Distributed, to accommodate different data scale needs.
+
+- Standalone Mode, including three components:
+  - Milvus: Provides the core functionality of the system.
+  - Metadata Storage (ETCD): A metadata engine for accessing and storing metadata of Milvus internal components (including proxies, index nodes, etc.), typically using etcd.
+  - Object Storage (minio): A storage engine responsible for the persistence of Milvus data, typically using MinIO or S3-compatible storage services.
+
+- Cluster Mode, including multiple layers:
+  - Access Layer: composed of a group of stateless proxies
+  - Worker Nodes:
+    - Query Nodes
+    - Data Nodes
+    - Index Nodes
+  - Coordinator Service: Manages the metadata of the cluster, including Root, Query , Data, and Index Coordinators.
+  - Storage Layer, including
+    - Metadata Storage (ETCD): A metadata engine for accessing and storing metadata of Milvus internal components, typically using etcd.
+    - Object Storage (minio): A storage engine responsible for the persistence of Milvus data, typically using MinIO or S3-compatible storage services.
+    - Log Storage (Pulsar): A log storage engine responsible for the persistence of Milvus logs, typically using Apache Pulsar.
+
+## Supported Features
+
+### Lifecycle Management
+
+| Topology | Horizontal<br/>scaling | Vertical <br/>scaling | Expand<br/>volume | Restart   | Stop/Start | Configure | Expose | Switchover |
+|----------|------------------------|-----------------------|-------------------|-----------|------------|-----------|--------|------------|
+| Standalone/Cluster | Yes          | Yes                   | N/A           | Yes       | Yes        | N/A       | Yes    | N/A   |
+
+### Versions
+
+| Versions |
+|----------|
+| 2.3.2 |
