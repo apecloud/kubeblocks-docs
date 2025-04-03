@@ -1,8 +1,8 @@
 ---
-title: Stop/Start an ApeCloud MySQL cluster
+title: Stop/Start
 description: How to stop/start an ApeCloud MySQL cluster
 keywords: [mysql, stop a cluster, start a cluster]
-sidebar_position: 5
+sidebar_position: 4
 sidebar_label: Stop/Start
 ---
 
@@ -35,7 +35,7 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
     ```
 
     </TabItem>
-  
+
     <TabItem value="Edit cluster YAML file" label="Edit cluster YAML file">
 
     ```bash
@@ -53,7 +53,7 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
       componentSpecs:
       - name: mysql
         componentDefRef: mysql
-        disableExporter: true  
+        disableExporter: true
         replicas: 0 # Change this value
     ...
     ```
@@ -109,11 +109,11 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
     spec:
       clusterName: mycluster
       type: Start
-    EOF 
+    EOF
     ```
 
     </TabItem>
-  
+
     <TabItem value="Edit cluster YAML file" label="Edit cluster YAML file">
 
     ```bash

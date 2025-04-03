@@ -1,4 +1,4 @@
-position: 8
-label: Proxy
-collapsible: true 
-collapsed: true 
+position: 20
+label: ApeCloud MySQL Proxy
+collapsible: true
+collapsed: true

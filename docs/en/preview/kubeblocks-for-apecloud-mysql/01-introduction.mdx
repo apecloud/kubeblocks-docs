@@ -1,13 +1,13 @@
 ---
-title: ApeCloud MySQL introduction
-description: ApeCloud MySQL introduction
-keywords: [apecloud mysql, mysql, introduction]
+title: ApeCloud MySQL
+description: ApeCloud MySQL
+keywords: [apecloud mysql, mysql]
 sidebar_position: 1
 ---
 
-# ApeCloud MySQL introduction
+# ApeCloud MySQL
 
-MySQL is the world’s most popular open-source database and the second-most-popular database overall. It is used by many of the most accessed applications, such as Facebook, Twitter, Netflix, Uber, Airbnb, Shopify, and Booking.com. 
+MySQL is the world’s most popular open-source database and the second-most-popular database overall. It is used by many of the most accessed applications, such as Facebook, Twitter, Netflix, Uber, Airbnb, Shopify, and Booking.com.
 KubeBlocks adopts the MySQL distribution provided by ApeCloud, which includes data compression and high availability improvements.
 
 - When there are 3 or more replicas,  a strong consistent high-availability cluster is created with the consensus algorithm protocol to ensure that RPO=0 in the case of a single availability zone failure. Among them, the primary instance provides read/write capacity, and the remaining instances provide read-only services.
@@ -51,3 +51,24 @@ The cluster supports node fault tolerance. Suppose the number of replicas is n, 
   8 | 5 | 3 |
   9 | 5 | 4 |
   10 | 6 | 4 |
+
+
+## Supported Features
+
+### Lifecycle Management
+
+| Horizontal<br/>scaling | Vertical <br/>scaling | Expand<br/>volume | Restart   | Stop/Start | Configure | Expose | Switchover |
+|------------------------|-----------------------|-------------------|-----------|------------|-----------|--------|------------|
+| Yes                    | Yes                   | Yes              | Yes       | Yes        | Yes       | Yes    | Yes      |
+
+### Backup and Restore
+
+| Feature     | Method | Description |
+|-------------|--------|------------|
+| Full Backup | xtrabackup   | uses `xtrabackup`, an open-source tool developed by Percona to perform full backups  |
+
+### Versions
+
+| Major Versions | Description |
+|---------------|--------------|
+| 8.0           | 8.0.30       |

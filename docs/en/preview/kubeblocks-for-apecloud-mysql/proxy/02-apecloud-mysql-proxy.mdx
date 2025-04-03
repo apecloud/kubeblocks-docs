@@ -1,5 +1,5 @@
 ---
-title: How to use ApeCloud MySQL Proxy Cluster
+title: Manage ApeCloud MySQL Proxy Cluster
 description: ApeCloud MySQL Proxy Cluster tutorial
 keywords: [apecloud mysql proxy, proxy]
 sidebar_position: 2
@@ -8,8 +8,6 @@ sidebar_label: ApeCloud MySQL Proxy Cluster
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-
-# ApeCloud MySQL Proxy
 
 ## Before you start
 
@@ -72,7 +70,7 @@ It is recommended to use kbcli to create an ApeCloud MySQL Proxy Cluster.
    3. Install the etcd cluster.
 
        ```bash
-       helm install etcd-cluster kubeblocks/etcd-cluster 
+       helm install etcd-cluster kubeblocks/etcd-cluster
        ```
 
    4. view the status of the etcd cluster and make sure it is running.
@@ -95,7 +93,7 @@ It is recommended to use kbcli to create an ApeCloud MySQL Proxy Cluster.
        kubernetes                       ClusterIP   10.96.0.1      <none>        443/TCP                                                  13m
        ```
 
-       You can combine the service address to get the endpoint or you can use the IP of the service address as the access address. 
+       You can combine the service address to get the endpoint or you can use the IP of the service address as the access address.
 
        Here is an example of combining the service address.
 
@@ -446,10 +444,10 @@ VTGate, VTConsensus, and VTTablet support parameter configuration. You can confi
    ```bash
    # vtgate
    kbcli cluster describe-config myproxy --components vtgate --show-detail
-   
+
    # vtcontroller
    kbcli cluster describe-config myproxy --components vtcontroller --show-detail
-   
+
    # vttablet
    kbcli cluster describe-config myproxy --components mysql --show-detail --config-specs vttablet-config
    ```
@@ -609,7 +607,7 @@ You can enable the read-write splitting function.
    kubectl edit configurations.apps.kubeblocks.io myproxy-vtgate
    ```
 
-2. Configure `read_write_splitting_policy` as `random`. 
+2. Configure `read_write_splitting_policy` as `random`.
 
    ```yaml
    spec:

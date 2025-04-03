@@ -1,8 +1,8 @@
 ---
-title: Create and connect to an ApeCloud MySQL Cluster
+title: Provision
 description: How to create and connect to an ApeCloud MySQL cluster
 keywords: [mysql, create an apecloud mysql cluster, connect to a mysql cluster]
-sidebar_position: 1
+sidebar_position: 2
 sidebar_label: Create and connect
 ---
 
@@ -20,7 +20,7 @@ This tutorial shows how to create and connect to an ApeCloud MySQL cluster.
 * [Install kbcli](./../../installation/install-kbcli.md) if you want to create and connect a MySQL cluster by `kbcli`.
 * [Install KubeBlocks](./../../installation/install-kubeblocks.md).
 * Check whether the ApeCloud MySQL Addon is enabled. The ApeCloud MySQL Addon is enabled by KubeBlocks by default. If you disable it when installing KubeBlocks,[enable it](./../../installation/install-addons.md) first.
-  
+
   <Tabs>
 
   <TabItem value="kubectl" label="kubectl" default>
@@ -35,7 +35,7 @@ This tutorial shows how to create and connect to an ApeCloud MySQL cluster.
   </TabItem>
 
   <TabItem value="kbcli" label="kbcli">
-  
+
   ```bash
   kbcli addon list
   >
@@ -54,7 +54,7 @@ This tutorial shows how to create and connect to an ApeCloud MySQL cluster.
   <Tabs>
 
   <TabItem value="kubectl" label="kubectl" default>
-  
+
   Make sure the `apecloud-mysql` cluster definition is installed.
 
   ```bash
@@ -187,7 +187,7 @@ KubeBlocks supports creating two types of ApeCloud MySQL clusters: Standalone an
 1. Create an ApeCloud MySQL cluster.
 
    Below are some common examples to create a cluster with default settings. If you want to customize your cluster specifications, kbcli provides various options, such as setting cluster version, termination policy, CPU, and memory. You can view these options by adding `--help` or `-h` flag.
-  
+
    ```bash
    kbcli cluster create apecloud-mysql --help
 

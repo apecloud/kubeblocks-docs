@@ -1,15 +1,15 @@
 ---
-title: Configure cluster parameters
-description: Configure cluster parameters
+title: Reconfigure
+description: Reconfigure cluster parameters
 keywords: [mysql, parameter, configuration, reconfiguration]
-sidebar_position: 1
-sidebar_label: Configuration
+sidebar_position: 8
+sidebar_label: Reconfigure
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# Configure cluster parameters
+# Reconfigure cluster parameters
 
 This guide shows how to configure cluster parameters.
 
@@ -204,7 +204,7 @@ You can also view the details of this configuration file and parameters.
   ```
 
 * View the user guide of a specified parameter.
-  
+
   ```bash
   kbcli cluster explain-config mycluster --param=innodb_buffer_pool_size --config-specs=mysql-consensusset-config -n demo
   ```
@@ -225,9 +225,9 @@ You can also view the details of this configuration file and parameters.
     Scope:              Global
     Dynamic:            false
     Type:               integer
-    Description:        The size in bytes of the memory buffer innodb uses to cache data and indexes of its tables  
+    Description:        The size in bytes of the memory buffer innodb uses to cache data and indexes of its tables
   ```
-  
+
   </details>
 
   * Allowed Values: It defines the valid value range of this parameter.
@@ -347,7 +347,7 @@ The example below takes configuring `max_connections` and `innodb_buffer_pool_si
    +-----------------+-------+
    1 row in set (0.04 sec)
    ```
-  
+
    ```bash
    mysql> show variables like '%innodb_buffer_pool_size%';
    >
@@ -418,7 +418,7 @@ vttablet-config             vttablet.cnf   true      vttablet-config-template   
 History modifications:
 OPS-NAME                        CLUSTER     COMPONENT   CONFIG-SPEC-NAME            FILE     STATUS    POLICY              PROGRESS   CREATED-TIME                 VALID-UPDATED
 mycluster-reconfiguring-zk4b4   mycluster   mysql       mysql-consensusset-config   my.cnf   Succeed   syncDynamicReload   1/1        Sep 19,2024 18:26 UTC+0800   {"my.cnf":"{\"mysqld\":{\"innodb_buffer_pool_size\":\"512M\",\"max_connections\":\"600\"}}"}
-mycluster-reconfiguring-djdfc   mycluster   mysql       mysql-consensusset-config   my.cnf   Succeed   syncDynamicReload   1/1        Sep 19,2024 18:31 UTC+0800   {"my.cnf":"{\"mysqld\":{\"max_connections\":\"610\"}}"}                     
+mycluster-reconfiguring-djdfc   mycluster   mysql       mysql-consensusset-config   my.cnf   Succeed   syncDynamicReload   1/1        Sep 19,2024 18:31 UTC+0800   {"my.cnf":"{\"mysqld\":{\"max_connections\":\"610\"}}"}
 ```
 
 From the above results, there are three parameter modifications.
@@ -429,10 +429,10 @@ Compare these modifications to view the configured parameters and their differen
 kbcli cluster diff-config mycluster-reconfiguring-zk4b4 mycluster-reconfiguring-djdfc -n demo
 >
 DIFF-CONFIGURE RESULT:
-  ConfigFile: my.cnf    TemplateName: mysql-consensusset-config ComponentName: mysql    ClusterName: mycluster       UpdateType: update      
+  ConfigFile: my.cnf    TemplateName: mysql-consensusset-config ComponentName: mysql    ClusterName: mycluster       UpdateType: update
 
-PARAMETERNAME             MYCLUSTER-RECONFIGURING-ZK4B4   MYCLUSTER-RECONFIGURING-DJDFC  
-max_connections           600                             610                                        
+PARAMETERNAME             MYCLUSTER-RECONFIGURING-ZK4B4   MYCLUSTER-RECONFIGURING-DJDFC
+max_connections           600                             610
 innodb_buffer_pool_size   512M                            512M
 ```
 
