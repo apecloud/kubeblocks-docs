@@ -1,0 +1,122 @@
+---
+title: Provision
+description: How to Provision RabbitMQ on KubeBlocks
+keywords: [RabbitMQ, vector database, control plane]
+sidebar_position: 2
+sidebar_label: Provision RabbitMQ with KubeBlocks
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Before you start
+
+- [Install KubeBlocks](./../installation/install-kubeblocks.md).
+- [Install and enable the rabbitmq addon](./../installation/install-addons.md).
+
+## Create a cluster
+
+KubeBlocks implements a Cluster CRD to define a cluster. Here is an example of creating a RabbitMQ cluster with three replicas. Pods are distributed on different nodes by default. But if you only have one node for a cluster with three replicas, configure the cluster affinity by setting `spec.schedulingPolicy` or `spec.componentSpecs.schedulingPolicy`. For details, you can refer to the [API docs](https://kubeblocks.io/docs/preview/developer_docs/api-reference/cluster#apps.kubeblocks.io/v1.SchedulingPolicy). But for a production environment, it is not recommended to deploy all replicas on one node, which may decrease the cluster availability.
+
+```yaml
+cat <<EOF | kubectl apply -f -
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: mycluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: rabbitmq
+      componentDef: rabbitmq
+      serviceVersion: 3.13.7
+      serviceAccountName: kb-rabbitmq-cluster
+      replicas: 3
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: rabbitmq-cluster-peer-discovery
+  namespace: demo
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kb-rabbitmq-cluster
+  namespace: demo
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kb-rabbitmq-cluster
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: rabbitmq-cluster-peer-discovery
+subjects:
+  - kind: ServiceAccount
+    name: kb-rabbitmq-cluster
+    namespace: demo
+EOF
+```
+
+| Field                                 | Definition  |
+|---------------------------------------|--------------------------------------|
+| `spec.terminationPolicy`              | It is the policy of cluster termination. Valid values are `DoNotTerminate`, `Delete`, `WipeOut`. For the detailed definition, you can refer to [Termination Policy](#termination-policy). |
+| `spec.componentSpecs`                 | It is the list of ClusterComponentSpec objects that define the individual Components that make up a Cluster. This field allows customized configuration of each component within a cluster.   |
+| `spec.componentSpecs.serviceVersion` | It specifies the version of the Service expected to be provisioned by this Component. Valid options are [3.10.25,3.11.28,3.12.14,3.13.2,3.13.7,3.8.14,3.9.29]. |
+| `spec.componentSpecs.serviceAccountName` | It specifies the name of the ServiceAccount required by the running Component. RabbitMQ needs the `peer-discovery` role to create events and get endpoints. This is essential for discovering other RabbitMQ nodes and forming a cluster. |
+| `spec.componentSpecs.replicas`        | It specifies the number of replicas of the component. RabbitMQ prefers ODD numbers like [3, 5, 7]. All data/state is replicated across all replicas. |
+| `spec.componentSpecs.resources`       | It specifies the resources required by the Component.  |
+| `spec.componentSpecs.volumeClaimTemplates` | It specifies a list of PersistentVolumeClaim templates that define the storage requirements for the Component. |
+| `spec.componentSpecs.volumeClaimTemplates.name` | It refers to the name of a volumeMount defined in `componentDefinition.spec.runtime.containers[*].volumeMounts`. |
+| `spec.componentSpecs.volumeClaimTemplates.spec.storageClassName` | It is the name of the StorageClass required by the claim. If not specified, the StorageClass annotated with `storageclass.kubernetes.io/is-default-class=true` will be used by default. |
+| `spec.componentSpecs.volumeClaimTemplates.spec.resources.storage` | You can set the storage size as needed. |
+
+For more API fields and descriptions, refer to the [API Reference](https://kubeblocks.io/docs/preview/developer_docs/api-reference/cluster).
+
+KubeBlocks operator watches for the `Cluster` CRD and creates the cluster and all dependent resources. You can get all the resources created by the cluster with `kubectl get all,secret,rolebinding,serviceaccount -l app.kubernetes.io/instance=mycluster -n demo`.
+
+```bash
+kubectl get all,secret,rolebinding,serviceaccount -l app.kubernetes.io/instance=mycluster -n demo
+```
+
+Run the following command to see the created RabbitMQ cluster object:
+
+```bash
+kubectl get cluster mycluster -n demo -o yaml
+```
+
+## Connect to the cluster
+
+Use the [RabbitMQ tools](https://www.rabbitmq.com/docs/cli) to connect to and manage the RabbitMQ cluster.
