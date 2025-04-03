@@ -180,10 +180,6 @@ KubeBlocks integrates [the open-source Patroni solution](https://patroni.readthe
 4. Connect to the PostgreSQL cluster to view the replication information.
 
    ```bash
-   kbcli cluster connect mycluster -n demo
-   ```
-
-   ```bash
    postgres=# select * from pg_stat_replication;
    ```
 

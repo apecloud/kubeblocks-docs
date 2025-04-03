@@ -124,9 +124,7 @@ When creating a PostgreSQL cluster with KubeBlocks, PgBouncer is installed by de
    This command shows how to connect to a cluster with CLI. The default example uses port `5432` and you can replace it with port `6432`.
 
     ```bash
-    kbcli cluster connect --client=cli --show-example mycluster -n demo
-    >
-    kubectl port-forward service/mycluster-postgresql 6432:6432
+    kubectl port-forward service/mycluster-postgresql 6432:6432 &
     PGPASSWORD=***** psql -h127.0.0.1 -p 6432 -U postgres postgres
     ```
 

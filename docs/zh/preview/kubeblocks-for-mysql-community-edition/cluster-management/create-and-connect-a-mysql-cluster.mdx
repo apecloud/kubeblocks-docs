@@ -20,7 +20,7 @@ import TabItem from '@theme/TabItem';
 * 如果您想通过 `kbcli` 创建并连接 ApeCloud MySQL 集群，请先[安装 kbcli](./../../installation/install-kbcli.md)。
 * [安装 KubeBlocks](./../../installation/install-kubeblocks.md)。
 * 确保 MySQL 引擎已启用。KubeBlocks 默认已安装 MySQL，如果您在安装 KubeBlocks 关闭/卸载了该引擎，可参考相关文档，再次[启用/安装该引擎](./../../installation/install-addons.md)。
-  
+
   <Tabs>
 
   <TabItem value="kubectl" label="kubectl" default>
@@ -103,7 +103,7 @@ KubeBlocks 支持创建两种类型的 MySQL 集群：单机版（Standalone）�
 <TabItem value="kubectl" label="kubectl" default>
 
 1. 创建 MySQL 集群。
-   
+
    KubeBlocks 通过 `Cluster` 定义集群。以下是创建 MySQL 主备版的示例。
 
    如果您只有一个节点可用于部署集群版，可将 `spec.affinity.topologyKeys` 设置为 `null`。但生产环境中，不建议将所有副本部署在同一个节点上，因为这可能会降低集群的可用性。
@@ -294,14 +294,5 @@ KubeBlocks operator 会创建一个名为 `mycluster-conn-credential` 的新的 
 
 </TabItem>
 
-<TabItem value="kbcli" label="kbcli">
-
-```bash
-kbcli cluster connect mycluster --namespace demo
-```
-
-</TabItem>
-
 </Tabs>
 
-有关详细的数据库连接指南，请参考[连接数据库](./../../connect-databases/overview-on-connect-databases.md)。

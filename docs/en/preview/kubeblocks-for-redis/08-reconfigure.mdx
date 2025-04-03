@@ -222,11 +222,7 @@ You can also view the details of this configuration file and parameters.
 
 The example below configures `acllog-max-len`.
 
-1. View the current values of `acllog-max-len`.
-
-   ```bash
-   kbcli cluster connect mycluster -n demo
-   ```
+1. Connect to cluster and View the current values of `acllog-max-len`.
 
    ```bash
    127.0.0.1:6379> config get parameter acllog-max-len
@@ -300,10 +296,6 @@ The example below configures `acllog-max-len`.
    It takes about 30 seconds for the configuration to take effect because the kubelet requires some time to sync changes in the ConfigMap to the Pod's volume.
 
    ```bash
-   kbcli cluster connect mycluster -n demo
-   ```
-
-   ```bash
    127.0.0.1:6379> config get parameter acllog-max-len
    1) "acllog-max-len"
    2) "256"
@@ -334,10 +326,6 @@ For Linux and macOS, you can edit configuration files by vi. For Windows, you ca
    ```
 
 3. Connect to the database to verify whether the parameters are configured as expected.
-
-   ```bash
-   kbcli cluster connect mycluster -n demo
-   ```
 
    :::note
 

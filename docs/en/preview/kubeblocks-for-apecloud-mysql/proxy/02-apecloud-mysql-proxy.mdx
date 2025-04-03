@@ -259,16 +259,6 @@ ApeCloud MySQL Proxy is routed through the `vtgate` component, and the way the M
 
 </TabItem>
 
-<TabItem value="kbcli" label="kbcli">
-
-Run the command below to connect to the Proxy Cluster.
-
-```bash
-kbcli cluster connect myproxy --components vtgate
-```
-
-</TabItem>
-
 </Tabs>
 
 ### Connect Proxy Cluster by MySQL Server
@@ -288,16 +278,6 @@ kbcli cluster connect myproxy --components vtgate
    ```bash
    mysql -h 127.0.0.1 -P 3306
    ```
-
-</TabItem>
-
-<TabItem value="kbcli" label="kbcli">
-
-Run the command below to connect to the MySQL Server.
-
-```bash
-kbcli cluster connect myproxy
-```
 
 </TabItem>
 
@@ -470,11 +450,7 @@ VTGate, VTConsensus, and VTTablet support parameter configuration. You can confi
 
 ### Reconfigure parameters
 
-1. View the current values in the MySQL Server.
-
-   ```bash
-   kbcli cluster connect myproxy --components=vtgate
-   ```
+1. Connect to the cluster and View the current values in the MySQL Server.
 
    ```bash
    mysql> show variables like '%healthcheck_timeout%';

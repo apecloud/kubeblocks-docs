@@ -241,10 +241,6 @@ The example below takes configuring `max_connections` as an example.
 1. View the current values of `max_connections`.
 
    ```bash
-   kbcli cluster connect mycluster -n demo
-   ```
-
-   ```bash
    postgres=# show max_connections;
     max_connections
    -----------------
@@ -319,10 +315,6 @@ error: failed to validate updated config: [failed to cue template render configu
    It takes about 30 seconds for the configuration to take effect because the kubelet requires some time to sync changes in the ConfigMap to the Pod's volume.
 
    ```bash
-   kbcli cluster connect mycluster -n demo
-   ```
-
-   ```bash
    postgres=# show max_connections;
     max_connections
    -----------------
@@ -355,10 +347,6 @@ For Linux and macOS, you can edit configuration files by vi. For Windows, you ca
    ```
 
 3. Connect to the database to verify whether the parameters are configured as expected.
-
-   ```bash
-   kbcli cluster connect mycluster -n demo
-   ```
 
    :::note
 

@@ -87,22 +87,15 @@ You can explore KubeBlocks, by referring to [Describe a MySQL cluster](#describe
 
 ### Access a MySQL cluster
 
-**Option 1.** Connect database from container network.
-
-Wait until the status of this cluster is `Running`, then run `kbcli cluster connect` to access a specified database cluster. For example,
-
-```bash
-kbcli cluster connect mycluster
-```
-
-**Option 2.** Connect database from host network.
-
 ***Steps:***
 
 1. Get Credentials.
+
    ```bash
-   kbcli cluster connect --show-example --show-password --client=cli mycluster
+   kubectl get secrets -n demo mycluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
+   kubectl get secrets -n demo mycluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
    ```
+
 3. Run `port-forward`.
 
    ```bash
@@ -207,8 +200,6 @@ In this example, delete the leader pod to simulate a failure.
 4. Connect to the Raft MySQL cluster. It can be accessed within seconds.
 
    ```bash
-   kbcli cluster connect maple05
-   >
    Connect to instance maple05-mysql-2: out of maple05-mysql-2(leader), maple05-mysql-1(follower), maple05-mysql-0(follower)
    Welcome to the MySQL monitor.  Commands end with ; or \g.
    Your MySQL connection id is 33
@@ -227,8 +218,6 @@ In this example, delete the leader pod to simulate a failure.
 
 #### Demonstrate availability failure by NON-STOP NYAN CAT (for fun)
 
-The above example uses `kbcli cluster connect` to test availability, in which the changes are not obvious to see.
-
 NON-STOP NYAN CAT is a demo application to observe how the database cluster exceptions affect actual businesses. Animations and real-time key information display provided by NON-STOP NYAN CAT can directly show the availability influences of database services.
 
 ***Steps:***
@@ -244,7 +233,7 @@ NON-STOP NYAN CAT is a demo application to observe how the database cluster exce
    <summary>Expected output</summary>
 
    ```bash
-   addon.extensions.kubeblocks.io/nyancat enabled   
+   addon.extensions.kubeblocks.io/nyancat enabled
    ```
 
    </details>
@@ -252,7 +241,7 @@ NON-STOP NYAN CAT is a demo application to observe how the database cluster exce
 2. Check the NYAN CAT addon status and when its status is `Enabled`, this application is ready.
 
    ```bash
-   kbcli addon list | grep nyancat 
+   kbcli addon list | grep nyancat
    ```
 
 3. Open the web page.

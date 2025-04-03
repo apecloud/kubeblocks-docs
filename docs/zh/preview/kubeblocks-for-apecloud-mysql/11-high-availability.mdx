@@ -60,7 +60,7 @@ import TabItem from '@theme/TabItem';
     ```
 
     ![delete_pod](/img/docs/zh/failure_simulation_delete_pod.png)
-3. 执行 `kbcli cluster describe` 和 `kbcli cluster connect` 命令，查看 pod 状态和集群连接。
+3. 执行 `kbcli cluster describe`，查看 pod 状态和集群连接。
 
     ***结果***
 
@@ -73,10 +73,6 @@ import TabItem from '@theme/TabItem';
     ![describe_cluster_after](/img/docs/zh/failure_simulation_describe_cluster_after.png)
 
     ApeCloud MySQL 集群版可以在几秒钟恢复连接。
-
-    ```bash
-    kbcli cluster connect mycluster -n demo
-    ```
 
     ![connect_cluster_after](/img/docs/zh/failure_simulation_connect_cluster_after.png)
 
@@ -174,10 +170,6 @@ import TabItem from '@theme/TabItem';
 
 4. 连接到 MySQL 集群版，发现单个 Follower 的异常不影响集群的读写操作。
 
-   ```bash
-   kbcli cluster connect mycluster -n demo
-   ```
-
    ![connect_cluster_follower](/img/docs/zh/failure_simulation_connect_cluster_follower.png)
 
 </TabItem>
@@ -262,10 +254,6 @@ import TabItem from '@theme/TabItem';
 
     ![describe_two_pods](/img/docs/zh/failure_simulation_describe_two_pods.png)
 4. 几秒钟后再次执行连接集群命令，数据库连接恢复正常。
-
-    ```bash
-    kbcli cluster connect mycluster -n demo
-    ```
 
     ![connect_two_pods](/img/docs/zh/failure_simulation_connect_two_pods.png)
 
@@ -352,11 +340,7 @@ import TabItem from '@theme/TabItem';
     ```
 
     ![describe_three_clusters](/img/docs/zh/failure_simulation_describe_three_pods.png)
-4. 几秒钟后再次执行 `kbcli cluster connect mycluster`，数据库连接恢复正常。
-
-    ```bash
-    kbcli cluster connect mycluster -n demo
-    ```
+4. 几秒钟后再次连接数据库，数据库连接恢复正常。
 
     ![connect_three_clusters](/img/docs/zh/failure_simulation_connect_three_pods.png)
 
