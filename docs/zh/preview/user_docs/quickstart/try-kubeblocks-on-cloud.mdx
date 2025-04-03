@@ -138,7 +138,7 @@ kbcli playground init --cloud-provider gcp --region us-central1
 # 查看 kbcli 版本
 kbcli version
 
-# 查看集群列表 
+# 查看集群列表
 kbcli cluster list
 ```
 
@@ -148,7 +148,7 @@ kbcli cluster list
 
 :::
 
-</TabItem> 
+</TabItem>
 <TabItem value="腾讯云" label="腾讯云">
 
 ### 开始之前
@@ -225,7 +225,7 @@ kbcli cluster list
 
    创建 ACK 集群时，需要创建和管理节点池，因此需要创建 AliyunOOSLifecycleHook4CSRole 角色，为 OOS 运维编排服务授权以访问其他云产品中的资源（详情请参考[官方文档](https://www.alibabacloud.com/help/zh/container-service-for-kubernetes/latest/scale-up-and-down-node-pools)）。
 4. 创建 AccessKey ID 和对应的 AccessKey 密钥。
-   
+
    1. 进入[阿里云管理控制台](https://homenew.console.aliyun.com/home/dashboard/ProductAndService)。将鼠标悬停在账户中心处，点击 **AccessKey 管理**。
        ![AccessKey Management](/img/docs/zh/try-kb-on-cloud-accesskey-management.png)
    2. 点击**创建 AccessKey**，创建 AccessKey ID 和对应的 AccessKey 密钥。
@@ -295,23 +295,15 @@ kbcli cluster list
 
 ### 访问 MySQL 集群
 
-**选项 1.** 通过容器网络连接数据库
-
-等待该集群的状态变为 `Running`，然后执行 `kbcli cluster connect` 来访问指定的数据库集群。例如:
-
-```bash
-kbcli cluster connect mycluster
-```
-
-**选项 2.** 远程连接数据库
-
 ***步骤：***
 
 1. 获取连接凭证。
 
    ```bash
-   kbcli cluster connect --show-example --show-password --client=cli mycluster
+   kubectl get secrets -n demo mycluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
+   kubectl get secrets -n demo mycluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
    ```
+
 2. 执行 `port-forward`。
 
    ```bash
@@ -439,8 +431,6 @@ kbcli cluster create --cluster-definition='apecloud-mysql' --set replicas=3
 4. 连接 MySQL 集群版，只需几秒就可成功。
 
    ```bash
-   kbcli cluster connect maple05
-   >
    Connect to instance maple05-mysql-2: out of maple05-mysql-2(leader), maple05-mysql-1(follower), maple05-mysql-0(follower)
    Welcome to the MySQL monitor.  Commands end with ; or \g.
    Your MySQL connection id is 33
@@ -477,7 +467,7 @@ kbcli cluster create --cluster-definition='apecloud-mysql' --set replicas=3
 2. 销毁 Playground。
 
    ```bash
-   kbcli playground destroy 
+   kbcli playground destroy
    ```
 
 :::caution

@@ -205,7 +205,7 @@ You can also view the details of this configuration file and parameters.
   ```
 
 * View the user guide of a specified parameter.
-  
+
   ```bash
   kbcli cluster explain-config mycluster --param=innodb_buffer_pool_size --config-specs=mysql-replication-config -n demo
   ```
@@ -227,9 +227,9 @@ You can also view the details of this configuration file and parameters.
     Scope:              Global
     Dynamic:            true
     Type:               integer
-    Description:        The size in bytes of the memory buffer innodb uses to cache data and indexes of its tables 
+    Description:        The size in bytes of the memory buffer innodb uses to cache data and indexes of its tables
   ```
-  
+
   </details>
 
   * Allowed Values: It defines the valid value range of this parameter.
@@ -245,10 +245,6 @@ You can also view the details of this configuration file and parameters.
 The example below takes configuring `max_connections` and `innodb_buffer_pool_size` as an example.
 
 1. View the current values of `max_connections` and `innodb_buffer_pool_size`.
-
-   ```bash
-   kbcli cluster connect mycluster -n demo
-   ```
 
    ```bash
    mysql> show variables like '%max_connections%';
@@ -336,10 +332,6 @@ The example below takes configuring `max_connections` and `innodb_buffer_pool_si
    It takes about 30 seconds for the configuration to take effect because the kubelet requires some time to sync changes in the ConfigMap to the Pod's volume.
 
    ```bash
-   kbcli cluster connect mycluster -n demo
-   ```
-
-   ```bash
    mysql> show variables like '%max_connections%';
    >
    +-----------------+-------+
@@ -349,7 +341,7 @@ The example below takes configuring `max_connections` and `innodb_buffer_pool_si
    +-----------------+-------+
    1 row in set (0.04 sec)
    ```
-  
+
    ```bash
    mysql> show variables like '%innodb_buffer_pool_size%';
    >
@@ -388,10 +380,6 @@ For Linux and macOS, you can edit configuration files by vi. For Windows, you ca
 
 3. Connect to the database to verify whether the parameters are configured as expected.
 
-   ```bash
-   kbcli cluster connect mycluster -n demo
-   ```
-
    :::note
 
    1. For the `edit-config` function, static parameters and dynamic parameters cannot be edited at the same time.
@@ -419,7 +407,7 @@ agamotto-configuration     agamotto-config-with-proxy.yaml   false     mysql-aga
 History modifications:
 OPS-NAME                        CLUSTER     COMPONENT   CONFIG-SPEC-NAME           FILE     STATUS    POLICY              PROGRESS   CREATED-TIME                 VALID-UPDATED
 mycluster-reconfiguring-pxs46   mycluster   mysql       mysql-replication-config   my.cnf   Succeed   syncDynamicReload   2/2        Jul 05,2024 19:00 UTC+0800   {"my.cnf":"{\"mysqld\":{\"innodb_buffer_pool_size\":\"512M\",\"max_connections\":\"600\"}}"}
-mycluster-reconfiguring-x52fb   mycluster   mysql       mysql-replication-config   my.cnf   Succeed   syncDynamicReload   2/2        Jul 05,2024 19:04 UTC+0800   {"my.cnf":"{\"mysqld\":{\"max_connections\":\"1000\"}}"}                    
+mycluster-reconfiguring-x52fb   mycluster   mysql       mysql-replication-config   my.cnf   Succeed   syncDynamicReload   2/2        Jul 05,2024 19:04 UTC+0800   {"my.cnf":"{\"mysqld\":{\"max_connections\":\"1000\"}}"}
 ```
 
 From the above results, there are two parameter modifications.
@@ -430,11 +418,11 @@ Compare these modifications to view the configured parameters and their differen
 kbcli cluster diff-config mycluster-reconfiguring-pxs46 mycluster-reconfiguring-x9zsf -n demo
 >
 DIFF-CONFIGURE RESULT:
-  ConfigFile: my.cnf    TemplateName: mysql-replication-config ComponentName: mysql    ClusterName: mycluster       UpdateType: update      
+  ConfigFile: my.cnf    TemplateName: mysql-replication-config ComponentName: mysql    ClusterName: mycluster       UpdateType: update
 
-PARAMETERNAME             mycluster-reconfiguring-pxs46   mycluster-reconfiguring-x9zsf   
-max_connections           600                             2000                                      
-innodb_buffer_pool_size   512M                            1G 
+PARAMETERNAME             mycluster-reconfiguring-pxs46   mycluster-reconfiguring-x9zsf
+max_connections           600                             2000
+innodb_buffer_pool_size   512M                            1G
 ```
 
 </TabItem>

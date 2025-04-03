@@ -211,7 +211,7 @@ kbcli cluster describe-config mycluster -n demo
   ```
 
 * 查看指定参数的使用文档。
-  
+
   ```bash
   kbcli cluster explain-config mycluster --param=innodb_buffer_pool_size --config-specs=mysql-replication-config -n demo
   ```
@@ -233,9 +233,9 @@ kbcli cluster describe-config mycluster -n demo
     Scope:              Global
     Dynamic:            true
     Type:               integer
-    Description:        The size in bytes of the memory buffer innodb uses to cache data and indexes of its tables 
+    Description:        The size in bytes of the memory buffer innodb uses to cache data and indexes of its tables
   ```
-  
+
   </details>
 
   * Allowed Values：定义了参数的有效值范围。
@@ -251,10 +251,6 @@ kbcli cluster describe-config mycluster -n demo
 以下示例以配置 `max_connections` 和 `innodb_buffer_pool_size` 为例。
 
 1. 查看 `max_connections` 和 `innodb_buffer_pool_size` 的当前值。
-
-   ```bash
-   kbcli cluster connect mycluster -n demo
-   ```
 
    ```bash
    mysql> show variables like '%max_connections%';
@@ -342,10 +338,6 @@ kbcli cluster describe-config mycluster -n demo
    配置生效过程约需要 30 秒，这是由于 kubelet 需要一定时间才能将对 ConfigMap 的修改同步到 Pod 的卷。
 
    ```bash
-   kbcli cluster connect mycluster -n demo
-   ```
-
-   ```bash
    mysql> show variables like '%max_connections%';
    >
    +-----------------+-------+
@@ -355,7 +347,7 @@ kbcli cluster describe-config mycluster -n demo
    +-----------------+-------+
    1 row in set (0.04 sec)
    ```
-  
+
    ```bash
    mysql> show variables like '%innodb_buffer_pool_size%';
    >
@@ -394,10 +386,6 @@ Linux 和 macOS 系统可以使用 vi 编辑器编辑配置文件，Windows 系�
 
 3. 连接到数据库，验证参数是否按预期配置。
 
-   ```bash
-   kbcli cluster connect mycluster -n demo
-   ```
-
    :::note
 
    1. `edit-config` 不能同时编辑静态参数和动态参数。
@@ -425,7 +413,7 @@ agamotto-configuration     agamotto-config-with-proxy.yaml   false     mysql-aga
 History modifications:
 OPS-NAME                        CLUSTER     COMPONENT   CONFIG-SPEC-NAME           FILE     STATUS    POLICY              PROGRESS   CREATED-TIME                 VALID-UPDATED
 mycluster-reconfiguring-pxs46   mycluster   mysql       mysql-replication-config   my.cnf   Succeed   syncDynamicReload   2/2        Jul 05,2024 19:00 UTC+0800   {"my.cnf":"{\"mysqld\":{\"innodb_buffer_pool_size\":\"512M\",\"max_connections\":\"600\"}}"}
-mycluster-reconfiguring-x52fb   mycluster   mysql       mysql-replication-config   my.cnf   Succeed   syncDynamicReload   2/2        Jul 05,2024 19:04 UTC+0800   {"my.cnf":"{\"mysqld\":{\"max_connections\":\"1000\"}}"}                    
+mycluster-reconfiguring-x52fb   mycluster   mysql       mysql-replication-config   my.cnf   Succeed   syncDynamicReload   2/2        Jul 05,2024 19:04 UTC+0800   {"my.cnf":"{\"mysqld\":{\"max_connections\":\"1000\"}}"}
 ```
 
 从上面可以看到，有三个参数被修改过。
@@ -436,11 +424,11 @@ mycluster-reconfiguring-x52fb   mycluster   mysql       mysql-replication-config
 kbcli cluster diff-config mycluster-reconfiguring-pxs46 mycluster-reconfiguring-x9zsf -n demo
 >
 DIFF-CONFIGURE RESULT:
-  ConfigFile: my.cnf    TemplateName: mysql-replication-config ComponentName: mysql    ClusterName: mycluster       UpdateType: update      
+  ConfigFile: my.cnf    TemplateName: mysql-replication-config ComponentName: mysql    ClusterName: mycluster       UpdateType: update
 
-PARAMETERNAME             mycluster-reconfiguring-pxs46   mycluster-reconfiguring-x9zsf   
-max_connections           600                             2000                                      
-innodb_buffer_pool_size   512M                            1G 
+PARAMETERNAME             mycluster-reconfiguring-pxs46   mycluster-reconfiguring-x9zsf
+max_connections           600                             2000
+innodb_buffer_pool_size   512M                            1G
 ```
 
 </TabItem>

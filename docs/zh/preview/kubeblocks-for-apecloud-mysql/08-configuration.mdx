@@ -250,10 +250,6 @@ kbcli cluster describe-config mycluster -n demo
 1. 查看 `max_connections` 和 `innodb_buffer_pool_size` 的当前值。
 
    ```bash
-   kbcli cluster connect mycluster -n demo
-   ```
-
-   ```bash
    mysql> show variables like '%max_connections%';
    >
    +-----------------+-------+
@@ -339,10 +335,6 @@ kbcli cluster describe-config mycluster -n demo
    配置生效过程约需要 30 秒，这是由于 kubelet 需要一定时间才能将对 ConfigMap 的修改同步到 Pod 的卷。
 
    ```bash
-   kbcli cluster connect mycluster -n demo
-   ```
-
-   ```bash
    mysql> show variables like '%max_connections%';
    >
    +-----------------+-------+
@@ -392,10 +384,6 @@ Linux 和 macOS 系统可以使用 vi 编辑器编辑配置文件，Windows 系�
    ```
 
 3. 连接到数据库，验证参数是否按预期配置。
-
-   ```bash
-   kbcli cluster connect mycluster -n demo
-   ```
 
    :::note
 

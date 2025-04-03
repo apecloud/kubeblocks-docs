@@ -72,7 +72,7 @@ import TabItem from '@theme/TabItem';
    3. 安装 etcd 集群。
 
        ```bash
-       helm install etcd-cluster kubeblocks/etcd-cluster 
+       helm install etcd-cluster kubeblocks/etcd-cluster
        ```
 
    4. 查看 etcd 集群状态，确保其处于 `Running` 状态。
@@ -261,24 +261,6 @@ ApeCloud MySQL 代理通过 `vtgate` 组件进行路由，MySQL 服务器访问 
 
 </TabItem>
 
-<TabItem value="kbcli" label="kbcli">
-
-执行以下命令连接到代理集群。
-
-```bash
-kbcli cluster connect myproxy --components vtgate
-```
-
-### 通过 MySQL 服务器连接代理集群
-
-执行以下命令连接到代理集群。
-
-```bash
-kbcli cluster connect myproxy --components vtgate
-```
-
-</TabItem>
-
 </Tabs>
 
 ### 通过 MySQL 服务器连接代理集群
@@ -298,16 +280,6 @@ kbcli cluster connect myproxy --components vtgate
    ```bash
    mysql -h 127.0.0.1 -P 3306
    ```
-
-</TabItem>
-
-<TabItem value="kbcli" label="kbcli">
-
-执行以下命令，连接至 MySQL 服务器。
-
-```bash
-kbcli cluster connect myproxy
-```
 
 </TabItem>
 
@@ -454,10 +426,10 @@ VTGate、VTConsensus 和 VTTablet 都支持参数配置。你可以使用 `--com
    ```bash
    # vtgate
    kbcli cluster describe-config myproxy --components vtgate --show-detai
-   
+
    # vtcontroller
    kbcli cluster describe-config myproxy --components vtcontroller --show-detail
-   
+
    # vttablet
    kbcli cluster describe-config myproxy --component mysql --show-detail --config-specs vttablet-config
    ```
@@ -481,10 +453,6 @@ VTGate、VTConsensus 和 VTTablet 都支持参数配置。你可以使用 `--com
 ### 配置参数
 
 1. 查看 MySQL 服务器中的当前值。
-
-   ```bash
-   kbcli cluster connect myproxy --components=vtgate
-   ```
 
    ```bash
    mysql> show variables like '%healthcheck_timeout%';
@@ -645,7 +613,7 @@ kbcli cluster logs myproxy --instance myproxy-mysql-0 -c vttablet
    对于测试或演示环境，可执行以下命令查看 Grafana 大盘。
 
    ```bash
-   # 1. 获取用户名及密码 
+   # 1. 获取用户名及密码
    kubectl get secret grafana -n kb-system -o jsonpath='{.data.admin-user}' |base64 -d
 
    kubectl get secret grafana -n kb-system -o jsonpath='{.data.admin-password}' |base64 -d
@@ -683,8 +651,8 @@ kbcli cluster logs myproxy --instance myproxy-mysql-0 -c vttablet
 2. 查看插件列表并启用 Grafana 插件。
 
    ```bash
-   kbcli addon list 
-   
+   kbcli addon list
+
    kbcli addon enable grafana
    ```
 

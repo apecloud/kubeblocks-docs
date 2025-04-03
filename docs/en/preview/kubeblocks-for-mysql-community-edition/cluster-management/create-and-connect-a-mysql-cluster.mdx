@@ -119,7 +119,7 @@ KubeBlocks supports creating two types of MySQL clusters: Standalone and Replica
      terminationPolicy: Delete
      componentSpecs:
        - name: mysql
-         componentDef: "mysql-8.0" 
+         componentDef: "mysql-8.0"
          serviceVersion: 8.0.35
          disableExporter: false
          replicas: 2
@@ -272,14 +272,4 @@ You can also port forward the service to connect to a database from your local m
 
 </TabItem>
 
-<TabItem value="kbcli" label="kbcli">
-
-```bash
-kbcli cluster connect mycluster  --namespace demo
-```
-
-</TabItem>
-
 </Tabs>
-
-For the detailed database connection guide, refer to [Connect database](./../../connect_database/overview-of-database-connection.md).

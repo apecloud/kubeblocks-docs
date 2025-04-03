@@ -164,10 +164,6 @@ This section takes the cluster `redis-cluster` in the namespace `default` as an 
 4. Connect to the Redis cluster to view the primary pod information after the exception simulation.
 
    ```bash
-   kbcli cluster connect redis-cluster
-   ```
-
-   ```bash
    # View the current primary pod
    127.0.0.1:6379> info replication
    ```
