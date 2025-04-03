@@ -1,0 +1,33 @@
+---
+title: Qdrant
+description: Qdrant
+keywords: [Qdrant]
+sidebar_position: 1
+---
+
+# Qdrant
+
+Qdrant is an open source (Apache-2.0 licensed), vector similarity search engine and vector database.
+
+## Supported Features
+
+### Lifecycle Management
+
+|   Topology       | Horizontal<br/>scaling | Vertical <br/>scaling | Expand<br/>volume | Restart   | Stop/Start | Configure | Expose | Switchover |
+|------------------|------------------------|-----------------------|-------------------|-----------|------------|-----------|--------|------------|
+| cluster     | Yes                    | Yes                   | Yes              | Yes       | Yes        | No       | Yes    | N/A     |
+
+### Backup and Restore
+
+| Feature     | Method | Description |
+|-------------|--------|------------|
+| Full Backup | datafile | uses HTTP API `snapshot` to create snapshot for all collections. |
+
+### Versions
+
+| Major Versions | Description |
+|---------------|-------------|
+| 1.5 | 1.5.0 |
+| 1.7 | 1.7.3 |
+| 1.8 | 1.8.1,1.8.4 |
+| 1.10| 1.10.0 |

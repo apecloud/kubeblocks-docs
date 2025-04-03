@@ -1,0 +1,192 @@
+---
+title: 磁盘扩容
+description: How to expand volume Elasticsearch on KubeBlocks
+keywords: [elasticsearch]
+sidebar_position: 1
+sidebar_label: Expand Volume
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## 磁盘扩容
+
+### 开始之前
+
+确认集群状态是否为 `Running`。否则，后续相关操作可能会失败。
+
+<Tabs>
+
+<TabItem value="kubectl" label="kubectl" default>
+
+```bash
+kubectl get cluster mycluster -n demo
+>
+NAME        CLUSTER-DEFINITION   VERSION                  TERMINATION-POLICY   STATUS    AGE
+mycluster                                                 Delete               Running   49m
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+```bash
+kbcli cluster list mycluster -n demo
+>
+NAME        NAMESPACE   CLUSTER-DEFINITION   VERSION           TERMINATION-POLICY   STATUS    CREATED-TIME
+mycluster   demo                                               Delete               Running   Sep 27,2024 11:42 UTC+0800
+```
+
+</TabItem>
+
+</Tabs>
+
+### 步骤
+
+<Tabs>
+
+<TabItem value="OpsRequest" label="OpsRequest" default>
+
+1. 对指定的集群应用 OpsRequest，可根据您的需求配置参数。
+
+   以下示例演示了增加 2 个副本。
+
+   ```bash
+   kubectl apply -f - <<EOF
+   apiVersion: apps.kubeblocks.io/v1alpha1
+   kind: OpsRequest
+   metadata:
+     name: ops-horizontal-scaling
+     namespace: demo
+   spec:
+     clusterName: mycluster
+     type: HorizontalScaling
+     horizontalScaling:
+     - componentName: elasticsearch
+       scaleOut:
+         replicaChanges: 2
+   EOF
+   ```
+
+   如果您想要缩容，可将 `scaleOut` 替换为 `scaleIn`。
+
+   以下示例演示了删除 2 个副本。
+
+   ```bash
+   kubectl apply -f - <<EOF
+   apiVersion: apps.kubeblocks.io/v1alpha1
+   kind: OpsRequest
+   metadata:
+     name: ops-horizontal-scaling
+     namespace: demo
+   spec:
+     clusterName: mycluster
+     type: HorizontalScaling
+     horizontalScaling:
+     - componentName: elasticsearch
+       scaleIn:
+         replicaChanges: 2
+   EOF
+   ```
+
+2. 查看运维操作状态，验证水平扩缩容是否成功。
+
+   ```bash
+   kubectl get ops -n demo
+   >
+   NAMESPACE   NAME                     TYPE                CLUSTER     STATUS    PROGRESS   AGE
+   demo        ops-horizontal-scaling   HorizontalScaling   mycluster   Succeed   3/3        6m
+   ```
+
+   如果有报错，可执行 `kubectl describe ops -n demo` 命令查看该运维操作的相关事件，协助排障。
+
+3. 当 OpsRequest 状态为 `Succeed` 或集群状态再次回到 `Running` 后，查看相应资源是否变更。
+
+    ```bash
+    kubectl describe cluster mycluster -n demo
+    ```
+
+</TabItem>
+
+<TabItem value="编辑集群 YAML 文件" label="编辑集群 YAML 文件">
+
+1. 修改 YAML 文件中 `spec.componentSpecs.replicas` 的配置。`spec.componentSpecs.replicas` 定义了 pod 数量，修改该参数将触发集群水平扩缩容。
+
+   ```yaml
+   kubectl edit cluster mycluster -n demo
+   apiVersion: apps.kubeblocks.io/v1alpha1
+   kind: Cluster
+   metadata:
+     name: mycluster
+     namespace: demo
+   spec:
+     clusterDefinitionRef: elasticsearch
+     clusterVersionRef: elasticsearch-8.8.2
+     componentSpecs:
+     - name: elasticsearch
+       componentDefRef: elasticsearch
+       replicas: 1 # Change the amount
+       volumeClaimTemplates:
+       - name: data
+         spec:
+           accessModes:
+             - ReadWriteOnce
+           resources:
+             requests:
+               storage: 1Gi
+    terminationPolicy: Delete
+   ```
+
+2. 当集群状态再次回到 `Running` 后，查看相关资源是否变更。
+
+    ```bash
+    kubectl describe cluster mycluster -n demo
+    ```
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+1. 更改配置。
+
+    配置参数 `--components`、`--volume-claim-templates` 和 `--storage`，并执行以下命令。
+
+    ```bash
+    kbcli cluster volume-expand elasticsearch --storage=40Gi --components=elasticsearch -t data -n demo
+    ```
+
+    - `--components` 表示需扩容的组件名称。
+    - `--volume-claim-templates` 表示组件中的 VolumeClaimTemplate 名称。
+    - `--storage` 表示磁盘需扩容至的大小。
+
+2. 可通过以下任意一种方式验证扩容操作是否完成。
+
+    - 查看 OpsRequest 进度。
+
+       执行磁盘扩容命令后，KubeBlocks 会自动输出查看 OpsRequest 进度的命令，可通过该命令查看 OpsRequest 进度的细节，包括 OpsRequest 的状态、PVC 状态等。当 OpsRequest 的状态为 `Succeed` 时，表明这一任务已完成。
+
+       ```bash
+       kbcli cluster describe-ops elasticsearch-volumeexpansion-5pbd2 -n demo
+       ```
+
+    - 查看集群状态。
+
+       ```bash
+       kbcli cluster list mycluster -n demo
+       >
+       NAME        NAMESPACE   CLUSTER-DEFINITION   VERSION           TERMINATION-POLICY   STATUS      CREATED-TIME
+       mycluster   demo                                               Delete               Updating    Sep 27,2024 11:42 UTC+0800
+       ```
+
+       * STATUS=Updating 表示扩容正在进行中。
+       * STATUS=Running 表示扩容已完成。
+
+3. 当 OpsRequest 状态为 `Succeed` 或集群状态再次回到 `Running` 后，检查资源规格是否已按要求变更。
+
+    ```bash
+    kbcli cluster describe mycluster -n demo
+    ```
+
+</TabItem>
+
+</Tabs>

@@ -1,0 +1,82 @@
+---
+title: 重启
+description: How to Restart Milvus on KubeBlocks
+keywords: [milvus, vector database, control plane]
+sidebar_position: 5
+sidebar_label: Restart Milvus with KubeBlocks
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## 重启
+
+<Tabs>
+
+<TabItem value="OpsRequest" label="OpsRequest" default>
+
+1. 执行以下命令，重启集群。
+
+   ```bash
+   kubectl apply -f - <<EOF
+   apiVersion: apps.kubeblocks.io/v1alpha1
+   kind: OpsRequest
+   metadata:
+     name: ops-restart
+     namespace: demo
+   spec:
+     clusterName: mycluster
+     type: Restart
+     restart:
+     - componentName: milvus
+   EOF
+   ```
+
+2. 查看 pod 和运维操作状态，验证重启操作是否成功。
+
+   ```bash
+   kubectl get pod -n demo
+
+   kubectl get ops ops-restart -n demo
+   ```
+
+   重启过程中，Pod 有如下两种状态：
+
+   - STATUS=Terminating：表示集群正在重启。
+   - STATUS=Running：表示集群已重启。
+
+   如果操作过程中出现报错，可通过 `kubectl describe ops -n demo` 查看该操作的事件，协助排障。
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+1. 重启集群。
+
+   配置 `--components` 和 `--ttlSecondsAfterSucceed` 的值，重启指定集群。
+
+   ```bash
+   kbcli cluster restart mycluster --components="milvus" -n demo \
+     --ttlSecondsAfterSucceed=30
+   ```
+
+   - `--components` 表示需要重启的组件名称。
+   - `--ttlSecondsAfterSucceed` 表示重启成功后 OpsRequest 作业的生存时间。
+
+2. 验证重启操作。
+
+   执行以下命令检查集群状态，并验证重启操作。
+
+   ```bash
+   kbcli cluster list milvus -n demo
+   >
+   NAME     NAMESPACE   CLUSTER-DEFINITION     VERSION         TERMINATION-POLICY   STATUS    CREATED-TIME
+   milvus   default     milvus-2.3.2           milvus-2.3.2    Delete               Running   Jul 05,2024 18:35 UTC+0800
+   ```
+
+   * STATUS=Updating 表示集群正在重启中。
+   * STATUS=Running 表示集群已重启。
+
+</TabItem>
+
+</Tabs>
