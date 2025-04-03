@@ -1,8 +1,8 @@
 ---
-title: Restart Pulsar cluster
+title: Restart
 description: How to restart a Pulsar cluster
 keywords: [pulsar, restart]
-sidebar_position: 4
+sidebar_position: 5
 sidebar_label: Restart
 ---
 
@@ -36,7 +36,7 @@ The pod role may change after the cluster restarts.
      namespace: demo
    spec:
      clusterRef: mycluster
-     type: Restart 
+     type: Restart
      restart:
      - componentName: bookies
    EOF

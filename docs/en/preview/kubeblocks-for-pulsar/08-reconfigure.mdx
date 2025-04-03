@@ -1,8 +1,8 @@
 ---
-title: Configure cluster parameters
+title: Reconfigure
 description: Configure cluster parameters
 keywords: [pulsar, parameter, configuration, reconfiguration]
-sidebar_position: 4
+sidebar_position: 8
 ---
 
 import Tabs from '@theme/Tabs';
@@ -130,7 +130,7 @@ Just in case you cannot find the configuration file of your cluster, you can use
 View the current configuration file of a cluster.
 
 ```bash
-kbcli cluster describe-config mycluster -n demo  
+kbcli cluster describe-config mycluster -n demo
 ```
 
 * View the details of the current configuration file.
@@ -156,7 +156,7 @@ kbcli cluster describe-config mycluster -n demo
 1. You need to specify the component name to configure parameters. Get the pulsar cluster component name.
 
    ```bash
-   kbcli cluster list-components mycluster -n demo 
+   kbcli cluster list-components mycluster -n demo
    >
    NAME               NAMESPACE   CLUSTER      TYPE               IMAGE
    proxy              demo        mycluster    pulsar-proxy       docker.io/apecloud/pulsar:2.11.2
@@ -171,7 +171,7 @@ kbcli cluster describe-config mycluster -n demo
    We take `zookeeper` as an example.
 
    ```bash
-   kbcli cluster configure mycluster -n demo --components=zookeeper --set PULSAR_MEM="-XX:MinRAMPercentage=50 -XX:MaxRAMPercentage=70" 
+   kbcli cluster configure mycluster -n demo --components=zookeeper --set PULSAR_MEM="-XX:MinRAMPercentage=50 -XX:MaxRAMPercentage=70"
    ```
 
 3. Verify the configuration.
