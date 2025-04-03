@@ -1,4 +1,5 @@
 position: 18
 label: KubeBlocks for Pulsar
-collapsible: true 
+collapsible: true
 collapsed: true
+hidden: true

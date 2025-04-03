@@ -1,19 +1,19 @@
 ---
-title: Stop/Start a Pulsar cluster
-description: How to Stop/Start a Pulsar cluster
-keywords: [pulsar, stop a cluster, start a cluster]
-sidebar_position: 5
-sidebar_label: Stop/Start
+title: Stop/Start
+description: How to Start and Stop Elasticsearch on KubeBlocks
+keywords: [elasticsearch]
+sidebar_position: 1
+sidebar_label: Start and Stop
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# Stop/Start a Pulsar Cluster
+## Stop/Start an Elasticsearch Cluster
 
 You can stop/start a cluster to save computing resources. When a cluster is stopped, the computing resources of this cluster are released, which means the pods of Kubernetes are released, but the storage resources are reserved. Start this cluster again if you want to restore the cluster resources from the original storage by snapshots.
 
-## Stop a cluster
+### Stop a cluster
 
 1. Configure the name of your cluster and run the command below to stop this cluster.
 
@@ -21,7 +21,7 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
 
     <TabItem value="OpsRequest" label="OpsRequest" default>
 
-    Apply an OpsRequest to stop a cluster.
+    Configure replicas as 0 to delete pods.
 
     ```bash
     kubectl apply -f - <<EOF
@@ -44,19 +44,17 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
     kubectl edit cluster mycluster -n demo
     ```
 
-    Configure replicas as 0 to delete pods.
+    Configure the value of `spec.componentSpecs.replicas` as 0 to delete pods.
 
     ```yaml
     ...
     spec:
-      clusterDefinitionRef: pulsar
-      clusterVersionRef: pulsar-3.0.2
       terminationPolicy: Delete
       componentSpecs:
-      - name: pulsar
-        componentDefRef: pulsar
+      - name: mdit
+        componentDefRef: elasticsearch
         disableExporter: true
-        replicas: 0
+        replicas: 0 # Change this value
     ...
     ```
 
@@ -94,7 +92,7 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
 
     </Tabs>
 
-## Start a cluster
+### Start a cluster
 
 1. Configure the name of your cluster and run the command below to start this cluster.
 
@@ -102,7 +100,7 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
 
     <TabItem value="OpsRequest" label="OpsRequest" default>
 
-    Apply an OpsRequest to start a cluster.
+    Run the command below to start a cluster.
 
     ```bash
     kubectl apply -f - <<EOF
@@ -122,22 +120,20 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
     <TabItem value="Edit cluster YAML file" label="Edit cluster YAML file">
 
     ```bash
-    kubectl edit cluster mycluster
+    kubectl edit cluster mycluster -n demo
     ```
 
-    Change replicas back to the original amount to start this cluster again.
+    Change the value of `spec.componentSpecs.replicas` back to the original amount to start this cluster again.
 
     ```yaml
     ...
     spec:
-      clusterDefinitionRef: pulsar
-      clusterVersionRef: pulsar-3.0.2
       terminationPolicy: Delete
       componentSpecs:
-      - name: pulsar
-        componentDefRef: pulsar
+      - name: mdit
+        componentDefRef: elasticsearch
         disableExporter: true
-        replicas: 1
+        replicas: 1 # Change this value
     ...
     ```
 

@@ -1,17 +1,16 @@
 ---
-title: Stop/Start a Pulsar cluster
-description: How to Stop/Start a Pulsar cluster
-keywords: [pulsar, stop a cluster, start a cluster]
-sidebar_position: 5
-sidebar_label: Stop/Start
+title: Stop/Start
+description: How to Stop/Start a Redis cluster
+keywords: [redis, stop a cluster, start a cluster]
+sidebar_position: 4
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# Stop/Start a Pulsar Cluster
+# Stop/Start a Redis Cluster
 
-You can stop/start a cluster to save computing resources. When a cluster is stopped, the computing resources of this cluster are released, which means the pods of Kubernetes are released, but the storage resources are reserved. Start this cluster again if you want to restore the cluster resources from the original storage by snapshots.
+You can stop/start a cluster to save computing resources. When a cluster is stopped, the computing resources of this cluster are released, which means the pods of Kubernetes are released, but the storage resources are reserved. You can start this cluster again to restore it to the state it was in before it was stopped.
 
 ## Stop a cluster
 
@@ -21,7 +20,7 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
 
     <TabItem value="OpsRequest" label="OpsRequest" default>
 
-    Apply an OpsRequest to stop a cluster.
+    Run the command below to stop a cluster.
 
     ```bash
     kubectl apply -f - <<EOF
@@ -44,20 +43,28 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
     kubectl edit cluster mycluster -n demo
     ```
 
-    Configure replicas as 0 to delete pods.
+    Configure the values of `replicas` as 0 to delete pods.
 
     ```yaml
     ...
     spec:
-      clusterDefinitionRef: pulsar
-      clusterVersionRef: pulsar-3.0.2
-      terminationPolicy: Delete
+      affinity:
+        podAntiAffinity: Preferred
+        topologyKeys:
+        - kubernetes.io/hostname
+      clusterDefinitionDef: redis
       componentSpecs:
-      - name: pulsar
-        componentDefRef: pulsar
+      - componentDef: redis-7
+        enabledLogs:
+        - running
         disableExporter: true
-        replicas: 0
-    ...
+        name: redis
+        replicas: 0 # Change this value
+        ...
+      - componentDef: redis-sentinel-7
+        name: redis-sentinel
+        replicas: 0 # Change this value
+        ...
     ```
 
     </TabItem>
@@ -87,7 +94,7 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
     <TabItem value="kbcli" label="kbcli">
 
     ```bash
-    kbcli cluster list mycluster -n demo
+    kbcli cluster list -n demo
     ```
 
     </TabItem>
@@ -102,7 +109,7 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
 
     <TabItem value="OpsRequest" label="OpsRequest" default>
 
-    Apply an OpsRequest to start a cluster.
+    Apply an OpsRequest to start the cluster.
 
     ```bash
     kubectl apply -f - <<EOF
@@ -119,26 +126,34 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
 
     </TabItem>
 
-    <TabItem value="Edit cluster YAML file" label="Edit cluster YAML file">
+    <TabItem value="Edit cluster YAML file" label="Edit cluster YAML File">
 
     ```bash
-    kubectl edit cluster mycluster
+    kubectl edit cluster mycluster -n demo
     ```
 
-    Change replicas back to the original amount to start this cluster again.
+    Change the values of `replicas` back to the original amount to start this cluster again.
 
     ```yaml
     ...
     spec:
-      clusterDefinitionRef: pulsar
-      clusterVersionRef: pulsar-3.0.2
-      terminationPolicy: Delete
+      affinity:
+        podAntiAffinity: Preferred
+        topologyKeys:
+        - kubernetes.io/hostname
+      clusterDefinitionDef: redis
       componentSpecs:
-      - name: pulsar
-        componentDefRef: pulsar
+      - componentDef: redis-7
+        enabledLogs:
+        - running
         disableExporter: true
-        replicas: 1
-    ...
+        name: redis
+        replicas: 3 # Change this value
+        ...
+      - componentDef: redis-sentinel-7
+        name: redis-sentinel
+        replicas: 3 # Change this value
+        ...
     ```
 
     </TabItem>
@@ -152,7 +167,6 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
     </TabItem>
 
     </Tabs>
-
 2. Check the status of the cluster to see whether it is running again.
 
     <Tabs>
@@ -168,7 +182,7 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
     <TabItem value="kbcli" label="kbcli">
 
     ```bash
-    kbcli cluster list mycluster -n demo
+    kbcli cluster list -n demo
     ```
 
     </TabItem>

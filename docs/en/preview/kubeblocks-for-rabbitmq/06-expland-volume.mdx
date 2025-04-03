@@ -1,0 +1,137 @@
+---
+title: Expand Volume
+description: How to Expand Volume for RabbitMQ on KubeBlocks
+keywords: [RabbitMQ, vector database, control plane]
+sidebar_position: 6
+sidebar_label: Expand Volume for RabbitMQ with KubeBlocks
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+## Volume expansion
+
+Before you start, check whether the cluster status is `Running`. Otherwise, the following operations may fail.
+
+```bash
+kubectl get cluster mycluster -n demo
+>
+NAME        CLUSTER-DEFINITION    VERSION        TERMINATION-POLICY     STATUS    AGE
+mycluster                                        Delete                 Running   47m
+```
+
+<Tabs>
+
+<TabItem value="OpsRequest" label="OpsRequest" default>
+
+1. Change the value of storage according to your need and run the command below to expand the volume of a cluster.
+
+    ```bash
+    kubectl apply -f - <<EOF
+    apiVersion: apps.kubeblocks.io/v1alpha1
+    kind: OpsRequest
+    metadata:
+      name: ops-volume-expansion
+      namespace: demo
+    spec:
+      clusterName: mycluster
+      type: VolumeExpansion
+      volumeExpansion:
+      - componentName: rabbitmq
+        volumeClaimTemplates:
+        - name: data
+          storage: "40Gi"
+    EOF
+    ```
+
+2. Validate the volume expansion operation.
+
+    ```bash
+    kubectl get ops -n demo
+    >
+    NAME                   TYPE              CLUSTER     STATUS    PROGRESS   AGE
+    ops-volume-expansion   VolumeExpansion   mycluster   Succeed   1/1        6m
+    ```
+
+    If an error occurs, you can troubleshoot it with `kubectl describe ops -n demo` command to view the events of this operation.
+
+3. Check whether the corresponding cluster resources change.
+
+    ```bash
+    kubectl describe cluster mycluster -n demo
+    ```
+
+</TabItem>
+
+<TabItem value="Edit cluster YAML file" label="Edit cluster YAML file">
+
+1. Change the value of `spec.componentSpecs.volumeClaimTemplates.spec.resources` in the cluster YAML file.
+
+   `spec.componentSpecs.volumeClaimTemplates.spec.resources` is the storage resource information of the pod and changing this value triggers the volume expansion of a cluster.
+
+   ```bash
+   kubectl edit cluster mycluster -n demo
+   ```
+
+   Edit the value of `spec.componentSpecs.volumeClaimTemplates.spec.resources`.
+
+   ```yaml
+   ...
+   spec:
+     componentSpecs:
+     - name: rabbitmq
+       componentDefRef: rabbitmq
+       replicas: 2
+       volumeClaimTemplates:
+       - name: data
+         spec:
+           accessModes:
+             - ReadWriteOnce
+           resources:
+             requests:
+               storage: 40Gi # Change the volume storage size
+   ...
+   ```
+
+2. Check whether the corresponding cluster resources change.
+
+    ```bash
+    kubectl describe cluster mycluster -n demo
+    ```
+
+</TabItem>
+
+</Tabs>
+
+## Restart
+
+1. Restart a cluster.
+
+   ```bash
+   kubectl apply -f - <<EOF
+   apiVersion: apps.kubeblocks.io/v1alpha1
+   kind: OpsRequest
+   metadata:
+     name: mycluster-restart
+     namespace: demo
+   spec:
+     clusterName: mycluster
+     type: Restart
+     restart:
+     - componentName: rabbitmq
+   EOF
+   ```
+
+2. Check the pod and operation status to validate the restarting.
+
+   ```bash
+   kubectl get pod -n demo
+
+   kubectl get ops -n demo
+   ```
+
+   During the restarting process, there are two status types for pods.
+
+   - STATUS=Terminating: it means the cluster restart is in progress.
+   - STATUS=Running: it means the cluster has been restarted.

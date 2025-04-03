@@ -1,0 +1,128 @@
+---
+title: Stop/Start
+description: How to Stop/Start RabbitMQ on KubeBlocks
+keywords: [RabbitMQ, vector database, control plane]
+sidebar_position: 4
+sidebar_label: Stop/Start RabbitMQ with KubeBlocks
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Stop/Start a cluster
+
+You can stop/start a cluster to save computing resources. When a cluster is stopped, the computing resources of this cluster are released, which means the pods of Kubernetes are released, but the storage resources are reserved. You can start this cluster again by snapshots if you want to restore the cluster resources.
+
+### Stop a cluster
+
+<Tabs>
+
+<TabItem value="OpsRequest" label="OpsRequest" default>
+
+Run the command below to stop a cluster.
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: mycluster-stop
+  namespace: demo
+spec:
+  clusterName: mycluster
+  type: Stop
+EOF
+```
+
+</TabItem>
+
+<TabItem value="Edit cluster YAML file" label="Edit cluster YAML file">
+
+```bash
+kubect edit cluster mycluster -n demo
+```
+
+Configure `replicas` as 0 to delete pods.
+
+```bash
+kubectl edit cluster mycluster -n demo
+```
+
+Edit the value of `replicas`.
+
+```yaml
+...
+spec:
+  terminationPolicy: Delete
+  affinity:
+    podAntiAffinity: Preferred
+    topologyKeys:
+      - kubernetes.io/hostname
+  componentSpecs:
+    - name: rabbitmq
+      componentDef: rabbitmq
+      serviceVersion: 3.13.2
+      replicas: 0 # Change this value
+...
+```
+
+</TabItem>
+
+</Tabs>
+
+### Start a cluster
+
+<Tabs>
+
+<TabItem value="OpsRequest" label="OpsRequest" default>
+
+Run the command below to start a cluster.
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: mycluster-start
+  namespace: demo
+spec:
+  clusterName: mycluster
+  type: Start
+EOF
+```
+
+</TabItem>
+
+<TabItem value="Edit cluster YAML file" label="Edit cluster YAML file">
+
+```bash
+kubectl edit cluster mycluster -n demo
+```
+
+Change replicas back to the original amount to start this cluster again.
+
+```bash
+kubectl edit cluster mycluster -n demo
+```
+
+Edit the value of `replicas`.
+
+```yaml
+...
+spec:
+  terminationPolicy: Delete
+  affinity:
+    podAntiAffinity: Preferred
+    topologyKeys:
+      - kubernetes.io/hostname
+  componentSpecs:
+    - name: rabbitmq
+      componentDef: rabbitmq
+      serviceVersion: 3.13.2
+      replicas: 3 # Change this value
+...
+```
+
+</TabItem>
+
+</Tabs>
