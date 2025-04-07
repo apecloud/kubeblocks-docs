@@ -11,7 +11,6 @@ import {
   Button,
   useTheme,
   alpha,
-  darken,
 } from "@mui/material";
 
 export default function Banner() {
@@ -26,10 +25,7 @@ export default function Banner() {
   };
   const bgLight = {
     ...bgDark,
-    backgroundImage: `url("/site/home-rectangles.svg"), linear-gradient(135deg, ${darken(
-      theme.palette.primary.main,
-      0.8
-    )} 0%, ${darken(theme.palette.primary.main, 0.4)} 100%)`,
+    backgroundImage: `url("/site/home-rectangles.svg"), linear-gradient(135deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.9) 100%)`,
   };
 
   const textColor = '#FFF';
