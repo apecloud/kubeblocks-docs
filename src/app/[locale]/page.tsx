@@ -7,6 +7,7 @@ import Contact from "./contact";
 import BlogsPreview from "./blogs-preview";
 import { getBlogs } from "@/utils/markdown";
 import { getStaticParams } from "@/locales/server";
+import Customers from "./customers";
 
 export function generateStaticParams() {
   return getStaticParams();
@@ -24,6 +25,8 @@ export default async function HomePage({
     <>
       <Box style={{ minHeight: "var(--container-min-height)" }}>
         <Banner />
+        <Divider />
+        <Customers />
         <Divider />
         <WhyNeedKubeBlocks />
         <Divider />
