@@ -3,10 +3,7 @@
 import {
   Box,
   BoxProps,
-  Card,
-  CardContent,
   Container,
-  Divider,
   Typography,
   useTheme,
 } from "@mui/material";
