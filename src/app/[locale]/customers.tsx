@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  Box,
-  BoxProps,
-  Container,
-  Typography,
-  useTheme,
-} from "@mui/material";
+import { Box, BoxProps, Container, Typography, useTheme } from "@mui/material";
 import Image from "next/image";
 
 import boncloud from "@/assets/customers/boncloud.svg";
@@ -19,6 +13,8 @@ import tencent from "@/assets/customers/tencent.svg";
 import weipinhui from "@/assets/customers/weipinhui.svg";
 import xiaomi from "@/assets/customers/xiaomi.svg";
 import zhongxinzhengquan from "@/assets/customers/zhongxinzhengquan.svg";
+import tigerbrokers from "@/assets/customers/tigerbrokers.svg";
+
 import Slider from "react-slick";
 import { KeyboardArrowLeft, KeyboardArrowRight } from "@mui/icons-material";
 
@@ -63,6 +59,10 @@ const customers = [
     img: zhongxinzhengquan,
     title: "中信证券",
   },
+  {
+    img: tigerbrokers,
+    title: "老虎证券",
+  },
 ];
 
 const NextArrow = (props: BoxProps) => (
@@ -73,7 +73,6 @@ const NextArrow = (props: BoxProps) => (
       "&:before": {
         display: "none",
       },
-      display: "none",
     }}
   >
     <KeyboardArrowRight color="action" />
@@ -87,7 +86,6 @@ const PrevArrow = (props: BoxProps) => (
       "&:before": {
         display: "none",
       },
-      display: "none",
     }}
   >
     <KeyboardArrowLeft color="action" />
@@ -98,7 +96,7 @@ export default function Customers() {
   const theme = useTheme();
   const settings = {
     dots: false,
-    speed: 600,
+    speed: 800,
     slidesToShow: 6,
     slidesToScroll: 6,
     autoplay: true,
@@ -115,6 +113,15 @@ export default function Customers() {
         }}
       />
     ),
+    responsive: [
+      {
+        breakpoint: 800,
+        settings: {
+          slidesToShow: 3,
+          slidesToScroll: 3,
+        },
+      },
+    ],
   };
 
   return (
@@ -129,14 +136,30 @@ export default function Customers() {
         <Box className="slider-container">
           <Slider {...settings}>
             {customers.map((item, index) => (
-              <Box key={index} sx={{ textAlign: 'center' }}>
-                <Image
-                  style={{ display: "inline-block" }}
-                  src={item.img}
-                  alt={item.title}
-                  height={40}
-                />
-                <Typography mt={2} sx={{ fontSize: 16 }}>{item.title}</Typography>
+              <Box key={index}>
+                <Box sx={{
+                  textAlign: "center",
+                  paddingInline: 1,
+                  paddingBlock: 2,
+                  marginInline: 1,
+                  "img": {
+                    display: "inline-block",
+                  },
+                  borderRadius: 2,
+                  transitionDuration: '0.3s',
+                  "&:hover": {
+                    bgcolor: theme.palette.action.hover,
+                  }
+                }}>
+                  <Image
+                    src={item.img}
+                    alt={item.title}
+                    height={40}
+                  />
+                  <Typography mt={2} sx={{ fontSize: 16 }}>
+                    {item.title}
+                  </Typography>
+                </Box>
               </Box>
             ))}
           </Slider>
