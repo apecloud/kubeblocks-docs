@@ -48,7 +48,7 @@ $ aws s3 ls s3://kubeblocks-backup-repo
 
 ## Step 2: Create a Kubernetes Secret for AWS Credentials
 
-Store your AWS credentials securely in a Kubernetes Secret. Replace <ACCESS_KEY> and <SECRET_KEY> with your actual AWS credentials:
+Store your AWS credentials securely in a Kubernetes Secret. Replace `<ACCESS_KEY>` and `<SECRET_KEY>` with your actual AWS credentials:
 
 ```bash
 # Create a secret to save the access key
@@ -121,6 +121,6 @@ s3-repo   Ready         s3                Tool           true      35s
 
 Troubleshooting:
  - If status becomes Failed:
-   - Verify bucket name and region match your S3 configuration. 
-   - Confirm AWS credentials in the Secret are correct. 
+   - Verify bucket name and region match your S3 configuration.
+   - Confirm AWS credentials in the Secret are correct.
    - Check network connectivity between KubeBlocks and AWS S3.
