@@ -6,6 +6,11 @@ sidebar_position: 9
 sidebar_label: Decommission a Pod  
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+
 # Decommission a Specific Pod in a KubeBlocks-Managed MySQL Clusters
 
 This guide explains how to decommission (take offline) a specific Pod in a MySQL cluster managed by KubeBlocks. Decommissioning a Pod allows precise control over cluster resources without disrupting the cluster's overall functionality. This is particularly useful for workload rebalancing, node maintenance, or addressing specific failures.
@@ -101,6 +106,10 @@ example-mysql-cluster-mysql-2   4/4     Running   0          49s
 
 To decommission a specific Pod (e.g., 'example-mysql-cluster-mysql-1'), you can use one of the following methods:
 
+    <Tabs>
+
+    <TabItem value="opsRequest" label="Use the OpsRequest API" default>
+
 ### Method 1: Using OpsRequest
 Create an OpsRequest to mark the Pod as offline:
 
@@ -136,6 +145,10 @@ Status:
   Progress:           1/1
   ...
 ```
+
+    </TabItem>
+
+    <TabItem value="ClusterAPI" label="Use the Cluster API">
 
 ### Method 2: Using Cluster API
 Alternatively, update the Cluster resource directly to decommission the Pod:
@@ -175,6 +188,9 @@ spec:
                 storage: 20Gi
 EOF
 ```
+    </TabItem>
+
+    </Tabs>
 
 ### Verify the Decommissioning
 

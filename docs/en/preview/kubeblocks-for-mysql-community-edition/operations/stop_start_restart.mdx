@@ -6,6 +6,10 @@ sidebar_position: 1
 sidebar_label: MySQL Cluster Lifecycle Management
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
 # Managing MySQL Cluster Lifecycle (Stop, Start and Restart)
 
 This guide demonstrates how to manage the lifecycle of a MySQL cluster in **KubeBlocks**, including stopping, starting, and restarting the cluster. Proper lifecycle management helps optimize resource usage, reduce operational costs, and ensure flexibility in your Kubernetes environment.
@@ -84,6 +88,10 @@ Once the cluster status becomes Running, your MySQL cluster is ready for use.
 
 Stopping the cluster terminates all its running pods but retains the persistent storage. This is useful when you want to temporarily suspend the cluster to save costs.
 
+    <Tabs>
+
+    <TabItem value="opsRequest" label="Use the OpsRequest API" default>
+
 #### Option 1: Using OpsRequest
 
 You can stop the cluster using an OpsRequest:
@@ -100,6 +108,9 @@ spec:
   type: Stop
 EOF
 ```
+    </TabItem>
+
+    <TabItem value="ClusterAPI" label="Use the Cluster API">
 
 #### Option 2: Using the Declarative Cluster API
 
@@ -114,6 +125,10 @@ kubectl patch cluster example-mysql-cluster -n demo --type='json' -p='[
   }
 ]'
 ```
+
+    </TabItem>
+
+    </Tabs>
 
 ### Verifying Cluster Stop
 Monitor the cluster's status to ensure it transitions to the Stopped state:
@@ -148,6 +163,9 @@ data-example-mysql-cluster-mysql-1   Bound    pvc-5bb87b23-7c38-45de-bf04-f28220
 ### Start the Cluster
 
 Starting the cluster recreates the pods and brings the cluster back online.
+    <Tabs>
+
+    <TabItem value="opsRequest" label="Use the OpsRequest API" default>
 
 #### Option 1: Using OpsRequest
 
@@ -167,6 +185,10 @@ spec:
 EOF
 ```
 
+    </TabItem>
+
+    <TabItem value="ClusterAPI" label="Use the Cluster API">
+
 #### Option 2: Using the Declarative Cluster API
 
 Alternatively, you can start the cluster by:
@@ -181,6 +203,9 @@ kubectl patch cluster example-mysql-cluster -n demo --type='json' -p='[
   }
 ]'
 ```
+    </TabItem>
+
+    </Tabs>
 
 ### Verifying Cluster Start
 

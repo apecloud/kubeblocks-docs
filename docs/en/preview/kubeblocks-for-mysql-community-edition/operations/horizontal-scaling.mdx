@@ -6,6 +6,11 @@ sidebar_position: 10
 sidebar_label: Horizontal Scaling
 ---
 
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
 # Horizontal Scaling for MySQL Clusters with KubeBlocks
 
 This guide explains how to perform horizontal scaling (scale-out and scale-in) on a MySQL cluster managed by KubeBlocks. You'll learn how to use both **OpsRequest** and direct **Cluster API** updates to achieve this.
@@ -78,6 +83,10 @@ Once the cluster status becomes Running, your MySQL cluster is ready for use.
 
 ## Scale-out (Add Replicas)
 
+    <Tabs>
+
+    <TabItem value="opsRequest" label="Use the OpsRequest API" default>
+
 ### Method 1: Using OpsRequest
 Scale out the MySQL cluster by adding 1 replica:
 
@@ -118,12 +127,22 @@ Status:
   ...
 ```
 
+
+    </TabItem>
+
+    <TabItem value="ClusterAPI" label="Use the Cluster API">
+
 ### Method 2: Direct Cluster API Update
 
 Alternatively, you can perform a direct update to the `replicas` field in the Cluster resource:
 ```yaml
 $ kubectl patch cluster example-mysql-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 3}]'
 ```
+
+    </TabItem>
+
+    </Tabs>
+
 
 ### Verify Scale-Out
 
@@ -154,6 +173,11 @@ example-mysql-cluster-mysql-2	secondary
 
 
 ## Scale-in (Remove Replicas)
+
+    <Tabs>
+
+    <TabItem value="opsRequest" label="Use the OpsRequest API" default>
+
 
 ### Option 1: Using OpsRequest
 Scale in the MySQL cluster by removing 1 replica:
@@ -193,12 +217,20 @@ Status:
   ...
 ```
 
+    </TabItem>
+
+    <TabItem value="ClusterAPI" label="Use the Cluster API">
+
 ### Option 2: Direct Cluster API Update
 
 Alternatively, update the `replicas` field in the Cluster resource:
 ```yaml
 $ kubectl patch cluster example-mysql-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 2}]'
 ```
+
+    </TabItem>
+
+    </Tabs>
 
 ### Verify Scale-In
 

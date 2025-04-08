@@ -6,6 +6,11 @@ sidebar_position: 2
 sidebar_label: Vertical Scaling in MySQL
 ---
 
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
 # Vertical Scaling in a MySQL Cluster
 
 This guide explains how to perform **vertical scaling** in a MySQL cluster managed by KubeBlocks. 
@@ -86,7 +91,9 @@ NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
 example-mysql-cluster   mysql                Delete               Creating   66s
 example-mysql-cluster   mysql                Delete               Running    72s
 ```
+    <Tabs>
 
+    <TabItem value="opsRequest" label="Use the OpsRequest API" default>
 ### Option 1: Using VerticalScaling OpsRequest
 
 Apply the following YAML to scale up the resources for the mysql component:
@@ -129,7 +136,9 @@ Status:
   Progress:         2/2
   ...
 ```
+    </TabItem>
 
+    <TabItem value="ClusterAPI" label="Use the Cluster API">
 ### Option 2: Direct Cluster API Update
 
 Alternatively, you may update `spec.componentSpecs.resources` field to the desired resources for vertical scale.
@@ -167,6 +176,9 @@ spec:
                 storage: 20Gi
 EOF
 ```
+    </TabItem>
+
+    </Tabs>
 
 ## Verification
 Verify the updated resources by inspecting the cluster configuration or Pod details:

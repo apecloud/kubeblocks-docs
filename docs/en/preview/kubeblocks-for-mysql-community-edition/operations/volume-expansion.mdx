@@ -6,6 +6,11 @@ sidebar_position: 3
 sidebar_label: Volume Expansion in MySQL
 ---
 
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
 # Expanding Volume in a MySQL Cluster
 
 This guide explains how to expand the Persistent Volume Claims (PVCs) in a MySQL cluster managed by **KubeBlocks**. Volume expansion allows you to increase storage capacity dynamically, ensuring your database can scale seamlessly as data grows. If supported by the underlying storage class, this operation can be performed without downtime.
@@ -99,6 +104,9 @@ sc-s3-repo-2qsxfh   ru.yandex.s3.csi        Retain          Immediate           
 Ensure the storage class you are using has ALLOWVOLUMEEXPANSION set to true. If it is false, the storage class does not support volume expansion.
 
 You can expand the volume in one of two ways:
+    <Tabs>
+
+    <TabItem value="opsRequest" label="Use the OpsRequest API" default>
 
 ### Option 1: Using VolumeExpansion OpsRequest
 
@@ -137,6 +145,9 @@ Status:
 ```
 Once completed, the PVC size will be updated.
 
+    </TabItem>
+
+    <TabItem value="ClusterAPI" label="Use the Cluster API">
 
 ### Option 2: Direct Cluster API Update
 
@@ -177,6 +188,9 @@ EOF
 ```
 KubeBlocks will automatically update the PVC size based on the new specifications.
 
+    </TabItem>
+
+    </Tabs>
 
 ## Verification
 
