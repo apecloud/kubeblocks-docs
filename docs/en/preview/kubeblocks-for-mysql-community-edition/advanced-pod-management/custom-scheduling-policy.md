@@ -1,0 +1,246 @@
+---
+title: Configuring Custom Scheduling Policies for MySQL Cluster Pods in KubeBlocks
+description: Learn how to configure custom scheduling policies for MySQL Cluster Pods in KubeBlocks to ensure high availability or optimize for low latency by controlling their distribution across availability zones.
+keywords:  [KubeBlocks, MySQL, Kubernetes, Pod Scheduling, High Availability]
+sidebar_position: 1
+sidebar_label: Custom Scheduling Policies
+---
+
+# Configuring Custom Scheduling Policies for MySQL Cluster Pods in KubeBlocks
+
+This guide demonstrates how to configure custom scheduling policies for MySQL Cluster Pods in KubeBlocks. For example:
+1. Distribute Pods across different availability zones (AZs) to improve high availability.
+2. Deploy Pods in the same AZ to reduce latency.
+
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+   - A Kubernetes cluster is up and running.
+   - The kubectl CLI tool is configured to communicate with your cluster.
+   - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+$ kubectl create ns demo
+namespace/demo created
+```
+
+## Verify K8s Node Distribution
+
+Our Kubernetes cluster (EKS) consists of 9 nodes distributed across 3 availability zones, with 3 nodes in each AZ. To confirm the node distribution across availability zones, run the following command:
+
+```bash
+$ kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | while read node; do echo -n "Node: $node, Zone: "; kubectl get node "$node" -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}'; echo; done
+```
+Example Output:
+```bash
+ip-10-0-1-107.ap-southeast-1.compute.internal   Ready    <none>   91m     v1.31.5-eks-5d632ec
+ip-10-0-1-183.ap-southeast-1.compute.internal   Ready    <none>   71m     v1.31.5-eks-5d632ec
+ip-10-0-1-217.ap-southeast-1.compute.internal   Ready    <none>   2m13s   v1.31.5-eks-5d632ec
+ip-10-0-2-186.ap-southeast-1.compute.internal   Ready    <none>   91m     v1.31.5-eks-5d632ec
+ip-10-0-2-252.ap-southeast-1.compute.internal   Ready    <none>   71m     v1.31.5-eks-5d632ec
+ip-10-0-2-71.ap-southeast-1.compute.internal    Ready    <none>   2m24s   v1.31.5-eks-5d632ec
+ip-10-0-3-143.ap-southeast-1.compute.internal   Ready    <none>   91m     v1.31.5-eks-5d632ec
+ip-10-0-3-205.ap-southeast-1.compute.internal   Ready    <none>   36s     v1.31.5-eks-5d632ec
+ip-10-0-3-238.ap-southeast-1.compute.internal   Ready    <none>   91m     v1.31.5-eks-5d632ec
+```
+From the output, we can see there are three nodes in each AZ: ap-southeast-1a, ap-southeast-1b, and ap-southeast-1c.
+
+
+## Deploy a MySQL Cluster Across Different AZs
+
+### Creating a MySQL Cluster
+To deploy a 3-node semi-synchronous MySQL cluster (1 primary, 2 secondary) across different AZs, use the following YAML configuration:
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 3
+      schedulingPolicy:
+        affinity:
+          podAntiAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              - labelSelector:
+                  matchExpressions:
+                     - key: apps.kubeblocks.io/component-name
+                       operator: In
+                       values:
+                          - mysql
+                topologyKey: topology.kubernetes.io/zone
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+**Key Configurations:**
+- `podAntiAffinity`:
+  - Ensures that Pods belonging to the same component (mysql) are not scheduled on nodes in the same AZ. 
+  - By using `requiredDuringSchedulingIgnoredDuringExecution`, this rule strictly enforces that Pods must be scheduled in separate AZs.
+- `labelSelector`:
+  - Matches Pods with the label 'apps.kubeblocks.io/component-name=mysql' (automatically added by the KubeBlocks controller). Update this label if your MySQL Pods use a different label.
+- `topologyKey`:
+  - Specifies the scope for anti-affinity. Here, we use 'topology.kubernetes.io/zone' to ensure Pods are distributed across different AZs.
+- `requiredDuringSchedulingIgnoredDuringExecution`:
+  - Enforces strict scheduling rules. If no resources are available to satisfy the rule, the Pod will remain unscheduled.
+  - If you want a "soft" requirement (i.e., Pods are scheduled in the same AZ if resources are insufficient), use `preferredDuringSchedulingIgnoredDuringExecution` instead.
+
+   
+### Verifying the Deployment
+To monitor the deployment, check the cluster status until it transitions to Running:
+```bash
+$ kubectl get cluster -n demo -w
+```
+Example output:
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster   mysql                Delete               Updating   79s
+example-mysql-cluster   mysql                Delete               Running   2m44s
+```
+
+### Check Pod Distribution
+To verify that the MySQL Pods are distributed across different availability zones, use the following command:
+```bash
+$ kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster -o=jsonpath='{range .items[*]}{"Pod: "}{.metadata.name}{"\tZone: "}{.spec.nodeName}{"\n"}{end}' | while read line; do pod=$(echo $line | awk '{print $2}'); node=$(echo $line | awk '{print $4}'); zone=$(kubectl get node $node -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}'); echo "Pod: $pod, Zone: $zone"; done
+```
+Example Output:
+```bash
+Pod: example-mysql-cluster-mysql-0, Zone: ap-southeast-1c
+Pod: example-mysql-cluster-mysql-1, Zone: ap-southeast-1b
+Pod: example-mysql-cluster-mysql-2, Zone: ap-southeast-1a
+```
+**Observation:**
+- The 3 MySQL Pods are successfully distributed across different AZs, ensuring high availability.
+
+
+## Deploy a MySQL Cluster in the Same AZ
+
+### Creating a MySQL Cluster
+
+To deploy Pods in the same AZ to optimize for low latency, use the following configuration:
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster2
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 3
+      schedulingPolicy:
+         affinity:
+            podAffinity:
+               requiredDuringSchedulingIgnoredDuringExecution:
+                  - labelSelector:
+                       matchExpressions:
+                          - key: apps.kubeblocks.io/component-name
+                            operator: In
+                            values:
+                               - mysql
+                    topologyKey: topology.kubernetes.io/zone
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+**Key Configurations:**
+- `podAffinity`:
+   - Ensures that Pods belonging to the same component (mysql) are scheduled on nodes in the same AZ.
+   - By using `requiredDuringSchedulingIgnoredDuringExecution`, this rule strictly enforces that Pods must be scheduled in the same AZ.
+- `labelSelector`:
+   - Matches Pods with the label 'apps.kubeblocks.io/component-name=mysql' (automatically added by the KubeBlocks controller). Update this label if your MySQL Pods use a different label.
+- `topologyKey`:
+   - Specifies the scope for anti-affinity. Here, we use 'topology.kubernetes.io/zone' to ensure Pods are distributed in the same AZs.
+- `requiredDuringSchedulingIgnoredDuringExecution`:
+   - Enforces strict scheduling rules. If no resources are available to satisfy the rule, the Pod will remain unscheduled.
+   - If you want a "soft" requirement (i.e., Pods are scheduled to different AZs if resources are insufficient), use `preferredDuringSchedulingIgnoredDuringExecution` instead.
+
+
+
+### Verifying the Deployment
+To monitor the deployment, check the cluster status until it transitions to Running:
+```bash
+$ kubectl get cluster -n demo -w
+```
+Example output:
+```bash
+NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster2   mysql                Delete               Updating   79s
+example-mysql-cluster2   mysql                Delete               Running   2m44s
+```
+
+### Check Pod Distribution
+
+```bash
+$ kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster2 -o=jsonpath='{range .items[*]}{"Pod: "}{.metadata.name}{"\tZone: "}{.spec.nodeName}{"\n"}{end}' | while read line; do pod=$(echo $line | awk '{print $2}'); node=$(echo $line | awk '{print $4}'); zone=$(kubectl get node $node -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}'); echo "Pod: $pod, Zone: $zone"; done
+```
+Example Output:
+```bash
+Pod: example-mysql-cluster-mysql-0, Zone: ap-southeast-1c
+Pod: example-mysql-cluster-mysql-1, Zone: ap-southeast-1c
+Pod: example-mysql-cluster-mysql-2, Zone: ap-southeast-1c
+```
+**Observation:**
+- All 3 MySQL Pods are successfully deployed in the same AZ to minimize replication and network latency.
+
+
+## Cleanup
+To remove all created resources, delete the MySQL cluster along with its namespace:
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete cluster example-mysql-cluster2 -n demo
+kubectl delete ns demo
+```
+
+## Summary
+In this tutorial, we successfully configured custom scheduling policies for a MySQL Cluster in KubeBlocks. We demonstrated two scenarios:
+- Distributing Pods across different AZs for high availability.
+- Deploying Pods in the same AZ for low latency.
+
+This flexibility allows you to tailor your database deployment to meet specific requirements, whether it's fault tolerance or performance optimization.
+
+

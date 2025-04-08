@@ -1,0 +1,269 @@
+---
+title: Create a Full Backup for a MySQL Cluster on KubeBlocks
+description: Step-by-step guide to creating and validating full backups for MySQL clusters using Backup API and Ops API in KubeBlocks.
+keywords: [MySQL, Full Backup, KubeBlocks, Kubernetes, Database Backup, XtraBackup]
+sidebar_position: 1
+sidebar_label: Create Full Backup
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# Create a Full Backup for a MySQL Cluster on KubeBlocks
+
+This guide demonstrates how to create and validate full backups for a MySQL cluster deployed on KubeBlocks using XtraBackup through both Backup API and Ops API.
+The Ops API is essentially a wrapper around the Backup API, offering enhanced control and progress monitoring capabilities for backup operations.
+
+We will cover how to restore data from a backup in the [Restore From Full Backup](restoring-from-full-backup.md) guide.
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+$ kubectl create ns demo
+namespace/demo created
+```
+
+## Deploy a MySQL Semi-Synchronous Cluster
+
+KubeBlocks uses a declarative approach for managing MySQL clusters. Below is an example configuration for deploying a MySQL cluster with 2 nodes (1 primary, 1 replicas) in semi-synchronous mode.
+
+Cluster Configuration
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: WipeOut
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+**Key Notes:**
+- `terminationPolicy: WipeOut`:
+  - When set to 'WipeOut', deleting the cluster also deletes all associated data, including backups.
+  - For production environments, it is recommended to use `terminationPolicy: Delete`, which retains backup data even after the cluster is deleted.
+
+## Verifying the Deployment
+
+Monitor the cluster status until it transitions to Running:
+
+```bash
+$ kubectl get cluster example-mysql-cluster -n demo
+```
+
+Expected Output:
+```bash
+NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Running   36m
+```
+
+## Identify Backup Policies
+
+List available backup policies and schedules for the cluster:
+
+```bash
+# List backup policies
+$ kubectl get backuppolicy -n demo
+
+# List backup schedules
+$ kubectl get backupschedule -n demo
+```
+
+Example Output:
+```bash
+NAME                                            BACKUP-REPO   STATUS      AGE
+example-mysql-cluster-mysql-backup-policy                      Available   58m
+
+NAME                                              STATUS      AGE
+example-mysql-cluster-mysql-backup-schedule        Available   60m
+```
+
+View supported backup methods in the BackupPolicy CR 'example-mysql-cluster-mysql-backup-policy':
+
+```bash
+$ kubectl get backuppolicy example-mysql-cluster-mysql-backup-policy -n demo -oyaml
+```
+Available Methods:
+- 'xtrabackup': Full database backup using Percona XtraBackup
+- 'volume-snapshot': Storage-level snapshot
+- 'archive-binlog': Continuous binary log archiving
+
+The following sections demonstrate how to perform a full backup using the 'xtrabackup' method.
+
+<Tabs>
+
+<TabItem value="backupAPI" label="Use the Backup API" default>
+
+## Perform a Backup via Backup API
+
+### 1. Initiate a Full Backup
+
+Execute a full backup using the 'xtrabackup' method defined in the backup policy:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: Backup
+metadata:
+  name: example-mysql-cluster-backup
+  namespace: demo
+spec:
+  # Specifies the backup method name that is defined in the backup policy.
+  # - xtrabackup
+  # - volume-snapshot
+  backupMethod: xtrabackup
+  backupPolicyName: example-mysql-cluster-mysql-backup-policy
+  # Determines whether the backup contents stored in the backup repository should be deleted when the backup custom resource(CR) is deleted. Supported values are 'Retain' and 'Delete'.
+  # - 'Retain' means that the backup content and its physical snapshot on backup repository are kept.
+  # - 'Delete' means that the backup content and its physical snapshot on backup repository are deleted.
+  deletionPolicy: Delete
+EOF
+```
+
+### 2. Monitor Backup Progress
+
+Check the backup status until it shows 'Completed':
+
+```bash
+$ kubectl get backup example-mysql-cluster-backup  -n demo -w
+```
+
+Expected Output:
+
+```bash
+NAME                           POLICY                                      METHOD       REPO      STATUS    TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME   EXPIRATION-TIME
+example-mysql-cluster-backup   example-mysql-cluster-mysql-backup-policy   xtrabackup   s3-repo   Running                           Delete            2025-03-07T01:39:05Z
+example-mysql-cluster-backup   example-mysql-cluster-mysql-backup-policy   xtrabackup   s3-repo   Completed   1524515      18s        Delete            2025-03-07T01:39:05Z   2025-03-07T01:39:23Z
+```
+
+### 3. Validate Backup Artifacts
+
+Verify the backup files in the configured S3 bucket:
+
+```bash
+$ aws s3 ls s3://kubeblocks-backup-repo/ --recursive
+```
+
+Expected Output:
+```bash
+2025-03-07 09:39:10    1524515 demo/example-mysql-cluster-cb1b0f47-e310-4f63-9537-dacb6cbac499/mysql/example-mysql-cluster-backup/example-mysql-cluster-backup.xbstream.zst
+2025-03-07 09:39:20       5642 demo/example-mysql-cluster-cb1b0f47-e310-4f63-9537-dacb6cbac499/mysql/example-mysql-cluster-backup/kubeblocks-backup.json
+```
+
+
+</TabItem>
+
+<TabItem value="opsAPI" label="Use the Ops API">
+
+
+## Perform a Backup via Ops API
+
+### 1. Initiate a Full Backup
+
+Execute a full backup using the 'xtrabackup' method defined in the backup policy:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-cluster-backup
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  force: false
+  backup:
+    backupPolicyName: example-mysql-cluster-mysql-backup-policy
+    backupMethod: xtrabackup
+    deletionPolicy: Delete
+    retentionPeriod: 1mo
+  type: Backup
+EOF
+```
+
+### 2. Monitor Backup Progress
+
+#### Step 1: Verify Backup Operation Status
+
+Execute the following command to monitor the backup operation status in real-time:
+```bash
+$ kubectl get ops example-mysql-cluster-backup  -n demo -w
+```
+Example Output:
+```bash
+NAME                           TYPE     CLUSTER                 STATUS    PROGRESS   AGE
+example-mysql-cluster-backup   Backup   example-mysql-cluster   Succeed   -/-        3m34s
+```
+- A STATUS of 'Succeed' indicates the backup operation completed successfully.
+
+#### Step 2: Confirm Backup Completion
+
+Check the final backup status with:
+
+```bash
+$ kubectl get backup  -n demo -w
+```
+
+Expected Output:
+```bash
+NAME                                               POLICY                                      METHOD           REPO      STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
+backup-demo-example-mysql-cluster-20250307013939   example-mysql-cluster-mysql-backup-policy   xtrabackup   s3-repo   Completed   1549449      18s        Delete            2025-03-07T01:39:39Z   2025-03-07T01:39:57Z   2025-04-06T01:39:57Z
+```
+- The backup status should show 'Completed'.
+
+### 3. Validate Backup Artifacts
+
+Verify the backup files in the configured S3 bucket:
+
+```bash
+$ aws s3 ls s3://kubeblocks-backup-repo/ --recursive
+```
+
+Expected Output:
+```bash
+2025-03-07 09:39:44    1549449 demo/example-mysql-cluster-cb1b0f47-e310-4f63-9537-dacb6cbac499/mysql/backup-demo-example-mysql-cluster-20250307013939/backup-demo-example-mysql-cluster-20250307013939.xbstream.zst
+2025-03-07 09:39:54       5529 demo/example-mysql-cluster-cb1b0f47-e310-4f63-9537-dacb6cbac499/mysql/backup-demo-example-mysql-cluster-20250307013939/kubeblocks-backup.json
+```
+
+</TabItem>
+
+</Tabs>
+
+
+## Summary
+This guide demonstrated how to:
+- Deploy a semi-synchronous MySQL cluster on KubeBlocks.
+- Create a full backup using the 'xtrabackup' method.
+- Monitor and validate backup artifacts.
+By following this guide, you can ensure your MySQL cluster data is securely backed up and easily restorable.

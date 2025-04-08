@@ -1,0 +1,131 @@
+---
+title: Deploy a MySQL Cluster with a Custom Password Generation Policy
+description: Learn how to deploy a MySQL cluster in KubeBlocks with a custom password generation policy for the root user to enhance security.
+keywords: [MySQL, KubeBlocks, Password Policy, Kubernetes, Security]
+sidebar_position: 2
+sidebar_label: Custom Password Policy
+---
+
+# Create a MySQL Cluster With Custom Password Generation Policy
+This guide explains how to deploy a MySQL cluster in KubeBlocks with a custom password generation policy for the root user. By defining specific password rules, you can ensure strong, secure credentials for your cluster.
+
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+  - A Kubernetes cluster is up and running.
+  - The kubectl CLI tool is configured to communicate with your cluster.
+  - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+$ kubectl create ns demo
+namespace/demo created
+```
+
+## Deploying the MySQL Semi-Synchronous Cluster
+
+KubeBlocks uses a declarative approach for managing MySQL clusters. Below is an example configuration for deploying a MySQL cluster with 2 nodes (1 primary, 1 replicas) in semi-synchronous mode and a custom root password that adheres to a specific pattern.
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      systemAccounts:
+        - name: root
+          passwordConfig:
+            length: 20           # Password length: 20 characters
+            numDigits: 4         # At least 4 digits
+            numSymbols: 4        # At least 4 symbols
+            letterCase: MixedCases # Uppercase and lowercase letters
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+**Key Features of the Password Policy:**
+- Length: 20 characters.
+- Composition:
+  - At least 4 digits. 
+  - At least 4 symbols. 
+  - Mixed uppercase and lowercase letters.
+
+This ensures the generated password is strong and secure.
+
+## Verifying the Deployment
+
+Once the cluster is deployed, monitor its status:
+```bash
+$ kubectl get cluster example-mysql-cluster -n demo -w
+NAME                                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster   mysql                Delete               Creating   10s
+example-mysql-cluster   mysql                Delete               Running    1m
+```
+Wait until the STATUS changes to Running.
+
+
+## Retrieving the Password
+
+KubeBlocks automatically creates a secret containing the MySQL root credentials. Retrieve the credentials with the following commands:
+```bash
+$ kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+```
+Example Output:
+```bash
+v@DI5PC7n*#3hE#HjRV0
+```
+This password has the following characteristics:
+- Length: 20 characters.
+- Composition:
+  - 4 digits.
+  - 4 symbols.
+  - 12 letters (mixed uppercase and lowercase).
+
+This password adheres to the custom policy defined in the configuration.
+
+## Connecting to the MySQL Cluster
+
+To connect to the cluster's primary node, use the MySQL client with the custom password:
+```bash
+$ kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pv@DI5PC7n*#3hE#HjRV0
+```
+
+## Cleanup
+To remove all created resources, delete the MySQL cluster along with its namespace:
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete ns demo
+```
+
+## Summary
+In this tutorial, you:
+- Configured and deployed a MySQL cluster with a custom password generation policy using KubeBlocks.
+- Verified the deployment and retrieved the generated root password.
+- Connected to the MySQL cluster using the secure, auto-generated password.
+This approach simplifies password management while maintaining high-security standards for your database deployments.

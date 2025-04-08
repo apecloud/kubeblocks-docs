@@ -1,0 +1,235 @@
+---
+title: Modify MySQL Parameters
+description: Learn how to modify dynamic and static MySQL parameters in KubeBlocks using Reconfiguring OpsRequests to optimize database performance and availability.
+keywords: [MySQL, KubeBlocks, OpsRequest, dynamic parameters, static parameters, database configuration]
+sidebar_position: 7
+sidebar_label: Modify MySQL Parameters  
+---
+
+# Modify MySQL Parameters
+
+Reconfiguring a database involves modifying database parameters, settings, or configurations to improve performance, security, or availability. These changes can be categorized as:
+- Dynamic: Changes applied without requiring a database restart.
+- Static: Changes that require a database restart to take effect.
+
+Even for static parameters, **KubeBlocks** ensures minimal downtime. It modifies and restarts the replica nodes first, then performs a **switchover** to promote the updated replica as the primary node (a process typically completed within a few milliseconds). Finally, it restarts the original primary node.
+
+This guide demonstrates how to modify both dynamic and static parameters of a MySQL cluster managed by KubeBlocks using a Reconfiguring OpsRequest.
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+$ kubectl create ns demo
+namespace/demo created
+```
+
+## Deploying the MySQL Semi-Synchronous Cluster
+
+KubeBlocks uses a declarative approach for managing MySQL clusters. Below is an example configuration for deploying a MySQL cluster with 2 nodes (1 primary, 1 replicas) in semi-synchronous mode.
+
+Deploy the cluster using the following YAML manifest:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+## Verifying the Deployment
+
+After the cluster is deployed, verify its status using the following command:
+
+```bash
+$ kubectl get cluster example-mysql-cluster -n demo -w
+NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Creating   12s
+example-mysql-cluster   mysql                Delete               Running   46s
+```
+
+This indicates that the MySQL cluster is running successfully.
+
+## Connecting to the MySQL Cluster
+KubeBlocks automatically creates a secret containing the MySQL root credentials. Retrieve the credentials with the following commands:
+```bash
+$ kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+mDvdY62156
+```
+
+To connect to the cluster's primary node, use the MySQL client:
+```bash
+$ kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pmDvdY62156
+```
+
+Once connected, you can query the current value of 'max_connections' and 'performance_schema':
+```sql
+mysql> SHOW VARIABLES LIKE 'max_connections';
++-----------------+-------+
+| Variable_name   | Value |
++-----------------+-------+
+| max_connections | 83    |
++-----------------+-------+
+1 row in set (0.00 sec)
+
+mysql> SHOW VARIABLES LIKE 'performance_schema';
++--------------------+-------+
+| Variable_name      | Value |
++--------------------+-------+
+| performance_schema | OFF   |
++--------------------+-------+
+1 row in set (0.00 sec)
+```
+
+## Dynamic Parameter Example: Modifying max_connections
+
+Dynamic parameters can be modified without restarting the database. For example, updating the 'max_connections' parameter allows more concurrent connections to the MySQL instance.
+
+The expected behavior is that after modifying the configuration, the new settings take effect immediately, without the need to restart the database.
+
+To update the 'max_connections' parameter from 83 to 100, apply the following Reconfiguring OpsRequest:
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: mysql-reconfigure-dynamic
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  force: false
+  reconfigures:
+  - componentName: mysql
+    parameters:
+      - key: max_connections
+        value: '100'
+  preConditionDeadlineSeconds: 0
+  type: Reconfiguring
+EOF
+```
+
+Wait for the OpsRequest to complete:
+```bash
+$ kubectl get ops mysql-reconfigure-dynamic -n demo -w
+```
+Example output:
+```bash
+NAME                        TYPE            CLUSTER                 STATUS    PROGRESS   AGE
+mysql-reconfigure-dynamic   Reconfiguring   example-mysql-cluster   Running   -/-        11s
+mysql-reconfigure-dynamic   Reconfiguring   example-mysql-cluster   Succeed   -/-        31s
+```
+
+### Verifying the Configuration Change
+
+Log into the MySQL instance and confirm that the max_connections parameter has been updated:
+
+```sql
+mysql> SHOW VARIABLES LIKE 'max_connections';
++-----------------+-------+
+| Variable_name   | Value |
++-----------------+-------+
+| max_connections | 100   |
++-----------------+-------+
+1 row in set (0.00 sec)
+```
+
+The output confirms that the 'max_connections' parameter has been successfully updated to 100.
+
+
+## Static Parameter Example: Modifying performance_schema
+
+Static parameters, such as 'performance_schema', require a database restart to take effect. In this example, we will set performance_schema to ON.
+
+Create a Reconfigure OpsRequest. Apply the following OpsRequest YAML to update the 'performance_schema':
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: mysql-reconfigure-static
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  force: false
+  reconfigures:
+  - componentName: mysql
+    parameters:
+    - key: performance_schema
+      value: 'OFF'
+  preConditionDeadlineSeconds: 0
+  type: Reconfiguring
+EOF
+```
+
+Check the status of the OpsRequest until it completes:
+
+```bash
+kubectl get ops mysql-reconfigure-static -n demo -w
+```
+Example output:
+```bash
+mysql-reconfigure-static   Reconfiguring   example-mysql-cluster   Running   -/-        5s
+mysql-reconfigure-static   Reconfiguring   example-mysql-cluster   Succeed   -/-        31s
+```
+
+### Verify the Configuration Change
+
+Once the Pods are restarted, connect to the MySQL instance and confirm that the 'performance_schema' parameter has been updated to 'ON'.
+
+```bash
+$ kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pmDvdY62156
+```
+
+```sql
+mysql> SHOW VARIABLES LIKE 'performance_schema';
++--------------------+-------+
+| Variable_name      | Value |
++--------------------+-------+
+| performance_schema | ON    |
++--------------------+-------+
+1 row in set (0.00 sec)
+```
+
+## Cleanup
+To remove all created resources, delete the MySQL cluster along with its namespace:
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete ns demo
+```
+
+## Summary
+This guide demonstrated how to modify both dynamic (e.g., max_connections) and static (e.g., performance_schema) MySQL parameters using Reconfiguring OpsRequests in KubeBlocks. While dynamic changes take effect immediately, static changes require a database restart. By leveraging KubeBlocks' declarative and automated management, these configuration updates can be applied efficiently with minimal downtime.
