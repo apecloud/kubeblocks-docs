@@ -49,7 +49,7 @@ export const getMarkDownSideBar = async (
             .replace(MARKDOWN_SUEFIX_REG, "");
           Object.assign(item, {
             position: metadata.sidebar_position || metadata.position || 0,
-            label: metadata.title || metadata.sidebar_label,
+            label: metadata.sidebar_label || metadata.title,
             href: urlPath.replace(/^\/(en|zh)/, "/docs"),
             description: metadata.description,
             hidden: Boolean(metadata.hidden),
