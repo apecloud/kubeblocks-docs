@@ -1,0 +1,341 @@
+---
+title: QuickStart Guide
+description: Learn how to get started with KubeBlocks MySQL Add-on, including prerequisites, enabling the MySQL Add-on, creating a MySQL cluster, and managing it effectively.
+keywords: [Kubernetes, MySQL, KubeBlocks, Helm, Cluster Management, QuickStart]
+sidebar_position: 2
+sidebar_label: QuickStart
+---
+
+# QuickStart Guide
+
+This guide walks you through the process of getting started with the **KubeBlocks MySQL Add-on**, including prerequisites, enabling the add-on, creating a MySQL cluster, and managing the cluster with ease.
+
+
+## Prerequisites
+
+This tutorial assumes that you have a Kubernetes cluster installed and running, and that you have installed the `kubectl` command line tool and `helm` somewhere in your path. Please see the [getting started](https://kubernetes.io/docs/setup/)  and [Installing Helm](https://helm.sh/docs/intro/install/) for installation instructions for your platform.
+
+Also, this example requires KubeBlocks installed and running. Please see the [Install KubeBlocks](../user_docs/installation/install-kubeblocks.md) to install KubeBlocks.
+
+### Enable MySQL Add-on
+
+Verify whether MySQL Addon is installed. By default, the MySQL Addon is installed along with the KubeBlocks Helm chart.
+```bash
+$ helm list -A
+NAME                        	NAMESPACE  	REVISION	UPDATED                                	STATUS  	CHART                       	APP VERSION
+...
+kb-addon-mysql              	kb-system  	1       	2024-12-16 00:28:52.78819557 +0000 UTC 	deployed	mysql-1.0.0-alpha.0         	5.7.44
+```
+
+If MySQL Addon is not enabled, you can enable it by following the steps below.
+
+```bash
+# Add Helm repo
+$ helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
+# For users in Mainland China, if github is not accessible or very slow for you, please use following repo instead
+#helm repo add kubeblocks-addons https://jihulab.com/api/v4/projects/150246/packages/helm/stable
+
+# Update helm repo
+$ helm repo update
+# Search versions of the Addon
+$ helm search repo kubeblocks/mysql --versions
+# Install the version you want (replace $version with the one you need)
+$ helm upgrade -i mysql kubeblocks-addons/mysql --version $version -n kb-system
+```
+
+### Create A MySQL Cluster
+
+```bash
+$ kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/mysql/cluster.yaml
+```
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: mysql-cluster
+  namespace: default
+spec:
+  # Specifies the behavior when a Cluster is deleted.
+  # Valid options are: [DoNotTerminate, Delete, WipeOut] (`Halt` is deprecated since KB 0.9)
+  # - `DoNotTerminate`: Prevents deletion of the Cluster. This policy ensures that all resources remain intact.
+  # - `Delete`: Extends the `Halt` policy by also removing PVCs, leading to a thorough cleanup while removing all persistent data.
+  # - `WipeOut`: An aggressive policy that deletes all Cluster resources, including volume snapshots and backups in external storage. This results in complete data removal and should be used cautiously, primarily in non-production environments to avoid irreversible data loss.
+  terminationPolicy: Delete
+  # Specifies a list of ClusterComponentSpec objects used to define the
+  # individual Components that make up a Cluster.
+  # This field allows for detailed configuration of each Component within the Cluster
+  componentSpecs:
+    - name: mysql
+      # Specifies the ComponentDefinition custom resource (CR) that defines the
+      # Component's characteristics and behavior.
+      # Supports three different ways to specify the ComponentDefinition:
+      # - the regular expression - recommended
+      # - the full name - recommended
+      # - the name prefix
+      componentDef: "mysql-8.0"  # match all CMPD named with 'mysql-8.0-'
+      # ServiceVersion specifies the version of the Service expected to be
+      # provisioned by this Component.
+      # When componentDef is "mysql-8.0",
+      # Valid options are: [8.0.30,8.0.31,8.0.32,8.0.33,8.0.34,8.0.35,8.0.36,8.0.37,8.0.38,8.0.39]
+      serviceVersion: 8.0.35
+      # Determines whether metrics exporter information is annotated on the
+      # Component's headless Service.
+      # Valid options are [true, false]
+      disableExporter: false
+      # Specifies the desired number of replicas in the Component
+      replicas: 2
+      # Specifies the resources required by the Component.
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      # Specifies a list of PersistentVolumeClaim templates that define the storage
+      # requirements for the Component.
+      volumeClaimTemplates:
+        # Refers to the name of a volumeMount defined in
+        # `componentDefinition.spec.runtime.containers[*].volumeMounts
+        - name: data
+          spec:
+            # The name of the StorageClass required by the claim.
+            # If not specified, the StorageClass annotated with
+            # `storageclass.kubernetes.io/is-default-class=true` will be used by default
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                # Set the storage size as needed
+                storage: 20Gi
+```
+
+If you want to create a cluster of specified version, set `spec.componentSpecs.componentDef` (major version) and `spec.componentSpecs.serviceVersion` (major and minor version) field in the yaml file before applying it, for examples:
+
+```yaml
+  componentSpecs:
+    - name: mysql
+      # componentDef is "mysql-5.7" means the major version is 5.7
+      componentDef: "mysql-5.7"
+      # Valid options are: [5.7.44]
+      serviceVersion: 5.7.44
+```
+
+```yaml
+  componentSpecs:
+    - name: mysql
+      # componentDef is "mysql-8.0" means the major version is 8.0
+      componentDef: "mysql-8.0"
+      # Valid options are: [8.0.30,8.0.31,8.0.32,8.0.33,8.0.34,8.0.35,8.0.36,8.0.37,8.0.38,8.0.39]
+      serviceVersion: 8.0.35
+```
+
+```yaml
+  componentSpecs:
+    - name: mysql
+      # componentDef is "mysql-8.4" means the major version is 8.4
+      componentDef: "mysql-8.4"
+      # Valid options are: [8.4.0, 8.4.1, 8.4.2]
+      serviceVersion: 8.4.2
+```
+
+The list of available componentDef can be found by following command:
+```bash
+$ kubectl get cmpd -l app.kubernetes.io/name=mysql
+```
+
+The list of supported versions can be found by following command:
+
+```bash
+$ kubectl get cmpv mysql
+```
+
+When you create a MySQL cluster, KubeBlocks automatically creates a MySQL cluster that includes one primary replica and one secondary replica. The primary and secondary replicas are synchronized using semi-synchronous replication.
+
+When the cluster's status.phase changes to Running, it indicates that the cluster has been successfully created, and both the primary and secondary replicas have been started.
+
+```bash
+$ kubectl get cluster mysql-cluster
+NAME            CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+mysql-cluster                        Delete               Running   22m
+
+$ kubectl get pods -l app.kubernetes.io/instance=mysql-cluster
+NAME                    READY   STATUS    RESTARTS   AGE
+mysql-cluster-mysql-0   4/4     Running   0          31m
+mysql-cluster-mysql-1   4/4     Running   0          31m
+```
+
+If you have installed `kbcli`, you can use the `kbcli` tool to quickly view important information related to the cluster.
+
+```bash
+$ kbcli cluster describe mysql-cluster
+Name: mysql-cluster	 Created Time: Dec 16,2024 08:37 UTC+0800
+NAMESPACE   CLUSTER-DEFINITION   VERSION   STATUS    TERMINATION-POLICY
+default                                    Running   Delete
+
+Endpoints:
+COMPONENT   MODE        INTERNAL                                             EXTERNAL
+mysql       ReadWrite   mysql-cluster-mysql.default.svc.cluster.local:3306   <none>
+
+Topology:
+COMPONENT   INSTANCE                ROLE        STATUS    AZ                NODE                                                       CREATED-TIME
+mysql       mysql-cluster-mysql-0   secondary   Running   ap-southeast-1b   ip-10-0-2-243.ap-southeast-1.compute.internal/10.0.2.243   Dec 16,2024 08:37 UTC+0800
+mysql       mysql-cluster-mysql-1   primary     Running   ap-southeast-1a   ip-10-0-1-215.ap-southeast-1.compute.internal/10.0.1.215   Dec 16,2024 08:37 UTC+0800
+
+Resources Allocation:
+COMPONENT   DEDICATED   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+mysql       false       500m / 500m          512Mi / 512Mi           data:20Gi      <none>
+
+Images:
+COMPONENT   TYPE   IMAGE
+mysql              docker.io/apecloud/mysql:8.0.35
+
+Data Protection:
+BACKUP-REPO   AUTO-BACKUP   BACKUP-SCHEDULE   BACKUP-METHOD   BACKUP-RETENTION   RECOVERABLE-TIME
+
+Show cluster events: kbcli cluster list-events -n default mysql-cluster
+```
+
+### Connect to the MySQL Cluster
+
+When creating a MySQL Cluster, KubeBlocks creates a Secret named "mysql-cluster-mysql-account-root" to store the MySQL root username and password.
+
+```bash
+$ kubectl get secret -l app.kubernetes.io/instance=mysql-cluster
+NAME                                           TYPE     DATA   AGE
+mysql-cluster-mysql-account-kbadmin            Opaque   2      61s
+mysql-cluster-mysql-account-kbdataprotection   Opaque   2      61s
+mysql-cluster-mysql-account-kbmonitoring       Opaque   2      61s
+mysql-cluster-mysql-account-kbprobe            Opaque   2      61s
+mysql-cluster-mysql-account-kbreplicator       Opaque   2      61s
+mysql-cluster-mysql-account-proxysql           Opaque   2      61s
+mysql-cluster-mysql-account-root               Opaque   2      61s
+```
+
+You can obtain the MySQL root username and password from secret 'mysql-cluster-mysql-account-root' using the following two commands:
+
+```bash
+$ kubectl get secret mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 --decode
+
+$ kubectl get secret mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 --decode
+```
+
+KubeBlocks by default creates a Service of type ClusterIP named "mysql-cluster-mysql" to access the MySQL Cluster.
+
+```bash
+$ kubectl get svc  -l app.kubernetes.io/instance=mysql-cluster
+NAME                  TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
+mysql-cluster-mysql   ClusterIP   172.20.253.119   <none>        3306/TCP   153m
+```
+
+You can log in to a Pod within the Kubernetes cluster, such as the primary replica of the MySQL Cluster, and access the database through this Service. Within the same Kubernetes cluster, the ClusterIP is accessible.
+
+```bash
+$ kubectl exec -ti -n default mysql-cluster-mysql-0 -- mysql -h mysql-cluster-mysql -uroot -pkni676X2W1
+```
+
+Alternatively, you can use the `kubectl port-forward` command to map port 3306 of the primary replica of the MySQL Cluster to port 3306 on your local machine:
+
+```bash
+$ kubectl port-forward svc/mysql-cluster-mysql 3306:3306 -n default
+Forwarding from 127.0.0.1:3306 -> 3306
+Forwarding from [::1]:3306 -> 3306
+```
+
+Then, open another shell and use the mysql command-line tool to connect to the local port 3306:
+
+```bash
+$ mysql -h 127.0.0.1 -P3306 -uroot -pkni676X2W1
+```
+
+Using `kubectl exec` and `kubectl port-forward` are methods intended for quickly testing the operator's functionality and should not be used in production environments. In production, you should use a Service to access the MySQL Cluster. If accessing the database from outside Kubernetes, a LoadBalancer or NodePort type Service that provides an EXTERNAL-IP is required. Refer to [Accessing MySQL Cluster](operations/create-loadbalancer/loadbalancer-via-operations-api) to configure the Service in your environment.
+
+### Stop the MySQL Cluster
+
+Stop the cluster will release all the Pods of the cluster, but the PVC, Secret, ConfigMap and Service resources will be retained. It is useful when you want to save the cost of the cluster.
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/mysql/stop.yaml
+```
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: mysql-stop
+  namespace: default
+spec:
+  # Specifies the name of the Cluster resource that this operation is targeting.
+  clusterName: mysql-cluster
+  type: Stop
+```
+
+Alternatively, you may stop the cluster by setting the spec.componentSpecs.stop field to true.
+
+```bash
+$ kubectl edit cluster mysql-cluster
+```
+
+```yaml
+spec:
+  componentSpecs:
+    - name: mysql
+      stop: true  # set stop `true` to stop the component
+      replicas: 2
+```
+
+### Start the Stopped MySQL Cluster
+
+Start the stopped cluster
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/mysql/start.yaml
+```
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: mysql-start
+  namespace: default
+spec:
+  # Specifies the name of the Cluster resource that this operation is targeting.
+  clusterName: mysql-cluster
+  type: Start
+```
+
+Alternatively, you may start the stopped cluster by setting the spec.componentSpecs.stop field to false.
+
+```bash
+$ kubectl edit cluster mysql-cluster
+```
+
+```yaml
+spec:
+  componentSpecs:
+    - name: mysql
+      stop: false  # set to `false` (or remove this field) to start the component
+      replicas: 2
+```
+
+### Destroy the MySQL Cluster
+
+You can delete the Cluster using the following command:
+
+```bash
+$ kubectl delete cluster mysql-cluster
+```
+
+The behavior when deleting the Cluster depends on the value of the terminationPolicy field:
+- If the terminationPolicy value is DoNotTerminate, deleting the Cluster will not remove any resources related to the Cluster.
+- If the terminationPolicy value is Delete, deleting the Cluster will remove all resources related to the Cluster, including PVC, Secret, ConfigMap, and Service.
+- If the terminationPolicy value is WipeOut, deleting the Cluster will remove all resources related to the Cluster, including PVC, Secret, ConfigMap, and Service, as well as snapshots and backups in the external storage.
+
+In a testing environment, you can delete the Cluster using the following command to release all resources.
+
+```bash
+kubectl patch cluster mysql-cluster -p '{"spec":{"terminationPolicy":"WipeOut"}}' --type="merge"
+kubectl delete cluster mysql-cluster
+```

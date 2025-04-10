@@ -1,0 +1,184 @@
+---
+title: Setting Instance Update Strategy to OnDelete for MySQL Clusters in KubeBlocks
+description: Learn how to configure the OnDelete instance update strategy to control updates for MySQL clusters in KubeBlocks.
+keywords: [KubeBlocks, MySQL, OnDelete, Kubernetes, Cluster Updates]
+sidebar_position: 4
+sidebar_label: Set Instance Update Strategy To OnDelete
+---
+
+# Set Instance Update Strategy to OnDelete for MySQL Clusters in KubeBlocks
+
+The `instanceUpdateStrategy.type` field supports two values: 'onDelete' and 'RollingUpdate'.
+- 'OnDelete': Updates that require a Pod restart are blocked until the Pods are manually deleted. This provides fine-grained control over updates, as ordered rolling restarts are disabled. You decide when and how to restart the Pods, ensuring minimal disruption to your workload.
+- 'RollingUpdate' (default): Updates are applied automatically with ordered rolling restarts. The Operator restarts Pods in a controlled manner to ensure availability and a seamless update process.
+
+By using the OnDelete strategy, you can tailor update behavior to meet specific requirements, such as maintaining maximum stability during updates or scheduling restarts during maintenance windows.
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+$ kubectl create ns demo
+namespace/demo created
+```
+
+## Deploy a MySQL Semi-Synchronous Cluster
+
+Deploy a 2-node MySQL cluster with semi-synchronous replication (1 primary, 1 secondary) using the following YAML configuration:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      instanceUpdateStrategy:
+        type: OnDelete
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+
+## Verifying the Deployment
+
+Monitor the cluster status until it transitions to the Running state:
+```bash
+$ kubectl get cluster example-mysql-cluster -n demo -w
+```
+Expected Output:
+```bash
+NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Creating   6s
+example-mysql-cluster   mysql                Delete               Running    3m47s
+```
+Once the cluster status becomes Running, your MySQL cluster is ready for use.
+
+
+## Testing a Pod-Interrupting Update
+With the OnDelete update strategy, updates to the cluster that require pod restarts are blocked until the user manually deletes the affected pods.
+
+### Step 1. Trigger Resource Update
+Update the resource requests and limits for the MySQL cluster:
+```bash
+kubectl patch cluster example-mysql-cluster -n demo --type='json' -p='[
+  {
+    "op": "replace",
+    "path": "/spec/componentSpecs/0/resources/limits/cpu",
+    "value": "1.0"
+  },
+  {
+    "op": "replace",
+    "path": "/spec/componentSpecs/0/resources/limits/memory",
+    "value": "1.0Gi"
+  },
+  {
+    "op": "replace",
+    "path": "/spec/componentSpecs/0/resources/requests/cpu",
+    "value": "1.0"
+  },
+  {
+    "op": "replace",
+    "path": "/spec/componentSpecs/0/resources/requests/memory",
+    "value": "1.0Gi"
+  }
+]'
+```
+
+### Step 2. Observe Update Blocking
+Check the cluster status after applying the patch:
+```bash
+$ kubectl get cluster example-mysql-cluster -n demo
+```
+Expected Output:
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster   mysql                Delete               Updating   5m57s
+```
+The cluster status shows Updating, but the pods remain running without any restarts. This is because the Operator blocks updates requiring pod restarts when the OnDelete strategy is set.
+
+Verify that the pods are still running:
+```bash
+$ kubectl get pods -n demo
+```
+Expected Output:
+```
+NAME                            READY   STATUS    RESTARTS   AGE
+example-mysql-cluster-mysql-0   4/4     Running   0          6m18s
+example-mysql-cluster-mysql-1   4/4     Running   0          4m30s
+```
+
+## Applying Changes with Controlled Pod Restarts
+To apply the changes, you need to manually delete the affected pods. Kubernetes will recreate them with the updated configuration.
+
+### Restart Pods Sequentially
+Delete the pods one at a time to minimize impact on availability with maintenance window control:
+```bash
+$ kubectl delete pod example-mysql-cluster-mysql-0 -n demo --wait=true --grace-period=300  
+$ kubectl delete pod example-mysql-cluster-mysql-1 -n demo --wait=true --grace-period=300  
+```
+Monitor the pods as they are recreated:
+```bash
+$ kubectl get pods -n demo  -w
+```
+Expected Output:
+```
+NAME                            READY   STATUS    RESTARTS   AGE
+example-mysql-cluster-mysql-0   4/4     Running   0          2m21s
+example-mysql-cluster-mysql-1   4/4     Running   0          18s
+```
+
+Once all Pods are running, the cluster status will update to 'Running':
+```bash
+$ kubectl get cluster example-mysql-cluster -n demo -w
+```
+Expected Output:
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Running   24m
+```
+
+## Cleanup
+To remove all created resources, delete the MySQL cluster along with its namespace:
+```bash
+$ kubectl delete cluster example-mysql-cluster -n demo
+$ kubectl delete ns demo
+```
+
+
+## Summary
+In this guide, we demonstrated how to:
+- Deploy a MySQL cluster with `OnDelete` as the instance update strategy.
+- Triggering a resource update and observing how the Operator blocks pod restarts.
+- Manually restart Pods to apply updates in a controlled manner.
+
+By setting `instanceUpdateStrategy` to 'OnDelete', you gain fine-grained control over updates, ensuring that your MySQL clusters remain stable and highly available during configuration changes.

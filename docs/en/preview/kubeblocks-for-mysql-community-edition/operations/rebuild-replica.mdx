@@ -1,0 +1,398 @@
+---
+title: Recovering MySQL Replica in KubeBlocks
+description: How to recover a MySQL replica in a semi-synchronous cluster managed by KubeBlocks using in-place and non-in-place repair methods.
+keywords: [KubeBlocks, MySQL, Replica Recovery, In-Place Repair, Non-In-Place Repair]
+sidebar_position: 11
+sidebar_label: Recovering MySQL Replica
+---
+
+# Recovering MySQL Replica in KubeBlocks
+
+This guide demonstrates how to perform the following tasks in a MySQL semi-synchronous cluster managed by KubeBlocks:
+- Write a record to the primary instance and verify replication on the replica.
+- Stop HA, break replication, modify data on the replica, and remove replication.
+- Rebuild the replica using both 'in-place' repair and 'non-in-place' repair methods.
+- Verify data recovery on the replica.
+
+> **Note**: Above steps are intended for testing purpose only. Disabling HA, breaking replication, and modifying data on a replica can compromise database consistency. Do not perform these operations on a production database.
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+$ kubectl create ns demo
+namespace/demo created
+```
+
+## Deploy a MySQL Semi-Synchronous Cluster
+
+KubeBlocks uses a declarative approach for managing MySQL clusters. Below is an example configuration for deploying a MySQL cluster with 2 nodes (1 primary, 1 replicas) in semi-synchronous mode.
+
+Cluster Configuration
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+## Verifying the Deployment
+
+Monitor the cluster status until it transitions to Running:
+
+```bash
+$ kubectl get cluster example-mysql-cluster -n demo -w
+```
+
+Expected Output:
+```bash
+NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster    mysql                Delete               Running   36m
+```
+
+List all the Pods in the cluster along with their roles to identify the primary and secondary instances:
+
+```bash
+$ kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+example-mysql-cluster-mysql-0	secondary
+example-mysql-cluster-mysql-1	primary
+```
+
+## Get Connection Credential
+
+When creating a MySQL Cluster, KubeBlocks creates a Secret named "mysql-cluster-mysql-account-root" to store the MySQL root username and password.
+```bash
+$ kubectl get secret -n demo -l app.kubernetes.io/instance=example-mysql-cluster
+```
+Example Output:
+```bash
+NAME                                       TYPE     DATA   AGE
+example-mysql-cluster-mysql-account-root   Opaque   2      12m
+```
+
+You can obtain the MySQL root username and password using the following two commands:
+
+```bash
+$ kubectl get secret example-mysql-cluster-mysql-account-root -n demo -o jsonpath='{.data.username}' | base64 --decode
+
+$ kubectl get secret example-mysql-cluster-mysql-account-root -n demo -o jsonpath='{.data.password}' | base64 --decode
+```
+
+Example Output:
+```bash
+root
+
+R0z5Z1DS02
+```
+
+## Connect to the Primary MySQL Cluster and Write Mock Data
+
+### Step 1: Connect to the Primary Instance
+
+Connect to the primary instance ('example-mysql-cluster-mysql-1') using the retrieved credentials:
+```bash
+$ kubectl exec -ti -n demo example-mysql-cluster-mysql-1 -- mysql  -uroot -pR0z5Z1DS02
+```
+Note: If the primary instance is 'example-mysql-cluster-mysql-0', you should connect to 'example-mysql-cluster-mysql-0' instead. Make sure to check the role of each instance before connecting.
+
+
+### Step 2: Write Data to the Primary Instance
+Connect to the primary instance and write a record to the database:
+
+```sql
+mysql> CREATE DATABASE test;
+mysql> USE test;
+mysql> CREATE TABLE t1 (id INT PRIMARY KEY, name VARCHAR(255));
+mysql> INSERT INTO t1 VALUES (1, 'John Doe');
+```
+
+### Step 3: Verify Data Replication
+Connect to the replica instance (example-mysql-cluster-mysql-0) to verify that the data has been replicated:
+```bash
+$ kubectl exec -ti -n demo example-mysql-cluster-mysql-0 -- mysql  -uroot -pR0z5Z1DS02
+```
+Note: If the primary instance is 'example-mysql-cluster-mysql-0', you should connect to 'example-mysql-cluster-mysql-1' instead. Make sure to check the role of each instance before connecting.
+
+```sql
+mysql> SELECT * FROM test.t1;
+```
+
+Expected Output:
+```bash
++----+----------+
+| id | name     |
++----+----------+
+|  1 | John Doe |
++----+----------+
+```
+
+## Break HA & Replication and Modify the Replica
+
+### Step 1: Disable HA
+
+Fetch the HA configuration:
+
+```bash
+$ k get configmap -n demo example-mysql-cluster-mysql-haconfig -o yaml
+```
+Example Output:
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    MaxLagOnSwitchover: "10"
+    enable: "true"
+    ttl: "15"
+```
+
+Patch the ConfigMap to disable HA:
+
+```bash
+$ k patch configmap -n demo example-mysql-cluster-mysql-haconfig --type merge -p '{"metadata":{"annotations":{"enable":"false"}}}'
+```
+
+### Step 2: Stop Replication
+
+Stop replication on the replica instance:
+```sql
+mysql> STOP REPLICA;
+```
+
+### Step 3: Change Replica to Read-Write
+
+Change the replica instance to read-write mode:
+
+```sql
+mysql> SET GLOBAL super_read_only = OFF;
+mysql> SET GLOBAL read_only = OFF;
+```
+
+### Step 4: Delete Data from the Replica
+Delete the data on the replica:
+```sql
+mysql> DELETE FROM test.t1 WHERE id = 1;
+```
+
+### Step 5: Change Replica to Read-Only
+Restore the replica to read-only mode:
+```sql
+mysql> SET GLOBAL super_read_only = ON;
+mysql> SET GLOBAL read_only = ON;
+```
+
+### Step 6: Enable HA
+Patch the ConfigMap to re-enable HA:
+```bash
+$ k patch configmap -n demo example-mysql-cluster-mysql-haconfig --type merge -p '{"metadata":{"annotations":{"enable":"true"}}}'
+```
+
+### Step 7: Verify Data Deletion
+Verify that the data has been deleted:
+```sql
+mysql> SELECT * FROM test.t1;
+Empty set (0.00 sec)
+```
+
+## Rebuild the Replica
+
+KubeBlocks provides two approaches for rebuilding a replica: in-place repair and non-in-place repair.
+
+### In-Place Repair
+
+Rebuild the replica in-place using the following configuration:
+```bash
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-ops-rebuild-replica-inplace
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  type: RebuildInstance
+  force: true
+  rebuildFrom:
+  - componentName: mysql
+    inPlace: true
+    instances:
+      - name: example-mysql-cluster-mysql-0
+EOF
+```
+In this configuration, "example-mysql-cluster-mysql-0" refers to the instance name (Pod name) that will be repaired.
+
+Monitor the rebuild operation:
+```bash
+$ kubectl get ops example-mysql-ops-rebuild-replica-inplace -n demo -w
+```
+Expect Output:
+```bash
+NAME                                        TYPE              CLUSTER                 STATUS    PROGRESS   AGE
+example-mysql-ops-rebuild-replica-inplace   RebuildInstance   example-mysql-cluster   Running   0/1        24s
+example-mysql-ops-rebuild-replica-inplace   RebuildInstance   example-mysql-cluster   Succeed   1/1        33s
+```
+Verify the Pods to confirm the replica ("example-mysql-cluster-mysql-0") restarted:
+```bash
+$ kubectl get pods -n demo
+```
+Expect Output:
+```bash
+NAME                            READY   STATUS    RESTARTS   AGE
+example-mysql-cluster-mysql-0   4/4     Running   0          28s
+example-mysql-cluster-mysql-1   4/4     Running   0          89m
+```
+
+#### Verify Data Recovery
+Connect to the replica and check if the data has been restored:
+
+```bash
+$ kubectl exec -ti -n demo example-mysql-cluster-mysql-0 -- mysql  -uroot -pR0z5Z1DS02
+```
+
+```sql
+mysql> SELECT * FROM test.t1;
++----+----------+
+| id | name     |
++----+----------+
+|  1 | John Doe |
++----+----------+
+1 row in set (0.01 sec)
+```
+
+### Non-In-Place Repair
+
+Rebuild the replica by creating a new instance:
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-ops-rebuild-replica-non-inplace
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  type: RebuildInstance
+  force: true
+  rebuildFrom:
+  - componentName: mysql
+    instances:
+      - name: example-mysql-cluster-mysql-0
+EOF
+```
+In this configuration, "example-mysql-cluster-mysql-0" refers to the instance name (Pod name) that will be repaired.
+
+```bash
+$ kubectl get ops -n demo example-mysql-ops-rebuild-replica-non-inplace -w
+```
+Expect Output:
+```bash
+example-mysql-ops-rebuild-replica-non-inplace   RebuildInstance   example-mysql-cluster   Succeed   1/1        34s
+```
+
+```bash
+$ kubectl get pods -n demo -w
+NAME                            READY   STATUS    RESTARTS   AGE
+example-mysql-cluster-mysql-1   4/4     Running   0          42m
+example-mysql-cluster-mysql-0   4/4     Running   0          3m53s
+example-mysql-cluster-mysql-2   0/4     Pending   0          0s
+example-mysql-cluster-mysql-2   0/4     Pending   0          3s
+example-mysql-cluster-mysql-2   0/4     Init:0/5   0          3s
+example-mysql-cluster-mysql-2   0/4     Init:1/5   0          10s
+example-mysql-cluster-mysql-2   0/4     Init:1/5   0          11s
+example-mysql-cluster-mysql-2   0/4     Init:2/5   0          12s
+example-mysql-cluster-mysql-2   0/4     Init:3/5   0          13s
+example-mysql-cluster-mysql-2   0/4     Init:4/5   0          14s
+example-mysql-cluster-mysql-2   0/4     PodInitializing   0          15s
+example-mysql-cluster-mysql-2   3/4     Running           0          17s
+example-mysql-cluster-mysql-2   3/4     Running           0          18s
+example-mysql-cluster-mysql-2   3/4     Running           0          18s
+example-mysql-cluster-mysql-2   4/4     Running           0          19s
+example-mysql-cluster-mysql-0   4/4     Terminating       0          5m28s
+example-mysql-cluster-mysql-0   4/4     Terminating       0          5m28s
+example-mysql-cluster-mysql-0   4/4     Terminating       0          5m28s
+```
+Expected Behavior:
+- A new Pod ('example-mysql-cluster-mysql-2') is created.
+- The old Pod ('example-mysql-cluster-mysql-0') is terminated.
+
+#### Verify Data Recovery
+Connect to the new replica instance ('example-mysql-cluster-mysql-2') and verify the data:
+
+```bash
+$ kubectl exec -ti -n demo example-mysql-cluster-mysql-2 -- mysql  -uroot -pR0z5Z1DS02
+```
+
+Expected Output:
+```sql
+mysql> SELECT * FROM test.t1;
++----+----------+
+| id | name     |
++----+----------+
+|  1 | John Doe |
++----+----------+
+1 row in set (0.01 sec)
+```
+
+#### Check All Pods
+Run the following command to list all the Pods in the MySQL cluster:
+```bash
+$ kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster
+```
+Example output:
+```bash
+NAME                            READY   STATUS    RESTARTS   AGE
+example-mysql-cluster-mysql-1   4/4     Running   0          13m
+example-mysql-cluster-mysql-2   4/4     Running   0          2m14s
+```
+At this point, you can see two Pods: 'example-mysql-cluster-mysql-1' and 'example-mysql-cluster-mysql-2'. The original Pod 'example-mysql-cluster-mysql-0' has been deleted.
+
+To verify the cluster's status, inspect the cluster resource:
+```bash
+$ kubectl get cluster example-mysql-cluster -n demo -oyaml
+```
+Example output:
+```yaml
+    offlineInstances:
+    - example-mysql-cluster-mysql-0
+```
+The 'example-mysql-cluster-mysql-0' instance has been marked as offline.
+
+
+## Summary
+- In-Place Repair: Successfully rebuilt the replica and restored the deleted data.
+- Non-In-Place Repair: Created a new replica instance and successfully restored the data. 
+Both methods effectively recover the replica and ensure data consistency.

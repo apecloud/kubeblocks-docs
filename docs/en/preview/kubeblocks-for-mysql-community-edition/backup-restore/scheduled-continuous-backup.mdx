@@ -1,0 +1,163 @@
+---
+title: Setting Up a MySQL Cluster with Scheduled Continuous Backup in KubeBlocks
+description: Learn how to set up a MySQL cluster with scheduled full backups and continuous incremental backups enabled in KubeBlocks.
+keywords: [MySQL, Backup, PITR, KubeBlocks, Kubernetes]
+sidebar_position: 4
+sidebar_label: Scheduled Continuous Backup
+---
+
+# Setting Up a MySQL Cluster with Scheduled Continuous Backup Enabled in KubeBlocks
+
+This guide explains how to deploy a MySQL cluster on KubeBlocks with scheduled full backups and continuous binlog backups, enabling Point-In-Time Recovery (PITR) for enhanced data protection and recovery capabilities.
+
+## What is PITR?
+Point-In-Time Recovery (PITR) allows you to restore a database to a specific moment in time by combining full backups with incremental binlog backups.
+
+For details on restoring data from both full backups and continuous binlog backups, refer to the [Restore From PITR](restore-with-pitr.mdx)  guide.
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+$ kubectl create ns demo
+namespace/demo created
+```
+
+## Deploy a MySQL Semi-Synchronous Cluster
+
+KubeBlocks uses a declarative approach for managing MySQL clusters. Below is an example configuration for deploying a MySQL cluster with 2 nodes (1 primary, 1 replicas) in semi-synchronous mode, along with scheduled backups (both full backup and continuous backup).
+
+Cluster Configuration
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: WipeOut
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+  backup:
+    enabled: true
+    retentionPeriod: 30d
+    method: xtrabackup
+    cronExpression: '0 0 * * *'
+    repoName: s3-repo
+    pitrEnabled: true
+EOF
+```
+
+**Explanation of Key Fields**
+- `terminationPolicy: WipeOut`:
+  - When set to 'WipeOut', deleting the cluster also deletes all associated data, including backups.
+  - For production environments, it is recommended to use `terminationPolicy: Delete`, which retains backup data even after the cluster is deleted.
+- `backup.enabled: true`: Enables scheduled backups for the cluster.
+- `method: xtrabackup`: Specifies the backup tool to be used (e.g., Percona XtraBackup).
+- `cronExpression: '0 0 * * *'`: Configures the backup schedule to run daily at midnight (UTC).
+- `retentionPeriod: 30d`: Retains backups for 30 days.
+- `repoName: s3-repo`: Specifies the S3 repository for storing backups.
+- `pitrEnabled: true`: Enables Point-in-Time Recovery (PITR).
+
+## Verifying the Deployment
+
+Monitor the cluster status until it transitions to Running:
+```bash
+$ kubectl get cluster example-mysql-cluster -n demo
+```
+
+Expected Output:
+```bash
+NAME                             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Running   38s
+```
+Once the status is Running, the MySQL cluster is successfully deployed.
+
+## Check the BackupSchedule Resource
+
+KubeBlocks automatically creates a BackupSchedule resource when scheduled backups are enabled. Verify the configuration using the following command:
+
+```bash
+$ kubectl get backupschedule example-mysql-cluster-mysql-backup-schedule  -n demo -oyaml
+```
+
+Expected Output:
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: BackupSchedule
+...
+spec:
+  backupPolicyName: example-mysql-cluster-mysql-backup-policy
+  schedules:
+    - backupMethod: xtrabackup
+      cronExpression: 0 0 * * *
+      enabled: true
+      name: xtrabackup
+      retentionPeriod: 30d
+    - backupMethod: archive-binlog
+      cronExpression: '*/30 * * * *'
+      enabled: true
+      name: archive-binlog
+      retentionPeriod: 30d
+```
+**Explanation**:
+- The xtrabackup schedule performs a full backup daily at midnight (UTC).
+- The archive-binlog schedule performs incremental backups by archiving binlogs every 30 minutes.
+
+With this setup, a combination of full and incremental backups ensures robust data protection and enables PITR.
+
+## Validate Backup in S3 Repository
+
+After the scheduled backup task has been executed, verify the backup files in the configured S3 bucket with the following command:
+
+```bash
+$ TZ=":UTC" aws s3 ls s3://kubeblocks-backup-repo/ --recursive
+```
+
+Expected Output:
+```bash
+$ TZ=":UTC" aws s3 ls s3://kubeblocks-backup-repo/ --recursive
+2025-03-04 02:35:09        127 demo/example-mysql-cluster-77a788fa-352d-40b2-8262-7fcd0c706f58/mysql/77a788fa-example-mysql-cluster-archive-binlog/binlog_005/example-mysql-cluster-mysql-0-bin.000001.zst
+2025-03-04 02:35:10        127 demo/example-mysql-cluster-77a788fa-352d-40b2-8262-7fcd0c706f58/mysql/77a788fa-example-mysql-cluster-archive-binlog/binlog_005/example-mysql-cluster-mysql-0-bin.000002.zst
+2025-03-04 02:35:11       2107 demo/example-mysql-cluster-77a788fa-352d-40b2-8262-7fcd0c706f58/mysql/77a788fa-example-mysql-cluster-archive-binlog/binlog_005/example-mysql-cluster-mysql-0-bin.000003.zst
+2025-03-04 03:05:23     102282 demo/example-mysql-cluster-77a788fa-352d-40b2-8262-7fcd0c706f58/mysql/77a788fa-example-mysql-cluster-archive-binlog/binlog_005/example-mysql-cluster-mysql-0-bin.000004.zst
+2025-03-04 03:35:30      87272 demo/example-mysql-cluster-77a788fa-352d-40b2-8262-7fcd0c706f58/mysql/77a788fa-example-mysql-cluster-archive-binlog/binlog_005/example-mysql-cluster-mysql-0-bin.000005.zst
+2025-03-04 03:35:30         62 demo/example-mysql-cluster-77a788fa-352d-40b2-8262-7fcd0c706f58/mysql/77a788fa-example-mysql-cluster-archive-binlog/binlog_sentinel_005.json
+```
+This output confirms that:
+- Binlog archives are uploaded every 30 minutes.
+- Full and incremental backups are stored in the specified S3 repository, ensuring continuous data protection.
+
+
+## Summary
+In this guide, you learned how to:
+- Deploy a MySQL cluster with semi-synchronous replication in KubeBlocks, enable scheduled full backups and continuous incremental backups.
+- Verify backup schedules and validate backup files in an S3 repository.
+With this setup, your MySQL cluster is protected with PITR capabilities, allowing you to restore the database to any specific point in time with minimal data loss.
