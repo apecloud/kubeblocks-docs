@@ -28,7 +28,7 @@ export default function DatabasesNav() {
     {
       title: "MySQL",
       icon: <MySQLIcon {...iconProps}/>,
-      href: "/docs/preview/kubeblocks-for-mysql-community-edition",
+      href: "/docs/preview/kubeblocks-for-mysql",
     },
     {
       title: "PostgreSQL",

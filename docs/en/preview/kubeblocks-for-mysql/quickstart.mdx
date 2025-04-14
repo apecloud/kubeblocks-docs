@@ -6,6 +6,9 @@ sidebar_position: 2
 sidebar_label: QuickStart
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 # QuickStart Guide
 
 This guide walks you through the process of getting started with the **KubeBlocks MySQL Add-on**, including prerequisites, enabling the add-on, creating a MySQL cluster, and managing the cluster with ease.
@@ -43,7 +46,7 @@ $ helm search repo kubeblocks/mysql --versions
 $ helm upgrade -i mysql kubeblocks-addons/mysql --version $version -n kb-system
 ```
 
-### Create A MySQL Cluster
+## Create A MySQL Cluster
 
 ```bash
 $ kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/mysql/cluster.yaml
@@ -198,7 +201,7 @@ BACKUP-REPO   AUTO-BACKUP   BACKUP-SCHEDULE   BACKUP-METHOD   BACKUP-RETENTION  
 Show cluster events: kbcli cluster list-events -n default mysql-cluster
 ```
 
-### Connect to the MySQL Cluster
+## Connect to the MySQL Cluster
 
 When creating a MySQL Cluster, KubeBlocks creates a Secret named "mysql-cluster-mysql-account-root" to store the MySQL root username and password.
 
@@ -217,9 +220,9 @@ mysql-cluster-mysql-account-root               Opaque   2      61s
 You can obtain the MySQL root username and password from secret 'mysql-cluster-mysql-account-root' using the following two commands:
 
 ```bash
-$ kubectl get secret mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 --decode
+$ username=`kubectl get secret mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 --decode`
 
-$ kubectl get secret mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 --decode
+$ passwd=`kubectl get secret mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 --decode`
 ```
 
 KubeBlocks by default creates a Service of type ClusterIP named "mysql-cluster-mysql" to access the MySQL Cluster.
@@ -230,97 +233,123 @@ NAME                  TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
 mysql-cluster-mysql   ClusterIP   172.20.253.119   <none>        3306/TCP   153m
 ```
 
-You can log in to a Pod within the Kubernetes cluster, such as the primary replica of the MySQL Cluster, and access the database through this Service. Within the same Kubernetes cluster, the ClusterIP is accessible.
+<Tabs>
 
-```bash
-$ kubectl exec -ti -n default mysql-cluster-mysql-0 -- mysql -h mysql-cluster-mysql -uroot -pkni676X2W1
-```
+  <TabItem value="kubectl" label="kubectl" default>
 
-Alternatively, you can use the `kubectl port-forward` command to map port 3306 of the primary replica of the MySQL Cluster to port 3306 on your local machine:
+  You can log in to a Pod within the Kubernetes cluster, such as the primary replica of the MySQL Cluster, and access the database through this Service. Within the same Kubernetes cluster, the ClusterIP is accessible.
 
-```bash
-$ kubectl port-forward svc/mysql-cluster-mysql 3306:3306 -n default
-Forwarding from 127.0.0.1:3306 -> 3306
-Forwarding from [::1]:3306 -> 3306
-```
+  ```bash
+  $ kubectl exec -ti -n default mysql-cluster-mysql-0 -- mysql -h mysql-cluster-mysql -u$username -p$passwd
+  ```
 
-Then, open another shell and use the mysql command-line tool to connect to the local port 3306:
+  </TabItem>
 
-```bash
-$ mysql -h 127.0.0.1 -P3306 -uroot -pkni676X2W1
-```
+  <TabItem value="port-forward" label="port-forward" default>
+
+  Alternatively, you can use the `kubectl port-forward` command to map port 3306 of the primary replica of the MySQL Cluster to port 3306 on your local machine:
+
+  ```bash
+  $ kubectl port-forward svc/mysql-cluster-mysql 3306:3306 -n default
+  Forwarding from 127.0.0.1:3306 -> 3306
+  Forwarding from [::1]:3306 -> 3306
+  ```
+
+  Then, open another shell and use the mysql command-line tool to connect to the local port 3306:
+
+  ```bash
+  $ mysql -h 127.0.0.1 -P3306 -u$username -p$passwd
+  ```
+
+  </TabItem>
+</Tabs>
 
 Using `kubectl exec` and `kubectl port-forward` are methods intended for quickly testing the operator's functionality and should not be used in production environments. In production, you should use a Service to access the MySQL Cluster. If accessing the database from outside Kubernetes, a LoadBalancer or NodePort type Service that provides an EXTERNAL-IP is required. Refer to [Accessing MySQL Cluster](operations/create-loadbalancer/loadbalancer-via-operations-api) to configure the Service in your environment.
 
-### Stop the MySQL Cluster
+## Stop the MySQL Cluster
 
 Stop the cluster will release all the Pods of the cluster, but the PVC, Secret, ConfigMap and Service resources will be retained. It is useful when you want to save the cost of the cluster.
 
-```bash
-kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/mysql/stop.yaml
-```
+<Tabs>
+  <TabItem value="OpsRequest" label="OpsRequest" default>
 
-```yaml
-apiVersion: operations.kubeblocks.io/v1alpha1
-kind: OpsRequest
-metadata:
-  name: mysql-stop
-  namespace: default
-spec:
-  # Specifies the name of the Cluster resource that this operation is targeting.
-  clusterName: mysql-cluster
-  type: Stop
-```
+  ```bash
+  kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/mysql/stop.yaml
+  ```
 
-Alternatively, you may stop the cluster by setting the spec.componentSpecs.stop field to true.
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: mysql-stop
+    namespace: default
+  spec:
+    # Specifies the name of the Cluster resource that this operation is targeting.
+    clusterName: mysql-cluster
+    type: Stop
+  ```
+  </TabItem>
 
-```bash
-$ kubectl edit cluster mysql-cluster
-```
+  <TabItem value="kubectl" label="kubectl" default>
+  Alternatively, you may stop the cluster by setting the spec.componentSpecs.stop field to true.
 
-```yaml
-spec:
-  componentSpecs:
-    - name: mysql
-      stop: true  # set stop `true` to stop the component
-      replicas: 2
-```
+  ```bash
+  $ kubectl edit cluster mysql-cluster
+  ```
 
-### Start the Stopped MySQL Cluster
+  ```yaml
+  spec:
+    componentSpecs:
+      - name: mysql
+        stop: true  # set stop `true` to stop the component
+        replicas: 2
+  ```
+  </TabItem>
+</Tabs>
+
+## Start the Stopped MySQL Cluster
 
 Start the stopped cluster
 
-```bash
-kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/mysql/start.yaml
-```
+<Tabs>
+  <TabItem value="OpsRequest" label="OpsRequest" default>
 
-```yaml
-apiVersion: operations.kubeblocks.io/v1alpha1
-kind: OpsRequest
-metadata:
-  name: mysql-start
-  namespace: default
-spec:
-  # Specifies the name of the Cluster resource that this operation is targeting.
-  clusterName: mysql-cluster
-  type: Start
-```
+  ```bash
+  kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/mysql/start.yaml
+  ```
 
-Alternatively, you may start the stopped cluster by setting the spec.componentSpecs.stop field to false.
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: mysql-start
+    namespace: default
+  spec:
+    # Specifies the name of the Cluster resource that this operation is targeting.
+    clusterName: mysql-cluster
+    type: Start
+  ```
+  </TabItem>
 
-```bash
-$ kubectl edit cluster mysql-cluster
-```
+  <TabItem value="kubectl" label="kubectl">
 
-```yaml
-spec:
-  componentSpecs:
-    - name: mysql
-      stop: false  # set to `false` (or remove this field) to start the component
-      replicas: 2
-```
+  Alternatively, you may start the stopped cluster by setting the spec.componentSpecs.stop field to false.
 
-### Destroy the MySQL Cluster
+  ```bash
+  $ kubectl edit cluster mysql-cluster
+  ```
+
+  ```yaml
+  spec:
+    componentSpecs:
+      - name: mysql
+        stop: false  # set to `false` (or remove this field) to start the component
+        replicas: 2
+  ```
+  </TabItem>
+</Tabs>
+
+## Destroy the MySQL Cluster
 
 You can delete the Cluster using the following command:
 
