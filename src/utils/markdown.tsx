@@ -41,6 +41,7 @@ export const getMarkDownSideBar = async (
     const stat = fs.lstatSync(filepath);
     const item: SidebarMenuItem = { position: 0 };
     if (stat.isFile() && filepath.match(MARKDOWN_SUEFIX_REG)) {
+      if(child.match(/^_/)) return;
       fns.push(
         new Promise(async (resolve) => {
           const metadata = await getMarkDownMetaData(filepath);
