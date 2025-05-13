@@ -25,6 +25,7 @@ import "highlight.js/styles/github-dark.css";
 import "./global.css";
 import LocaleSwitcher from "./locale-switch";
 import ThemeSwitcher from "./theme-switch";
+import MessageBox from "@/components/MessageBox";
 
 export const metadata: Metadata = {
   title: "KubeBlocks",
@@ -51,6 +52,7 @@ export default async function RootLayout({
             <NextThemeProvider>
               <MuiThemeProvider>
                 <CssBaseline />
+                <MessageBox />
                 <AppBar>
                   <Toolbar>
                     <Logo />
