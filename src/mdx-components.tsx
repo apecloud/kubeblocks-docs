@@ -15,13 +15,14 @@ import { JSX } from "react";
 import NoteBox from "./components/NoteBox";
 import { Link } from "./components/Link";
 import Sticky from "./components/Sticky";
+import CodeWithCopyButton from "./components/CodeWithCopyButton";
 
 export function useMDXComponents(components: MDXComponents): MDXComponents {
   return {
     nav: (props: JSX.IntrinsicElements["nav"]) => {
       if (props.className === "toc") {
         return (
-          <Sticky enabled={true} top={80} >
+          <Sticky enabled={true} top={80}>
             <nav {...props} />
           </Sticky>
         );
@@ -44,7 +45,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       );
     },
     table: (props: JSX.IntrinsicElements["table"]) => (
-      <TableContainer sx={{ marginBlock: 4, width: 'auto' }}>
+      <TableContainer sx={{ marginBlock: 4, width: "auto" }}>
         <Table {...props} />
       </TableContainer>
     ),
@@ -58,11 +59,18 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       <TableCell>{props.children}</TableCell>
     ),
     code: (props: JSX.IntrinsicElements["code"]) => {
-      return (
-        <code style={{ fontSize: "0.9em" }} {...props}>
-          {props.children}
-        </code>
-      );
+      const match = /language-(\w+)/.exec(props.className || "");
+      if (match?.length) {
+        return (
+          <CodeWithCopyButton {...props}>{props.children}</CodeWithCopyButton>
+        );
+      } else {
+        return (
+          <code style={{ fontSize: "0.9em" }} {...props}>
+            {props.children}
+          </code>
+        );
+      }
     },
     hr: (props: JSX.IntrinsicElements["hr"]) => (
       <Divider {...props} sx={{ marginBlock: 2 }} />
