@@ -8,7 +8,7 @@ sidebar_label: Set Instance Update Strategy To OnDelete
 
 # Set Instance Update Strategy to OnDelete for MySQL Clusters in KubeBlocks
 
-The `instanceUpdateStrategy.type` field supports two values: 'onDelete' and 'RollingUpdate'.
+The `instanceUpdateStrategy.type` field supports two values: 'OnDelete' and 'RollingUpdate'.
 - 'OnDelete': Updates that require a Pod restart are blocked until the Pods are manually deleted. This provides fine-grained control over updates, as ordered rolling restarts are disabled. You decide when and how to restart the Pods, ensuring minimal disruption to your workload.
 - 'RollingUpdate' (default): Updates are applied automatically with ordered rolling restarts. The Operator restarts Pods in a controlled manner to ensure availability and a seamless update process.
 

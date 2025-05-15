@@ -164,7 +164,7 @@ New replicas automatically join as secondary nodes.
 ```bash
 $ kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
-Expecte Outputs:
+Expected Outputs:
 ```bash
 example-mysql-cluster-mysql-0	primary
 example-mysql-cluster-mysql-1	secondary

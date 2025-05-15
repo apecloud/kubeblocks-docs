@@ -56,7 +56,7 @@ openssl req -new -key server-key.pem -out server-req.pem
 openssl x509 -req -in server-req.pem -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out server-cert.pem -days 3650 -sha256
 ```
 
-3. Genreate the Client Certificate & Key
+3. Generate the Client Certificate & Key
 ```bash
 # Generate the client private key
 openssl genrsa -out client-key.pem 4096

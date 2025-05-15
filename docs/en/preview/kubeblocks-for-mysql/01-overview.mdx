@@ -10,13 +10,13 @@ sidebar_label: Overview
 
 The **KubeBlocks MySQL Addon** offers a comprehensive solution for deploying and managing MySQL clusters in Kubernetes. This document provides an overview of its features, including deployment topologies, lifecycle management options, backup and restore functionality, and supported MySQL versions.
 
-## Features 
+## Features
 
 ### Topologies
 The **KubeBlocks Operator** supports deploying MySQL in three different topologies, tailored to meet varying requirements for performance, consistency, and high availability:
 
 
-| Features                      | Description                                                                                                                                                               
+| Features                      | Description
 |-------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | SemiSync                      | Leverages MySQL’s semi-synchronous replication mechanism to achieve near-real-time data consistency. <br /> • Requires at least one replica to acknowledge receipt of the transaction before the primary commits. <br /> • Balances performance and consistency by reducing the chance of data loss in case of a primary failure.                                                    |
 | MySQL Group Replication (MGR) | Creates a distributed, multi-primary MySQL cluster using MySQL’s native Group Replication. <br /> • Ensures fault-tolerant operations and automatic data synchronization across all nodes. <br /> • Provides built-in conflict detection and resolution for continuous database availability.                  |
@@ -40,15 +40,15 @@ KubeBlocks provides robust lifecycle management features to simplify MySQL clust
 | Custom root password          | Ability to set and manage custom root password for the MySQL cluster during creation                                    |
 | Custom configuration template | Providing Customize MySQL configuration file templates during creation                                                  |
 | Dynamic Parameter Changes     | Reconfigure MySQL parameters dynamically without requiring a cluster restart                                            |
-| Expose Custom Services        | Ability to expose database services with custom configurations for different access requirements                        | 
+| Expose Custom Services        | Ability to expose database services with custom configurations for different access requirements                        |
 | SwitchOver                    | Planned primary-secondary switch operation with minimal downtime	                                                       |
 | Decommission specific replica | Safely take a specific MySQL replica offline for maintenance or decommissioning                                         |
 | Rebuild specific replica      | Recover a replica in place or recreate it as a new replica to restore functionality                                     |
 | Minor Version Upgrade         | Perform minor version upgrades of MySQL clusters without impacting availability                                         |
 | Advanced Pod Management       | Support for custom Pod resources, custom scheduling policies, gradual rolling updates, and more advanced operational controls |
-| TLS Encryption                | Support for enabling or disabling TLS encryption for secure database connections	                                       | 
-| Prometheus Integration        | Integration with Prometheus managed by the Prometheus Operator for monitoring and alerting of MySQL metrics             | 
-| Loki Stack Integration        | Integrate with Loki Stack to collect MySQL error logs, audit logs, and slow query logs for better observability  | 
+| TLS Encryption                | Support for enabling or disabling TLS encryption for secure database connections	                                       |
+| Prometheus Integration        | Integration with Prometheus managed by the Prometheus Operator for monitoring and alerting of MySQL metrics             |
+| Loki Stack Integration        | Integrate with Loki Stack to collect MySQL error logs, audit logs, and slow query logs for better observability  |
 
 
 
@@ -57,15 +57,15 @@ KubeBlocks provides robust lifecycle management features to simplify MySQL clust
 | Feature     | Method     | Description                                                     |
 |-------------|------------|-----------------------------------------------------------------|
 | Full Backup | xtrabackup | uses `xtrabackup` to perform full backups                       |
-| Continuous Backup |            | Support for continuous backups to enable point-in-time recovery |
+| Continuous Backup |  archive-binlog | Support for continuous backups to enable point-in-time recovery |
 
 ### Supported Versions
 
-| Major Versions | Minior Versions                                                       |
-|---------------|-----------------------------------------------------------------------|
-| 5.7 | 5.7.44                                                                |
-| 8.0 | 8.0.30,8.0.31,8.0.32,8.0.33,8.0.34,8.0.35,8.0.36,8.0.37,8.0.38,8.0.39 |
-| 8.4 | 8.4.0,8.4.1,8.4.2                                                     |
+| Major Versions | Minor Versions                 |
+|---------------|----------------------------------|
+| 5.7 | 5.7.44                           |
+| 8.0 | [8.0.30-8.0.39]                  |
+| 8.4 | 8.4.0,8.4.1,8.4.2                |
 
 The list of supported versions can be found by following command:
 ```

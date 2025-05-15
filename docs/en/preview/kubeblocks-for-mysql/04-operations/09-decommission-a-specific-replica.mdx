@@ -3,7 +3,7 @@ title: Decommission a Specific Pod in KubeBlocks-Managed MySQL Clusters
 description: Learn how to decommission (take offline) a specific Pod in a MySQL cluster managed by KubeBlocks.
 keywords: [KubeBlocks, MySQL, Decommission Pod, Horizontal Scaling, Kubernetes]
 sidebar_position: 9
-sidebar_label: Decommission a Pod  
+sidebar_label: Decommission a Pod
 ---
 
 import Tabs from '@theme/Tabs';
@@ -102,7 +102,7 @@ example-mysql-cluster-mysql-2   4/4     Running   0          49s
 ```
 
 
-## Decommision a Specific Pod
+## Decommission a Specific Pod
 
 To decommission a specific Pod (e.g., 'example-mysql-cluster-mysql-1'), you can use one of the following methods:
 
@@ -118,7 +118,7 @@ kubectl apply -f - <<EOF
 apiVersion: operations.kubeblocks.io/v1alpha1
 kind: OpsRequest
 metadata:
-  name: example-mysql-cluster-decommision-ops
+  name: example-mysql-cluster-decommission-ops
   namespace: demo
 spec:
   clusterName: example-mysql-cluster
@@ -135,7 +135,7 @@ EOF
 Check the progress of the decommissioning operation:
 
 ```bash
-kubectl describe ops example-mysql-cluster-decommision-ops -n demo
+kubectl describe ops example-mysql-cluster-decommission-ops -n demo
 ```
 Expected Output:
 
