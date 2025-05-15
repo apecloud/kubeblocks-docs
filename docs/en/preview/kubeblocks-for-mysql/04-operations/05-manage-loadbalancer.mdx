@@ -3,7 +3,7 @@ title: Create and Destroy MySQL Service Using the Declarative Cluster API in Kub
 description: Learn how to configure and manage MySQL services in KubeBlocks for external and internal access using LoadBalancer and other service types.
 keywords: [KubeBlocks, MySQL, LoadBalancer, External Service, Expose, Kubernetes]
 sidebar_position: 5
-sidebar_label: Create and Destroy MySQL Service
+sidebar_label: Manage MySQL Services
 ---
 
 
@@ -11,7 +11,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
 
-# Create and Destroy MySQL Service Using the Declarative Cluster API in KubeBlocks
+# Manage MySQL Service Using the Declarative Cluster API in KubeBlocks
 
 This guide provides step-by-step instructions on how to expose a MySQL service managed by KubeBlocks, either externally or internally. You will learn how to configure external access using a cloud provider's LoadBalancer service, manage internal services, and correctly disable external exposure when no longer needed.
 
@@ -246,7 +246,7 @@ service.beta.kubernetes.io/alibaba-cloud-loadbalancer-address-type: "internet"  
 
 
 :::note
-The annotation `service.beta.kubernetes.io/aws-load-balancer-internal` determines whether the LoadBalancer is internal or internet-facing. 
+The annotation `service.beta.kubernetes.io/aws-load-balancer-internal` determines whether the LoadBalancer is internal or internet-facing.
 However, this annotation cannot be dynamically modified after the Service is created.
 ```yaml
   service.beta.kubernetes.io/aws-load-balancer-internal: "false"  # Use "true" for internal VPC IPs

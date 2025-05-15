@@ -3,7 +3,7 @@ title: Setting Instance Update Strategy to OnDelete for MySQL Clusters in KubeBl
 description: Learn how to configure the OnDelete instance update strategy to control updates for MySQL clusters in KubeBlocks.
 keywords: [KubeBlocks, MySQL, OnDelete, Kubernetes, Cluster Updates]
 sidebar_position: 4
-sidebar_label: Set Instance Update Strategy To OnDelete
+sidebar_label: Using OnDelete for Controlled Pod Updates
 ---
 
 # Set Instance Update Strategy to OnDelete for MySQL Clusters in KubeBlocks
@@ -143,8 +143,8 @@ To apply the changes, you need to manually delete the affected pods. Kubernetes 
 ### Restart Pods Sequentially
 Delete the pods one at a time to minimize impact on availability with maintenance window control:
 ```bash
-$ kubectl delete pod example-mysql-cluster-mysql-0 -n demo --wait=true --grace-period=300  
-$ kubectl delete pod example-mysql-cluster-mysql-1 -n demo --wait=true --grace-period=300  
+$ kubectl delete pod example-mysql-cluster-mysql-0 -n demo --wait=true --grace-period=300
+$ kubectl delete pod example-mysql-cluster-mysql-1 -n demo --wait=true --grace-period=300
 ```
 Monitor the pods as they are recreated:
 ```bash
