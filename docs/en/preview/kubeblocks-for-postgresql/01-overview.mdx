@@ -1,0 +1,67 @@
+---
+title: Overview of KubeBlocks PostgreSQL Addon
+description: Learn about the features and capabilities of the KubeBlocks PostgreSQL addon, including deployment topologies, lifecycle management, backup and restore, and supported versions.
+keywords: [PostgreSQL, KubeBlocks, database, features, lifecycle management, backup, restore]
+sidebar_position: 1
+sidebar_label: Overview
+---
+
+# Overview of KubeBlocks PostgreSQL Addon
+
+PostgreSQL is a powerful, scalable, secure, and customizable open-source relational database management system that is suitable for various applications and environments. In addition to the PostgreSQL core features, the KubeBlocks PostgreSQL cluster supports a number of extensions and users can also add the extensions by themselves.
+
+* PostGIS: PostGIS is an open-source spatial database extension that adds geographic information system (GIS) functionality to the PostgreSQL database. It provides a set of spatial functions and types that can be used for storing, querying, and analyzing geospatial data, allowing you to run location queries with SQL.
+* pgvector: Pgvector is a PostgreSQL extension that supports vector data types and vector operations. It provides an efficient way to store and query vector data, supporting various vector operations such as similarity search, clustering, classification, and recommendation systems. Pgvector can be used to store AI model embeddings, adding persistent memory to AI.
+* pg_trgm: The pg_trgm module provides functions and operators for determining the similarity of alphanumeric text based on trigram matching, as well as index operator classes that support fast searching for similar strings.
+* postgres_fdw: The postgres_fdw extension can map tables from a remote database to a local table in PostgreSQL, allowing users to query and manipulate the data through the local database.
+
+The **KubeBlocks PostgreSQL Addon** offers a comprehensive solution for deploying and managing PostgreSQL clusters in Kubernetes. This document provides an overview of its features, including deployment topologies, lifecycle management options, backup and restore functionality, and supported PostgreSQL versions.
+
+## Features
+
+### Lifecycle Management
+
+KubeBlocks provides robust lifecycle management features to simplify PostgreSQL cluster operations:
+
+| Features                      | Description                                                                                                             |
+|-------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| Horizontal scaling            | Modifying the number of replicas will trigger scale-in and scale-out operations                                         |
+| Vertical scaling              | Ability to adjust compute resources (CPU and memory) for PostgreSQL replicas                                                 |
+| Volume Expansion              | Support dynamic expansion of persistent storage volumes for PostgreSQL replicas                                              |
+| Restart                       | Controlled restart of the PostgreSQL cluster while maintaining high availability                                             |
+| Stop/Start                    | Ability to stop and start the PostgreSQL cluster for maintenance                                                             |
+| Custom root password          | Ability to set and manage custom root password for the PostgreSQL cluster during creation                                    |
+| Dynamic Parameter Changes     | Reconfigure PostgreSQL parameters dynamically without requiring a cluster restart                                            |
+| Expose Custom Services        | Ability to expose database services with custom configurations for different access requirements                        |
+| SwitchOver                    | Planned primary-secondary switch operation with minimal downtime	                                                       |
+| Decommission specific replica | Safely take a specific PostgreSQL replica offline for maintenance or decommissioning                                         |
+| Rebuild specific replica      | Recover a replica in place or recreate it as a new replica to restore functionality                                     |
+| Minor Version Upgrade         | Perform minor version upgrades of PostgreSQL clusters without impacting availability                                         |
+| Advanced Pod Management       | Support for custom Pod resources, custom scheduling policies, gradual rolling updates, and more advanced operational controls |
+| TLS Encryption                | Support for enabling or disabling TLS encryption for secure database connections	                                       |
+| Prometheus Integration        | Integration with Prometheus managed by the Prometheus Operator for monitoring and alerting of PostgreSQL metrics             |
+| Loki Stack Integration        | Integrate with Loki Stack to collect PostgreSQL error logs, audit logs, and slow query logs for better observability  |
+
+
+### Backup and Restore
+
+| Feature     | Method     | Description                                                     |
+|-------------|------------|-----------------------------------------------------------------|
+| Full Backup       | pg-basebackup   | Uses `pg_basebackup`, a PostgreSQL utility to create a base backup |
+| Full Backup       | wal-g  | Uses `wal-g` to create a full backup (requires WAL-G configuration) |
+| Continuous Backup | postgresql-pitr | Uploads PostgreSQL Write-Ahead Logging (WAL) files periodically to the backup repository, usually paired with `pg-basebackup`|
+| Continuous Backup | wal-g-archive | Uploads PostgreSQL Write-Ahead Logging (WAL) files periodically to the backup repository, usually paired with `wal-g`|
+
+### Supported Versions
+
+| Major Versions | Minor Versions                 |
+|---------------|----------------------------------|
+| 12.x    | 12.14.0, 12.14.1, 12.15.0 |
+| 14.x    | 14.7.2, 14.8.0 |
+| 15.x    | 15.7.0 |
+| 16.x    | 16.4.0 |
+
+The list of supported versions can be found by following command:
+```
+kubectl get cmpv postgresql
+```

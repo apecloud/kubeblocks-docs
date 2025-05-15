@@ -1,0 +1,313 @@
+---
+title: Recovering PostgreSQL Replica in KubeBlocks
+description: How to recover a PostgreSQL replica in a replication cluster managed by KubeBlocks using in-place and non-in-place repair methods.
+keywords: [KubeBlocks, PostgreSQL, Replica Recovery, In-Place Repair, Non-In-Place Repair]
+sidebar_position: 11
+sidebar_label: Recovering PostgreSQL Replica
+---
+
+# Recovering PostgreSQL Replica in KubeBlocks
+
+This guide demonstrates how to perform the following tasks in a PostgreSQL replication cluster managed by KubeBlocks:
+- Write a record to the primary instance and verify replication on the replica.
+- Rebuild the replica using both 'in-place' repair and 'non-in-place' repair methods.
+- Verify data recovery on the replica.
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+$ kubectl create ns demo
+namespace/demo created
+```
+
+
+## Deploy a PostgreSQL Cluster
+
+Deploy a 2-node semi-sync PostgreSQL cluster (1 primary, 1 secondary):
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: pg-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: postgresql
+  topology: replication
+  componentSpecs:
+    - name: postgresql
+      serviceVersion: 16.4.0
+      labels:
+        apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
+      disableExporter: true
+      replicas: 2
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+## Verifying the Deployment
+
+Monitor the cluster status until it transitions to the Running state:
+```bash
+$ kubectl get cluster pg-cluster -n demo -w
+```
+
+Example Output::
+
+```bash
+NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+pg-cluster   postgresql           Delete               Creating   50s
+pg-cluster   postgresql           Delete               Running    4m2s
+```
+Once the cluster status becomes Running, your PostgreSQL cluster is ready for use.
+
+:::tip
+If you are creating the cluster for the very first time, it may take some time to pull images before running.
+
+:::
+
+## Connect to the Primary PostgreSQL Cluster and Write Mock Data
+
+Check replica roles with command:
+```bash
+$ kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster -L kubeblocks.io/role
+```
+
+Expected Outputs:
+```bash
+NAME                      READY   STATUS    RESTARTS   AGE     ROLE
+pg-cluster-postgresql-0   4/4     Running   0          13m     secondary
+pg-cluster-postgresql-1   4/4     Running   0          12m     primary
+```
+
+### Step 1: Connect to the Primary Instance
+
+KubeBlocks automatically creates a Secret containing the PostgreSQL postgres credentials. Retrieve the PostgreSQL postgres credentials:
+
+```bash
+NAME=`kubectl get secrets -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.username}' | base64 -d`
+PASSWD=`kubectl get secrets -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.password}' | base64 -d`
+```
+
+Connect to the primary replica through service `pg-cluster-postgresql-postgresql` which routes data to primary replica.
+
+```bash
+$ kubectl exec -ti -n demo pg-cluster-postgresql-0 -- env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql -h pg-cluster-postgresql-postgresql
+```
+
+### Step 2: Write Data to the Primary Instance
+Connect to the primary instance and write a record to the database:
+
+```sql
+postgrel> CREATE DATABASE test;
+postgrel> \c test;
+postgrel> CREATE TABLE t1 (id INT PRIMARY KEY, name VARCHAR(255));
+postgrel> INSERT INTO t1 VALUES (1, 'John Doe');
+```
+
+### Step 3: Verify Data Replication
+
+Connect to the replica instance (e.g. pg-cluster-postgresql-0) to verify that the data has been replicated:
+```bash
+$ kubectl exec -ti -n demo pg-cluster-postgresql-0 -- env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql -h 127.0.0.1
+```
+:::note
+If the primary instance is 'pg-cluster-postgresql-0', you should connect to 'pg-cluster-postgresql-1' instead. Make sure to check the role of each instance before connecting.
+:::
+
+```sql
+postgrel> \c test;
+postgrel> SELECT * FROM test.t1;
+```
+
+Expected Output:
+```bash
+id |   name
+----+----------
+  1 | John Doe
+(1 row)
+```
+
+## Rebuild the Replica
+
+KubeBlocks provides two approaches for rebuilding a replica: in-place repair and non-in-place repair.
+
+### In-Place Repair
+
+**Expected Workflow**:
+1. The old Pod (e.g. 'pg-cluster-postgresql-0') is terminated and created
+2. PVC
+2. The new Pod has all data as the primary node.
+
+Rebuild the replica in-place using the following configuration:
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-rebuild-replica-inplace
+  namespace: demo
+spec:
+  clusterName: pg-cluster
+  force: true
+  preConditionDeadlineSeconds: 0
+  rebuildFrom:
+  - componentName: postgresql
+    inPlace: true  # set inPlace to true
+    instances:
+    - name: pg-cluster-postgresql-0
+  type: RebuildInstance
+```
+
+In this configuration, "pg-cluster-postgresql-0" refers to the instance name (Pod name) that will be repaired.
+
+Monitor the rebuild operation:
+```bash
+$ kubectl get ops  pg-rebuild-replica-inplace -n demo -w
+```
+Expect Output:
+```bash
+NAME                         TYPE              CLUSTER      STATUS    PROGRESS   AGE
+pg-rebuild-replica-inplace   RebuildInstance   pg-cluster   Running   0/1        5s
+pg-rebuild-replica-inplace   RebuildInstance   pg-cluster   Running   0/1        5s
+pg-rebuild-replica-inplace   RebuildInstance   pg-cluster   Running   0/1        46s
+pg-rebuild-replica-inplace   RebuildInstance   pg-cluster   Running   1/1        46s
+pg-rebuild-replica-inplace   RebuildInstance   pg-cluster   Succeed   1/1        47s
+```
+
+Verify the Pods to confirm the replica ("pg-cluster-postgresql-0") , its PVC and PV have been recreated.
+```bash
+$ kubectl get po,pvc,pv -l app.kubernetes.io/instance=pg-cluster -ndemo
+```
+Expect Output:
+```bash
+kubectl get po,pvc,pv -l app.kubernetes.io/instance=pg-cluster -ndemo
+NAME                          READY   STATUS    RESTARTS   AGE
+pod/pg-cluster-postgresql-0   4/4     Running   0          5m6s
+pod/pg-cluster-postgresql-1   4/4     Running   0          14m
+
+NAME                                                 STATUS   VOLUME    CAPACITY   ACCESS MODES  STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+persistentvolumeclaim/data-pg-cluster-postgresql-0   Bound    pvc-xxx   20Gi       RWO            <SC>          <unset>                 5m6s
+persistentvolumeclaim/data-pg-cluster-postgresql-3   Bound    pvc-yyy   20Gi       RWO            <SC>          <unset>                 14m
+```
+
+Connect to the replica and check if the data has been restored:
+
+```bash
+$ kubectl exec -ti -n demo pg-cluster-postgresql-0 -- env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql -h 127.0.0.1
+```
+
+```sql
+postgrel> \c test;
+postgrel> select * from t1;
+ id |   name
+----+----------
+  1 | John Doe
+(1 row)
+```
+
+### Non-In-Place Repair
+
+**Expected Workflow**:
+1. A new Pod (e.g. 'pg-cluster-postgresql-2') is created first
+2. The old Pod (e.g. 'pg-cluster-postgresql-0') is terminated when the new replica is running.
+3. The new Pod has all data as the primary node.
+
+Rebuild the replica by creating a new instance:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-rebuild-replica-non-inplace
+  namespace: demo
+spec:
+  clusterName: pg-cluster
+  force: true
+  preConditionDeadlineSeconds: 0
+  rebuildFrom:
+  - componentName: postgresql
+    inPlace: false
+    instances:
+    - name: pg-cluster-postgresql-0
+  type: RebuildInstance
+```
+
+In this configuration, "pg-cluster-postgresql-0" refers to the instance name (Pod name) that will be repaired.
+
+Monitor the rebuild operation:
+```bash
+$ kubectl get ops  pg-rebuild-replica-inplace -n demo -w
+```
+Expect Output:
+```bash
+NAME                             TYPE              CLUSTER      STATUS    PROGRESS   AGE
+pg-rebuild-replica-non-inplace   RebuildInstance   pg-cluster   Running   0/1        5s
+pg-rebuild-replica-non-inplace   RebuildInstance   pg-cluster   Running   0/1        5s
+pg-rebuild-replica-non-inplace   RebuildInstance   pg-cluster   Running   0/1        46s
+pg-rebuild-replica-non-inplace   RebuildInstance   pg-cluster   Running   1/1        46s
+pg-rebuild-replica-non-inplace   RebuildInstance   pg-cluster   Succeed   1/1        47s
+```
+
+```bash
+$ kubectl get pods  -l app.kubernetes.io/instance=pg-cluster -n demo -w
+NAME                      READY   STATUS    RESTARTS   AGE
+pg-cluster-postgresql-0   4/4     Running   0          53m
+pg-cluster-postgresql-1   4/4     Running   0          2m52s
+pg-cluster-postgresql-2   0/4     Pending   0          0s
+pg-cluster-postgresql-2   0/4     Pending   0          4s
+pg-cluster-postgresql-2   0/4     Init:0/4   0          4s
+pg-cluster-postgresql-2   0/4     Init:1/4   0          5s
+pg-cluster-postgresql-2   0/4     Init:2/4   0          6s
+pg-cluster-postgresql-2   0/4     Init:3/4   0          7s
+pg-cluster-postgresql-2   0/4     PodInitializing   0          8s
+pg-cluster-postgresql-2   2/4     Running           0          9s
+pg-cluster-postgresql-2   2/4     Running           0          12s
+pg-cluster-postgresql-2   2/4     Running           0          14s
+pg-cluster-postgresql-2   3/4     Running           0          14s
+pg-cluster-postgresql-2   3/4     Running           0          16s
+pg-cluster-postgresql-2   4/4     Running           0          3m30s
+pg-cluster-postgresql-0   4/4     Terminating       0          4m3s
+pg-cluster-postgresql-0   4/4     Terminating       0          4m3s
+pg-cluster-postgresql-0   4/4     Terminating       0          4m3s
+```
+
+Connect to the new replica instance ('pg-cluster-postgresql-2') and verify the data:
+
+```bash
+$ kubectl exec -ti -n demo pg-cluster-postgresql-2 -- env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql -h 127.0.0.1
+```
+
+```sql
+postgrel> \c test;
+postgrel> select * from t1;
+ id |   name
+----+----------
+  1 | John Doe
+(1 row)
+```
+
+## Summary
+- In-Place Repair: Successfully rebuilt the replica and restored the deleted data.
+- Non-In-Place Repair: Created a new replica instance and successfully restored the data.
+Both methods effectively recover the replica and ensure data consistency.

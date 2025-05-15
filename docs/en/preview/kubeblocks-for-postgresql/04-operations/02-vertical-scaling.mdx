@@ -1,0 +1,232 @@
+---
+title: Vertical Scaling in a PostgreSQL Cluster
+description: Learn how to perform vertical scaling in a PostgreSQL cluster managed by KubeBlocks to optimize resource utilization and improve performance.
+keywords: [KubeBlocks, PostgreSQL, Vertical Scaling, Kubernetes, Resources]
+sidebar_position: 2
+sidebar_label: Vertical Scaling
+---
+
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# Vertical Scaling in a PostgreSQL Cluster
+
+This guide explains how to perform **vertical scaling** in a PostgreSQL cluster managed by KubeBlocks.
+Vertical scaling adjusts the resource limits and requests (such as CPU and memory) allocated to the cluster components, allowing for better performance or resource optimization.
+
+## What is Vertical Scaling?
+Vertical scaling involves increasing or decreasing the resources (e.g., CPU and memory) allocated to a running database cluster.
+Unlike horizontal scaling, which adjusts the number of replicas, vertical scaling focuses on scaling the capacity of individual Pods.
+
+Resources that can be scaled include:
+- CPU cores: Processing power for the database.
+- Memory (RAM): Memory available for database operations.
+
+KubeBlocks ensures seamless vertical scaling by carefully orchestrating Pod restarts to minimize downtime. For example:
+- Secondary Pods are recreated first.
+- Primary Pods are updated last to maintain cluster availability.
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+$ kubectl create ns demo
+namespace/demo created
+```
+
+## Deploy a PostgreSQL Cluster
+
+Deploy a 2-node semi-sync PostgreSQL cluster (1 primary, 1 secondary):
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: pg-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: postgresql
+  topology: replication
+  componentSpecs:
+    - name: postgresql
+      serviceVersion: 16.4.0
+      labels:
+        apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
+      disableExporter: true
+      replicas: 2
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+## Verifying the Deployment
+
+Monitor the cluster status until it transitions to the Running state:
+```bash
+$ kubectl get cluster pg-cluster -n demo -w
+```
+
+Example Output::
+
+```bash
+NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+pg-cluster   postgresql           Delete               Creating   50s
+pg-cluster   postgresql           Delete               Running    4m2s
+```
+Once the cluster status becomes Running, your PostgreSQL cluster is ready for use.
+
+:::tip
+If you are creating the cluster for the very first time, it may take some time to pull images before running.
+
+:::
+
+## Vertical Scale
+
+**Expected Workflow**:
+
+1. Secondary replicas are updated first (one at a time)
+1. Primary is updated last after secondary replicas are healthy
+1. Cluster status transitions from `Updating` to `Running`
+
+<Tabs>
+  <TabItem value="opsRequest" label="Use the OpsRequest API" default>
+  ### Option 1: Using VerticalScaling OpsRequest
+
+  Apply the following YAML to scale up the resources for the postgresql component:
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: pg-cluster-vscale-ops
+    namespace: demo
+  spec:
+    clusterName: pg-cluster
+    type: VerticalScaling
+    verticalScaling:
+    - componentName: postgresql
+      requests:
+        cpu: '1'
+        memory: 1Gi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+  ```
+  What Happens During Vertical Scaling?
+  - Secondary Pods are recreated first to ensure the primary Pod remains available.
+  - Once all secondary Pods are updated, the primary Pod is restarted with the new resource configuration.
+
+
+  You can check the progress of the scaling operation with following command:
+
+  ```bash
+  kubectl -n demo get ops pg-cluster-vscale-ops -w
+  ```
+
+  Expected Result:
+  ```bash
+  NAME                    TYPE              CLUSTER      STATUS    PROGRESS   AGE
+  pg-cluster-vscale-ops   VerticalScaling   pg-cluster   Running   0/2        52s
+  pg-cluster-vscale-ops   VerticalScaling   pg-cluster   Running   1/2        64s
+  pg-cluster-vscale-ops   VerticalScaling   pg-cluster   Running   2/2        2m6s
+  pg-cluster-vscale-ops   VerticalScaling   pg-cluster   Running   2/2        2m6s
+  pg-cluster-vscale-ops   VerticalScaling   pg-cluster   Succeed   2/2        2m6s
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Use the Cluster API">
+
+  ### Option 2: Direct Cluster API Update
+
+  Alternatively, you may update `spec.componentSpecs.resources` field to the desired resources for vertical scale.
+
+  ```yaml
+    apiVersion: apps.kubeblocks.io/v1
+    kind: Cluster
+    metadata:
+      name: pg-cluster
+      namespace: demo
+    spec:
+      terminationPolicy: Delete
+      clusterDef: postgresql
+      topology: replication
+      componentSpecs:
+        - name: postgresql
+          serviceVersion: 16.4.0
+          labels:
+            apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
+          disableExporter: true
+          replicas: 2
+          resources:
+            requests:
+              cpu: "1"       # Update the resources to your need.
+              memory: "1Gi"  # Update the resources to your need.
+            limits:
+              cpu: "1"       # Update the resources to your need.
+              memory: "1Gi"  # Update the resources to your need.
+          volumeClaimTemplates:
+            - name: data
+              spec:
+                storageClassName: ""
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 20Gi
+    ```
+  </TabItem>
+</Tabs>
+
+**Key Considerations**:
+
+- Ensure sufficient cluster capacity exists
+- Resource changes may trigger pod restarts and parameters reconfiguration
+- Monitor resource utilization after changes
+
+## Verification
+Verify the updated resources by inspecting the cluster configuration or Pod details:
+```bash
+$ kbcli cluster describe pg-cluster -n demo
+```
+
+Example Output:
+```bash
+Resources Allocation:
+COMPONENT    INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+postgresql                       1 / 1                1Gi / 1Gi               data:20Gi      standard
+```
+
+## Key Benefits of Vertical Scaling with KubeBlocks
+- Seamless Scaling: Pods are recreated in a specific order to ensure minimal disruption.
+- Dynamic Resource Adjustments: Easily scale CPU and memory based on workload requirements.
+- Flexibility: Choose between OpsRequest for dynamic scaling or direct API updates for precise control.
+- Improved Availability: The cluster remains operational during the scaling process, maintaining high availability.
+
+## Summary
+In this guide, you learned how to:
+1. Deploy a PostgreSQL cluster managed by KubeBlocks.
+2. Perform vertical scaling by increasing or decreasing resources for the postgresql component.
+3. Use both OpsRequest and direct Cluster API updates to adjust resource allocations.
+
+Vertical scaling is a powerful tool for optimizing resource utilization and adapting to changing workload demands, ensuring your PostgreSQL cluster remains performant and resilient.

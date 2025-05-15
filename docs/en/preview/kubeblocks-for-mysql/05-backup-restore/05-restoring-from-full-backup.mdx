@@ -38,10 +38,6 @@ NAME                           POLICY                                      METHO
 example-mysql-cluster-backup   example-mysql-cluster-mysql-backup-policy   xtrabackup   s3-repo   Completed   1633717      18s        Delete            2025-03-07T03:25:22Z   2025-03-07T03:25:40Z
 ```
 
-<Tabs>
-
-<TabItem value="clusterAPI" label="Use the Cluster API" default>
-
 ## Restore the Backup Using Cluster Annotation
 
 ### Retrieve Encrypted System Accounts
@@ -126,13 +122,6 @@ example-mysql-cluster-restored-mysql-0     4/4     Running        0          20s
 ```
 Pods initialize with restored data and start MySQL services.
 
-
-</TabItem>
-
-<TabItem value="opsAPI" label="Use the Ops API">
-
-
-
 ## Perform Restoration via Ops API
 
 Alternatively, use the Ops API to initiate the restoration process:
@@ -168,10 +157,6 @@ NAME                            TYPE      CLUSTER                         STATUS
 example-mysql-cluster-restore   Restore   example-mysql-cluster-restored   Running   -/-        55s
 example-mysql-cluster-restore   Restore   example-mysql-cluster-restored   Succeed   -/-        3m3s
 ```
-
-</TabItem>
-
-</Tabs>
 
 
 ## Verify the Restored Cluster Status

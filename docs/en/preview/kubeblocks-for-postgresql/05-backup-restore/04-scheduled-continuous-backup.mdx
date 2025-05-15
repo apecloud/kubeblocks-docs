@@ -1,0 +1,170 @@
+---
+title: Setting Up a PostgreSQL Cluster with Scheduled Continuous Backup in KubeBlocks
+description: Learn how to set up a PostgreSQL cluster with scheduled full backups and continuous incremental backups enabled in KubeBlocks.
+keywords: [PostgreSQL, Backup, PITR, KubeBlocks, Kubernetes]
+sidebar_position: 4
+sidebar_label: Scheduled Continuous Backup
+---
+
+# Setting Up a PostgreSQL Cluster with Scheduled Continuous Backup Enabled in KubeBlocks
+
+This guide explains how to deploy a PostgreSQL cluster on KubeBlocks with scheduled full backups and continuous wal log backups, enabling Point-In-Time Recovery (PITR) for enhanced data protection and recovery capabilities.
+
+## What is PITR?
+Point-In-Time Recovery (PITR) allows you to restore a database to a specific moment in time by combining full backups with continuous binlog/wal/archive log backups.
+
+For details on restoring data from both full backups and continuous binlog backups, refer to the [Restore From PITR](restore-with-pitr.mdx)  guide.
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+$ kubectl create ns demo
+namespace/demo created
+```
+
+## List of Backup methods
+
+KubeBlocks PostgreSQL provides multiple backup methods at you need.
+
+| Feature           | Method          | Description |
+|-------------------|-----------------|-------------|
+| Full Backup       | pg-basebackup   | Uses `pg_basebackup`, a PostgreSQL utility to create a base backup |
+| Full Backup       | wal-g  | Uses `wal-g` to create a full backup (requires WAL-G configuration) |
+| Continuous Backup | postgresql-pitr | Uploads PostgreSQL Write-Ahead Logging (WAL) files periodically to the backup repository, usually paired with `pg-basebackup`|
+| Continuous Backup | wal-g-archive | Uploads PostgreSQL Write-Ahead Logging (WAL) files periodically to the backup repository, usually paired with `wal-g`|
+
+## Deploy a PostgreSQL Cluster with Backup APIs
+
+Deploy a 2-node semi-sync PostgreSQL cluster (1 primary, 1 secondary) and specify backup information.
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: pg-cluster-2
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: postgresql
+  topology: replication
+  componentSpecs:
+    - name: postgresql
+      serviceVersion: 16.4.0
+      labels:
+        apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
+      disableExporter: true
+      replicas: 2
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+  backup:
+    retentionPeriod: 7d
+    # for full backup
+    method: pg-basebackup # full backup methnod name
+    enabled: true
+    cronExpression: 0 18 * * * # full backup scheuler
+    # for continuous backup
+    continuousMethod: wal-g-archive # continuous backup method, paired with method wal-g
+    pitrEnabled: true # enable continous method or not
+    repoName: s3-repo # specify backuprepo, if not specified, the BackupRepo annotated as `default` will be used.
+```
+
+**Explanation of Key Fields**
+- `backup.enabled: true`: Enables scheduled backups for the cluster.
+- `method: pg-basebackup`: Specifies the backup method to be used.
+- ` cronExpression: 0 18 * * *`: Configures the backup schedule to run periodically.
+- `retentionPeriod: 7d`: Retains backups for 7 days.
+- `repoName: s3-repo`: Specifies the S3 repository for storing backups.
+- `pitrEnabled: true`: Enables Point-in-Time Recovery (PITR).
+
+
+## Verifying the Deployment
+
+Monitor the cluster status until it transitions to the Running state:
+```bash
+$ kubectl get cluster pg-cluster -n demo -w
+```
+
+Example Output::
+
+```bash
+NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+pg-cluster   postgresql           Delete               Creating   50s
+pg-cluster   postgresql           Delete               Running    4m2s
+```
+Once the cluster status becomes Running, your PostgreSQL cluster is ready for use.
+
+
+As continuous backup is enabled, you may check its status by
+```bash
+# get continuous backup
+kubectl get backup -l app.kubernetes.io/instance=pg-cluster,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
+# get pod working for continuous backup
+kubectl get pod -l app.kubernetes.io/instance=pg-cluster,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
+```
+
+## Prerequisites for Backup
+
+1. Backup Repository Configured:
+   - Configured `BackupRepo`
+   - Network connectivity between cluster and repo, `BackupRepo` status is `Ready`
+
+2. Cluster is Running:
+   - Cluster must be in `Running` state
+   - No ongoing operations (scaling, upgrades etc.)
+
+## Check the BackupSchedule Resource
+
+KubeBlocks automatically creates a BackupSchedule resource when scheduled backups are enabled. Verify the configuration using the following command:
+
+```bash
+$ kubectl get backupschedule pg-cluster-postgresql-backup-schedule  -n demo -oyaml
+```
+
+Expected Output:
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: BackupSchedule
+...
+spec:
+  backupPolicyName: pg-cluster-postgresql-backup-policy
+  schedules:
+  - backupMethod: pg-basebackup
+    cronExpression: 0 18 * * *
+    enabled: true #
+    retentionPeriod: 7d
+  - backupMethod: wal-g-archive
+    cronExpression: '*/5 * * * *'
+    enabled: true  # set to `true` to enable continuous backup
+    retentionPeriod: 8d # set the retention period to your need
+```
+**Explanation**:
+- The pg-basebackup schedule performs a full backup.
+- The wal-g-archive schedule performs continuous backups by wal logs.
+
+With this setup, a combination of full and continuous backups ensures robust data protection and enables PITR.
+
+## Summary
+In this guide, you learned how to:
+- Deploy a PostgreSQL cluster with semi-synchronous replication in KubeBlocks, enable scheduled full backups and continuous backups.
+
+With this setup, your PostgreSQL cluster is protected with PITR capabilities, allowing you to restore the database to any specific point in time with minimal data loss.

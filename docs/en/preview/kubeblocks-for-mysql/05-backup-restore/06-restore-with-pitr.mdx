@@ -43,10 +43,6 @@ example-mysql-cluster-xtrabackup-20250305000008    example-mysql-cluster-mysql-b
 - '77a788fa-example-mysql-cluster-archive-binlog': Continuous backup (binlog archive).
 - 'example-mysql-cluster-xtrabackup-20250305000008': Full backup.
 
-<Tabs>
-
-<TabItem value="clusterAPI" label="Use the Cluster API" default>
-
 ## Retrieve Encrypted System Accounts
 Extract encrypted credentials for system accounts from the metadata of the full backup:
 
@@ -103,12 +99,6 @@ spec:
                 storage: 20Gi
 EOF
 ```
-
-</TabItem>
-
-<TabItem value="opsAPI" label="Use the Ops API">
-
-
 ## Perform Restoration via Ops API
 
 Alternatively, use the Ops API to initiate the restoration process:
@@ -130,11 +120,6 @@ spec:
   type: Restore
 EOF
 ```
-
-</TabItem>
-
-</Tabs>
-
 
 ### Monitor Restoration Progress
 

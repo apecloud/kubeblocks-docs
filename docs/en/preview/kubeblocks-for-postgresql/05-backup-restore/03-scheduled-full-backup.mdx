@@ -1,0 +1,145 @@
+---
+title: Setting Up a PostgreSQL Cluster with Scheduled Backups in KubeBlocks
+description: Learn how to deploy a PostgreSQL cluster using KubeBlocks and configure automated scheduled backups with retention in an S3 repository.
+keywords: [PostgreSQL, Backup, KubeBlocks, Scheduled Backup, Kubernetes]
+sidebar_position: 3
+sidebar_label: Scheduled Backups
+---
+
+
+# Setting Up a PostgreSQL Cluster with Scheduled Backups in KubeBlocks
+
+This guide demonstrates how to deploy a PostgreSQL cluster using KubeBlocks and configure scheduled backups with retention in an S3 repository.
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+$ kubectl create ns demo
+namespace/demo created
+```
+
+## Deploy a PostgreSQL Cluster
+
+Deploy a 2-node semi-sync PostgreSQL cluster (1 primary, 1 secondary):
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: pg-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: postgresql
+  topology: replication
+  componentSpecs:
+    - name: postgresql
+      serviceVersion: 16.4.0
+      labels:
+        apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
+      disableExporter: true
+      replicas: 2
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+## Verifying the Deployment
+
+Monitor the cluster status until it transitions to the Running state:
+```bash
+$ kubectl get cluster pg-cluster -n demo -w
+```
+
+Example Output::
+
+```bash
+NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+pg-cluster   postgresql           Delete               Creating   50s
+pg-cluster   postgresql           Delete               Running    4m2s
+```
+Once the cluster status becomes Running, your PostgreSQL cluster is ready for use.
+
+:::tip
+If you are creating the cluster for the very first time, it may take some time to pull images before running.
+
+:::
+
+## Prerequisites for Backup
+
+1. Backup Repository Configured:
+   - Configured `BackupRepo`
+   - Network connectivity between cluster and repo, `BackupRepo` status is `Ready`
+
+2. Cluster is Running:
+   - Cluster must be in `Running` state
+   - No ongoing operations (scaling, upgrades etc.)
+
+## Check the BackupSchedule Resource
+
+KubeBlocks automatically creates a BackupSchedule resource when scheduled backups are enabled. Verify the configuration using the following command:
+
+```bash
+$ kubectl get backupschedule pg-cluster-postgresql-backup-schedule  -n demo -oyaml
+```
+
+Expected Output:
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: BackupSchedule
+spec:
+  backupPolicyName: pg-cluster-postgresql-backup-policy
+  schedules:
+  - backupMethod: pg-basebackup
+    # ┌───────────── minute (0-59)
+    # │ ┌───────────── hour (0-23)
+    # │ │ ┌───────────── day of month (1-31)
+    # │ │ │ ┌───────────── month (1-12)
+    # │ │ │ │ ┌───────────── day of week (0-6) (Sunday=0)
+    # │ │ │ │ │
+    # 0 18 * * *
+    # schedule this job every day at 6:00 PM (18:00).
+    cronExpression: 0 18 * * * # update the cronExpression to your need
+    enabled: false # set to `true` to schedule base backup periodically
+    retentionPeriod: 7d # set the retention period to your need
+```
+
+To schedule backup periodically, you may update the `BackupSchedule` and set `enabled=true` for method `pg-basebackup`.
+
+## Cleanup
+To remove all created resources, delete the PostgreSQL cluster along with its namespace:
+
+```bash
+kubectl delete cluster pg-cluster -n demo
+kubectl delete ns demo
+```
+
+
+## Summary
+
+In this guide:
+- The backup was executed at midnight UTC (2025-02-06 00:00:52), as defined in the `cronExpression` field of the `backup` configuration.
+- The backup files were successfully stored in the specified S3 repository. These include:
+  - The compressed backup data file ('pg-cluster-xtrabackup-20250206000001.xbstream.zst').
+  - The metadata file ('kubeblocks-backup.json') which contains information about the backup.
+
+By following this guide, you can automate regular backups for your PostgreSQL clusters, ensuring data availability and recovery options.
