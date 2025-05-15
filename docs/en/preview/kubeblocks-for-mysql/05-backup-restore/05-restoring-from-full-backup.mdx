@@ -2,7 +2,7 @@
 title: Restore a MySQL Cluster from Backup
 description: Learn how to restore a new MySQL cluster from an existing backup in KubeBlocks using the Cluster Annotation or Ops API.
 keywords: [MySQL, Restore, Backup, KubeBlocks, Kubernetes]
-sidebar_position: 2
+sidebar_position: 5
 sidebar_label: Restore MySQL Cluster
 ---
 
@@ -18,7 +18,7 @@ The **Ops API** provides enhanced control and progress monitoring capabilities f
 
 ## Prerequisites
 - KubeBlocks Environment:
-  - KubeBlocks operator and required CRDs installed. 
+  - KubeBlocks operator and required CRDs installed.
   - kubectl configured to access your Kubernetes cluster.
 - Existing Backup:
   - A valid backup named example-mysql-backup-backup in the 'demo' namespace.
@@ -60,7 +60,7 @@ Example Output:
 
 ### Create Restored Cluster
 
-Create a new cluster with restoration configuration referencing the backup, set `encryptedSystemAccounts` with the encrypted system account credentials got from last step. 
+Create a new cluster with restoration configuration referencing the backup, set `encryptedSystemAccounts` with the encrypted system account credentials got from last step.
 
 Note: Use \" to escape double quotes in the JSON string.
 
