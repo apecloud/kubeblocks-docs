@@ -16,23 +16,19 @@ This guide demonstrates two methods to restore a PostgreSQL cluster from backup 
 1. **Cluster Annotation Method** - Simple declarative approach using YAML annotations
 2. **Ops API Method** - Enhanced operational control with progress monitoring
 
-Key differences:
-- Ops API provides real-time status updates
-- Ops API supports additional operational controls
-- Both methods ultimately perform the same restore operation
-
-:::note
-
-Restored Cluster is not necessary of the same resources/replicas/storage class/storage size as the one restored from.
-
-:::
-
 ## Prerequisites
-- KubeBlocks Environment:
-  - KubeBlocks operator and required CRDs installed.
-  - kubectl configured to access your Kubernetes cluster.
-- Existing Backup:
-  - A valid backup named example-postgresql-backup-backup in the 'demo' namespace.
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+$ kubectl create ns demo
+namespace/demo created
+```
 
 ## Preparing for Restoration: Locate one Full Backup
 Before restoring, ensure that there is a full backup is available. The restoration process will use this backup to create a new PostgreSQL cluster.

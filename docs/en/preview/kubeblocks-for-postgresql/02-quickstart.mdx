@@ -104,7 +104,7 @@ If the add-on isn't enabled, choose an installation method:
   </TabItem>
 </Tabs>
 
-:::important Version Compatibility
+:::note Version Compatibility
 Always verify that the PostgreSQL Add-on version matches your KubeBlocks major version to avoid compatibility issues.
 :::
 
@@ -548,7 +548,6 @@ Restarting a stopped cluster resumes operations with all data and configuration 
 
 ## Delete PostgreSQL Cluster
 
-:::important Termination Policies
 Choose carefully based on your data retention needs:
 
 | Policy          | Resources Removed | Data Removed | Recommended For |
@@ -558,7 +557,6 @@ Choose carefully based on your data retention needs:
 | WipeOut         | All resources     | Everything*  | Test environments only |
 
 *Includes snapshots and backups in external storage
-:::
 
 **Pre-Deletion Checklist:**
 1. Verify no applications are using the cluster

@@ -140,6 +140,16 @@ spec:
                 storage: 20Gi
 ```
 
+### Step 3: Monitor Restoration
+Track restore progress with:
+
+```bash
+# Watch restore status
+kubectl get restore -n demo -w
+
+# Watch cluster status
+kubectl get cluster -n demo -w
+```
 
 ## Method 2: Ops API Restoration
 

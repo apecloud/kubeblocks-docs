@@ -102,7 +102,7 @@ If you are creating the cluster for the very first time, it may take some time t
 
   <TabItem value="opsRequest" label="Use the OpsRequest API" default>
 
-  ### Option 1: Using Horizontal Scaling OpsRequest
+  Option 1: Using Horizontal Scaling OpsRequest
   Scale out the PostgreSQL cluster by adding 1 replica:
 
   ```yaml
@@ -141,7 +141,7 @@ If you are creating the cluster for the very first time, it may take some time t
 
   <TabItem value="ClusterAPI" label="Use the Cluster API">
 
-  ### Option 2: Direct Cluster API Update
+  Option 2: Direct Cluster API Update
 
   Alternatively, you can perform a direct update to the `replicas` field in the Cluster resource:
 
@@ -234,7 +234,7 @@ If the replica being scaled-in happens to be a primary replica, KubeBlocks will 
 
   <TabItem value="opsRequest" label="Use the OpsRequest API" default>
 
-  ### Option 1: Using Horizontal Scaling OpsRequest
+  Option 1: Using Horizontal Scaling OpsRequest
   Scale in the PostgreSQL cluster by removing ONE replica:
   ```yaml
   apiVersion: operations.kubeblocks.io/v1alpha1
@@ -273,7 +273,7 @@ If the replica being scaled-in happens to be a primary replica, KubeBlocks will 
 
   <TabItem value="ClusterAPI" label="Use the Cluster API">
 
-  ### Option 2: Direct Cluster API Update
+  Option 2: Direct Cluster API Update
 
   Alternatively, you can perform a direct update to the `replicas` field in the Cluster resource:
 

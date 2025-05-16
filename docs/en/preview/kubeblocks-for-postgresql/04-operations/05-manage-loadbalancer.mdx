@@ -124,7 +124,7 @@ External service addresses enable public internet access to PostgreSQL, while in
 
   <TabItem value="opsRequest" label="Use the OpsRequest API" default>
 
-  ### Option 1: Using OpsRequest
+  Option 1: Using OpsRequest
 
   To expose the PostgreSQL service externally using a LoadBalancer, create an OpsRequest resource:
 
@@ -171,7 +171,7 @@ External service addresses enable public internet access to PostgreSQL, while in
 
   <TabItem value="ClusterAPI" label="Use the Cluster API">
 
-  ### Option 2: Using Cluster API
+  Option 1: Using Cluster API
 
   Alternatively, update the `spec.services` section in the Cluster resource to include a LoadBalancer service:
   ```yaml
@@ -326,7 +326,7 @@ $ psql -h <EXTERNAL_IP> -U${NAME} -W
 
   <TabItem value="opsRequest" label="Use the OpsRequest API" default>
 
-  ### Option 1: Using OpsRequest
+  Option 1: Using OpsRequest
   To disable external access, create an OpsRequest:
   ```yaml
   apiVersion: operations.kubeblocks.io/v1alpha1
@@ -361,7 +361,7 @@ $ psql -h <EXTERNAL_IP> -U${NAME} -W
 
   <TabItem value="ClusterAPI" label="Use the Cluster API">
 
-  ### Option 2: Using Cluster API
+  Option 1: Using Cluster API
 
   Alternatively, remove the `spec.services` field from the Cluster resource:
   ```bash

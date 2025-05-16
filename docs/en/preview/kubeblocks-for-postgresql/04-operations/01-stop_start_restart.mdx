@@ -110,7 +110,7 @@ This operation is ideal for:
 
   <TabItem value="opsRequest" label="OpsRequest API" default>
 
-  #### Option 1: OpsRequest API
+  Option 1: OpsRequest API
 
   Create a Stop operation request:
 
@@ -128,7 +128,7 @@ This operation is ideal for:
 
   <TabItem value="ClusterAPI" label="Cluster API">
 
-  #### Option 2: Cluster API Patch
+  Option 2: Cluster API Patch
 
   Modify the cluster spec directly by patching the stop field:
 
@@ -223,7 +223,7 @@ Expected behavior:
 
   <TabItem value="opsRequest" label="Use the OpsRequest API" default>
 
-#### Option 1: OpsRequest API
+Option 1: OpsRequest API
 
 Initiate a Start operation request:
 
@@ -243,7 +243,7 @@ spec:
 
   <TabItem value="ClusterAPI" label="Use the Cluster API">
 
-#### Option 2: Cluster API Patch
+Option 2: Cluster API Patch
 
 Modify the cluster spec to resume operation:
 1. Set stop: false, or
@@ -315,7 +315,7 @@ Use cases:
 - Resource refresh
 - Troubleshooting
 
-#### Using OpsRequest API
+**Using OpsRequest API**
 
 Target a specific component for restart:
 
@@ -332,7 +332,7 @@ spec:
   - componentName: postgresql
 ```
 
-#### Verifying Restart Completion
+**Verifying Restart Completion**
 
 To verify a successful component restart:
 

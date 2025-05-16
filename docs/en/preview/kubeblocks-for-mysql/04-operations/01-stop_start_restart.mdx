@@ -92,7 +92,7 @@ Stopping the cluster terminates all its running pods but retains the persistent 
 
     <TabItem value="opsRequest" label="Use the OpsRequest API" default>
 
-#### Option 1: Using OpsRequest
+Option 1: Using OpsRequest
 
 You can stop the cluster using an OpsRequest:
 
@@ -112,7 +112,7 @@ EOF
 
     <TabItem value="ClusterAPI" label="Use the Cluster API">
 
-#### Option 2: Using the Declarative Cluster API
+Option 1: Using the Declarative Cluster API
 
 Alternatively, you may stop the cluster by setting the `spec.componentSpecs.stop` field to `true`  in the cluster configuration:
 
@@ -167,7 +167,7 @@ Starting the cluster recreates the pods and brings the cluster back online.
 
     <TabItem value="opsRequest" label="Use the OpsRequest API" default>
 
-#### Option 1: Using OpsRequest
+Option 1: Using OpsRequest
 
 You can start the stopped cluster using an OpsRequest:
 
@@ -189,7 +189,7 @@ EOF
 
     <TabItem value="ClusterAPI" label="Use the Cluster API">
 
-#### Option 2: Using the Declarative Cluster API
+Option 1: Using the Declarative Cluster API
 
 Alternatively, you can start the cluster by:
 - Setting the `spec.componentSpecs.stop` field to false, or

@@ -108,7 +108,7 @@ You can expand the volume in one of two ways:
 
     <TabItem value="opsRequest" label="Use the OpsRequest API" default>
 
-### Option 1: Using VolumeExpansion OpsRequest
+Option 1: Using VolumeExpansion OpsRequest
 
 Apply the following YAML to increase the volume size for the mysql component:
 
@@ -149,7 +149,7 @@ Once completed, the PVC size will be updated.
 
     <TabItem value="ClusterAPI" label="Use the Cluster API">
 
-### Option 2: Direct Cluster API Update
+Option 2: Direct Cluster API Update
 
 Alternatively, you may update the `spec.componentSpecs.volumeClaimTemplates.spec.resources.requests.storage` field to the desired size.
 
