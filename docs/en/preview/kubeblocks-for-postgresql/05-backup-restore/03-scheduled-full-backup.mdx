@@ -25,6 +25,17 @@ $ kubectl create ns demo
 namespace/demo created
 ```
 
+## List of Backup methods
+
+KubeBlocks PostgreSQL supports these backup methods:
+
+| Feature           | Method          | Description |
+|-------------------|-----------------|-------------|
+| Full Backup       | pg-basebackup   | Uses `pg_basebackup`, a PostgreSQL utility to create a base backup |
+| Full Backup       | wal-g  | Uses `wal-g` to create a full backup (requires WAL-G configuration) |
+| Continuous Backup | postgresql-pitr | Uploads PostgreSQL Write-Ahead Logging (WAL) files periodically to the backup repository, usually paired with `pg-basebackup`|
+| Continuous Backup | wal-g-archive | Uploads PostgreSQL Write-Ahead Logging (WAL) files periodically to the backup repository, usually paired with `wal-g`|
+
 ## Deploy a PostgreSQL Cluster
 
 Deploy a 2-node semi-sync PostgreSQL cluster (1 primary, 1 secondary):
@@ -94,9 +105,11 @@ If you are creating the cluster for the very first time, it may take some time t
    - Cluster must be in `Running` state
    - No ongoing operations (scaling, upgrades etc.)
 
-## Check the BackupSchedule Resource
+## Configure Scheduled Backups
 
-KubeBlocks automatically creates a BackupSchedule resource when scheduled backups are enabled. Verify the configuration using the following command:
+KubeBlocks automatically creates a `BackupSchedule` resource when the cluster is created. Follow these steps to enable and configure scheduled backups:
+
+1. Verify the default backup schedule configuration:
 
 ```bash
 $ kubectl get backupschedule pg-cluster-postgresql-backup-schedule  -n demo -oyaml
@@ -123,7 +136,63 @@ spec:
     retentionPeriod: 7d # set the retention period to your need
 ```
 
-To schedule backup periodically, you may update the `BackupSchedule` and set `enabled=true` for method `pg-basebackup`.
+2. Enable and customize the backup schedule:
+```bash
+kubectl edit backupschedule pg-cluster-postgresql-backup-schedule -n demo
+```
+
+Update these key parameters:
+- `enabled`: Set to `true` to activate scheduled backups
+- `cronExpression`: Configure backup frequency using cron syntax
+- `retentionPeriod`: Set how long to keep backups (e.g., `7d`, `1mo`)
+
+Example configuration for daily backups at 6PM UTC with 7-day retention:
+```yaml
+schedules:
+- backupMethod: pg-basebackup
+  enabled: true
+  cronExpression: "0 18 * * *"
+  retentionPeriod: 7d
+```
+
+3. Verify the schedule configuration:
+```bash
+# Check schedule status
+kubectl get backupschedule pg-cluster-postgresql-backup-schedule -n demo -w
+
+# View detailed configuration
+kubectl describe backupschedule pg-cluster-postgresql-backup-schedule -n demo
+```
+
+## Monitoring and Managing Backups
+
+After enabling scheduled backups, monitor their execution and manage backup retention:
+
+1. View all backups:
+```bash
+kubectl get backup -n demo -l app.kubernetes.io/instance=pg-cluster
+```
+
+2. Inspect backup details:
+```bash
+kubectl describe backup <backup-name> -n demo
+```
+
+3. Verify backup artifacts:
+- Status should show "Completed"
+- Check backup size matches expectations
+- Confirm retention period is being applied
+- Validate backup files exist in repository
+
+4. Manage backup retention:
+- To manually delete old backups:
+```bash
+kubectl delete backup <backup-name> -n demo
+```
+- To modify retention period:
+```bash
+kubectl edit backupschedule pg-cluster-postgresql-backup-schedule -n demo
+```
 
 ## Cleanup
 To remove all created resources, delete the PostgreSQL cluster along with its namespace:
@@ -133,13 +202,15 @@ kubectl delete cluster pg-cluster -n demo
 kubectl delete ns demo
 ```
 
-
 ## Summary
 
-In this guide:
-- The backup was executed at midnight UTC (2025-02-06 00:00:52), as defined in the `cronExpression` field of the `backup` configuration.
-- The backup files were successfully stored in the specified S3 repository. These include:
-  - The compressed backup data file ('pg-cluster-xtrabackup-20250206000001.xbstream.zst').
-  - The metadata file ('kubeblocks-backup.json') which contains information about the backup.
+This guide demonstrated:
+1. Configuration of automated PostgreSQL backups
+2. Schedule customization using cron syntax
+3. Retention policy management
+4. Backup verification procedures
 
-By following this guide, you can automate regular backups for your PostgreSQL clusters, ensuring data availability and recovery options.
+Your PostgreSQL cluster now has:
+- Regular automated backups
+- Configurable retention policies
+- Complete backup history tracking

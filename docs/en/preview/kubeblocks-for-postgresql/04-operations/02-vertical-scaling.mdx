@@ -11,22 +11,22 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
 
-# Vertical Scaling in a PostgreSQL Cluster
+# PostgreSQL Vertical Scaling
 
-This guide explains how to perform **vertical scaling** in a PostgreSQL cluster managed by KubeBlocks.
-Vertical scaling adjusts the resource limits and requests (such as CPU and memory) allocated to the cluster components, allowing for better performance or resource optimization.
+This guide demonstrates how to vertically scale a PostgreSQL cluster managed by KubeBlocks by adjusting compute resources (CPU and memory) while maintaining the same number of replicas.
 
-## What is Vertical Scaling?
-Vertical scaling involves increasing or decreasing the resources (e.g., CPU and memory) allocated to a running database cluster.
-Unlike horizontal scaling, which adjusts the number of replicas, vertical scaling focuses on scaling the capacity of individual Pods.
+## Vertical Scaling
 
-Resources that can be scaled include:
-- CPU cores: Processing power for the database.
-- Memory (RAM): Memory available for database operations.
+Vertical scaling modifies compute resources (CPU/memory) for PostgreSQL instances while maintaining replica count. Key characteristics:
 
-KubeBlocks ensures seamless vertical scaling by carefully orchestrating Pod restarts to minimize downtime. For example:
-- Secondary Pods are recreated first.
-- Primary Pods are updated last to maintain cluster availability.
+- **Non-disruptive**: When properly configured, maintains availability during scaling
+- **Granular**: Adjust CPU, memory, or both independently
+- **Reversible**: Scale up or down as needed
+
+KubeBlocks orchestrates scaling with minimal impact:
+1. Secondary replicas update first
+2. Primary updates last after secondaries are healthy
+3. Cluster status transitions from `Updating` to `Running`
 
 ## Prerequisites
 
@@ -198,11 +198,20 @@ If you are creating the cluster for the very first time, it may take some time t
   </TabItem>
 </Tabs>
 
-**Key Considerations**:
+## Best Practices & Considerations
 
-- Ensure sufficient cluster capacity exists
-- Resource changes may trigger pod restarts and parameters reconfiguration
-- Monitor resource utilization after changes
+**Planning:**
+- Scale during maintenance windows or low-traffic periods
+- Verify Kubernetes cluster has sufficient resources
+- Check for any ongoing operations before starting
+
+**Execution:**
+- Maintain balanced CPU:Memory ratios
+- Set identical requests/limits for guaranteed QoS
+
+**Post-Scaling:**
+- Monitor resource utilization and application performance
+- Consider adjusting PostgreSQL parameters if needed
 
 ## Verification
 Verify the updated resources by inspecting the cluster configuration or Pod details:

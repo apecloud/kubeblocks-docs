@@ -1,6 +1,6 @@
 ---
-title: PostgreSQL QuickStart
-description: Learn how to get started with KubeBlocks PostgreSQL Add-on, including prerequisites, enabling the PostgreSQL Add-on, creating a PostgreSQL cluster, and managing it effectively.
+title: PostgreSQL QuickStart Guide
+description: Comprehensive guide to deploying and managing PostgreSQL clusters with KubeBlocks, including installation, configuration, and operational best practices.
 keywords: [Kubernetes, PostgreSQL, KubeBlocks, Helm, Cluster Management, QuickStart]
 sidebar_position: 2
 sidebar_label: QuickStart
@@ -9,40 +9,43 @@ sidebar_label: QuickStart
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# PostgreSQL QuickStart
+# PostgreSQL QuickStart Guide
 
-This guide provides step-by-step instructions for getting started with the **KubeBlocks PostgreSQL Add-on**, covering prerequisites, add-on activation, PostgreSQL cluster creation, and cluster management.
+This guide provides a comprehensive walkabout for deploying and managing PostgreSQL clusters using the **KubeBlocks PostgreSQL Add-on**, covering:
+- System prerequisites and add-on installation
+- Cluster creation and configuration
+- Operational management including start/stop procedures
+- Connection methods and cluster monitoring
 
 ## Prerequisites
 
 ### System Requirements
 
-Before beginning this tutorial, ensure you have:
+Before proceeding, verify your environment meets these requirements:
 
-- A running Kubernetes cluster
-- `kubectl` command-line tool installed and configured in your PATH
-- `helm` installed and configured in your PATH ([installation instructions](https://helm.sh/docs/intro/install/))
-- KubeBlocks installed and running ([installation guide](../user_docs/installation/install-kubeblocks.md))
+- A functional Kubernetes cluster (v1.21+ recommended)
+- `kubectl` v1.21+ installed and configured with cluster access
+- Helm installed ([installation guide](https://helm.sh/docs/intro/install/))
+- KubeBlocks installed ([installation guide](../user_docs/installation/install-kubeblocks.md))
 
-### Enable PostgreSQL Add-on
+### Verify PostgreSQL Add-on
 
-Verify whether the PostgreSQL Add-on is installed. By default, the PostgreSQL Add-on is included with the KubeBlocks Helm chart installation.
+The PostgreSQL Add-on is included with KubeBlocks by default. Check its status:
 
 ```bash
-$ helm list -n kb-system | grep postgresql
+helm list -n kb-system | grep postgresql
 ```
 
 <details open>
-<summary>Sample Output:</summary>
+<summary>Expected Output:</summary>
 
 ```bash
-NAME                        	NAMESPACE  	REVISION	UPDATED                 	STATUS  	CHART
-...
-kb-addon-postgresql              	kb-system  	1       	2025-05-21              	deployed	postgresql-1.0.0
+NAME                    NAMESPACE   REVISION    UPDATED                     STATUS      CHART
+kb-addon-postgresql     kb-system   1           2025-05-21                  deployed    postgresql-1.0.0
 ```
 </details>
 
-If the PostgreSQL Add-on is not enabled, follow these steps to activate it:
+If the add-on isn't enabled, choose an installation method:
 
 <Tabs>
 
@@ -101,13 +104,13 @@ If the PostgreSQL Add-on is not enabled, follow these steps to activate it:
   </TabItem>
 </Tabs>
 
-:::warning
-Ensure Add-ons to be installed match the major version of your KubeBlocks installation.
+:::important Version Compatibility
+Always verify that the PostgreSQL Add-on version matches your KubeBlocks major version to avoid compatibility issues.
 :::
 
-### Check Supported PostgreSQL Versions
+### Verify Supported PostgreSQL Versions
 
-**To view all supported PostgreSQL versions:**
+**List available PostgreSQL versions:**
 
 ```bash
 $ kubectl get cmpv postgresql
@@ -120,7 +123,7 @@ postgresql   16.4.0,15.7.0,14.8.0,14.7.2,12.15.0,12.14.1,12.14.0   Available   3
 ```
 </details>
 
-**Check compatible versions for the same ComponentDefinition**
+**Check version compatibility for ComponentDefinitions**
 
 **Step 1.** Get the list of `ComponentDefinition` associated with a given `ComponentVersion`
 
@@ -154,22 +157,33 @@ This returns versions compatible with `ComponentDefinition` named `postgresql-14
 ```
 </details>
 
-### Verify Available StorageClasses
+### Storage Configuration
 
-List available StorageClasses in your environment and select one that meets your requirements, considering factors such as:
-- Reclaim policy
-- Volume expansion capability
-- Volume snapshot support
+PostgreSQL requires persistent storage. Verify available options:
 
 ```bash
 kubectl get storageclass
 ```
 
-## Create a PostgreSQL Cluster
+Recommended storage characteristics:
+- Minimum 20Gi capacity
+- ReadWriteOnce access mode
+- Supports volume expansion
+- Appropriate performance for workload
+
+## Deploy a PostgreSQL Cluster
+
+Deploy a basic PostgreSQL cluster with default settings:
 
 ```bash
-$ kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/postgresql/cluster.yaml
+kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/postgresql/cluster.yaml
 ```
+
+This creates:
+- A 2-replica PostgreSQL cluster
+- Default resource allocations (0.5 CPU, 0.5Gi memory)
+- 20Gi persistent storage
+- Automatic primary-replica configuration
 
 ```yaml
 apiVersion: apps.kubeblocks.io/v1
@@ -321,11 +335,17 @@ postgresql   16.4.0,15.7.0,14.8.0,14.7.2,12.15.0,12.14.1,12.14.0   Available   2
 
 ## Verify Cluster Status
 
-When creating a PostgreSQL cluster with `replica=2`, KubeBlocks automatically configures one primary and one secondary replica.
+When deploying a PostgreSQL cluster with 2 replicas, KubeBlocks automatically configures:
+- Primary replica (read/write operations)
+- Secondary replica (read-only operations)
 
-Cluster creation is successful when cluster `status.phase` changes to `Running` (both replicas should be running with expected roles).
+Confirm successful deployment by checking:
 
-Check cluster status:
+1. Cluster phase is `Running`
+2. All pods are operational
+3. Replicas have correct roles
+
+Check status using either method:
 
 <Tabs>
   <TabItem value='kubectl' label='kubectl' default>
@@ -379,62 +399,69 @@ Show cluster events: kbcli cluster list-events -n demo pg-cluster
   </TabItem>
 </Tabs>
 
-## Connect to PostgreSQL Cluster
+## Access the PostgreSQL Cluster
 
-KubeBlocks creates a Secret named `pg-cluster-postgresql-account-postgres` containing PostgreSQL postgres credentials.
+KubeBlocks automatically provisions:
+1. Credentials stored in Secret `pg-cluster-postgresql-account-postgres`
+2. ClusterIP Service `pg-cluster-postgresql-postgresql`
 
-Retrieve credentials:
-
+### Retrieve Credentials
 ```bash
-$ NAME=`kubectl get secret -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.username}' | base64 --decode`
-$ PASSWD=`kubectl get secret -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.password}' | base64 --decode`
+# Get username
+NAME=$(kubectl get secret -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.username}' | base64 --decode)
+
+# Get password
+PASSWD=$(kubectl get secret -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.password}' | base64 --decode)
 ```
 
-KubeBlocks creates a ClusterIP Service named `pg-cluster-postgresql` for cluster access:
-
-```bash
-$ kubectl get svc -l app.kubernetes.io/instance=pg-cluster -n demo
-NAME                               TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)             AGE
-pg-cluster-postgresql-postgresql   ClusterIP   10.96.213.162   <none>        5432/TCP,6432/TCP   6m36s
-```
+### Connection Methods
 
 <Tabs>
-  <TabItem value="kubectl exec" label="kubectl exec" default>
+  <TabItem value="Direct Pod Access" label="Direct Pod Access" default>
 
-  Access from within the Kubernetes cluster:
-
+  Connect directly to a pod:
   ```bash
-  $ kubectl exec -ti -n demo pg-cluster-postgresql-0 -- env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql -h pg-cluster-postgresql-postgresql
+  kubectl exec -ti -n demo pg-cluster-postgresql-0 -- \
+    env PGUSER=${NAME} PGPASSWORD=${PASSWD} \
+    psql -h pg-cluster-postgresql-postgresql
   ```
   </TabItem>
 
-  <TabItem value="kubectl port-forward" label="kubectl port-forward">
+  <TabItem value="Local Port Forwarding" label="Local Port Forwarding">
 
-  Forward PostgreSQL port to localhost:
-
+  1. Forward service port:
   ```bash
-  $ kubectl port-forward svc/pg-cluster-postgresql-postgresql 5432:5432 -n demo
-  Forwarding from 127.0.0.1:5432 -> 5432
-  Forwarding from [::1]:5432 -> 5432
+  kubectl port-forward svc/pg-cluster-postgresql-postgresql 5432:5432 -n demo
   ```
 
-  Connect locally:
-
+  2. Connect via localhost:
   ```bash
-  $ psql -h 127.0.0.1 -U${NAME} -W
+  psql -h 127.0.0.1 -U${NAME} -W
   ```
   </TabItem>
 </Tabs>
 
-:::tip
-`kubectl exec` and `kubectl port-forward` are for testing purposes only. In production, use proper Service configurations.
+:::note Production Considerations
+For production environments, avoid using `kubectl exec` and `port-forward`. Instead implement:
+- LoadBalancer or NodePort Services for external access
+- Network policies to restrict access
+- TLS encryption for secure connections
+- Connection pooling for better performance
 
-For external access, configure LoadBalancer or NodePort Services. Refer to [Accessing PostgreSQL Cluster](operations/create-loadbalancer/loadbalancer-via-operations-api) for production setup guidance.
+See [Production Access Guide](operations/create-loadbalancer/loadbalancer-via-operations-api) for implementation details.
 :::
 
-## Stop PostgreSQL Cluster
+## Stop the PostgreSQL Cluster
 
-Stopping the cluster releases all Pods while retaining PVCs, Secrets, ConfigMaps, and Services. This reduces operational costs.
+Stopping a cluster temporarily suspends operations while preserving all data and configuration:
+
+**Key Effects:**
+- Compute resources (Pods) are released
+- Persistent storage (PVCs) remains intact
+- Service definitions are maintained
+- Cluster configuration is preserved
+- Operational costs are reduced
+
 
 <Tabs>
   <TabItem value="OpsRequest" label="OpsRequest API" default>
@@ -473,7 +500,14 @@ Stopping the cluster releases all Pods while retaining PVCs, Secrets, ConfigMaps
   </TabItem>
 </Tabs>
 
-## Start Stopped PostgreSQL Cluster
+## Start the PostgreSQL Cluster
+
+Restarting a stopped cluster resumes operations with all data and configuration intact:
+
+**Key Effects:**
+- Compute resources (Pods) are recreated
+- Services become available again
+- Cluster returns to previous state
 
 <Tabs>
   <TabItem value="OpsRequest" label="OpsRequest API" default>
@@ -514,12 +548,23 @@ Stopping the cluster releases all Pods while retaining PVCs, Secrets, ConfigMaps
 
 ## Delete PostgreSQL Cluster
 
-:::note
-Deletion behavior depends on `terminationPolicy`:
-- `DoNotTerminate`: Preserves all cluster resources
-- `Delete`: Removes all resources including PVCs (persistent data)
-- `WipeOut`: Aggressively removes all resources including snapshots and backups
+:::important Termination Policies
+Choose carefully based on your data retention needs:
+
+| Policy          | Resources Removed | Data Removed | Recommended For |
+|-----------------|-------------------|--------------|-----------------|
+| DoNotTerminate  | None              | None         | Critical production clusters |
+| Delete          | All resources     | PVCs deleted | Non-critical environments |
+| WipeOut         | All resources     | Everything*  | Test environments only |
+
+*Includes snapshots and backups in external storage
 :::
+
+**Pre-Deletion Checklist:**
+1. Verify no applications are using the cluster
+2. Ensure required backups exist
+3. Confirm proper terminationPolicy is set
+4. Check for dependent resources
 
 For test environments, use this complete cleanup:
 

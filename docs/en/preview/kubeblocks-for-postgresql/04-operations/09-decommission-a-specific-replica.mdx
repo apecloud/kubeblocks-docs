@@ -11,9 +11,9 @@ import TabItem from '@theme/TabItem';
 
 
 
-# Decommission a Specific Pod in a KubeBlocks-Managed PostgreSQL Clusters
+# Decommission a Specific Pod in KubeBlocks-Managed PostgreSQL Clusters
 
-This guide explains how to decommission (take offline) a specific Pod in a PostgreSQL cluster managed by KubeBlocks. Decommissioning a Pod allows precise control over cluster resources without disrupting the cluster's overall functionality. This is particularly useful for workload rebalancing, node maintenance, or addressing specific failures.
+This guide explains how to decommission (take offline) specific Pods in PostgreSQL clusters managed by KubeBlocks. Decommissioning provides precise control over cluster resources while maintaining availability. Use this for workload rebalancing, node maintenance, or addressing failures.
 
 ## Why Decommission Pods with KubeBlocks?
 
@@ -94,13 +94,13 @@ If you are creating the cluster for the very first time, it may take some time t
 
 :::
 
-## Decommission a Specific Pod
+## Decommission a Pod
 
 **Expected Workflow**:
 
-1. Selected replica (specified in `onlineInstancesToOffline`) is removed
-2. Pod is terminated gracefully
-3. Cluster status changes from `Updating` to `Running`
+1. Replica specified in `onlineInstancesToOffline` is removed
+2. Pod terminates gracefully
+3. Cluster transitions from `Updating` to `Running`
 
 To decommission a specific Pod (e.g., 'pg-cluster-postgresql-1'), you can use one of the following methods:
 
@@ -203,8 +203,8 @@ pg-cluster-postgresql-0   4/4     Running   0          6m12s
 ```
 
 ## Summary
-In this guide, you learned:
-- The limitations of traditional StatefulSet-based scaling in Kubernetes.
-- How KubeBlocks enables precise decommissioning of specific Pods.
-- Two methods to decommission a Pod: using OpsRequest or directly updating the Cluster API.
-By leveraging KubeBlocks, you can manage PostgreSQL clusters with fine-grained control, ensuring high availability and flexibility for maintenance and workload distribution.
+Key takeaways:
+- Traditional StatefulSets lack precise Pod removal control
+- KubeBlocks enables targeted Pod decommissioning
+- Two implementation methods: OpsRequest or Cluster API
+This provides granular cluster management while maintaining availability.

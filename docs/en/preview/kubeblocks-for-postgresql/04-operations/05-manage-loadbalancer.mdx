@@ -11,9 +11,9 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
 
-# Manage PostgreSQL Service Using the Declarative Cluster API in KubeBlocks
+# Manage PostgreSQL Services Using the Declarative Cluster API in KubeBlocks
 
-This guide provides step-by-step instructions on how to expose a PostgreSQL service managed by KubeBlocks, either externally or internally. You will learn how to configure external access using a cloud provider's LoadBalancer service, manage internal services, and correctly disable external exposure when no longer needed.
+This guide provides step-by-step instructions for exposing PostgreSQL services managed by KubeBlocks, both externally and internally. You'll learn to configure external access using cloud provider LoadBalancer services, manage internal services, and properly disable external exposure when no longer needed.
 
 ## Prerequisites
 
@@ -31,7 +31,7 @@ namespace/demo created
 
 ## Deploy a PostgreSQL Replication Cluster
 
-KubeBlocks uses a declarative approach for managing PostgreSQL clusters. Below is an example configuration for deploying a PostgreSQL cluster with 2 replicas (1 primary, 1 replicas).
+KubeBlocks uses a declarative approach to manage PostgreSQL clusters. Below is an example configuration for deploying a PostgreSQL cluster with 2 replicas (1 primary, 1 secondary).
 
 Apply the following YAML configuration to deploy the cluster:
 
@@ -75,7 +75,7 @@ Monitor the cluster status until it transitions to the Running state:
 $ kubectl get cluster pg-cluster -n demo -w
 ```
 
-Example Output::
+Example Output:
 
 ```bash
 NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
@@ -109,15 +109,15 @@ There are two ports here 5432 and 6432, where 5432 is for postgresql and 6432 fo
 
 ## Expose PostgreSQL Service
 
-External services addresses allow public internet access to the PostgreSQL service, while internal services addresses restrict access to the user’s VPC.
+External service addresses enable public internet access to PostgreSQL, while internal service addresses restrict access to the user's VPC.
 
 ### Service Types Comparison
 
-| Type | 	Use Case	| Cloud Cost |	Security |
-|----|---|----|---|
-| ClusterIP |	Internal service communication |	Free |	Highest|
-| NodePort |	Development/testing	| Low |	Moderate |
-| LoadBalancer	| Production external access |	High	| Managed via SG |
+| Type | Use Case | Cloud Cost | Security |
+|------|----------|------------|----------|
+| ClusterIP | Internal service communication | Free | Highest |
+| NodePort | Development/testing | Low | Moderate |
+| LoadBalancer | Production external access | High | Managed via security groups |
 
 
 <Tabs>
@@ -224,7 +224,7 @@ External services addresses allow public internet access to the PostgreSQL servi
                 requests:
                   storage: 20Gi
   ```
-  In the above YAML configuration, a new external service is added under the services section. The service is of type `LoadBalancer` and is configured with annotations for AWS Network Load Balancer (NLB).
+  The YAML configuration above adds a new external service under the services section. This LoadBalancer service includes annotations for AWS Network Load Balancer (NLB).
 
   :::note
   Cloud Provider Annotations
@@ -256,8 +256,7 @@ External services addresses allow public internet access to the PostgreSQL servi
 
 
   :::note
-  The annotation `service.beta.kubernetes.io/aws-load-balancer-internal` determines whether the LoadBalancer is internal or internet-facing.
-  However, this annotation cannot be dynamically modified after the Service is created.
+  The `service.beta.kubernetes.io/aws-load-balancer-internal` annotation controls whether the LoadBalancer is internal or internet-facing. Note that this annotation cannot be modified dynamically after service creation.
   ```yaml
     service.beta.kubernetes.io/aws-load-balancer-internal: "false"  # Use "true" for internal VPC IPs
   ```
@@ -394,11 +393,11 @@ Ensure that the 'pg-cluster-postgresql-internet' Service is removed:
 $ kubectl get service -n demo
 ```
 
-Expected Result: The 'pg-cluster-postgresql-internet' Service should have be removed.
+Expected Result: The 'pg-cluster-postgresql-internet' Service should be removed.
 
 ## Expose PgBouncer Service
 
-PostgreSQL adopts a multi-process architecture, which creates a separate backend process for each user connection. When there are too many user connections, it occupies a large amount of memory, which reduces the throughput and stability of the database. To solve these problems, KubeBlocks introduces a connection pool, PgBouncer, for PostgreSQL database clusters.
+PostgreSQL uses a multi-process architecture that creates a separate backend process for each connection. Excessive connections consume significant memory, reducing database throughput and stability. KubeBlocks addresses this with PgBouncer, a connection pool for PostgreSQL clusters.
 
 
 To expose PgBouncer Service, just update ports information with that of pgbouncer as following:

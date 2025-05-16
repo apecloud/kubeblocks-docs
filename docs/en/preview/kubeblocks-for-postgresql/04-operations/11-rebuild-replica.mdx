@@ -1,17 +1,35 @@
 ---
 title: Recovering PostgreSQL Replica in KubeBlocks
-description: How to recover a PostgreSQL replica in a replication cluster managed by KubeBlocks using in-place and non-in-place repair methods.
-keywords: [KubeBlocks, PostgreSQL, Replica Recovery, In-Place Repair, Non-In-Place Repair]
+description: How to rebuild a PostgreSQL replica in a replication cluster managed by KubeBlocks using in-place and non-in-place methods.
+keywords: [KubeBlocks, PostgreSQL, Replica Rebuild, In-Place, Non-In-Place]
 sidebar_position: 11
 sidebar_label: Recovering PostgreSQL Replica
 ---
 
-# Recovering PostgreSQL Replica in KubeBlocks
+# Rebuilding PostgreSQL Replicas in KubeBlocks
 
-This guide demonstrates how to perform the following tasks in a PostgreSQL replication cluster managed by KubeBlocks:
-- Write a record to the primary instance and verify replication on the replica.
-- Rebuild the replica using both 'in-place' repair and 'non-in-place' repair methods.
-- Verify data recovery on the replica.
+This guide demonstrates how to:
+- Rebuild replicas using both in-place and non-in-place methods
+
+**What is Replica Rebuilding**
+
+Replica rebuilding is the process of recreating a PostgreSQL replica from scratch while maintaining:
+- **Data Consistency**: Ensures the replica has an exact copy of primary data
+- **High Availability**: Minimizes downtime during the rebuild process
+
+During this progress:
+1. The problematic replica is identified and isolated
+2. A new base backup is taken from the primary
+3. WAL (Write-Ahead Log) segments are streamed to catch up
+4. The replica rejoins the replication cluster
+
+**When to Rebuild a PostgreSQL Instance**
+
+Rebuilding becomes necessary in these common scenarios:
+- Replica falls too far behind primary (irrecoverable lag), or Replication slot corruption
+- WAL file gaps that can't be automatically resolved
+- Data Corruption: with storage-level corruption (disk/volume issues), inconsistent data between primary and replica, etc
+- Infrastructure Issues: Node failure, storage device failure or cross Zone/region migration
 
 ## Prerequisites
 
@@ -26,7 +44,6 @@ Before proceeding, ensure the following:
 $ kubectl create ns demo
 namespace/demo created
 ```
-
 
 ## Deploy a PostgreSQL Cluster
 
@@ -143,7 +160,7 @@ postgrel> SELECT * FROM test.t1;
 
 Expected Output:
 ```bash
-id |   name
+ id |   name
 ----+----------
   1 | John Doe
 (1 row)
@@ -151,14 +168,14 @@ id |   name
 
 ## Rebuild the Replica
 
-KubeBlocks provides two approaches for rebuilding a replica: in-place repair and non-in-place repair.
+KubeBlocks provides two approaches for rebuilding replicas: in-place and non-in-place.
 
-### In-Place Repair
+### In-Place Rebuild
 
-**Expected Workflow**:
-1. The old Pod (e.g. 'pg-cluster-postgresql-0') is terminated and created
-2. PVC
-2. The new Pod has all data as the primary node.
+**Workflow**:
+1. Original Pod (e.g. 'pg-cluster-postgresql-0') is terminated
+2. New Pod is created with same name, New PVC is provisioned.
+3. Data is synchronized from primary
 
 Rebuild the replica in-place using the following configuration:
 ```yaml
@@ -208,7 +225,7 @@ pod/pg-cluster-postgresql-1   4/4     Running   0          14m
 
 NAME                                                 STATUS   VOLUME    CAPACITY   ACCESS MODES  STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
 persistentvolumeclaim/data-pg-cluster-postgresql-0   Bound    pvc-xxx   20Gi       RWO            <SC>          <unset>                 5m6s
-persistentvolumeclaim/data-pg-cluster-postgresql-3   Bound    pvc-yyy   20Gi       RWO            <SC>          <unset>                 14m
+persistentvolumeclaim/data-pg-cluster-postgresql-1   Bound    pvc-yyy   20Gi       RWO            <SC>          <unset>                 14m
 ```
 
 Connect to the replica and check if the data has been restored:
@@ -226,12 +243,12 @@ postgrel> select * from t1;
 (1 row)
 ```
 
-### Non-In-Place Repair
+### Non-In-Place Rebuild
 
-**Expected Workflow**:
-1. A new Pod (e.g. 'pg-cluster-postgresql-2') is created first
-2. The old Pod (e.g. 'pg-cluster-postgresql-0') is terminated when the new replica is running.
-3. The new Pod has all data as the primary node.
+**Workflow**:
+1. New Pod (e.g. 'pg-cluster-postgresql-2') is created
+2. Data is synchronized from primary
+3. Original Pod is terminated after new replica is ready
 
 Rebuild the replica by creating a new instance:
 
@@ -307,7 +324,13 @@ postgrel> select * from t1;
 (1 row)
 ```
 
+## Choosing Between Rebuild Methods
+
+- When you want to maintain the same Pod name and PVC name, use In-Place Rebuild
+- When you want to gain more reliability (problematic replica won't be terminated until new replica is online) , use Non-In-Place Rebuild
+
 ## Summary
-- In-Place Repair: Successfully rebuilt the replica and restored the deleted data.
-- Non-In-Place Repair: Created a new replica instance and successfully restored the data.
+Key takeaways:
+- In-Place Rebuild: Successfully rebuilt the replica and restored the deleted data.
+- Non-In-Place Rebuild: Created a new replica instance and successfully restored the data.
 Both methods effectively recover the replica and ensure data consistency.

@@ -1,33 +1,26 @@
 ---
-title: Planned Switchover in a PostgreSQL Cluster
-description: Learn how to perform a planned switchover in a PostgreSQL cluster using KubeBlocks to ensure minimal downtime and seamless role transitions.
-keywords: [KubeBlocks, PostgreSQL, Switchover, High Availability, Kubernetes]
+title: PostgreSQL Cluster Switchover
+description: Perform planned role transitions in PostgreSQL clusters with KubeBlocks for minimal downtime and controlled maintenance
+keywords: [PostgreSQL, KubeBlocks, Switchover, High Availability, Role Transition, Kubernetes]
 sidebar_position: 8
-sidebar_label: Planned Switchover in PostgreSQL
+sidebar_label: PostgreSQL Switchover
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# Planned Switchover in a PostgreSQL Cluster
+# PostgreSQL Cluster Switchover
 
-A **switchover** is a planned operation where the primary instance in a PostgreSQL cluster proactively transfers its role to a secondary instance. Unlike an unplanned failover, which occurs during unexpected failures, a switchover ensures a controlled and predictable role transition with minimal service disruption.
+A **switchover** is a planned operation that transfers the primary role from one PostgreSQL instance to another. Unlike failover which occurs during failures, switchover provides:
+- Controlled role transitions
+- Minimal downtime (typically a few hundred milliseconds).
+- Predictable maintenance windows
 
-## **Benefits of Switchover**
-1. **Minimal Downtime**: The primary instance actively transfers its role to the secondary instance, resulting in very short service downtime (typically a few hundred milliseconds).
-2. **Controlled Transition**: Ensures a seamless and predictable role change compared to failover, which involves detecting and recovering from a failure, often causing longer delays (several seconds or more).
-3. **Maintenance-Friendly**: Ideal for planned maintenance tasks, such as node upgrades or decommissioning, while ensuring uninterrupted service.
-
-## **Switchover vs. Failover**
-
-| **Aspect**                  | **Switchover**                            | **Failover**                         |
-|-----------------------------|-------------------------------------------|---------------------------------------|
-| **Initiation**              | Planned and manually triggered            | Unplanned and automatically triggered|
-| **Downtime**                | Few hundred milliseconds                  | Several seconds or more               |
-| **Primary Role Transition** | Proactively transferred                   | Reactively promoted                   |
-| **Use Case**                | Planned maintenance (e.g., upgrades)      | Handling unexpected failures          |
-
-Using a switchover ensures smooth transitions and minimal service disruption, making it the preferred choice for planned maintenance activities.
+SwitchOver are ideal for:
+- Node maintenance/upgrades
+- Workload rebalancing
+- Testing high availability
+- Planned infrastructure changes
 
 
 ## Prerequisites
@@ -46,7 +39,7 @@ namespace/demo created
 
 ## Deploy a PostgreSQL Replication Cluster
 
-KubeBlocks uses a declarative approach for managing PostgreSQL clusters. Below is an example configuration for deploying a PostgreSQL cluster with 2 replicas (1 primary, 1 replicas).
+KubeBlocks manages PostgreSQL clusters declaratively. This example deploys a 2-node cluster (1 primary, 1 secondary):
 
 Apply the following YAML configuration to deploy the cluster:
 
@@ -90,7 +83,7 @@ Monitor the cluster status until it transitions to the Running state:
 $ kubectl get cluster pg-cluster -n demo -w
 ```
 
-Example Output::
+Example Output:
 
 ```bash
 NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
@@ -126,7 +119,7 @@ To initiate a planned switchover, create an OpsRequest resource as shown below:
 
 <Tabs>
   <TabItem value="Automatic Switchover" label="Automatic Switchover" default>
-  ### Option 1: **Automatic Switchover** (No preferred candidate)
+  Option 1: Automatic Switchover (No preferred candidate)
 
   ```yaml
   apiVersion: operations.kubeblocks.io/v1alpha1
@@ -146,7 +139,7 @@ To initiate a planned switchover, create an OpsRequest resource as shown below:
 
   </TabItem>
   <TabItem value="Targeted Switchover" label="Targeted Switchover" >
-  ### Option 2:  **Targeted Switchover** (Specific instance)
+  Option 2: Targeted Switchover (Specific candidate)
 
   ```yaml
   apiVersion: operations.kubeblocks.io/v1alpha1
@@ -176,7 +169,7 @@ To initiate a planned switchover, create an OpsRequest resource as shown below:
 
 ## Monitoring the Switchover
 
-You can check the progress of the scaling operation with following command:
+Monitor the switchover progress:
 
 ```bash
 kubectl get ops pg-switchover-ops -n demo -w
@@ -195,7 +188,7 @@ After the switchover is executed, the specified instance ('example-semisync-post
 $ kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster -L kubeblocks.io/role
 ```
 
-Example Outputs:
+Example Output:
 
 ```text
 NAME                      READY   STATUS    RESTARTS   AGE     ROLE
@@ -209,21 +202,36 @@ In this example:
 
 ## Troubleshooting
 
-**Switchover Stuck**
+### Common Switchover Issues
+
+If the switchover operation gets stuck, check these resources:
 ```bash
-kubectl logs -n demo <pod-name> -c kbagent  # check kbagent log on primary replica
-kubectl get events -n demo --field-selector involvedObject.name=<cluster-name> # check events
+# Check agent logs on both current primary and candidate
+kubectl logs -n demo <primary-pod> -c kbagent
+kubectl logs -n demo <candidate-pod> -c kbagent
+
+# Check cluster events for errors
+kubectl get events -n demo --field-selector involvedObject.name=pg-cluster
+
+# Check kubeblocks logs
+kubectl -n kb-system logs deploy/kubeblocks
 ```
 
 ## Summary
-Key Benefits of Planned Switchover:
-1. Minimal Downtime: The operation completes within a few hundred milliseconds, ensuring service continuity.
-2. Controlled Transition: Switchover ensures a predictable and seamless role change, unlike failovers, which are reactive and take longer.
-3. Ideal for Maintenance: Enables tasks like upgrades, node decommissioning, or rebalancing without impacting application availability.
 
-In this guide, you learned how to:
-- Deploy a PostgreSQL cluster managed by KubeBlocks.
-- Perform a planned switchover to transfer the primary role from one instance to another.
-- Verify the success of the switchover operation and the updated roles of the Pods.
-Planned switchover is a critical operation for maintaining high availability during maintenance tasks, ensuring minimal service disruption and predictable transitions in highly available systems.
+This guide demonstrated how to:
+1. Deploy a PostgreSQL HA cluster
+2. Perform both automatic and targeted SwitchOver
+3. Verify role transitions
+
+Key takeaways:
+- SwitchOver enable controlled maintenance with minimal downtime (~100-500ms)
+- KubeBlocks provides declarative operations for reliable role transitions
+- Always verify:
+  - Cluster status immediately after switchover
+  - Application connectivity
+  - Replication health
+- Check logs for troubleshooting:
+  - KubeBlocks operator (kb-system namespace)
+  - kbagent on database pods
 

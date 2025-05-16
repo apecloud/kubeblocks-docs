@@ -67,14 +67,14 @@ spec:
                 storage: 20Gi
 ```
 
-## Verifying the Deployment
+## Verify Cluster Deployment
 
-Monitor the cluster status until it transitions to the Running state:
+Monitor the cluster status until it transitions to Running:
 ```bash
 $ kubectl get cluster pg-cluster -n demo -w
 ```
 
-Example Output::
+Example Output:
 
 ```bash
 NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
@@ -88,26 +88,13 @@ If you are creating the cluster for the very first time, it may take some time t
 
 :::
 
-## Verifying the Deployment
-
-Monitor the cluster status until it transitions to the Running state:
-```bash
-$ kubectl get cluster pg-cluster -n demo -w
-```
-Expected Output:
-```bash
-NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
-pg-cluster   postgresql                Delete               Creating   8s
-pg-cluster   postgresql                Delete               Running    87s
-```
-Once the cluster status becomes Running, your PostgreSQL cluster is ready for use.
 
 ## Scale-out (Add Replicas)
 
 **Expected Workflow**:
 
 1. New pod is provisioned with `Pending` status
-2. Data is cloned from primary to new replica
+2. Data synced from primary to new replica
 3. New pod transitions to `Running` with `secondary` role
 4. Cluster status changes from `Updating` to `Running`
 
@@ -235,8 +222,9 @@ pg-cluster-postgresql-2   4/4     Running   0          5m54s   secondary
 **Expected Workflow**:
 
 1. Selected replica (the one with the largest ordinal) is removed
-2. Pod is terminated gracefully
-3. Cluster status changes from `Updating` to `Running`
+2. If removing a primary replica, automatic switchover occurs first
+3. Pod is terminated gracefully
+4. Cluster status changes from `Updating` to `Running`
 
 :::note
 If the replica being scaled-in happens to be a primary replica, KubeBlocks will trigger a SwitchOver actions. And this pod will not be terminated until this SwitchOver action succeeds.
@@ -342,8 +330,16 @@ NAME                      READY   STATUS    RESTARTS   AGE
 pg-cluster-postgresql-0   4/4     Running   0          16m
 ```
 
+## Best Practices
+
+When performing horizontal scaling:
+- Scale during low-traffic periods when possible
+- Monitor cluster health during scaling operations
+- Verify sufficient resources exist before scaling out
+- Consider storage requirements for new replicas
+
 ## Summary
-In this guide, you learned how to:
+In this guide you learned how to:
 - Perform scale-out operations to add replicas to a PostgreSQL cluster.
 - Perform scale-in operations to remove replicas from a PostgreSQL cluster.
 - Use both OpsRequest and direct Cluster API updates for horizontal scaling.

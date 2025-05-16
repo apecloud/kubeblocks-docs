@@ -10,10 +10,11 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
 
-# Create a Full Backup for a PostgreSQL Cluster on KubeBlocks
+# Create a Full Backup for PostgreSQL on KubeBlocks
 
-This guide demonstrates how to create and validate full backups for a PostgreSQL cluster deployed on KubeBlocks using `pg-basebackup` through both Backup API and Ops API.
-The Ops API is essentially a wrapper around the Backup API, offering enhanced control and progress monitoring capabilities for backup operations.
+This guide demonstrates how to create and validate full backups for PostgreSQL clusters on KubeBlocks using the `pg-basebackup` method through both:
+- The Backup API (direct backup operations)
+- The Ops API (managed backup operations with enhanced monitoring)
 
 We will cover how to restore data from a backup in the [Restore From Full Backup](restoring-from-full-backup.md) guide.
 
@@ -33,7 +34,7 @@ namespace/demo created
 
 ## Deploy a PostgreSQL Cluster
 
-Deploy a 2-node semi-sync PostgreSQL cluster (1 primary, 1 secondary):
+Deploy a 2-node replication PostgreSQL cluster (1 primary, 1 secondary):
 
 ```yaml
 apiVersion: apps.kubeblocks.io/v1
@@ -69,9 +70,9 @@ spec:
                 storage: 20Gi
 ```
 
-## Verifying the Deployment
+## Verify Cluster Deployment
 
-Monitor the cluster status until it transitions to the Running state:
+Monitor the cluster status until it shows "Running":
 ```bash
 $ kubectl get cluster pg-cluster -n demo -w
 ```
@@ -90,19 +91,21 @@ If you are creating the cluster for the very first time, it may take some time t
 
 :::
 
-## Prerequisites for Backup
+## Backup Prerequisites
 
-1. Backup Repository Configured:
-   - Configured `BackupRepo`
-   - Network connectivity between cluster and repo, `BackupRepo` status is `Ready`
+Before creating backups, ensure:
+1. Backup repository is configured:
+   - `BackupRepo` resource exists
+   - Network connectivity between cluster and repository
+   - `BackupRepo` status shows "Ready"
 
-2. Cluster is Running:
-   - Cluster must be in `Running` state
-   - No ongoing operations (scaling, upgrades etc.)
+2. Cluster is ready:
+   - Cluster status is "Running"
+   - No ongoing operations (scaling, upgrades, etc.)
 
-## Identify Backup Policies
+## Identify Backup Configuration
 
-List available backup policies and schedules for the cluster:
+Check available backup policies and schedules:
 
 ```bash
 # List backup policies
@@ -126,16 +129,18 @@ View supported backup methods in the BackupPolicy CR 'pg-cluster-postgresql-back
 ```bash
 $ kubectl get backuppolicy pg-cluster-postgresql-backup-policy -n demo -oyaml | yq '.spec.backupMethods[].name'
 ```
-KubeBlocks supports multiple backup methods for PostgreSQL cluster, such as `pg-basebackup`, `volume-snapshot`, `wal-g`, etc. The following sections demonstrate how to perform a full backup using the 'pg-basebackup' method.
+KubeBlocks supports multiple PostgreSQL backup methods including:
+- `pg-basebackup` (shown in this guide)
+- `wal-g`
 
 
-## Perform a Backup via Backup API
+## Backup via Backup API
 
-### 1. On-Demand Full Backup
+### 1. Create On-Demand Backup
 
-The method `pg-basebackup` uses `pg_basebackup`,  a PostgreSQL utility to create a base backup.
+The `pg-basebackup` method uses PostgreSQL's native `pg_basebackup` utility.
 
-To create a base backup for the cluster, you can apply the following yaml file:
+Apply this manifest to create a backup:
 
 ```yaml
 apiVersion: dataprotection.kubeblocks.io/v1alpha1
@@ -158,9 +163,9 @@ spec:
   deletionPolicy: Delete
 ```
 
-### 2. Monitor Backup Progress
+### 2. Monitor Backup and Verify Completion
 
-Check the backup status until it shows 'Completed':
+Track progress until status shows "Completed":
 
 ```bash
 $ kubectl get backup pg-cluster-pg-basebackup  -n demo -w
@@ -173,21 +178,24 @@ NAME                       POLICY                                METHOD         
 pg-cluster-pg-basebackup   pg-cluster-postgresql-backup-policy   pg-basebackup   <BACKUP_REPO>   Completed   4722262      10s        Delete            2025-05-16T02:53:45Z   2025-05-16T02:53:55Z
 ```
 
-### 3. Verify Completion
+### 3. Validate Backup
 
-- Check status is `Completed`
-- Verify backup size matches expectations
-- Validate backup metadata
-- Verify the backup files in the configured BackupRepo.
+Confirm successful completion by checking:
+- Backup status shows "Completed"
+- Backup size matches expectations
+- Check files in the BackupRepo
 
-Information, such as `path`, `timeRange` about the backup will be recorded into the `Backup` resource.
+The `Backup` resource records details including:
+- Storage path
+- Time range
+- Backup file size
 
 
-## Perform a Backup via Ops API
+## Backup via Ops API
 
-### 1. On-Demand Full Backup
+### 1. Create On-Demand Backup
 
-Execute a full backup using the 'pg-basebackup' method defined in the backup policy:
+Execute a backup using the Ops API with the 'pg-basebackup' method:
 
 ```yaml
 apiVersion: operations.kubeblocks.io/v1alpha1
@@ -208,9 +216,9 @@ spec:
 
 ### 2. Monitor Backup Progress
 
-#### Step 1: Verify Backup Operation Status
+#### 1. Monitor Operation Status
 
-Execute the following command to monitor the backup operation status in real-time:
+Track backup progress in real-time:
 ```bash
 $ kubectl get ops pg-cluster-backup  -n demo -w
 ```
@@ -223,9 +231,9 @@ pg-cluster-backup   Backup   pg-cluster   Succeed   -/-        35s
 
 - A STATUS of 'Succeed' indicates the backup operation completed successfully.
 
-#### Step 2: Confirm Backup Completion
+#### 2. Verify Completion
 
-Check the final backup status with:
+Check the final backup status:
 
 ```bash
 $ kubectl get backup -n demo -l operations.kubeblocks.io/ops-name=pg-cluster-backup
@@ -238,18 +246,25 @@ backup-demo-pg-cluster-20250516025810   pg-cluster-postgresql-backup-policy   pg
 ```
 - The backup status should show 'Completed'.
 
-### 3. Verify Completion
+### 3. Validate Backup
 
-- Check status is `Completed`
-- Verify backup size matches expectations
-- Validate backup metadata
-- Verify the backup files in the configured BackupRepo.
+Confirm successful completion by checking:
+- Backup status shows "Completed"
+- Backup size matches expectations
+- Files in the BackupRepo
 
-Information, such as `path`, `timeRange` about the backup will be recorded into the `Backup` resource.
+The `Backup` resource records details including:
+- Storage path
+- Time range
+- Other metadata
 
 ## Summary
-This guide demonstrated how to:
-- Deploy a semi-synchronous PostgreSQL cluster on KubeBlocks.
-- Create a full backup using the 'pg-basebackup' method.
-- Monitor and validate backup artifacts.
-By following this guide, you can ensure your PostgreSQL cluster data is securely backed up and easily restorable.
+
+This guide covered:
+1. Deploying a replication PostgreSQL cluster
+2. Creating full backups using:
+   - Direct Backup API
+   - Managed Ops API
+3. Monitoring and validating backups
+
+Your PostgreSQL data is now securely backed up and ready for restoration when needed.

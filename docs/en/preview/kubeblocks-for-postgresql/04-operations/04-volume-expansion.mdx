@@ -13,7 +13,20 @@ import TabItem from '@theme/TabItem';
 
 # Expanding Volume in a PostgreSQL Cluster
 
-This guide explains how to expand the Persistent Volume Claims (PVCs) in a PostgreSQL cluster managed by **KubeBlocks**. Volume expansion allows you to increase storage capacity dynamically, ensuring your database can scale seamlessly as data grows. If supported by the underlying storage class, this operation can be performed without downtime.
+This guide explains how to expand Persistent Volume Claims (PVCs) in a PostgreSQL cluster managed by **KubeBlocks**. Volume expansion enables dynamic storage capacity increases, allowing your database to scale seamlessly as data grows. When supported by the underlying storage class, this operation can be performed without downtime.
+
+Volume expansion allows you to increase the size of a Persistent Volume Claim (PVC) after it has been created. This feature was introduced in Kubernetes v1.11 and became generally available (GA) in Kubernetes v1.24.
+
+Key considerations:
+- Supported Storage Class: The storage class used for the PVC must support volume expansion.
+- No Downtime: In most cases, volume expansion can be performed without downtime.
+- Incremental Expansion: The new size must be larger than the current size.
+
+:::note
+1. Ensure the storage class supports volume expansion (check ALLOWVOLUMEEXPANSION).
+2. The new size must be larger than the current size.
+3. Volume expansion may require additional configurations depending on the storage provider.
+:::
 
 ## Prerequisites
 
@@ -29,9 +42,26 @@ $ kubectl create ns demo
 namespace/demo created
 ```
 
-## Deploy a PostgreSQL Replication Cluster
+### Check the Storage Class for Volume Expansion Support
 
-KubeBlocks uses a declarative approach for managing PostgreSQL clusters. Below is an example configuration for deploying a PostgreSQL cluster with 2 replicas (1 primary, 1 replicas).
+List all available storage classes and verify if volume expansion is supported by checking the `ALLOWVOLUMEEXPANSION` field:
+```bash
+kubectl get storageclass
+```
+
+Example Outputs:
+```bash
+NAME                PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+gp2                 kubernetes.io/aws-ebs   Delete          WaitForFirstConsumer   false                  4d10h
+kb-default-sc       ebs.csi.aws.com         Delete          WaitForFirstConsumer   true                   3d7h
+sc-s3-repo-2qsxfh   ru.yandex.s3.csi        Retain          Immediate              false                  3d7h
+```
+Ensure the storage class you are using has `ALLOWVOLUMEEXPANSION` set to true. If it is false, the storage class does not support volume expansion.
+
+
+## Deploy a PostgreSQL Replication Cluster with StorageClass specified
+
+KubeBlocks uses a declarative approach to manage PostgreSQL clusters. Below is an example configuration for deploying a PostgreSQL cluster with 2 replicas (1 primary, 1 secondary).
 
 Apply the following YAML configuration to deploy the cluster:
 
@@ -62,12 +92,17 @@ spec:
       volumeClaimTemplates:
         - name: data
           spec:
+            storageClassName: <STORAGE_CLASS_NAME> # specify storage class name
             accessModes:
               - ReadWriteOnce
             resources:
               requests:
                 storage: 20Gi
 ```
+**Explanation of Key Fields**
+- `storageClassName`: specify StorageClass name that supports volume expansion. If not set, the StorageClass annotated `default` will be used.
+
+
 
 ## Verifying the Deployment
 Monitor the cluster status until it transitions to the Running state:
@@ -75,7 +110,7 @@ Monitor the cluster status until it transitions to the Running state:
 $ kubectl get cluster pg-cluster -n demo -w
 ```
 
-Example Output::
+Example Output:
 
 ```bash
 NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
@@ -89,37 +124,7 @@ If you are creating the cluster for the very first time, it may take some time t
 
 :::
 
-
 ## Expand volume
-
-Volume expansion allows you to increase the size of a Persistent Volume Claim (PVC) after it has been created. This feature was introduced in Kubernetes v1.11 and became generally available (GA) in Kubernetes v1.24.
-
-Key points to remember:
-- Supported Storage Class: The storage class used for the PVC must support volume expansion.
-- No Downtime: In most cases, volume expansion can be performed without downtime.
-- Incremental Expansion: The new size must be larger than the current size.
-
-:::note
-1. Ensure the storage class supports volume expansion (check ALLOWVOLUMEEXPANSION).
-2. The new size must be larger than the current size.
-3. Volume expansion may require additional configurations depending on the storage provider.
-:::
-
-### Check the Storage Class for Volume Expansion Support
-
-List all available storage classes and verify if volume expansion is supported by checking the `ALLOWVOLUMEEXPANSION` field:
-```bash
-kubectl get storageclass
-```
-
-Example Outputs:
-```bash
-NAME                PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-gp2                 kubernetes.io/aws-ebs   Delete          WaitForFirstConsumer   false                  4d10h
-kb-default-sc       ebs.csi.aws.com         Delete          WaitForFirstConsumer   true                   3d7h
-sc-s3-repo-2qsxfh   ru.yandex.s3.csi        Retain          Immediate              false                  3d7h
-```
-Ensure the storage class you are using has `ALLOWVOLUMEEXPANSION` set to true. If it is false, the storage class does not support volume expansion.
 
 You can expand the volume in one of two ways:
 <Tabs>
@@ -146,25 +151,23 @@ You can expand the volume in one of two ways:
         storage: 30Gi
   ```
 
-You can check the progress of the scaling operation with following command:
+  Monitor the expansion progress with:
 
-```bash
-kubectl describe ops pg-cluster-expand-volume-ops -n demo
-```
+  ```bash
+  kubectl describe ops pg-cluster-expand-volume-ops -n demo
+  ```
 
-Expected Result:
-```bash
-Status:
-  Phase:            Succeed
-  Progress:         1/1
-  ...
-```
-Once completed, the PVC size will be updated.
+  Expected Result:
+  ```bash
+  Status:
+    Phase:            Succeed
+  ```
+  Once completed, the PVC size will be updated.
 
-:::note
-If the storage class you use does not support volume expansion, this OpsRequest fails fast with information like:
-`storageClass: [STORAGE_CLASS_NAME] of volumeClaimTemplate: [VOLUME_NAME]] not support volume expansion in component [COMPONENT_NAME]`
-:::
+  :::note
+  If the storage class you use does not support volume expansion, this OpsRequest fails fast with information like:
+  `storageClass: [STORAGE_CLASS_NAME] of volumeClaimTemplate: [VOLUME_NAME]] not support volume expansion in component [COMPONENT_NAME]`
+  :::
 
   </TabItem>
 
@@ -214,7 +217,7 @@ If the storage class you use does not support volume expansion, this OpsRequest 
 
 ## Verification
 
-Use the following command to inspect the updated cluster configuration:
+Verify the updated cluster configuration:
 ```bash
 $ kbcli cluster describe pg-cluster -n demo
 ```
@@ -226,7 +229,7 @@ postgresql                           500m / 500m          512Mi / 512Mi      dat
 ```
 The volume size for the data PVC has been updated to the specified value (e.g., 30Gi in this case).
 
-Check the status of the PVCs in the cluster to confirm that the resize operation has completed:
+Confirm PVC resizing completion:
 ```bash
 kubectl get pvc -l app.kubernetes.io/instance=pg-cluster -n demo
 ```
@@ -238,7 +241,8 @@ pg-cluster-postgresql-data-1             Bound    pvc-xxxxxxxx-xxxx-xxxx-xxxx-xx
 ```
 
 ## Summary
-In this guide, you learned how to:
+
+In this guide you learned how to:
 1. Verify storage class compatibility for volume expansion.
 2. Perform volume expansion using either:
    - OpsRequest for dynamic updates.

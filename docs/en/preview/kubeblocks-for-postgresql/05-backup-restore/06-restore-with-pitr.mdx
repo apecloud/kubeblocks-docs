@@ -11,7 +11,15 @@ import TabItem from '@theme/TabItem';
 
 # Restore a PostgreSQL Cluster from Backup with Point-In-Time-Recovery(PITR) on KubeBlocks
 
-This guide provides a step-by-step walk-through for restoring a PostgreSQL cluster from an existing full backup in KubeBlocks, along with continuous WAL  backups for Point-In-Time Recovery (PITR).
+This guide demonstrates how to perform Point-In-Time Recovery (PITR) for PostgreSQL clusters in KubeBlocks using:
+
+1. A full base backup
+2. Continuous WAL (Write-Ahead Log) backups
+3. Two restoration methods:
+   - Cluster Annotation (declarative approach)
+   - Ops API (operational control)
+
+PITR enables recovery to any moment within the timeRange the backup for.
 
 ## Prerequisites
 Before proceeding, ensure the following:
@@ -26,64 +34,71 @@ $ kubectl create ns demo
 namespace/demo created
 ```
 
-## Identify Full and Continuous Backup
+## Prepare for PITR Restoration
 To perform a PITR restoration, both a full backup and continuous backup are required. Refer to the documentation to configure these backups if they are not already set up.
 
+- Completed full backup
+- Active continuous WAL backup
+- Backup repository accessible
+- Sufficient resources for new cluster
 
-**Step 1. Check Continuous Backup info**
+To identify the list of full and continuous backups, you may follow steps:
+
+### 1. Verify Continuous Backup
+Confirm you have an continuous WAL backup, either running or completed:
 
 ```bash
 # expect EXACTLY ONE continuous backup
-kubectl get backup -n demo -l dataprotection.kubeblocks.io/backup-type=Continuous,app.kubernetes.io/instance=pg-cluster  # get the list of Continuous backups
+kubectl get backup -n demo -l dataprotection.kubeblocks.io/backup-type=Continuous,app.kubernetes.io/instance=pg-cluster
 ```
 
-**Step 2. Check `timeRange` in continuous backup**
+### 2. Check Backup Time Range
+Get the valid recovery window:
 
 ```bash
-kubectl -n demo get backup <backup-name> -oyaml | yq '.status.timeRange' # get a valid time range.
+kubectl get backup <continuous-backup-name> -n demo -o yaml | yq '.status.timeRange'
 ```
 
 Example Output:
-
 ```text
-end: "2025-05-07T09:22:50Z"
 start: "2025-05-07T09:12:47Z"
+end: "2025-05-07T09:22:50Z"
 ```
 
-** Step 3. Check the list of Full Backups info:
+### 3. Identify Full Backup
+Find available full backups that meet:
+- Status: Completed
+- Completion time after continuous backup start time
 
 ```bash
 # expect one or more Full backups
-kubectl get backup -n demo -l dataprotection.kubeblocks.io/backup-type=Full,app.kubernetes.io/instance=pg-cluster  # get the list of Full backups
+kubectl get backup -n demo -l dataprotection.kubeblocks.io/backup-type=Full,app.kubernetes.io/instance=pg-cluster
 ```
 
-:::important
-
-Check if this is a full backup meets the condition: its stopTime/completionTimestamp must **AFTER** Continuous backup's startTime.
-KubeBlocks will automatically pick the latest completed Full backup as the base backup.
-
+:::tip
+KubeBlocks automatically selects the most recent qualifying full backup as the base.
+Make sure there is a full backup meets the condition: its stopTime/completionTimestamp must **AFTER** Continuous backup's startTime, otherwise PITR restoration will fail.
 :::
 
-## Perform Restoration via Cluster Annotation
+## Method 1: Cluster Annotation Restoration
 
-### Step 1. Retrieve Encrypted System Accounts
-Extract encrypted credentials for system accounts from the metadata of the full backup:
-
-```bash
-$ kubectl get backup -n demo <CONTINUOUS_BACKUP_NAME> -o -ojson | jq -r '.metadata.annotations | ."kubeblocks.io/encrypted-system-accounts" | fromjson .postgresql | tojson |gsub("\""; "\\\"")'
-```
-
-Example Output:
+### Step 1: Retrieve System Credentials
+Get encrypted account credentials from backup:
 
 ```bash
-{\"kbadmin\":\"Surpe3nrr4FFe82M34nCY2bThlztdifAVmrO8qHd3DYG5vRR33Y=\",\"kbdataprotection\":\"0gddL2+mEQ6DBeLYlijk5pd3YwuDWChSmvwlPWTS9QSfbY/kLFE=\",\"kbmonitoring\":\"ajWxjW2xMuysUq/UmP66+zCEltD1zVmO5Ec7sELSPvGEzaPzsHY=\",\"kbprobe\":\"qRoPyT8cUAVEaUjd/HIdmrVV6sJ6nO03G9MExVJryEEcs5LciCI=\",\"kbreplicator\":\"8xLt6zAIU5b2t9KmVy0LOaJsugQ8wNULyS+6LpRjRCfg05VnATk=\",\"postgres\":\"MNlRXK7nctiUyQSmTbbJUGeb6PsxDULm52abMYa2oBhyW+lWSFs=\"}
+kubectl get backup <continuous-backup-name> -n demo -o json | \
+  jq -r '.metadata.annotations | ."kubeblocks.io/encrypted-system-accounts" | fromjson .postgresql | tojson | gsub("\""; "\\\"")'
 ```
 
-### Step 2. Create Restored Cluster
+### Step 2: Create Restored Cluster
+Configure PITR parameters in cluster annotation:
 
-Create a new cluster with restoration configuration referencing the backup, set `encryptedSystemAccounts` with the encrypted system account credentials got from last step.
+Key parameters:
+- `encryptedSystemAccounts`: From previous step
+- `name`: Continuous backup name
+- `restoreTime`: Target recovery time (within backup `timeRange`)
 
-Apply the following YAML configuration:
+Apply this YAML configuration:
 ```yaml
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -126,9 +141,9 @@ spec:
 ```
 
 
-## Perform Restoration via Ops API
+## Method 2: Ops API Restoration
 
-Alternatively, use the Ops API to initiate the restoration process:
+For operational control and monitoring, use the Ops API:
 
 ```yaml
 apiVersion: operations.kubeblocks.io/v1alpha1
@@ -146,13 +161,14 @@ spec:
   type: Restore
 ```
 
-### Monitor Restoration Progress
+### Monitor Restoration
+Track progress with:
 
 ```bash
-# Watch restore status
+# Watch restore operation
 kubectl get restore -n demo -w
 
-# Watch custer status
+# Verify cluster status
 kubectl get cluster -n demo -w
 ```
 
