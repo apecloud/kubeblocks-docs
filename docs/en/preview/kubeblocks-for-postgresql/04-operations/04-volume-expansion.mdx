@@ -17,30 +17,11 @@ This guide explains how to expand Persistent Volume Claims (PVCs) in a PostgreSQ
 
 Volume expansion allows you to increase the size of a Persistent Volume Claim (PVC) after it has been created. This feature was introduced in Kubernetes v1.11 and became generally available (GA) in Kubernetes v1.24.
 
-Key considerations:
-- Supported Storage Class: The storage class used for the PVC must support volume expansion.
-- No Downtime: In most cases, volume expansion can be performed without downtime.
-- Incremental Expansion: The new size must be larger than the current size.
-
-:::note
-1. Ensure the storage class supports volume expansion (check ALLOWVOLUMEEXPANSION).
-2. The new size must be larger than the current size.
-3. Volume expansion may require additional configurations depending on the storage provider.
-:::
-
 ## Prerequisites
 
-Before proceeding, ensure the following:
-- Environment Setup:
-    - A Kubernetes cluster is up and running.
-    - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed.
-- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+import Prerequisites from '../_tpl/_prerequisites.mdx'
 
-```bash
-$ kubectl create ns demo
-namespace/demo created
-```
+<Prerequisites />
 
 ### Check the Storage Class for Volume Expansion Support
 
@@ -58,8 +39,7 @@ sc-s3-repo-2qsxfh   ru.yandex.s3.csi        Retain          Immediate           
 ```
 Ensure the storage class you are using has `ALLOWVOLUMEEXPANSION` set to true. If it is false, the storage class does not support volume expansion.
 
-
-## Deploy a PostgreSQL Replication Cluster with StorageClass specified
+## Deploy a PostgreSQL Replication Cluster with StorageClass
 
 KubeBlocks uses a declarative approach to manage PostgreSQL clusters. Below is an example configuration for deploying a PostgreSQL cluster with 2 replicas (1 primary, 1 secondary).
 
@@ -92,7 +72,8 @@ spec:
       volumeClaimTemplates:
         - name: data
           spec:
-            storageClassName: <STORAGE_CLASS_NAME> # specify storage class name
+            # specify storage class name supports Volume Expansion
+            storageClassName: <STORAGE_CLASS_NAME>
             accessModes:
               - ReadWriteOnce
             resources:
@@ -102,34 +83,32 @@ spec:
 **Explanation of Key Fields**
 - `storageClassName`: specify StorageClass name that supports volume expansion. If not set, the StorageClass annotated `default` will be used.
 
+:::note
+**ALLOWVOLUMEEXPANSION**
 
-
-## Verifying the Deployment
-Monitor the cluster status until it transitions to the Running state:
-```bash
-$ kubectl get cluster pg-cluster -n demo -w
-```
-
-Example Output:
-
-```bash
-NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
-pg-cluster   postgresql           Delete               Creating   50s
-pg-cluster   postgresql           Delete               Running    4m2s
-```
-Once the cluster status becomes Running, your PostgreSQL cluster is ready for use.
-
-:::tip
-If you are creating the cluster for the very first time, it may take some time to pull images before running.
+Ensure the storage class supports volume expansion (check ALLOWVOLUMEEXPANSION) when creating cluster.
 
 :::
 
+
+## Verifying the Deployment
+
+import VerifyPGCluster from '../_tpl/_verify-pg-replication-cluster.mdx'
+
+<VerifyPGCluster />
+
 ## Expand volume
+
+:::note
+1. Ensure the storage class supports volume expansion (check ALLOWVOLUMEEXPANSION).
+2. The new size must be larger than the current size.
+3. Volume expansion may require additional configurations depending on the storage provider.
+:::
 
 You can expand the volume in one of two ways:
 <Tabs>
 
-  <TabItem value="opsRequest" label="Use the OpsRequest API" default>
+  <TabItem value="opsRequest" label="OpsRequest API" default>
 
   Option 1: Using VolumeExpansion OpsRequest
 
@@ -171,7 +150,7 @@ You can expand the volume in one of two ways:
 
   </TabItem>
 
-  <TabItem value="ClusterAPI" label="Use the Cluster API">
+  <TabItem value="ClusterAPI" label="Cluster API">
 
   Option 2: Direct Cluster API Update
 
@@ -209,7 +188,8 @@ You can expand the volume in one of two ways:
                 - ReadWriteOnce
               resources:
                 requests:
-                  storage: 30Gi  # specify new size, and make sure it is larger than current size
+                  # specify new size, and make sure it is larger than current size
+                  storage: 30Gi
   ```
   KubeBlocks will automatically update the PVC size based on the new specifications.
   </TabItem>
@@ -219,7 +199,7 @@ You can expand the volume in one of two ways:
 
 Verify the updated cluster configuration:
 ```bash
-$ kbcli cluster describe pg-cluster -n demo
+kbcli cluster describe pg-cluster -n demo
 ```
 Example Output:
 ```bash
@@ -238,6 +218,13 @@ Example Output:
 NAME                                     STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS          AGE
 pg-cluster-postgresql-data-0             Bound    pvc-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   30Gi       RWO            <STORAGE_CLASS_NAME>  33m
 pg-cluster-postgresql-data-1             Bound    pvc-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   30Gi       RWO            <STORAGE_CLASS_NAME>  33m
+```
+
+## Cleanup
+To remove all created resources, delete the PostgreSQL cluster along with its namespace:
+```bash
+kubectl delete cluster pg-cluster -n demo
+kubectl delete ns demo
 ```
 
 ## Summary

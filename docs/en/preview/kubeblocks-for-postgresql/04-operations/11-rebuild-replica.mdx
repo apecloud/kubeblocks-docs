@@ -8,12 +8,11 @@ sidebar_label: Recovering PostgreSQL Replica
 
 # Rebuilding PostgreSQL Replicas in KubeBlocks
 
-This guide demonstrates how to:
-- Rebuild replicas using both in-place and non-in-place methods
+This guide demonstrates how to rebuild replicas using both in-place and non-in-place methods.
 
 **What is Replica Rebuilding**
 
-Replica rebuilding is the process of recreating a PostgreSQL replica from scratch while maintaining:
+Replica rebuilding is the process of recreating a PostgreSQL replica from scratch or from a backup while maintaining:
 - **Data Consistency**: Ensures the replica has an exact copy of primary data
 - **High Availability**: Minimizes downtime during the rebuild process
 
@@ -33,82 +32,27 @@ Rebuilding becomes necessary in these common scenarios:
 
 ## Prerequisites
 
-Before proceeding, ensure the following:
-- Environment Setup:
-    - A Kubernetes cluster is up and running.
-    - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
-- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+import Prerequisites from '../_tpl/_prerequisites.mdx'
 
-```bash
-$ kubectl create ns demo
-namespace/demo created
-```
+<Prerequisites />
 
 ## Deploy a PostgreSQL Cluster
 
-Deploy a 2-node semi-sync PostgreSQL cluster (1 primary, 1 secondary):
+import CreatePGCluster from '../_tpl/_create-pg-replication-cluster.mdx'
 
-```yaml
-apiVersion: apps.kubeblocks.io/v1
-kind: Cluster
-metadata:
-  name: pg-cluster
-  namespace: demo
-spec:
-  terminationPolicy: Delete
-  clusterDef: postgresql
-  topology: replication
-  componentSpecs:
-    - name: postgresql
-      serviceVersion: 16.4.0
-      labels:
-        apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
-      disableExporter: true
-      replicas: 2
-      resources:
-        limits:
-          cpu: "0.5"
-          memory: "0.5Gi"
-        requests:
-          cpu: "0.5"
-          memory: "0.5Gi"
-      volumeClaimTemplates:
-        - name: data
-          spec:
-            accessModes:
-              - ReadWriteOnce
-            resources:
-              requests:
-                storage: 20Gi
-```
+<CreatePGCluster />
 
 ## Verifying the Deployment
 
-Monitor the cluster status until it transitions to the Running state:
-```bash
-$ kubectl get cluster pg-cluster -n demo -w
-```
+import VerifyPGCluster from '../_tpl/_verify-pg-replication-cluster.mdx'
 
-Example Output::
+<VerifyPGCluster />
 
-```bash
-NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
-pg-cluster   postgresql           Delete               Creating   50s
-pg-cluster   postgresql           Delete               Running    4m2s
-```
-Once the cluster status becomes Running, your PostgreSQL cluster is ready for use.
-
-:::tip
-If you are creating the cluster for the very first time, it may take some time to pull images before running.
-
-:::
-
-## Connect to the Primary PostgreSQL Cluster and Write Mock Data
+## Connect to the Primary PostgreSQL Replcia and Write Mock Data
 
 Check replica roles with command:
 ```bash
-$ kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster -L kubeblocks.io/role
+kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster -L kubeblocks.io/role
 ```
 
 Expected Outputs:
@@ -130,7 +74,7 @@ PASSWD=`kubectl get secrets -n demo pg-cluster-postgresql-account-postgres -o js
 Connect to the primary replica through service `pg-cluster-postgresql-postgresql` which routes data to primary replica.
 
 ```bash
-$ kubectl exec -ti -n demo pg-cluster-postgresql-0 -- env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql -h pg-cluster-postgresql-postgresql
+kubectl exec -ti -n demo pg-cluster-postgresql-0 -- env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql -h pg-cluster-postgresql-postgresql
 ```
 
 ### Step 2: Write Data to the Primary Instance
@@ -147,7 +91,7 @@ postgrel> INSERT INTO t1 VALUES (1, 'John Doe');
 
 Connect to the replica instance (e.g. pg-cluster-postgresql-0) to verify that the data has been replicated:
 ```bash
-$ kubectl exec -ti -n demo pg-cluster-postgresql-0 -- env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql -h 127.0.0.1
+kubectl exec -ti -n demo pg-cluster-postgresql-0 -- env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql -h 127.0.0.1
 ```
 :::note
 If the primary instance is 'pg-cluster-postgresql-0', you should connect to 'pg-cluster-postgresql-1' instead. Make sure to check the role of each instance before connecting.
@@ -200,7 +144,7 @@ In this configuration, "pg-cluster-postgresql-0" refers to the instance name (Po
 
 Monitor the rebuild operation:
 ```bash
-$ kubectl get ops  pg-rebuild-replica-inplace -n demo -w
+kubectl get ops  pg-rebuild-replica-inplace -n demo -w
 ```
 Expect Output:
 ```bash
@@ -214,7 +158,7 @@ pg-rebuild-replica-inplace   RebuildInstance   pg-cluster   Succeed   1/1       
 
 Verify the Pods to confirm the replica ("pg-cluster-postgresql-0") , its PVC and PV have been recreated.
 ```bash
-$ kubectl get po,pvc,pv -l app.kubernetes.io/instance=pg-cluster -ndemo
+kubectl get po,pvc,pv -l app.kubernetes.io/instance=pg-cluster -ndemo
 ```
 Expect Output:
 ```bash
@@ -231,7 +175,7 @@ persistentvolumeclaim/data-pg-cluster-postgresql-1   Bound    pvc-yyy   20Gi    
 Connect to the replica and check if the data has been restored:
 
 ```bash
-$ kubectl exec -ti -n demo pg-cluster-postgresql-0 -- env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql -h 127.0.0.1
+kubectl exec -ti -n demo pg-cluster-postgresql-0 -- env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql -h 127.0.0.1
 ```
 
 ```sql
@@ -274,7 +218,7 @@ In this configuration, "pg-cluster-postgresql-0" refers to the instance name (Po
 
 Monitor the rebuild operation:
 ```bash
-$ kubectl get ops  pg-rebuild-replica-inplace -n demo -w
+kubectl get ops  pg-rebuild-replica-inplace -n demo -w
 ```
 Expect Output:
 ```bash
@@ -287,7 +231,7 @@ pg-rebuild-replica-non-inplace   RebuildInstance   pg-cluster   Succeed   1/1   
 ```
 
 ```bash
-$ kubectl get pods  -l app.kubernetes.io/instance=pg-cluster -n demo -w
+kubectl get pods  -l app.kubernetes.io/instance=pg-cluster -n demo -w
 NAME                      READY   STATUS    RESTARTS   AGE
 pg-cluster-postgresql-0   4/4     Running   0          53m
 pg-cluster-postgresql-1   4/4     Running   0          2m52s
@@ -312,7 +256,7 @@ pg-cluster-postgresql-0   4/4     Terminating       0          4m3s
 Connect to the new replica instance ('pg-cluster-postgresql-2') and verify the data:
 
 ```bash
-$ kubectl exec -ti -n demo pg-cluster-postgresql-2 -- env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql -h 127.0.0.1
+kubectl exec -ti -n demo pg-cluster-postgresql-2 -- env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql -h 127.0.0.1
 ```
 
 ```sql
@@ -324,10 +268,49 @@ postgrel> select * from t1;
 (1 row)
 ```
 
-## Choosing Between Rebuild Methods
+### Rebuild from Backups
 
-- When you want to maintain the same Pod name and PVC name, use In-Place Rebuild
-- When you want to gain more reliability (problematic replica won't be terminated until new replica is online) , use Non-In-Place Rebuild
+This configuration below shows recovering a failed replica by restoring it from a known backup using `backupName`:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-rebuild-from-backup
+  namespace: demo
+spec:
+  clusterName: pg-cluster
+  force: true
+  rebuildFrom:
+  - backupName: <PG_BACKUP_NAME>
+    componentName: postgresql
+    inPlace: true
+    instances:
+    - name: pg-cluster-postgresql-1
+  type: RebuildInstance
+```
+### Rebuild to Specifid Node
+
+To rebuild the new replica on specific node, you may use `targetNodeName`:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-rebuild-from-backup
+  namespace: demo
+spec:
+  clusterName: pg-cluster
+  force: true
+  rebuildFrom:
+  - backupName: <PG_BACKUP_NAME>
+    componentName: postgresql
+    inPlace: true
+    instances:
+    - name: pg-cluster-postgresql-1
+      targetNodeName: <NODE_NAME> # new pod will be scheduled to the specified nod
+  type: RebuildInstance
+```
 
 ## Summary
 Key takeaways:

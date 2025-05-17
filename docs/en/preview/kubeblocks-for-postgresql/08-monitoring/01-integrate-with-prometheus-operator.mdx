@@ -19,17 +19,9 @@ This guide demonstrates how to configure comprehensive monitoring for PostgreSQL
 
 ## Prerequisites
 
-Before proceeding, ensure the following:
-- Environment Setup:
-    - A Kubernetes cluster is up and running.
-    - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
-- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+import Prerequisites from '../_tpl/_prerequisites.mdx'
 
-```bash
-$ kubectl create ns demo
-namespace/demo created
-```
+<Prerequisites />
 
 ## Install Monitoring Stack
 
@@ -46,7 +38,7 @@ helm install prometheus prometheus-community/kube-prometheus-stack \
 ### 2. Verify Installation
 Check all components are running:
 ```bash
-$ kubectl get pods -n monitoring
+kubectl get pods -n monitoring
 ```
 
 Example Output:
@@ -64,45 +56,12 @@ prometheus-prometheus-node-exporter-jmxg8                1/1     Running   0    
 ```
 
 
-## Deploy a PostgreSQL Replication Cluster
+## Deploy a PostgreSQL Cluster
 
-KubeBlocks uses a declarative approach for managing PostgreSQL clusters. Below is an example configuration for deploying a PostgreSQL cluster with 2 replicas (1 primary, 1 replicas).
+import CreatePGCluster from '../_tpl/_create-pg-replication-cluster.mdx'
 
-Apply the following YAML configuration to deploy the cluster:
+<CreatePGCluster />
 
-```yaml
-apiVersion: apps.kubeblocks.io/v1
-kind: Cluster
-metadata:
-  name: pg-cluster
-  namespace: demo
-spec:
-  terminationPolicy: Delete
-  clusterDef: postgresql
-  topology: replication
-  componentSpecs:
-    - name: postgresql
-      serviceVersion: 16.4.0
-      labels:
-        apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
-      disableExporter: false
-      replicas: 2
-      resources:
-        limits:
-          cpu: "0.5"
-          memory: "0.5Gi"
-        requests:
-          cpu: "0.5"
-          memory: "0.5Gi"
-      volumeClaimTemplates:
-        - name: data
-          spec:
-            accessModes:
-              - ReadWriteOnce
-            resources:
-              requests:
-                storage: 20Gi
-```
 **Key Monitoring Configuration**
 - `disableExporter: false` enables the built-in metrics exporter
 - Exporter runs as sidecar container in each PostgreSQL pod
@@ -111,7 +70,7 @@ spec:
 ## Verifying the Deployment
 Monitor the cluster status until it transitions to the Running state:
 ```bash
-$ kubectl get cluster pg-cluster -n demo -w
+kubectl get cluster pg-cluster -n demo -w
 ```
 
 Example Output::
@@ -157,7 +116,7 @@ metadata:
   labels:               # Must match the setting in 'prometheus.spec.podMonitorSelector'
     release: prometheus
 spec:
-  jobLabel: kubeblocks-service
+  jobLabel: app.kubernetes.io/managed-by
   # defines the labels which are transferred from the
   # associated Kubernetes 'Pod' object onto the ingested metrics
   # set the lables w.r.t you own needs
@@ -194,7 +153,7 @@ spec:
 Forward and access Prometheus UI:
 
 ```bash
-$ kubectl port-forward svc/prometheus-kube-prometheus-prometheus -n monitoring 9090:9090
+kubectl port-forward svc/prometheus-kube-prometheus-prometheus -n monitoring 9090:9090
 ```
 Open your browser and navigate to:
 http://localhost:9090/targets
@@ -208,7 +167,7 @@ Expected State:
 ### 2. Test Metrics Collection
 Verify metrics are being scraped:
 ```bash
-$ curl -sG "http://localhost:9090/api/v1/query" --data-urlencode 'query=up{app_kubernetes_io_instance="pg-cluster"}' | jq
+curl -sG "http://localhost:9090/api/v1/query" --data-urlencode 'query=up{app_kubernetes_io_instance="pg-cluster"}' | jq
 ```
 
 Expected Outputs:
@@ -266,7 +225,7 @@ Expected Outputs:
 Port-forward and login:
 
 ```bash
-$ kubectl port-forward svc/prometheus-grafana -n monitoring 3000:80
+kubectl port-forward svc/prometheus-grafana -n monitoring 3000:80
 ```
 Open your browser and navigate to http://localhost:3000. Use the default credentials to log in:
 - Username: 'admin'

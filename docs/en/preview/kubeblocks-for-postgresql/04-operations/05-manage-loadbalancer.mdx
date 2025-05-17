@@ -17,82 +17,26 @@ This guide provides step-by-step instructions for exposing PostgreSQL services m
 
 ## Prerequisites
 
-Before proceeding, ensure the following:
-- Environment Setup:
-    - A Kubernetes cluster is up and running.
-    - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed.
-- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+import Prerequisites from '../_tpl/_prerequisites.mdx'
 
-```bash
-$ kubectl create ns demo
-namespace/demo created
-```
+<Prerequisites />
 
-## Deploy a PostgreSQL Replication Cluster
+## Deploy a PostgreSQL Cluster
 
-KubeBlocks uses a declarative approach to manage PostgreSQL clusters. Below is an example configuration for deploying a PostgreSQL cluster with 2 replicas (1 primary, 1 secondary).
+import CreatePGCluster from '../_tpl/_create-pg-replication-cluster.mdx'
 
-Apply the following YAML configuration to deploy the cluster:
-
-```yaml
-apiVersion: apps.kubeblocks.io/v1
-kind: Cluster
-metadata:
-  name: pg-cluster
-  namespace: demo
-spec:
-  terminationPolicy: Delete
-  clusterDef: postgresql
-  topology: replication
-  componentSpecs:
-    - name: postgresql
-      serviceVersion: 16.4.0
-      labels:
-        apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
-      disableExporter: true
-      replicas: 2
-      resources:
-        limits:
-          cpu: "0.5"
-          memory: "0.5Gi"
-        requests:
-          cpu: "0.5"
-          memory: "0.5Gi"
-      volumeClaimTemplates:
-        - name: data
-          spec:
-            accessModes:
-              - ReadWriteOnce
-            resources:
-              requests:
-                storage: 20Gi
-```
+<CreatePGCluster />
 
 ## Verifying the Deployment
-Monitor the cluster status until it transitions to the Running state:
-```bash
-$ kubectl get cluster pg-cluster -n demo -w
-```
 
-Example Output:
+import VerifyPGCluster from '../_tpl/_verify-pg-replication-cluster.mdx'
 
-```bash
-NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
-pg-cluster   postgresql           Delete               Creating   50s
-pg-cluster   postgresql           Delete               Running    4m2s
-```
-Once the cluster status becomes Running, your PostgreSQL cluster is ready for use.
-
-:::tip
-If you are creating the cluster for the very first time, it may take some time to pull images before running.
-
-:::
+<VerifyPGCluster />
 
 ## View Network Services
 List the Services created for the PostgreSQL cluster:
 ```bash
-$ kubectl get service -l app.kubernetes.io/instance=pg-cluster -n demo
+kubectl get service -l app.kubernetes.io/instance=pg-cluster -n demo
 ```
 
 Example Services:
@@ -122,7 +66,7 @@ External service addresses enable public internet access to PostgreSQL, while in
 
 <Tabs>
 
-  <TabItem value="opsRequest" label="Use the OpsRequest API" default>
+  <TabItem value="opsRequest" label="OpsRequest API" default>
 
   Option 1: Using OpsRequest
 
@@ -158,7 +102,7 @@ External service addresses enable public internet access to PostgreSQL, while in
 
   Wait for the OpsRequest to complete:
   ```bash
-  $ kubectl get ops pg-cluster-expose-enable-ops -n demo
+  kubectl get ops pg-cluster-expose-enable-ops -n demo
   ```
 
   Expected Output:
@@ -169,7 +113,7 @@ External service addresses enable public internet access to PostgreSQL, while in
 
   </TabItem>
 
-  <TabItem value="ClusterAPI" label="Use the Cluster API">
+  <TabItem value="ClusterAPI" label="Cluster API">
 
   Option 1: Using Cluster API
 
@@ -271,7 +215,7 @@ External service addresses enable public internet access to PostgreSQL, while in
 
   Wait for the Cluster status to transition to Running using the following command:
   ```bash
-  $ kubectl get cluster pg-cluster -n demo -w
+  kubectl get cluster pg-cluster -n demo -w
   ```
   ```
   NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
@@ -285,7 +229,7 @@ External service addresses enable public internet access to PostgreSQL, while in
 Check the service details to confirm the LoadBalancer service is created:
 
 ```bash
-$ kubectl get service -l app.kubernetes.io/instance=pg-cluster -n demo
+kubectl get service -l app.kubernetes.io/instance=pg-cluster -n demo
 ```
 
 Expected Output:
@@ -300,7 +244,7 @@ pg-cluster-postgresql-internet     LoadBalancer   172.20.60.24   <EXTERNAL-IP> 5
 The LoadBalancer DNS name may take 2-5 minutes to become resolvable. Verify the resolution status:
 
 ```bash
-$ nslookup <EXTERNAL-IP>  # replace <EXTERNAL-IP> with the real IP from previous output.
+nslookup <EXTERNAL-IP>  # replace <EXTERNAL-IP> with the real IP from previous output.
 ```
 
 ## Connect to PostgreSQL Externally
@@ -317,16 +261,17 @@ PASSWD=`kubectl get secrets -n demo pg-cluster-postgresql-account-postgres -o js
 
 You can now connect to the PostgreSQL database externally (e.g., from your laptop or EC2):
 ```bash
-$ psql -h <EXTERNAL_IP> -U${NAME} -W
+psql -h <EXTERNAL_IP> -U${NAME} -W
 ```
 
 ## Disable External Exposure
 
 <Tabs>
 
-  <TabItem value="opsRequest" label="Use the OpsRequest API" default>
+  <TabItem value="opsRequest" label="OpsRequest API" default>
 
   Option 1: Using OpsRequest
+
   To disable external access, create an OpsRequest:
   ```yaml
   apiVersion: operations.kubeblocks.io/v1alpha1
@@ -349,7 +294,7 @@ $ psql -h <EXTERNAL_IP> -U${NAME} -W
 
   Wait for the OpsRequest to complete:
   ```bash
-  $ kubectl get ops pg-cluster-expose-disable-ops -n demo
+  kubectl get ops pg-cluster-expose-disable-ops -n demo
   ```
   Expected Output:
   ```bash
@@ -359,13 +304,13 @@ $ psql -h <EXTERNAL_IP> -U${NAME} -W
 
   </TabItem>
 
-  <TabItem value="ClusterAPI" label="Use the Cluster API">
+  <TabItem value="ClusterAPI" label="Cluster API">
 
   Option 1: Using Cluster API
 
   Alternatively, remove the `spec.services` field from the Cluster resource:
   ```bash
-  $ kubectl patch cluster pg-cluster -n demo --type=json -p='[
+  kubectl patch cluster pg-cluster -n demo --type=json -p='[
     {
       "op": "remove",
       "path": "/spec/services"
@@ -375,7 +320,7 @@ $ psql -h <EXTERNAL_IP> -U${NAME} -W
 
   Monitor the cluster status until it is Running:
   ```bash
-  $ kubectl get cluster pg-cluster -n demo -w
+  kubectl get cluster pg-cluster -n demo -w
   ```
 
   ```
@@ -390,7 +335,7 @@ $ psql -h <EXTERNAL_IP> -U${NAME} -W
 Ensure that the 'pg-cluster-postgresql-internet' Service is removed:
 
 ```bash
-$ kubectl get service -n demo
+kubectl get service -n demo
 ```
 
 Expected Result: The 'pg-cluster-postgresql-internet' Service should be removed.
@@ -425,6 +370,13 @@ To expose PgBouncer Service, just update ports information with that of pgbounce
     componentSpecs:
       - name: postgresql
 ...
+```
+
+## Cleanup
+To remove all created resources, delete the PostgreSQL cluster along with its namespace:
+```bash
+kubectl delete cluster pg-cluster -n demo
+kubectl delete ns demo
 ```
 
 ## Summary

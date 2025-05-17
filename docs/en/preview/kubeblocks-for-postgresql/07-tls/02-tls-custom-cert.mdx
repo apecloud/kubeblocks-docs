@@ -3,7 +3,7 @@ title: Deploy a PostgreSQL Cluster with Custom TLS Certificates on KubeBlocks
 description: Step-by-step guide to deploy a PostgreSQL cluster on KubeBlocks using custom TLS certificates for secure communication. Includes certificate generation, cluster deployment, and connection verification.
 keywords: [KubeBlocks, PostgreSQL, Kubernetes, TLS, Security, Custom Certificates]
 sidebar_position: 2
-sidebar_label: PostgreSQL with Custom TLS
+sidebar_label: PostgreSQL Cluster with Custom TLS
 ---
 
 import Tabs from '@theme/Tabs';
@@ -15,17 +15,9 @@ This guide demonstrates how to deploy a PostgreSQL cluster with **custom TLS cer
 
 ## Prerequisites
 
-Before proceeding, ensure the following:
-- Environment Setup:
-    - A Kubernetes cluster is up and running.
-    - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
-- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+import Prerequisites from '../_tpl/_prerequisites.mdx'
 
-```bash
-$ kubectl create ns demo
-namespace/demo created
-```
+<Prerequisites />
 
 ## Generate Certificates
 

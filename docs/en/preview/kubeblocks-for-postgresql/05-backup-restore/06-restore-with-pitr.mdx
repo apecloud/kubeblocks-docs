@@ -17,22 +17,15 @@ This guide demonstrates how to perform Point-In-Time Recovery (PITR) for Postgre
 2. Continuous WAL (Write-Ahead Log) backups
 3. Two restoration methods:
    - Cluster Annotation (declarative approach)
-   - Ops API (operational control)
+   - OpsRequest API (operational control)
 
 PITR enables recovery to any moment within the timeRange the backup for.
 
 ## Prerequisites
-Before proceeding, ensure the following:
-- Environment Setup:
-  - A Kubernetes cluster is up and running.
-  - The kubectl CLI tool is configured to communicate with your cluster.
-  - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
-- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
-```bash
-$ kubectl create ns demo
-namespace/demo created
-```
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
 
 ## Prepare for PITR Restoration
 To perform a PITR restoration, both a full backup and continuous backup are required. Refer to the documentation to configure these backups if they are not already set up.
@@ -48,7 +41,7 @@ To identify the list of full and continuous backups, you may follow steps:
 Confirm you have an continuous WAL backup, either running or completed:
 
 ```bash
-# expect EXACTLY ONE continuous backup
+# expect EXACTLY ONE continuous backup per cluster
 kubectl get backup -n demo -l dataprotection.kubeblocks.io/backup-type=Continuous,app.kubernetes.io/instance=pg-cluster
 ```
 
@@ -151,9 +144,9 @@ kubectl get restore -n demo -w
 kubectl get cluster -n demo -w
 ```
 
-## Method 2: Ops API Restoration
+## Method 2: OpsRequest API Restoration
 
-For operational control and monitoring, use the Ops API:
+For operational control and monitoring, use the OpsRequest API:
 
 ```yaml
 apiVersion: operations.kubeblocks.io/v1alpha1

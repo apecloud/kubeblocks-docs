@@ -31,7 +31,7 @@ Before proceeding, ensure the following:
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -48,13 +48,13 @@ KubeBlocks PostgreSQL supports these backup methods:
 
 ## Deploy a PostgreSQL Cluster with Backup APIs
 
-Deploy a 2-node semi-sync PostgreSQL cluster (1 primary, 1 secondary) and specify backup information.
+Deploy a 2-node PostgreSQL replication cluster (1 primary, 1 secondary) and specify backup information.
 
 ```yaml
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
 metadata:
-  name: pg-cluster-2
+  name: pg-cluster
   namespace: demo
 spec:
   terminationPolicy: Delete
@@ -111,7 +111,7 @@ spec:
 
 Monitor the cluster status until it transitions to the Running state:
 ```bash
-$ kubectl get cluster pg-cluster -n demo -w
+kubectl get cluster pg-cluster -n demo -w
 ```
 
 Example Output::
@@ -148,7 +148,7 @@ kubectl get pod -l app.kubernetes.io/instance=pg-cluster,dataprotection.kubebloc
 KubeBlocks automatically creates a `BackupSchedule` resource. Inspect the configuration:
 
 ```bash
-$ kubectl get backupschedule pg-cluster-postgresql-backup-schedule  -n demo -oyaml
+kubectl get backupschedule pg-cluster-postgresql-backup-schedule  -n demo -oyaml
 ```
 
 Expected Output:

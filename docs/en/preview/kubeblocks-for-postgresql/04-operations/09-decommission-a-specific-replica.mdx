@@ -23,76 +23,21 @@ KubeBlocks overcomes this limitation by enabling administrators to decommission 
 
 ## Prerequisites
 
-Before proceeding, ensure the following:
-- Environment Setup:
-    - A Kubernetes cluster is up and running.
-    - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
-- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+import Prerequisites from '../_tpl/_prerequisites.mdx'
 
-```bash
-$ kubectl create ns demo
-namespace/demo created
-```
+<Prerequisites />
 
 ## Deploy a PostgreSQL Cluster
 
-Deploy a 2-node semi-sync PostgreSQL cluster (1 primary, 1 secondary):
+import CreatePGCluster from '../_tpl/_create-pg-replication-cluster.mdx'
 
-```yaml
-apiVersion: apps.kubeblocks.io/v1
-kind: Cluster
-metadata:
-  name: pg-cluster
-  namespace: demo
-spec:
-  terminationPolicy: Delete
-  clusterDef: postgresql
-  topology: replication
-  componentSpecs:
-    - name: postgresql
-      serviceVersion: 16.4.0
-      labels:
-        apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
-      disableExporter: true
-      replicas: 2
-      resources:
-        limits:
-          cpu: "0.5"
-          memory: "0.5Gi"
-        requests:
-          cpu: "0.5"
-          memory: "0.5Gi"
-      volumeClaimTemplates:
-        - name: data
-          spec:
-            accessModes:
-              - ReadWriteOnce
-            resources:
-              requests:
-                storage: 20Gi
-```
+<CreatePGCluster />
 
 ## Verifying the Deployment
 
-Monitor the cluster status until it transitions to the Running state:
-```bash
-$ kubectl get cluster pg-cluster -n demo -w
-```
+import VerifyPGCluster from '../_tpl/_verify-pg-replication-cluster.mdx'
 
-Example Output::
-
-```bash
-NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
-pg-cluster   postgresql           Delete               Creating   50s
-pg-cluster   postgresql           Delete               Running    4m2s
-```
-Once the cluster status becomes Running, your PostgreSQL cluster is ready for use.
-
-:::tip
-If you are creating the cluster for the very first time, it may take some time to pull images before running.
-
-:::
+<VerifyPGCluster />
 
 ## Decommission a Pod
 
@@ -106,9 +51,10 @@ To decommission a specific Pod (e.g., 'pg-cluster-postgresql-1'), you can use on
 
 <Tabs>
 
-  <TabItem value="opsRequest" label="Use the OpsRequest API" default>
+  <TabItem value="opsRequest" label="OpsRequest API" default>
 
   Option 1: Using OpsRequest
+
   Create an OpsRequest to mark the Pod as offline:
 
   ```yaml
@@ -131,22 +77,21 @@ To decommission a specific Pod (e.g., 'pg-cluster-postgresql-1'), you can use on
   Check the progress of the decommissioning operation:
 
   ```bash
-  kubectl describe ops pg-cluster-decommission-ops -n demo
+  kubectl get ops pg-cluster-decommission-ops -n demo -w
   ```
   Expected Output:
 
   ```bash
-  Status:
-    Phase:              Succeed
-    Progress:           1/1
-    ...
+  NAME                          TYPE                CLUSTER      STATUS    PROGRESS   AGE
+  pg-cluster-decommission-ops   HorizontalScaling   pg-cluster   Succeed   1/1        33s
   ```
 
   </TabItem>
 
-  <TabItem value="ClusterAPI" label="Use the Cluster API">
+  <TabItem value="ClusterAPI" label="Cluster API">
 
   Option 1: Using Cluster API
+
   Alternatively, update the Cluster resource directly to decommission the Pod:
 
   ```yaml
@@ -193,7 +138,7 @@ To decommission a specific Pod (e.g., 'pg-cluster-postgresql-1'), you can use on
 
 After applying the updated configuration, verify the remaining Pods in the cluster:
 ```bash
-$ kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster
+kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster
 ```
 
 Expected Output:

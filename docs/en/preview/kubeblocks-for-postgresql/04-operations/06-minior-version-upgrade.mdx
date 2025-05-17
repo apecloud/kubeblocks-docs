@@ -24,7 +24,7 @@ Before proceeding, ensure the following:
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -71,7 +71,7 @@ spec:
 ## Verifying the Deployment
 Monitor the cluster status until it transitions to the Running state:
 ```bash
-$ kubectl get cluster pg-cluster -n demo -w
+kubectl get cluster pg-cluster -n demo -w
 ```
 
 Example Output::
@@ -92,7 +92,7 @@ If you are creating the cluster for the very first time, it may take some time t
 
 Use the following command to display the PostgreSQL versions supported by your KubeBlocks installation:
 ```bash
-$ kubectl get cmpv postgresql
+kubectl get cmpv postgresql
 ```
 Example Output:
 ```bash
@@ -108,7 +108,7 @@ Note: The list of supported versions may vary depending on your KubeBlocks versi
 
 Run the following command to identify the roles of the cluster instances:
 ```bash
-$ kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster -L kubeblocks.io/role
+kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster -L kubeblocks.io/role
 ```
 
 Example Output:
@@ -123,7 +123,7 @@ pg-cluster-postgresql-1   4/4     Running   0          65m   secondary
 **Step 1.** Get the list of `ComponentDefinition` associated with a given `ComponentVersion`
 
 ```bash
-$ kubectl get cmpv postgresql -ojson | jq -r '.metadata.annotations."componentversion.kubeblocks.io/compatible-definitions"' | tr ',' '\n'
+kubectl get cmpv postgresql -ojson | jq -r '.metadata.annotations."componentversion.kubeblocks.io/compatible-definitions"' | tr ',' '\n'
 ```
 
 <details>
@@ -139,7 +139,7 @@ postgresql-16-1.0.0-alpha.0
 **Step 2.** Get the list of ComponentDefinition associated with a given ComponentVersion
 
 ```bash
-$ kubectl get cmpv postgresql -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("postgresql-14"))) | .releases[]'
+kubectl get cmpv postgresql -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("postgresql-14"))) | .releases[]'
 ```
 
 This returns versions compatible with `ComponentDefinition` named `postgresql-14`:
@@ -232,7 +232,7 @@ To upgrade the PostgreSQL version, modify the serviceVersion field in the Cluste
 ### Monitor the Upgrade Process
 During the upgrade, observe the changes in the cluster's Pods:
 ```bash
-$ kubectl get pods -n demo -w
+kubectl get pods -n demo -w
 ```
 Example Output:
 ```bash
@@ -249,7 +249,7 @@ pg-cluster-postgresql-0   4/4     Running   2 (6s ago)   2m6s
 
 After the upgrade is completed, roles are switched:
 ```bash
-$ kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster -L kubeblocks.io/role
+kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster -L kubeblocks.io/role
 ```
 Updated Roles:
 ```bash
@@ -263,7 +263,7 @@ pg-cluster-postgresql-1   4/4     Running   0          2m    primary
 ### Check Cluster Status
 Ensure the cluster is in the Running state:
 ```bash
-$ kubectl get cluster pg-cluster -n demo -w
+kubectl get cluster pg-cluster -n demo -w
 ```
 Example Output:
 ```bash
@@ -280,7 +280,7 @@ PASSWD=`kubectl get secrets -n demo pg-cluster-postgresql-account-postgres -o js
 
 Connect to the upgraded instances and verify the PostgreSQL version:
 ```bash
-$ kubectl exec -ti -n demo pg-cluster-postgresql-1 -- \
+kubectl exec -ti -n demo pg-cluster-postgresql-1 -- \
   env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql -c "SELECT VERSION();"
 ```
 

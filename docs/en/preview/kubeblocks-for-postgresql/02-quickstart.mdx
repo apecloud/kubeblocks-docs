@@ -52,16 +52,16 @@ If the add-on isn't enabled, choose an installation method:
   <TabItem value="helm" label="helm" default>
   ```bash
   # Add Helm repo
-  $ helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
+  helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
   # For users in Mainland China, if GitHub is inaccessible or slow, use this alternative repo:
   #helm repo add kubeblocks-addons https://jihulab.com/api/v4/projects/150246/packages/helm/stable
 
   # Update helm repo
-  $ helm repo update
+  helm repo update
   # Search available Add-on versions
-  $ helm search repo kubeblocks/postgresql --versions
+  helm search repo kubeblocks/postgresql --versions
   # Install your desired version (replace <VERSION> with your chosen version)
-  $ helm upgrade -i kb-addon-postgresql kubeblocks-addons/postgresql --version <VERSION> -n kb-system
+  helm upgrade -i kb-addon-postgresql kubeblocks-addons/postgresql --version <VERSION> -n kb-system
   ```
   </TabItem>
 
@@ -104,8 +104,11 @@ If the add-on isn't enabled, choose an installation method:
   </TabItem>
 </Tabs>
 
-:::note Version Compatibility
+:::note
+**Version Compatibility**
+
 Always verify that the PostgreSQL Add-on version matches your KubeBlocks major version to avoid compatibility issues.
+
 :::
 
 ### Verify Supported PostgreSQL Versions
@@ -113,7 +116,7 @@ Always verify that the PostgreSQL Add-on version matches your KubeBlocks major v
 **List available PostgreSQL versions:**
 
 ```bash
-$ kubectl get cmpv postgresql
+kubectl get cmpv postgresql
 ```
 <details open>
 <summary>Sample Output</summary>
@@ -128,7 +131,7 @@ postgresql   16.4.0,15.7.0,14.8.0,14.7.2,12.15.0,12.14.1,12.14.0   Available   3
 **Step 1.** Get the list of `ComponentDefinition` associated with a given `ComponentVersion`
 
 ```bash
-$ kubectl get cmpv postgresql -ojson | jq -r '.metadata.annotations."componentversion.kubeblocks.io/compatible-definitions"' | tr ',' '\n'
+kubectl get cmpv postgresql -ojson | jq -r '.metadata.annotations."componentversion.kubeblocks.io/compatible-definitions"' | tr ',' '\n'
 ```
 
 <details>
@@ -144,7 +147,7 @@ postgresql-16-1.0.0-alpha.0
 **Step 2.** Get the list of ComponentDefinition associated with a given ComponentVersion
 
 ```bash
-$ kubectl get cmpv postgresql -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("postgresql-14"))) | .releases[]'
+kubectl get cmpv postgresql -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("postgresql-14"))) | .releases[]'
 ```
 
 This returns versions compatible with `ComponentDefinition` named `postgresql-14`:
@@ -307,7 +310,7 @@ To create a cluster with a specific version, configure `spec.componentSpecs.serv
 List available `ComponentDefinition` and `ComponentVersion`:
 
 ```bash
-$ kubectl get cmpd -l app.kubernetes.io/name=postgresql
+kubectl get cmpd -l app.kubernetes.io/name=postgresql
 ```
 
 <details open>
@@ -322,7 +325,7 @@ postgresql-16-1.0.0-alpha.0   postgresql   16.4.0            Available   22d
 </details>
 
 ```bash
-$ kubectl get cmpv -l app.kubernetes.io/name=postgresql
+kubectl get cmpv -l app.kubernetes.io/name=postgresql
 ```
 
 <details open>
@@ -350,11 +353,11 @@ Check status using either method:
 <Tabs>
   <TabItem value='kubectl' label='kubectl' default>
   ```bash
-  $ kubectl get cluster pg-cluster -n demo
+  kubectl get cluster pg-cluster -n demo
   NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
   pg-cluster   postgresql           Delete               Running   107s
 
-  $ kubectl get pods -l app.kubernetes.io/instance=pg-cluster -n demo
+  kubectl get pods -l app.kubernetes.io/instance=pg-cluster -n demo
   NAME                    READY   STATUS    RESTARTS   AGE
   pg-cluster-postgresql-0   4/4     Running   0          31m
   pg-cluster-postgresql-1   4/4     Running   0          31m
@@ -366,7 +369,7 @@ Check status using either method:
   With `kbcli` installed, you can view comprehensive cluster information:
 
 ```bash
-$ kbcli cluster describe pg-cluster -n demo
+kbcli cluster describe pg-cluster -n demo
 Name: pg-cluster	 Created Time: May 15,2025 14:23 UTC+0800
 NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY      STATUS    TERMINATION-POLICY
 demo        postgresql           replication   Running   Delete
@@ -441,14 +444,13 @@ PASSWD=$(kubectl get secret -n demo pg-cluster-postgresql-account-postgres -o js
   </TabItem>
 </Tabs>
 
-:::note Production Considerations
+:::note
+**Production Considerations**
 For production environments, avoid using `kubectl exec` and `port-forward`. Instead implement:
 - LoadBalancer or NodePort Services for external access
 - Network policies to restrict access
 - TLS encryption for secure connections
 - Connection pooling for better performance
-
-See [Production Access Guide](operations/create-loadbalancer/loadbalancer-via-operations-api) for implementation details.
 :::
 
 ## Stop the PostgreSQL Cluster
@@ -485,7 +487,7 @@ Stopping a cluster temporarily suspends operations while preserving all data and
   Alternatively, stop by setting `spec.componentSpecs.stop` to true:
 
   ```bash
-  $ kubectl patch cluster pg-cluster -n demo \
+  kubectl patch cluster pg-cluster -n demo \
   --type=merge \
   -p='{"spec": {"componentSpecs": [{"name": "postgresql", "stop": true}]}}'
   ```
@@ -531,7 +533,7 @@ Restarting a stopped cluster resumes operations with all data and configuration 
   Restart by setting `spec.componentSpecs.stop` to false:
 
   ```bash
-  $ kubectl patch cluster pg-cluster -n demo \
+  kubectl patch cluster pg-cluster -n demo \
   --type=merge \
   -p='{"spec": {"componentSpecs": [{"name": "postgresql", "stop": false}]}}'
   ```

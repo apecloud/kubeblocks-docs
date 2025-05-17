@@ -24,88 +24,38 @@ This guide demonstrates how to modify both dynamic and static parameters of a Po
 
 ## Prerequisites
 
-Before proceeding, ensure the following:
-- Environment Setup:
-    - A Kubernetes cluster is up and running.
-    - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
-- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+import Prerequisites from '../_tpl/_prerequisites.mdx'
 
-```bash
-$ kubectl create ns demo
-namespace/demo created
-```
+<Prerequisites />
 
 ## Deploy a PostgreSQL Cluster
 
-Deploy a 2-node semi-sync PostgreSQL cluster (1 primary, 1 secondary):
+import CreatePGCluster from '../_tpl/_create-pg-replication-cluster.mdx'
 
-```yaml
-apiVersion: apps.kubeblocks.io/v1
-kind: Cluster
-metadata:
-  name: pg-cluster
-  namespace: demo
-spec:
-  terminationPolicy: Delete
-  clusterDef: postgresql
-  topology: replication
-  componentSpecs:
-    - name: postgresql
-      serviceVersion: 16.4.0
-      labels:
-        apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
-      disableExporter: true
-      replicas: 2
-      resources:
-        limits:
-          cpu: "0.5"
-          memory: "0.5Gi"
-        requests:
-          cpu: "0.5"
-          memory: "0.5Gi"
-      volumeClaimTemplates:
-        - name: data
-          spec:
-            accessModes:
-              - ReadWriteOnce
-            resources:
-              requests:
-                storage: 20Gi
-```
+<CreatePGCluster />
 
 ## Verifying the Deployment
 
-Monitor the cluster status until it transitions to the Running state:
-```bash
-$ kubectl get cluster pg-cluster -n demo -w
-```
+import VerifyPGCluster from '../_tpl/_verify-pg-replication-cluster.mdx'
 
-Example Output:
+<VerifyPGCluster />
 
-```bash
-NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
-pg-cluster   postgresql           Delete               Creating   50s
-pg-cluster   postgresql           Delete               Running    4m2s
-```
-Once the cluster status becomes Running, your PostgreSQL cluster is ready for use.
+## Check Parameter Values
 
-:::tip
-If you are creating the cluster for the very first time, it may take some time to pull images before running.
-
-:::
-
-## Connecting to the PostgreSQL Cluster
+### Retrieve Credentials
 KubeBlocks automatically creates a secret containing the PostgreSQL postgres credentials. Retrieve the credentials with the following commands:
 ```bash
 NAME=`kubectl get secrets -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.username}' | base64 -d`
 PASSWD=`kubectl get secrets -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.password}' | base64 -d`
 ```
 
+### Access PostgreSQL Cluster
 To connect to the cluster's primary node, use the PostgreSQL client:
 ```bash
-$ kubectl exec -it -n demo pg-cluster-postgresql-0 -c postgresql -- env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql
+kubectl exec -it -n demo pg-cluster-postgresql-0 -c postgresql -- env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql
 ```
+
+### Query Parameter Values
 
 Once connected, you can query the current value of 'max_connections' and 'shared_buffers':
 ```sql
@@ -143,7 +93,6 @@ metadata:
   namespace: demo
 spec:
   clusterName: pg-clusters
-  force: false
   reconfigures:
   - componentName: postgresql
     parameters:
@@ -163,29 +112,29 @@ The `pgaudit.log` parameter controls audit logging granularity. Available option
 | Value    | Description |
 |----------|-------------|
 | none     | No additional logging is performed by pgAudit. |
-| ddl      | Logs all Data Definition Language (DDL) statements, such as CREATE, ALTER, DROP, etc. Example: Logging the creation or modification of tables, indexes, views, etc. |
-| dml      | Logs all Data Manipulation Language (DML) statements, such as INSERT, UPDATE, DELETE, TRUNCATE, and COPY. Example: Logging changes made to data within tables. |
-| role     | Logs all role-related commands, such as GRANT, REVOKE, CREATE ROLE, ALTER ROLE, and DROP ROLE. Example: Logging changes to user permissions or roles. |
-| read     | Logs all read operations, such as SELECT and COPY TO. Example: Logging queries that retrieve data from the database. |
-| write    | Logs all write operations, such as INSERT, UPDATE, DELETE, TRUNCATE, and COPY FROM. Example: Logging queries that modify data in the database. |
-| function | Logs all function calls, including anonymous code blocks (DO blocks). Example: Logging executions of custom functions or procedures. |
-| misc     | Logs miscellaneous commands like DISCARD, FETCH, CHECKPOINT, VACUUM, SET, etc. Example: Logging maintenance or administrative commands. |
-| all      | Logs everything (including DDL, DML, role changes, function calls, and miscellaneous commands). This setting generates the most detailed logs but may significantly increase log file size and disk usage. |
+| ddl      | Logs all Data Definition Language (DDL) statements|
+| dml      | Logs all Data Manipulation Language (DML) statements
+| role     | Logs all role-related commands |
+| read     | Logs all read operations|
+| write    | Logs all write operations|
+| function | Logs all function calls|
+| misc     | Logs miscellaneous commands|
+| all      | Logs everything|
 
 
 Wait for the OpsRequest to complete:
 ```bash
-$ kubectl get ops pg-reconfigure-dynamic -n demo -w
+kubectl get ops pg-reconfigure-dynamic -n demo -w
 ```
 
 Example output:
 ```bash
-NAME                     TYPE            CLUSTER                 STATUS    PROGRESS   AGE
+NAME                     TYPE            CLUSTER      STATUS    PROGRESS   AGE
 pg-reconfigure-dynamic   Reconfiguring   pg-cluster   Running   -/-        11s
 pg-reconfigure-dynamic   Reconfiguring   pg-cluster   Succeed   -/-        31s
 ```
 
-### Verifying the Configuration Change
+**Verifying the Configuration Change**
 
 Log into the PostgreSQL instance and confirm that the `max_connections` and `pgaudit.log` parameter has been updated:
 
@@ -242,7 +191,7 @@ postgresql-reconfigure-static   Reconfiguring   pg-cluster   Running   -/-      
 postgresql-reconfigure-static   Reconfiguring   pg-cluster   Succeed   -/-        31s
 ```
 
-### Verify the Configuration Change
+**Verify the Configuration Change**
 
 Log into the PostgreSQL instance and confirm that the `shared_buffers` parameter has been updated:
 
@@ -256,15 +205,14 @@ postgres=# show shared_buffers;
 
 ## Validity Checking on Reconfiguration
 
-KubeBlocks validates parameters before applying changes. For example, `max_connections` must be:
+KubeBlocks validates parameters before applying changes. For example, `max_connections` must obey rule:
 
 ```cue
-// Sets the maximum number of concurrent connections.
 max_connections?: int & >=6 & <=8388607
 ```
-Which means it should be an integer ranging from 6 to 8388607.
+, which means `max_connections` must be an integer ranging from 6 to 8388607.
 
-And if you somehow give a string to this value like:
+And if you somehow set a string to this value like:
 
 ```yaml
 apiVersion: operations.kubeblocks.io/v1alpha1
@@ -287,9 +235,7 @@ By checking the status of the OpsRequest
 kubectl get ops postgresql-reconfigure-invalid -n demo
 ```
 
-This OpsRequest fails fast.
-
-To checkout the details, you may describe the `Parameter` CR:
+This OpsRequest fails fast. To checkout the details, you may describe the `Parameter` CR:
 
 ```bash
 kubectl describe parameter postgresql-reconfigure-invalid -n demo

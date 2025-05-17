@@ -13,87 +13,21 @@ This guide demonstrates how to deploy a PostgreSQL cluster using KubeBlocks and 
 
 ## Prerequisites
 
-Before proceeding, ensure the following:
-- Environment Setup:
-    - A Kubernetes cluster is up and running.
-    - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
-- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+import Prerequisites from '../_tpl/_prerequisites.mdx'
 
-```bash
-$ kubectl create ns demo
-namespace/demo created
-```
-
-## List of Backup methods
-
-KubeBlocks PostgreSQL supports these backup methods:
-
-| Feature           | Method          | Description |
-|-------------------|-----------------|-------------|
-| Full Backup       | pg-basebackup   | Uses `pg_basebackup`, a PostgreSQL utility to create a base backup |
-| Full Backup       | wal-g  | Uses `wal-g` to create a full backup (requires WAL-G configuration) |
-| Continuous Backup | postgresql-pitr | Uploads PostgreSQL Write-Ahead Logging (WAL) files periodically to the backup repository, usually paired with `pg-basebackup`|
-| Continuous Backup | wal-g-archive | Uploads PostgreSQL Write-Ahead Logging (WAL) files periodically to the backup repository, usually paired with `wal-g`|
+<Prerequisites />
 
 ## Deploy a PostgreSQL Cluster
 
-Deploy a 2-node semi-sync PostgreSQL cluster (1 primary, 1 secondary):
+import CreatePGCluster from '../_tpl/_create-pg-replication-cluster.mdx'
 
-```yaml
-apiVersion: apps.kubeblocks.io/v1
-kind: Cluster
-metadata:
-  name: pg-cluster
-  namespace: demo
-spec:
-  terminationPolicy: Delete
-  clusterDef: postgresql
-  topology: replication
-  componentSpecs:
-    - name: postgresql
-      serviceVersion: 16.4.0
-      labels:
-        apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
-      disableExporter: true
-      replicas: 2
-      resources:
-        limits:
-          cpu: "0.5"
-          memory: "0.5Gi"
-        requests:
-          cpu: "0.5"
-          memory: "0.5Gi"
-      volumeClaimTemplates:
-        - name: data
-          spec:
-            accessModes:
-              - ReadWriteOnce
-            resources:
-              requests:
-                storage: 20Gi
-```
+<CreatePGCluster />
 
 ## Verifying the Deployment
 
-Monitor the cluster status until it transitions to the Running state:
-```bash
-$ kubectl get cluster pg-cluster -n demo -w
-```
+import VerifyPGCluster from '../_tpl/_verify-pg-replication-cluster.mdx'
 
-Example Output::
-
-```bash
-NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
-pg-cluster   postgresql           Delete               Creating   50s
-pg-cluster   postgresql           Delete               Running    4m2s
-```
-Once the cluster status becomes Running, your PostgreSQL cluster is ready for use.
-
-:::tip
-If you are creating the cluster for the very first time, it may take some time to pull images before running.
-
-:::
+<VerifyPGCluster />
 
 ## Prerequisites for Backup
 
@@ -112,7 +46,7 @@ KubeBlocks automatically creates a `BackupSchedule` resource when the cluster is
 1. Verify the default backup schedule configuration:
 
 ```bash
-$ kubectl get backupschedule pg-cluster-postgresql-backup-schedule  -n demo -oyaml
+kubectl get backupschedule pg-cluster-postgresql-backup-schedule  -n demo -oyaml
 ```
 
 Expected Output:

@@ -17,92 +17,37 @@ This guide explains how to perform horizontal scaling (scale-out and scale-in) o
 
 ## Prerequisites
 
-Before proceeding, ensure the following:
-- Environment Setup:
-    - A Kubernetes cluster is up and running.
-    - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
-- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+import Prerequisites from '../_tpl/_prerequisites.mdx'
 
-```bash
-$ kubectl create ns demo
-namespace/demo created
-```
+<Prerequisites />
 
 ## Deploy a PostgreSQL Cluster
 
-Deploy a 2-node semi-sync PostgreSQL cluster (1 primary, 1 secondary):
+import CreatePGCluster from '../_tpl/_create-pg-replication-cluster.mdx'
 
-```yaml
-apiVersion: apps.kubeblocks.io/v1
-kind: Cluster
-metadata:
-  name: pg-cluster
-  namespace: demo
-spec:
-  terminationPolicy: Delete
-  clusterDef: postgresql
-  topology: replication
-  componentSpecs:
-    - name: postgresql
-      serviceVersion: 16.4.0
-      labels:
-        apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
-      disableExporter: true
-      replicas: 2
-      resources:
-        limits:
-          cpu: "0.5"
-          memory: "0.5Gi"
-        requests:
-          cpu: "0.5"
-          memory: "0.5Gi"
-      volumeClaimTemplates:
-        - name: data
-          spec:
-            accessModes:
-              - ReadWriteOnce
-            resources:
-              requests:
-                storage: 20Gi
-```
+<CreatePGCluster />
 
-## Verify Cluster Deployment
+## Verifying the Deployment
 
-Monitor the cluster status until it transitions to Running:
-```bash
-$ kubectl get cluster pg-cluster -n demo -w
-```
+import VerifyPGCluster from '../_tpl/_verify-pg-replication-cluster.mdx'
 
-Example Output:
-
-```bash
-NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
-pg-cluster   postgresql           Delete               Creating   50s
-pg-cluster   postgresql           Delete               Running    4m2s
-```
-Once the cluster status becomes Running, your PostgreSQL cluster is ready for use.
-
-:::tip
-If you are creating the cluster for the very first time, it may take some time to pull images before running.
-
-:::
+<VerifyPGCluster />
 
 
 ## Scale-out (Add Replicas)
 
 **Expected Workflow**:
 
-1. New pod is provisioned with `Pending` status
+1. New pod is provisioned, and transitions from `Pending` to `Running` with `secondary` role.
 2. Data synced from primary to new replica
-3. New pod transitions to `Running` with `secondary` role
-4. Cluster status changes from `Updating` to `Running`
+3. Cluster status changes from `Updating` to `Running`
 
 <Tabs>
 
-  <TabItem value="opsRequest" label="Use the OpsRequest API" default>
+  <TabItem value="opsRequest" label="OpsRequest API" default>
 
   Option 1: Using Horizontal Scaling OpsRequest
+
   Scale out the PostgreSQL cluster by adding 1 replica:
 
   ```yaml
@@ -112,10 +57,9 @@ If you are creating the cluster for the very first time, it may take some time t
     name: pg-cluster-scale-out-ops
     namespace: demo
   spec:
-    clusterName: pg-cluster # Specifies the name of the Cluster resource that this operation is targeting.
+    clusterName: pg-cluster
     type: HorizontalScaling
     horizontalScaling:
-      # Specifies the name of the Component.
     - componentName: postgresql
       # Specifies the replica changes for scaling in components
       scaleOut:
@@ -139,7 +83,7 @@ If you are creating the cluster for the very first time, it may take some time t
   ```
   </TabItem>
 
-  <TabItem value="ClusterAPI" label="Use the Cluster API">
+  <TabItem value="ClusterAPI" label="Cluster API">
 
   Option 2: Direct Cluster API Update
 
@@ -183,7 +127,7 @@ If you are creating the cluster for the very first time, it may take some time t
   Or you can patch the cluster CR with command:
 
   ```bash
-  $ kubectl patch cluster pg-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 3}]'
+  kubectl patch cluster pg-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 3}]'
   ```
   </TabItem>
 </Tabs>
@@ -193,7 +137,7 @@ If you are creating the cluster for the very first time, it may take some time t
 After applying the operation, you will see a new pod created and the PostgreSQL cluster status goes from `Updating` to `Running`, and the newly created pod has a new role `secondary`.
 
 ```bash
-$ kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster
+kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster
 ```
 
 Expected Output (3 Pods):
@@ -206,7 +150,7 @@ pg-cluster-postgresql-2   4/4     Running   0          5m5s
 
 New replicas automatically join as secondary nodes.
 ```bash
-$ kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster -L kubeblocks.io/role
+kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster -L kubeblocks.io/role
 ```
 
 Expected Outputs:
@@ -232,10 +176,12 @@ If the replica being scaled-in happens to be a primary replica, KubeBlocks will 
 
 <Tabs>
 
-  <TabItem value="opsRequest" label="Use the OpsRequest API" default>
+  <TabItem value="opsRequest" label="OpsRequest API" default>
 
   Option 1: Using Horizontal Scaling OpsRequest
+
   Scale in the PostgreSQL cluster by removing ONE replica:
+
   ```yaml
   apiVersion: operations.kubeblocks.io/v1alpha1
   kind: OpsRequest
@@ -243,12 +189,9 @@ If the replica being scaled-in happens to be a primary replica, KubeBlocks will 
     name: pg-cluster-scale-in-ops
     namespace: demo
   spec:
-    # Specifies the name of the Cluster resource that this operation is targeting.
     clusterName: pg-cluster
     type: HorizontalScaling
-    # Lists HorizontalScaling objects, each specifying scaling requirements for a Component, including desired total replica counts, configurations for new instances, modifications for existing instances, and instance downscaling options
     horizontalScaling:
-      # Specifies the name of the Component.
     - componentName: postgresql
       # Specifies the replica changes for scaling in components
       scaleIn:
@@ -271,7 +214,7 @@ If the replica being scaled-in happens to be a primary replica, KubeBlocks will 
   ```
   </TabItem>
 
-  <TabItem value="ClusterAPI" label="Use the Cluster API">
+  <TabItem value="ClusterAPI" label="Cluster API">
 
   Option 2: Direct Cluster API Update
 
@@ -315,7 +258,7 @@ If the replica being scaled-in happens to be a primary replica, KubeBlocks will 
   Or you can patch the cluster CR with command:
 
   ```bash
-  $ kubectl patch cluster pg-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 1}]'
+  kubectl patch cluster pg-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 1}]'
   ```
   </TabItem>
 
@@ -325,7 +268,7 @@ If the replica being scaled-in happens to be a primary replica, KubeBlocks will 
 
 Expected Output (ONE Pod):
 ```bash
-$ kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster
+kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster
 NAME                      READY   STATUS    RESTARTS   AGE
 pg-cluster-postgresql-0   4/4     Running   0          16m
 ```
@@ -337,6 +280,13 @@ When performing horizontal scaling:
 - Monitor cluster health during scaling operations
 - Verify sufficient resources exist before scaling out
 - Consider storage requirements for new replicas
+
+## Cleanup
+To remove all created resources, delete the PostgreSQL cluster along with its namespace:
+```bash
+kubectl delete cluster pg-cluster -n demo
+kubectl delete ns demo
+```
 
 ## Summary
 In this guide you learned how to:
