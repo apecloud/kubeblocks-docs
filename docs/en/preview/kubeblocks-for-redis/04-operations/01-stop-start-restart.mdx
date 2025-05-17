@@ -1,0 +1,295 @@
+---
+title: Redis Replication Cluster Lifecycle Management (Stop, Start, Restart)
+description: Learn how to manage Redis Replication Cluster states in KubeBlocks including stopping, starting, and restarting operations to optimize resources.
+keywords: [KubeBlocks, Redis, Cluster Management, Stop, Start, Restart]
+sidebar_position: 1
+sidebar_label: Lifecycle Management
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Redis Replication Cluster Lifecycle Management
+
+This guide demonstrates how to manage a Redis Replication Cluster's operational state in **KubeBlocks**, including:
+
+- Stopping the cluster to conserve resources
+- Starting a stopped cluster
+- Restarting cluster components
+
+These operations help optimize resource usage and reduce operational costs in Kubernetes environments.
+
+Lifecycle management operations in KubeBlocks:
+
+| Operation | Effect | Use Case |
+|-----------|--------|----------|
+| Stop | Suspends cluster, retains storage | Cost savings, maintenance |
+| Start | Resumes cluster operation | Restore service after pause |
+| Restart | Recreates pods for component | Configuration changes, troubleshooting |
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploy a Redis Replication Cluster
+
+import CreateCluster from '../_tpl/_create-redis-replication-cluster.mdx'
+
+<CreateCluster />
+
+## Verifying the Deployment
+
+import VerifyCluster from '../_tpl/_verify-redis-replication-cluster.mdx'
+
+<VerifyCluster />
+
+## Cluster Lifecycle Operations
+
+### Stopping the Cluster
+
+Stopping a Redis Replication Cluster in KubeBlocks will:
+
+1. Terminates all running pods
+2. Retains persistent storage (PVCs)
+3. Maintains cluster configuration
+
+This operation is ideal for:
+- Temporary cost savings
+- Maintenance windows
+- Development environment pauses
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  Option 1: OpsRequest API
+
+  Create a Stop operation request:
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: redis-replication-stop-ops
+    namespace: demo
+  spec:
+    clusterName: redis-replication
+    type: Stop
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  Option 2: Cluster API Patch
+
+  Modify the cluster spec directly by patching the stop field:
+
+  ```bash
+  kubectl patch cluster redis-replication -n demo \
+  --type=merge \
+  -p='{"spec": {"componentSpecs": [{"name": "redis", "stop": true}, {"name": "redis-sentinel", "stop": true}]}}'
+  ```
+
+  </TabItem>
+
+</Tabs>
+
+### Verifying Cluster Stop
+
+To confirm a successful stop operation:
+
+1. Check cluster status transition:
+   ```bash
+   kubectl get cluster redis-replication -n demo -w
+   ```
+   Expected output:
+   ```bash
+   NAME                CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+   redis-replication   redis                Delete               Stopping   6m3s
+   redis-replication   redis                Delete               Stopped    6m55s
+   ```
+
+2. Verify no running pods:
+   ```bash
+   kubectl get pods -n demo
+   ```
+   Expected output:
+   ```bash
+   No resources found in demo namespace.
+   ```
+
+3. Confirm persistent volumes remain:
+   ```bash
+   kubectl get pvc -n demo
+   ```
+   Expected output:
+   ```bash
+    NAME                                      STATUS   VOLUME     CAPACITY   ACCESS MODES
+    data-redis-replication-redis-0            Bound    pvc-uuid   20Gi       RWO
+    data-redis-replication-redis-1            Bound    pvc-uuid   20Gi       RWO
+    data-redis-replication-redis-sentinel-0   Bound    pvc-uuid   20Gi       RWO
+    data-redis-replication-redis-sentinel-1   Bound    pvc-uuid   20Gi       RWO
+    data-redis-replication-redis-sentinel-2   Bound    pvc-uuid   20Gi       RWO
+   ```
+
+### Starting the Cluster
+
+Starting a stopped Redis Replication Cluster:
+1. Recreates all pods
+2. Reattaches persistent storage
+3. Restores service endpoints
+
+Expected behavior:
+- Cluster returns to previous state
+- No data loss occurs
+- Services resume automatically
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  Initiate a Start operation request:
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: redis-replication-start-ops
+    namespace: demo
+  spec:
+    # Specifies the name of the Cluster resource that this operation is targeting.
+    clusterName: redis-replication
+    type: Start
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  Modify the cluster spec to resume operation:
+  1. Set stop: false, or
+  2. Remove the stop field entirely
+
+  ```bash
+  kubectl patch cluster redis-replication -n demo \
+  --type=merge \
+  -p='{"spec": {"componentSpecs": [{"name": "redis", "stop": false}, {"name": "redis-sentinel", "stop": false}]}}'
+  ```
+
+  </TabItem>
+
+</Tabs>
+
+### Verifying Cluster Start
+
+To confirm a successful start operation:
+
+1. Check cluster status transition:
+   ```bash
+   kubectl get cluster redis-replication -n demo -w
+   ```
+   Expected output:
+   ```bash
+   NAME                CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+   redis-replication   redis                Delete               Updating   22m
+   redis-replication   redis                Delete               Running    22m
+   ```
+
+2. Verify pod recreation:
+   ```bash
+   kubectl get pods -n demo -l app.kubernetes.io/instance=redis-replication
+   ```
+   Expected output:
+   ```bash
+   NAME                       READY   STATUS    RESTARTS   AGE
+   redis-replication-redis-0   1/1     Running   0          2m
+   redis-replication-redis-1   1/1     Running   0          1m
+   ```
+
+3. Check service endpoints:
+   ```bash
+   kubectl get endpoints redis-replication-redis-redis -n demo
+   ```
+
+### Restarting Cluster
+
+Restart operations provide:
+- Pod recreation without full cluster stop
+- Component-level granularity
+- Minimal service disruption
+
+Use cases:
+- Configuration changes requiring restart
+- Resource refresh
+- Troubleshooting
+
+**Using OpsRequest API**
+
+Target specific components `redis` and `redis-sentinel` for restart:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: redis-replication-restart-ops
+  namespace: demo
+spec:
+  clusterName: redis-replication
+  type: Restart
+  restart:
+  - componentName: redis
+  - componentName: redis-sentinel
+```
+
+**Verifying Restart Completion**
+
+To verify a successful component restart:
+
+1. Track OpsRequest progress:
+   ```bash
+   kubectl get opsrequest redis-replication-restart-ops -n demo -w
+   ```
+   Expected output:
+   ```bash
+   NAME                     TYPE      CLUSTER      STATUS    PROGRESS   AGE
+   redis-replication-restart-ops   Restart   redis-replication   Running   0/2        10s
+   redis-replication-restart-ops   Restart   redis-replication   Running   1/2        65s
+   redis-replication-restart-ops   Restart   redis-replication   Running   2/2        2m5s
+   redis-replication-restart-ops   Restart   redis-replication   Succeed   2/2        2m5s
+   ```
+
+2. Check pod status:
+   ```bash
+   kubectl get pods -n demo -l app.kubernetes.io/instance=redis-replication
+   ```
+   Note: Pods will show new creation timestamps after restart
+
+3. Verify component health:
+   ```bash
+   kbcli cluster describe redis-replication -n demo
+   ```
+
+Once the operation is complete, the cluster will return to the Running state.
+
+
+To restart pods for Redis Component only, you can use:
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: redis-replication-restart-redis
+  namespace: demo
+spec:
+  clusterName: redis-replication
+  type: Restart
+  restart:
+  - componentName: redis
+```
+
+## Summary
+In this guide, you learned how to:
+1. Stop a Redis Replication Cluster to suspend operations while retaining persistent storage.
+2. Start a stopped cluster to bring it back online.
+3. Restart specific cluster components to recreate their Pods without stopping the entire cluster.
+By managing the lifecycle of your Redis Replication Cluster, you can optimize resource utilization, reduce costs, and maintain flexibility in your Kubernetes environment. KubeBlocks provides a seamless way to perform these operations, ensuring high availability and minimal disruption.

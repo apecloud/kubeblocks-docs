@@ -1,0 +1,539 @@
+---
+title: Redis QuickStart Guide
+description: Comprehensive guide to deploying and managing Redis Replication Clusters with KubeBlocks, including installation, configuration, and operational best practices.
+keywords: [Kubernetes, Redis, KubeBlocks, Helm, Cluster Management, QuickStart]
+sidebar_position: 2
+sidebar_label: QuickStart
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Redis QuickStart Guide
+
+This guide provides a comprehensive walkabout for deploying and managing Redis Replication Clusters using the **KubeBlocks Redis Add-on**, covering:
+- System prerequisites and add-on installation
+- Cluster creation and configuration
+- Operational management including start/stop procedures
+- Connection methods and cluster monitoring
+
+## Prerequisites
+
+### System Requirements
+
+Before proceeding, verify your environment meets these requirements:
+
+- A functional Kubernetes cluster (v1.21+ recommended)
+- `kubectl` v1.21+ installed and configured with cluster access
+- Helm installed ([installation guide](https://helm.sh/docs/intro/install/))
+- KubeBlocks installed ([installation guide](../user_docs/installation/install-kubeblocks.md))
+
+### Verify Redis Add-on
+
+The Redis Add-on is included with KubeBlocks by default. Check its status:
+
+```bash
+helm list -n kb-system | grep redis
+```
+
+<details open>
+<summary>Expected Output:</summary>
+
+```bash
+NAME               NAMESPACE   REVISION    UPDATED                     STATUS      CHART
+kb-addon-redis     kb-system   1           2025-05-21                  deployed    redis-1.0.0
+```
+</details>
+
+If the add-on isn't enabled, choose an installation method:
+
+<Tabs>
+
+  <TabItem value="helm" label="helm" default>
+  ```bash
+  # Add Helm repo
+  helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
+  # For users in Mainland China, if GitHub is inaccessible or slow, use this alternative repo:
+  #helm repo add kubeblocks-addons https://jihulab.com/api/v4/projects/150246/packages/helm/stable
+
+  # Update helm repo
+  helm repo update
+  # Search available Add-on versions
+  helm search repo kubeblocks/redis --versions
+  # Install your desired version (replace <VERSION> with your chosen version)
+  helm upgrade -i kb-addon-redis kubeblocks-addons/redis --version <VERSION> -n kb-system
+  ```
+  </TabItem>
+
+  <TabItem value="kbcli" label="kbcli">
+
+  ```bash
+  # Add an index (kubeblocks is added by default)
+  kbcli addon index add kubeblocks https://github.com/apecloud/block-index.git
+  # Update the index
+  kbcli addon index update kubeblocks
+  # Update all indexes
+  kbcli addon index update --all
+  ```
+
+  To search and install an addon:
+
+  ```bash
+  # Search Add-on
+  kbcli addon search redis
+  # Install Add-on with your desired version (replace <VERSION> with your chosen version)
+  kbcli addon install redis --version <VERSION>
+  ```
+  **Sample Output:**
+  ```bash
+  ADDON   VERSION         INDEX
+  redis   0.9.0           kubeblocks
+  redis   0.9.1           kubeblocks
+  redis   1.0.0           kubeblocks
+  ```
+  To enable or disable an addon:
+
+  ```bash
+  # Enable Add-on
+  kbcli addon enable redis
+  # Disable Add-on
+  kbcli addon disable redis
+  ```
+
+  </TabItem>
+</Tabs>
+
+:::note
+**Version Compatibility**
+
+Always verify that the Redis Add-on version matches your KubeBlocks major version to avoid compatibility issues.
+
+:::
+
+### Verify Supported Redis Versions
+
+**List available Redis versions:**
+
+```bash
+kubectl get cmpv redis
+```
+<details open>
+<summary>Sample Output</summary>
+```text
+NAME    VERSIONS            STATUS      AGE
+redis   7.2.7,7.2.4,7.0.6   Available   33d
+```
+</details>
+
+**Check version compatibility for ComponentDefinitions**
+
+**Step 1.** Get the list of `ComponentDefinition` associated with a given `ComponentVersion`
+
+```bash
+kubectl get cmpv redis -ojson | jq -r '.metadata.annotations."componentversion.kubeblocks.io/compatible-definitions"' | tr ',' '\n'
+```
+
+<details>
+<summary>Sample Output</summary>
+```text
+redis-7-1.0.0-alpha.0
+```
+</details>
+
+**Step 2.** Get the list of ComponentDefinition associated with a given ComponentVersion
+
+```bash
+kubectl get cmpv redis -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("^redis-7"))) | .releases[]'
+```
+
+This returns versions compatible with `ComponentDefinition` named `redis-14`:
+
+<details open>
+<summary>Sample Output</summary>
+```text
+7.2.7
+7.2.4
+7.0.6
+```
+</details>
+
+### Storage Configuration
+
+Redis requires persistent storage. Verify available options:
+
+```bash
+kubectl get storageclass
+```
+
+Recommended storage characteristics:
+- Minimum 20Gi capacity
+- ReadWriteOnce access mode
+- Supports volume expansion
+- Appropriate performance for workload
+
+## Deploy a Redis ReplicationCluster
+
+Deploy a basic Redis Replication Cluster with default settings:
+
+```bash
+kubectl apply -f https://github.com/apecloud/kubeblocks-addons/blob/main/examples/redis/cluster.yaml
+```
+
+This creates:
+- A Redis Replication Cluster with two components, Redis(2 replicas) and Redis Sentinel(3 replicas).
+- Default resource allocations (0.5 CPU, 0.5Gi memory)
+- 20Gi persistent storage
+- Automatic primary-replica configuration
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: redis-replication
+  namespace: demo
+spec:
+  # Specifies the behavior when a Cluster is deleted.
+  # Valid options are: [DoNotTerminate, Delete, WipeOut] (`Halt` is deprecated since KB 0.9)
+  # - `DoNotTerminate`: Prevents deletion of the Cluster. This policy ensures that all resources remain intact.
+  # - `Delete`: Extends the `Halt` policy by also removing PVCs, leading to a thorough cleanup while removing all persistent data.
+  # - `WipeOut`: An aggressive policy that deletes all Cluster resources, including volume snapshots and backups in external storage.
+  # This results in complete data removal and should be used cautiously, primarily in non-production environments to avoid irreversible data loss.
+  terminationPolicy: Delete
+  # Specifies the name of the ClusterDefinition to use when creating a Cluster.
+  # Note: DO NOT UPDATE THIS FIELD
+  # The value must be `redis` to create a Redis Cluster
+  clusterDef: redis
+  # Specifies the name of the ClusterTopology to be used when creating the
+  # Cluster.
+  topology: replication
+  componentSpecs:
+    - name: redis
+      serviceVersion: "7.2.4"
+      # Determines whether metrics exporter information is annotated on the
+      # Component's headless Service.
+      # Valid options are [true, false]
+      disableExporter: false
+      # Specifies the desired number of replicas in the Component
+      replicas: 2
+      # Specifies the resources required by the Component.
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                # Set the storage size as needed
+                storage: 20Gi
+    - name: redis-sentinel
+      replicas: 3
+      resources:
+        # Specifies the resources required by the Component.
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                # Set the storage size as needed
+                storage: 20Gi
+```
+
+For more API fields and descriptions, refer to the [API Reference](https://kubeblocks.io/docs/preview/developer_docs/api-reference/cluster).
+
+### Create a Version-Specific Redis Replication Cluster
+
+To create a cluster with a specific version, configure `spec.componentSpecs.serviceVersion` (major.minor version) fields before applying:
+
+<Tabs>
+  <TabItem value="Redis77" label="Redis 7">
+  ```yaml
+    componentSpecs:
+      - name: redis
+        serviceVersion: 7.2.4    # Valid options: [7.0.6, 7.2.4, 7.2.7]
+  ```
+    </TabItem>
+</Tabs>
+
+## Verify Cluster Status
+
+When deploying a Redis Replication Cluster with 5 replicas, 2 for redis and 3 for redis sentinel:
+- Redis running with one Primary replica (read/write operations and one Secondary replica (read-only operations)
+
+Confirm successful deployment by checking:
+
+1. Cluster phase is `Running`
+2. All pods are operational
+3. Replicas have correct roles
+
+Check status using either method:
+
+<Tabs>
+  <TabItem value='kubectl' label='kubectl' default>
+```bash
+kubectl get cluster redis-replication -n demo
+NAME                CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+redis-replication   redis                Delete               Running   3m49s
+
+kubectl get pods -l app.kubernetes.io/instance=redis-replication -L  kubeblocks.io/role -n demo
+NAME                                 READY   STATUS    RESTARTS   AGE     ROLE
+redis-replication-redis-0            3/3     Running   0          3m38s   primary
+redis-replication-redis-1            3/3     Running   0          3m16s   secondary
+redis-replication-redis-sentinel-0   2/2     Running   0          4m35s
+redis-replication-redis-sentinel-1   2/2     Running   0          4m17s
+redis-replication-redis-sentinel-2   2/2     Running   0          3m59s
+```
+  </TabItem>
+
+  <TabItem value='kbcli' label='kbcli'>
+
+  With `kbcli` installed, you can view comprehensive cluster information:
+
+```bash
+kbcli cluster describe redis-replication -n demo
+
+Name: redis-replication	 Created Time: May 17,2025 15:45 UTC+0800
+NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY      STATUS    TERMINATION-POLICY
+demo        redis                replication   Running   Delete
+
+Endpoints:
+COMPONENT        INTERNAL                                                                       EXTERNAL
+redis            redis-replication-redis-redis.demo.svc.cluster.local:6379                      <none>
+redis-sentinel   redis-replication-redis-sentinel-redis-sentinel.demo.svc.cluster.local:26379   <none>
+
+Topology:
+COMPONENT        SERVICE-VERSION   INSTANCE                             ROLE        STATUS    AZ       NODE   CREATED-TIME
+redis            7.2.4             redis-replication-redis-0            primary     Running   zone-x   x.y.z  MM/DD
+redis            7.2.4             redis-replication-redis-1            secondary   Running   zone-x   x.y.z  MM/DD
+redis-sentinel   7.2.7             redis-replication-redis-sentinel-0   <none>      Running   zone-x   x.y.z  MM/DD
+redis-sentinel   7.2.7             redis-replication-redis-sentinel-1   <none>      Running   zone-x   x.y.z  MM/DD
+redis-sentinel   7.2.7             redis-replication-redis-sentinel-2   <none>      Running   zone-x   x.y.z  MM/DD
+
+Resources Allocation:
+COMPONENT        INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+redis                                500m / 500m          512Mi / 512Mi           data:20Gi      <none>
+redis-sentinel                       500m / 500m          512Mi / 512Mi           data:20Gi      <none>
+
+Images:
+COMPONENT        COMPONENT-DEFINITION             IMAGE
+redis            redis-7-1.0.0-alpha.0            docker.io/redis/redis-stack-server:7.2.0-v10
+                                                  docker.io/apecloud/agamotto:0.1.2-beta.1
+                                                  docker.io/redis/redis-stack-server:7.2.0-v14
+redis-sentinel   redis-sentinel-7-1.0.0-alpha.0   docker.io/redis/redis-stack-server:7.2.0-v14
+
+Data Protection:
+BACKUP-REPO   AUTO-BACKUP   BACKUP-SCHEDULE   BACKUP-METHOD   BACKUP-RETENTION   RECOVERABLE-TIME
+
+Show cluster events: kbcli cluster list-events -n demo redis-replication
+```
+
+  </TabItem>
+</Tabs>
+
+## Access the Redis Replication Cluster
+
+KubeBlocks automatically provisions:
+1. Credentials stored in Secret `redis-replication-redis-account-default`
+2. ClusterIP Service `redis-replication-redis-redis`
+
+### Retrieve Credentials
+```bash
+# Get username
+NAME=$(kubectl get secret -n demo redis-replication-redis-account-default -o jsonpath='{.data.username}' | base64 --decode)
+# Get password
+PASSWD=$(kubectl get secret -n demo redis-replication-redis-account-default -o jsonpath='{.data.password}' | base64 --decode)
+```
+
+### Connection Methods
+
+<Tabs>
+  <TabItem value="Direct Pod Access" label="Direct Pod Access" default>
+
+  Connect directly to a pod:
+  ```bash
+  kubectl exec -ti -n demo redis-replication-redis-0 -- \
+    redis-cli -h redis-replication-redis-redis -a ${PASSWD}
+  ```
+  </TabItem>
+
+  <TabItem value="Local Port Forwarding" label="Local Port Forwarding">
+
+  1. Forward service port:
+  ```bash
+  kubectl port-forward svc/redis-replication-redis-redis 6379:6379 -n demo
+  ```
+
+  2. Connect via localhost:
+  ```bash
+  redis-cli -h 127.0.0.1 -a ${PASSWD}
+  ```
+  </TabItem>
+</Tabs>
+
+:::note
+**Production Considerations**
+For production environments, avoid using `kubectl exec` and `port-forward`. Instead implement:
+- LoadBalancer or NodePort Services for external access
+- Network policies to restrict access
+- TLS encryption for secure connections
+- Connection pooling for better performance
+:::
+
+## Stop the Redis Replication Cluster
+
+Stopping a cluster temporarily suspends operations while preserving all data and configuration:
+
+**Key Effects:**
+- Compute resources (Pods) are released
+- Persistent storage (PVCs) remains intact
+- Service definitions are maintained
+- Cluster configuration is preserved
+- Operational costs are reduced
+
+
+<Tabs>
+  <TabItem value="OpsRequest" label="OpsRequest API" default>
+  ```bash
+  kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/redis/stop.yaml
+  ```
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: redis-stop
+    namespace: demo
+  spec:
+    clusterName: redis-replication
+    type: Stop
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+  Alternatively, stop by setting `spec.componentSpecs.stop` to true:
+
+  ```bash
+  kubectl patch cluster redis-replication -n demo \
+  --type=merge \
+  -p='{"spec": {"componentSpecs": [{"name": "redis", "stop": true}, {"name": "redis-sentinel", "stop": true}]}}'
+  ```
+
+  ```yaml
+  spec:
+    componentSpecs:
+      - name: redis
+        stop: true  # Set to stop component
+        replicas: 2
+  ```
+  </TabItem>
+</Tabs>
+
+## Start the Redis Replication Cluster
+
+Restarting a stopped cluster resumes operations with all data and configuration intact:
+
+**Key Effects:**
+- Compute resources (Pods) are recreated
+- Services become available again
+- Cluster returns to previous state
+
+<Tabs>
+  <TabItem value="OpsRequest" label="OpsRequest API" default>
+  ```bash
+  kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/redis/start.yaml
+  ```
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: redis-start
+    namespace: demo
+  spec:
+    clusterName: redis-replication
+    type: Start
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+  Restart by setting `spec.componentSpecs.stop` to false:
+
+  ```bash
+  kubectl patch cluster redis-replication -n demo \
+  --type=merge \
+  -p='{"spec": {"componentSpecs": [{"name": "redis", "stop": false}, {"name": "redis-sentinel", "stop": false}]}}'
+  ```
+  </TabItem>
+</Tabs>
+
+
+## Delete Redis Replication Cluster
+
+Choose carefully based on your data retention needs:
+
+| Policy          | Resources Removed | Data Removed | Recommended For |
+|-----------------|-------------------|--------------|-----------------|
+| DoNotTerminate  | None              | None         | Critical production clusters |
+| Delete          | All resources     | PVCs deleted | Non-critical environments |
+| WipeOut         | All resources     | Everything*  | Test environments only |
+
+*Includes snapshots and backups in external storage
+
+**Pre-Deletion Checklist:**
+1. Verify no applications are using the cluster
+2. Ensure required backups exist
+3. Confirm proper terminationPolicy is set
+4. Check for dependent resources
+
+For test environments, use this complete cleanup:
+
+```bash
+kubectl patch cluster redis-replication -p '{"spec":{"terminationPolicy":"WipeOut"}}' --type="merge" -n demo
+kubectl delete cluster redis-replication -n demo
+```
+
+## Why Redis Sentinel starts before Redis
+
+Redis Sentinel is a high availability solution for Redis. It provides monitoring, notifications, and automatic failover for Redis instances.
+
+Each Redis replica, from the Redis component, upon startup, will connect to the Redis Sentinel instances to get the current leader and follower information. It needs to determine:
+
+- Whether it should act as the primary (master) node.
+- If not, which node is the current primary to replicate from.
+
+In more detail, each Redis replica will:
+
+1. Check for Existing Primary Node
+    - Queries Redis Sentinel to find out if a primary node is already elected.
+    - Retrieve the primary's address and port.
+1. Initialize as Primary if Necessary
+    - If no primary is found (e.g., during initial cluster setup), it configures the current Redis instance to become the primary.
+    - Updates Redis configuration to disable replication.
+1. Configure as Replica if Primary Exists
+    - If a primary is found, it sets up the current Redis instance as a replica.
+    - Updates the Redis configuration with the `replicaof` directive pointing to the primary's address and port.
+    - Initiates replication to synchronize data from the primary.
+
+KubeBlocks ensures that Redis Sentinel starts first to provide the necessary information for the Redis replicas to initialize correctly. Such dependency is well-expressed in the KubeBlocks CRD `ClusterDefinition` ensuring the correct startup order.
+
+More details on how components for the `replication` topology are started, upgraded can be found in:
+
+```bash
+kubectl get cd redis -oyaml | yq '.spec.topologies[] | select(.name=="replication") | .orders'
+```

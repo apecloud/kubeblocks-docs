@@ -14,7 +14,7 @@ import { ExpandMore } from "@mui/icons-material";
 import { useState } from "react";
 import { Link } from "@/components/Link";
 import { DropDown } from "@/components/DropDown";
-import { ElasticSearchIcon, KafkaIcon, MilvusIcon, MongodbIcon, MySQLIcon, PostgreSQLIcon, QdrantIcon, RabbitMQIcon, StarRocksIcon } from "@/components/icons";
+import { ElasticSearchIcon, KafkaIcon, MilvusIcon, MongodbIcon, MySQLIcon, PostgreSQLIcon, QdrantIcon, RabbitMQIcon, RedisIcon } from "@/components/icons";
 
 
 export default function DatabasesNav() {
@@ -36,9 +36,9 @@ export default function DatabasesNav() {
       href: "/docs/preview/kubeblocks-for-postgresql",
     },
     {
-      title: "StarRocks",
-      icon: <StarRocksIcon {...iconProps}/>,
-      href: "/docs/preview/kubeblocks-for-starrocks",
+      title: "Redis",
+      icon: <RedisIcon {...iconProps}/>,
+      href: "/docs/preview/kubeblocks-for-redis",
     },
     {
       title: "MongoDB",
