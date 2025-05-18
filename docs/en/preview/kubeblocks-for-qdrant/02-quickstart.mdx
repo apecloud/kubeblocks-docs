@@ -174,7 +174,7 @@ Recommended storage characteristics:
 - Supports volume expansion
 - Appropriate performance for workload
 
-## Deploy a Qdrant Replication Cluster
+## Deploy a Qdrant Cluster
 
 Deploy a basic Qdrant Cluster with default settings:
 
@@ -183,10 +183,9 @@ kubectl apply -f https://github.com/apecloud/kubeblocks-addons/blob/main/example
 ```
 
 This creates:
-- A Qdrant Cluster with two components, Qdrant(2 replicas) and Qdrant Sentinel(3 replicas).
+- A Qdrant Cluster with 3 replicas.
 - Default resource allocations (0.5 CPU, 0.5Gi memory)
 - 20Gi persistent storage
-- Automatic primary-replica configuration
 
 ```yaml
 apiVersion: apps.kubeblocks.io/v1
@@ -263,13 +262,12 @@ To create a cluster with a specific version, configure `spec.componentSpecs.serv
 
 ## Verify Cluster Status
 
-When deploying a Qdrant Cluster with 1 primary replica and 2 secondary replicas:
+When deploying a Qdrant Cluster with 3 replicas:
 
 Confirm successful deployment by checking:
 
 1. Cluster phase is `Running`
 2. All pods are operational
-3. Replicas have correct roles
 
 Check status using either method:
 

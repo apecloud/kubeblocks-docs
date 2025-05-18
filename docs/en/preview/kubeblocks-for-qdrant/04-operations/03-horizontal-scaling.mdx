@@ -246,9 +246,8 @@ On scale-in, KubeBlocks Qdrant will redistribute data in following steps:
 If the scale-in operations gets stuck for quite a long time, please check these resources:
 
 ```bash
-# Check agent logs on both current primary and candidate
-kubectl logs -n demo <primary-pod> -c kbagent
-kubectl logs -n demo <candidate-pod> -c kbagent
+# Check agent logs
+kubectl logs -n demo <pod-name> -c kbagent
 
 # Check cluster events for errors
 kubectl get events -n demo --field-selector involvedObject.name=pg-cluster
