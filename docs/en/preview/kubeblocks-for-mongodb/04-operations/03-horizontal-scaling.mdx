@@ -95,14 +95,14 @@ import VerifyCluster from '../_tpl/_verify-cluster.mdx'
   spec:
     componentSpecs:
       - name: mongodb
-        replicas: 3 # increase replcias to scale-out
+        replicas: 4 # increase replcias to scale-out
   ...
   ```
 
   Or you can patch the cluster CR with command:
 
   ```bash
-  kubectl patch cluster mongo-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 3}]'
+  kubectl patch cluster mongo-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 4}]'
   ```
   </TabItem>
 </Tabs>

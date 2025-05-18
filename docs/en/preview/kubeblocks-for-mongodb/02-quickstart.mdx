@@ -315,7 +315,7 @@ Check status using either method:
 <Tabs>
   <TabItem value='kubectl' label='kubectl' default>
 ```bash
-kubectl get cluster mongo-cluster -n demo
+kubectl get cluster mongo-cluster -n demo -w
 NAME            CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
 mongo-cluster   mongodb              Delete               Creating   49s
 mongo-cluster   mongodb              Delete               Running    62s
