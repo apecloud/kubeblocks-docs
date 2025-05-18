@@ -127,6 +127,15 @@ spec:
     retentionPeriod: 8d # by default, retentionPeriod of continuous backup is 1d more than that of a full backup.
 ```
 
+1. **Full Backups** (datafile):
+  - Use redis `BGSAVE` command to perform a full backup
+  - Runs on configured schedule (daily by default)
+  - Serves as base for PITR
+
+2. **Continuous Backups** (archive-oplog):
+  - Continuously processing incremental AOF files, update base AOF file, purge expired files
+  - Maintains backup metadata including size and time ranges
+
 ## Monitoring Continuous Backups
 
 Verify continuous backup operation with these commands:

@@ -124,7 +124,7 @@ redis-switchover-ops   Switchover   redis-replication   Succeed   1/1        33s
 ```
 ## Verify the Switchover
 
-After the switchover is executed, the specified instance ('example-semisync-redis-redis-0') will be promoted to the primary role, while the previously primary instance ('example-semisync-redis-redis-1') will take on the secondary role.
+After the switchover is executed, the specified instance will be promoted to the primary role, while the previously primary instance will take on the secondary role.
 
 ```bash
 kubectl get pods -n demo -l app.kubernetes.io/instance=redis-replication,apps.kubeblocks.io/component-name=redis -L kubeblocks.io/role

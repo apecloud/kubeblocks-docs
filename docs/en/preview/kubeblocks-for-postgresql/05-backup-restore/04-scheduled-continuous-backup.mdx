@@ -35,6 +35,17 @@ kubectl create ns demo
 namespace/demo created
 ```
 
+## Prerequisites for Backup
+
+1. Backup Repository Configured:
+   - Configured `BackupRepo`
+   - Network connectivity between cluster and repo, `BackupRepo` status is `Ready`
+
+2. Cluster is Running:
+   - Cluster must be in `Running` state
+   - No ongoing operations (scaling, upgrades etc.)
+
+
 ## List of Backup methods
 
 KubeBlocks PostgreSQL supports these backup methods:
@@ -132,16 +143,6 @@ kubectl get backup -l app.kubernetes.io/instance=pg-cluster,dataprotection.kubeb
 # get pod working for continuous backup
 kubectl get pod -l app.kubernetes.io/instance=pg-cluster,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
 ```
-
-## Prerequisites for Backup
-
-1. Backup Repository Configured:
-   - Configured `BackupRepo`
-   - Network connectivity between cluster and repo, `BackupRepo` status is `Ready`
-
-2. Cluster is Running:
-   - Cluster must be in `Running` state
-   - No ongoing operations (scaling, upgrades etc.)
 
 ## Verifying Backup Configuration
 

@@ -124,7 +124,7 @@ pg-switchover-ops   Switchover   pg-cluster   Succeed   1/1        17s
 ```
 ## Verify the Switchover
 
-After the switchover is executed, the specified instance ('example-semisync-postgresql-postgresql-0') will be promoted to the primary role, while the previously primary instance ('example-semisync-postgresql-postgresql-1') will take on the secondary role.
+After the switchover is executed, the specified instance will be promoted to the primary role, while the previously primary instance will take on the secondary role.
 
 ```bash
 kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster -L kubeblocks.io/role
