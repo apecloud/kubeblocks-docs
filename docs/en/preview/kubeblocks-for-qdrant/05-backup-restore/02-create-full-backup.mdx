@@ -1,0 +1,217 @@
+---
+title: Create a Full Backup for a Qdrant Cluster on KubeBlocks
+description: Step-by-step guide to creating and validating full backups for Qdrant clusters using Backup API and OpsRequest API in KubeBlocks.
+keywords: [Qdrant, Full Backup, KubeBlocks, Kubernetes, Database Backup, XtraBackup]
+sidebar_position: 2
+sidebar_label: Create Full Backup
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# Create a Full Backup for Qdrant on KubeBlocks
+
+This guide demonstrates how to create and validate full backups for Qdrant clusters on KubeBlocks using the `pg-basebackup` method through both:
+- The Backup API (direct backup operations)
+- The OpsRequest API (managed backup operations with enhanced monitoring)
+
+We will cover how to restore data from a backup in the [Restore From Full Backup](./05-restoring-from-full-backup) guide.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploy a Qdrant Cluster
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+## Verifying the Deployment
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+## Backup Prerequisites
+
+Before creating backups, ensure:
+1. Backup repository is configured:
+   - `BackupRepo` resource exists
+   - Network connectivity between cluster and repository
+   - `BackupRepo` status shows "Ready"
+
+2. Cluster is ready:
+   - Cluster status is "Running"
+   - No ongoing operations (scaling, upgrades, etc.)
+
+## Identify Backup Configuration
+
+Check available backup policies and schedules:
+
+```bash
+# List backup policies
+kubectl get backuppolicy -n demo -l app.kubernetes.io/instance=qdrant-cluster
+
+# List backup schedules
+kubectl get backupschedule -n demo -l app.kubernetes.io/instance=qdrant-cluster
+```
+
+Example Output:
+```bash
+NAME                                  BACKUP-REPO   STATUS      AGE
+qdrant-cluster-qdrant-backup-policy                 Available   36m
+
+NAME                                    STATUS      AGE
+qdrant-cluster-qdrant-backup-schedule   Available   36m
+```
+
+View supported backup methods in the BackupPolicy CR 'qdrant-cluster-qdrant-backup-policy':
+
+```bash
+kubectl get backuppolicy qdrant-cluster-qdrant-backup-policy -n demo -oyaml | yq '.spec.backupMethods[].name'
+```
+**List of Backup methods**
+
+KubeBlocks Qdrant supports these backup methods:
+
+| Feature           | Method          | Description |
+|-------------|--------|------------|
+| Full Backup | datafile | uses HTTP API `snapshot` to create snapshot for all collections. |
+
+## Backup via Backup API
+
+### 1. Create On-Demand Backup
+
+The `datafile` method backup the data files of the database
+
+Apply this manifest to create a backup:
+
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: Backup
+metadata:
+  name: qdrant-backup-datafile
+  namespace: demo
+spec:
+  # Specifies the backup method name that is defined in the backup policy.
+  # - datafile
+  backupMethod: datafile
+  # Specifies the backup policy to be applied for this backup.
+  backupPolicyName: qdrant-cluster-qdrant-backup-policy
+  # Determines whether the backup contents stored in the backup repository should be deleted when the backup custom resource(CR) is deleted. Supported values are `Retain` and `Delete`.
+  # - `Retain` means that the backup content and its physical snapshot on backup repository are kept.
+  # - `Delete` means that the backup content and its physical snapshot on backup repository are deleted.
+  deletionPolicy: Delete
+```
+
+### 2. Monitor Backup and Verify Completion
+
+Track progress until status shows "Completed":
+
+```bash
+kubectl get backup qdrant-backup-datafile  -n demo -w
+```
+
+Expected Output:
+
+```bash
+NAME                     POLICY                                METHOD     REPO            STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
+qdrant-backup-datafile   qdrant-cluster-qdrant-backup-policy   datafile   <BACKUP_REPO>   Completed   0            10s        Delete            2025-05-18T15:43:53Z   2025-05-18T15:44:02Z
+```
+
+### 3. Validate Backup
+
+Confirm successful completion by checking:
+- Backup status shows "Completed"
+- Backup size matches expectations
+- Check files in the BackupRepo
+
+The `Backup` resource records details including:
+- Storage path
+- Time range
+- Backup file size
+
+
+## Backup via OpsRequest API
+
+### 1. Create On-Demand Backup
+
+Execute a backup using the OpsRequest API with the 'pg-basebackup' method:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: qdrant-cluster-backup
+  namespace: demo
+spec:
+  clusterName: qdrant-cluster
+  force: false
+  backup:
+    backupPolicyName: qdrant-cluster-qdrant-backup-policy
+    backupMethod: datafile
+    deletionPolicy: Delete
+    retentionPeriod: 1mo
+  type: Backup
+```
+
+### 2. Monitor Backup Progress
+
+#### 1. Monitor Operation Status
+
+Track backup progress in real-time:
+```bash
+kubectl get ops qdrant-cluster-backup  -n demo -w
+```
+
+Example Output:
+```bash
+NAME                    TYPE     CLUSTER          STATUS    PROGRESS   AGE
+qdrant-cluster-backup   Backup   qdrant-cluster   Running   -/-        5s
+qdrant-cluster-backup   Backup   qdrant-cluster   Succeed   -/-        10s
+```
+
+- A STATUS of 'Succeed' indicates the backup operation completed successfully.
+
+#### 2. Verify Completion
+
+Check the final backup status:
+
+```bash
+kubectl get backup -n demo -l operations.kubeblocks.io/ops-name=qdrant-cluster-backup
+```
+
+Expected Output:
+```bash
+NAME                                        POLICY                                METHOD     REPO            STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
+backup-demo-qdrant-cluster-20250518154515   qdrant-cluster-qdrant-backup-policy   datafile   <BACKUP_REPO>   Completed   0            10s        Delete            2025-05-18T15:45:15Z   2025-05-18T15:45:25Z   2025-06-17T15:45:25Z
+```
+
+- The backup status should show 'Completed'.
+
+### 3. Validate Backup
+
+Confirm successful completion by checking:
+- Backup status shows "Completed"
+- Backup size matches expectations
+- Files in the BackupRepo
+
+The `Backup` resource records details including:
+- Storage path
+- Time range
+- Other metadata
+
+## Summary
+
+This guide covered:
+1. Deploying a replication Qdrant cluster
+2. Creating full backups using:
+   - Direct Backup API
+   - Managed OpsRequest API
+3. Monitoring and validating backups
+
+Your Qdrant data is now securely backed up and ready for restoration when needed.

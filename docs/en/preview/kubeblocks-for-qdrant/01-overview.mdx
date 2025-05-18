@@ -1,0 +1,55 @@
+---
+title: Overview of KubeBlocks Qdrant Addon
+description: Learn about the features and capabilities of the KubeBlocks Qdrant addon, including deployment topologies, lifecycle management, backup and restore, and supported versions.
+keywords: [Qdrant, KubeBlocks, database, features, lifecycle management, backup, restore]
+sidebar_position: 1
+sidebar_label: Overview
+---
+
+# Overview of KubeBlocks Qdrant Addon
+
+Qdrant is an open-source vector search engine and vector database designed for efficient similarity search and storage of high-dimensional vectors. It is optimized for AI-driven applications, such as semantic search, recommendation systems, and retrieval-augmented generation (RAG) in large language models (LLMs).
+
+### Lifecycle Management
+
+KubeBlocks simplifies Qdrant operations with comprehensive lifecycle management:
+
+| Feature                      | Description                                                                 |
+|------------------------------|-----------------------------------------------------------------------------|
+| **Horizontal Scaling**       | Scale replicas in/out to adjust capacity                                   |
+| **Vertical Scaling**         | Adjust CPU/memory resources for Qdrant instances                       |
+| **Volume Expansion**         | Dynamically increase storage capacity without downtime                     |
+| **Restart Operations**       | Controlled cluster restarts with minimal disruption                        |
+| **Start/Stop**               | Temporarily suspend/resume cluster operations                              |
+| **Password Management**      | Ability to set and manage custom root password for the Qdrant cluster during creation |
+| **Custom Services**          | Expose specialized database endpoints                                      |
+| **Replica Management**       | Safely decommission or rebuild specific replicas                          |
+| **Version Upgrades**         | Perform minor version upgrades seamlessly                                  |
+| **Advanced Scheduling**      | Customize pod placement and resource allocation                           |
+| **Monitoring**               | Integrated Prometheus metrics collection                                  |
+| **Logging**                  | Centralized logs via Loki Stack                                           |
+
+
+### Backup and Restore
+
+KubeBlocks supports multiple backup strategies for Qdrant:
+
+| Feature           | Method          | Description |
+|-------------|--------|------------|
+| Full Backup | datafile | uses HTTP API `snapshot` to create snapshot for all collections. |
+
+### Supported Versions
+
+KubeBlocks Qdrant Addon supports these Qdrant versions:
+
+| Major Version | Supported Minor Versions       |
+|---------------|--------------------------------|
+| 1.5 | 1.5.0 |
+| 1.7 | 1.7.3 |
+| 1.8 | 1.8.1,1.8.4 |
+| 1.10| 1.10.0 |
+
+The list of supported versions can be found by following command:
+```bash
+kubectl get cmpv qdrant
+```
