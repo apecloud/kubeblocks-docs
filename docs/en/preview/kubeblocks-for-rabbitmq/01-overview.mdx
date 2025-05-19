@@ -1,0 +1,49 @@
+---
+title: Overview of KubeBlocks RabbitMQ Addon
+description: Learn about the features and capabilities of the KubeBlocks RabbitMQ addon, including deployment topologies, lifecycle management, backup and restore, and supported versions.
+keywords: [RabbitMQ, KubeBlocks, database, features, lifecycle management, backup, restore]
+sidebar_position: 1
+sidebar_label: Overview
+---
+
+# Overview of KubeBlocks RabbitMQ Addon
+
+RabbitMQ is an open-source and lightweight message broker which supports multiple messaging protocols.
+
+### Lifecycle Management
+
+KubeBlocks simplifies RabbitMQ operations with comprehensive lifecycle management:
+
+| Feature                      | Description                                                                 |
+|------------------------------|-----------------------------------------------------------------------------|
+| **Horizontal Scaling**       | Scale replicas in/out to adjust capacity                                   |
+| **Vertical Scaling**         | Adjust CPU/memory resources for RabbitMQ instances                       |
+| **Volume Expansion**         | Dynamically increase storage capacity without downtime                     |
+| **Restart Operations**       | Controlled cluster restarts with minimal disruption                        |
+| **Start/Stop**               | Temporarily suspend/resume cluster operations                              |
+| **Password Management**      | Ability to set and manage custom root password for the RabbitMQ cluster during creation |
+| **Custom Services**          | Expose specialized database endpoints                                      |
+| **Replica Management**       | Safely decommission or rebuild specific replicas                          |
+| **Version Upgrades**         | Perform minor version upgrades seamlessly                                  |
+| **Advanced Scheduling**      | Customize pod placement and resource allocation                           |
+| **Monitoring**               | Integrated Prometheus metrics collection                                  |
+| **Logging**                  | Centralized logs via Loki Stack                                           |
+
+### Supported Versions
+
+KubeBlocks RabbitMQ Addon supports these RabbitMQ versions:
+
+| Major Version | Supported Minor Versions       |
+|---------------|--------------------------------|
+| 3.8 | 3.8.14|
+| 3.9 | 3.9.29|
+| 3.10 | 3.10.25|
+| 3.11 | 3.11.28|
+| 3.12 | 3.12.14|
+| 3.13 | 3.13.2, 3.13.7|
+| 4.0 | 4.0.9|
+
+The list of supported versions can be found by following command:
+```bash
+kubectl get cmpv rabbitmq
+```
