@@ -21,7 +21,7 @@ import Prerequisites from '../_tpl/_prerequisites.mdx'
 
 <Prerequisites />
 
-## Deploy a RabbitMQ ReplicationSet Cluster
+## Deploy a RabbitMQ  Cluster
 
 import CreateCluster from '../_tpl/_create-cluster.mdx'
 
@@ -192,7 +192,7 @@ rabbitmq-cluster-rabbitmq-3   2/2     Running   0          3m54s
   spec:
     componentSpecs:
       - name: rabbitmq
-        replicas: 2 # decrease replcias to scale-out
+        replicas: 2 # decrease replcias to scale-in
   ```
 
   Or you can patch the cluster CR with command:

@@ -1,6 +1,6 @@
 ---
-title: Vertical Scaling in a Qdrant ReplicationSet Cluster
-description: Learn how to perform vertical scaling in a Qdrant ReplicationSet Cluster managed by KubeBlocks to optimize resource utilization and improve performance.
+title: Vertical Scaling in a Qdrant Cluster
+description: Learn how to perform vertical scaling in a Qdrant Cluster managed by KubeBlocks to optimize resource utilization and improve performance.
 keywords: [KubeBlocks, Qdrant, Vertical Scaling, Kubernetes, Resources]
 sidebar_position: 2
 sidebar_label: Vertical Scaling
@@ -13,7 +13,7 @@ import TabItem from '@theme/TabItem';
 
 # Vertical Scaling for Qdrant Clusters with KubeBlocks
 
-This guide demonstrates how to vertically scale a Qdrant ReplicationSet Cluster managed by KubeBlocks by adjusting compute resources (CPU and memory) while maintaining the same number of replicas.
+This guide demonstrates how to vertically scale a Qdrant Cluster managed by KubeBlocks by adjusting compute resources (CPU and memory) while maintaining the same number of replicas.
 
 Vertical scaling modifies compute resources (CPU/memory) for Qdrant instances while maintaining replica count. Key characteristics:
 
@@ -37,7 +37,7 @@ import Prerequisites from '../_tpl/_prerequisites.mdx'
 
 <Prerequisites />
 
-## Deploy a Qdrant ReplicationSet Cluster
+## Deploy a Qdrant Cluster
 
 import CreateCluster from '../_tpl/_create-cluster.mdx'
 
@@ -159,7 +159,7 @@ qdrant                          1 / 1                1Gi / 1Gi               dat
 - Improved Availability: The cluster remains operational during the scaling process, maintaining high availability.
 
 ## Cleanup
-To remove all created resources, delete the Qdrant ReplicationSet Cluster along with its namespace:
+To remove all created resources, delete the Qdrant Cluster along with its namespace:
 ```bash
 kubectl delete cluster qdrant-cluster -n demo
 kubectl delete ns demo
@@ -167,8 +167,8 @@ kubectl delete ns demo
 
 ## Summary
 In this guide, you learned how to:
-1. Deploy a Qdrant ReplicationSet Cluster managed by KubeBlocks.
+1. Deploy a Qdrant Cluster managed by KubeBlocks.
 2. Perform vertical scaling by increasing or decreasing resources for the qdrant component.
 3. Use both OpsRequest and direct Cluster API updates to adjust resource allocations.
 
-Vertical scaling is a powerful tool for optimizing resource utilization and adapting to changing workload demands, ensuring your Qdrant ReplicationSet Cluster remains performant and resilient.
+Vertical scaling is a powerful tool for optimizing resource utilization and adapting to changing workload demands, ensuring your Qdrant Cluster remains performant and resilient.

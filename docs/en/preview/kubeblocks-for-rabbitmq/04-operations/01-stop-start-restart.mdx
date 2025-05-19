@@ -1,6 +1,6 @@
 ---
-title: RabbitMQ ReplicationSet Cluster Lifecycle Management (Stop, Start, Restart)
-description: Learn how to manage RabbitMQ ReplicationSet Cluster states in KubeBlocks including stopping, starting, and restarting operations to optimize resources.
+title: RabbitMQ  Cluster Lifecycle Management (Stop, Start, Restart)
+description: Learn how to manage RabbitMQ  Cluster states in KubeBlocks including stopping, starting, and restarting operations to optimize resources.
 keywords: [KubeBlocks, RabbitMQ, Cluster Management, Stop, Start, Restart]
 sidebar_position: 1
 sidebar_label: Lifecycle Management
@@ -9,9 +9,9 @@ sidebar_label: Lifecycle Management
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# RabbitMQ ReplicationSet Cluster Lifecycle Management
+# RabbitMQ  Cluster Lifecycle Management
 
-This guide demonstrates how to manage a RabbitMQ ReplicationSet Cluster's operational state in **KubeBlocks**, including:
+This guide demonstrates how to manage a RabbitMQ  Cluster's operational state in **KubeBlocks**, including:
 
 - Stopping the cluster to conserve resources
 - Starting a stopped cluster
@@ -33,7 +33,7 @@ import Prerequisites from '../_tpl/_prerequisites.mdx'
 
 <Prerequisites />
 
-## Deploy a RabbitMQ ReplicationSet Cluster
+## Deploy a RabbitMQ  Cluster
 
 import CreateCluster from '../_tpl/_create-cluster.mdx'
 
@@ -49,7 +49,7 @@ import VerifyCluster from '../_tpl/_verify-cluster.mdx'
 
 ### Stopping the Cluster
 
-Stopping a RabbitMQ ReplicationSet Cluster in KubeBlocks will:
+Stopping a RabbitMQ  Cluster in KubeBlocks will:
 
 1. Terminates all running pods
 2. Retains persistent storage (PVCs)
@@ -134,7 +134,7 @@ To confirm a successful stop operation:
 
 ### Starting the Cluster
 
-Starting a stopped RabbitMQ ReplicationSet Cluster:
+Starting a stopped RabbitMQ  Cluster:
 1. Recreates all pods
 2. Reattaches persistent storage
 3. Restores service endpoints
@@ -268,7 +268,7 @@ Once the operation is complete, the cluster will return to the Running state.
 
 ## Summary
 In this guide, you learned how to:
-1. Stop a RabbitMQ ReplicationSet Cluster to suspend operations while retaining persistent storage.
+1. Stop a RabbitMQ  Cluster to suspend operations while retaining persistent storage.
 2. Start a stopped cluster to bring it back online.
 3. Restart specific cluster components to recreate their Pods without stopping the entire cluster.
-By managing the lifecycle of your RabbitMQ ReplicationSet Cluster, you can optimize resource utilization, reduce costs, and maintain flexibility in your Kubernetes environment. KubeBlocks provides a seamless way to perform these operations, ensuring high availability and minimal disruption.
+By managing the lifecycle of your RabbitMQ  Cluster, you can optimize resource utilization, reduce costs, and maintain flexibility in your Kubernetes environment. KubeBlocks provides a seamless way to perform these operations, ensuring high availability and minimal disruption.
