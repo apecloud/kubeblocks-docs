@@ -38,7 +38,7 @@ import VerifyCluster from '../_tpl/_verify-cluster.mdx'
 
 **Expected Workflow**:
 
-1. New pod is provisioned, and transitions from `Pending` to `Running` with `secondary` role.
+1. New pod is provisioned, and transitions from `Pending` to `Running`.
 2. Cluster status changes from `Updating` to `Running`
 
 :::note
@@ -169,7 +169,7 @@ It is handled by Qdrant `MemberLeave` operation, and Pods won't be deleted until
       # Specifies the replica changes for scaling in components
       scaleIn:
         # Specifies the replica changes for the component.
-        # add one more replica to current component
+        # remove one replica from current component
         replicaChanges: 1
   ```
 

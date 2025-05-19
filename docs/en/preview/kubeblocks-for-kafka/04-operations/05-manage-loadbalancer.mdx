@@ -207,9 +207,9 @@ kubectl get service -l app.kubernetes.io/instance=kafka-separated-cluster -n dem
 
 Expected Output:
 ```bash
-NAME                                                         TYPE        CLUSTER-IP      EXTERNAL-IP      PORT(S)          AGE
-kafka-separated-cluster-kafka-broker-advertised-listener-0   ClusterIP   10.96.101.247   <none>           9092/TCP         24m
-kafka-separated-cluster-kafka-broker-internet                NodePort    10.96.180.189   <EXTERNAL_IP>    9092:31243/TCP   59s
+NAME                                                         TYPE            CLUSTER-IP      EXTERNAL-IP      PORT(S)          AGE
+kafka-separated-cluster-kafka-broker-advertised-listener-0   ClusterIP       10.96.101.247   <none>           9092/TCP         24m
+kafka-separated-cluster-kafka-broker-internet                LoadBalancer    10.96.180.189   <EXTERNAL_IP>    9092:31243/TCP   59s
 ```
 
 ## Disable External Exposure

@@ -150,7 +150,7 @@ milvus-cluster-querynode-2   1/1     Running   0          99m
       # Specifies the replica changes for scaling in components
       scaleIn:
         # Specifies the replica changes for the component.
-        # add one more replica to current component
+        # remove one replica from current component
         replicaChanges: 1
   ```
 
@@ -201,7 +201,7 @@ kubectl patch cluster milvus-cluster -n demo --type='json' -p='[
 
 ### Verify Scale-In
 
-Expected Output (ONE Pod):
+Expected Output (Two Pod):
 ```bash
 kubectl get pods -n demo -l app.kubernetes.io/instance=milvus-cluster
 NAME                         READY   STATUS    RESTARTS   AGE
