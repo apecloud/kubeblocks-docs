@@ -454,11 +454,15 @@ Stopping a cluster temporarily suspends operations while preserving all data and
   <TabItem value="ClusterAPI" label="Cluster API">
   Alternatively, stop by setting `spec.componentSpecs.stop` to true:
 
-  ```bash
-  kubectl patch cluster mongo-cluster -n demo \
-  --type=merge \
-  -p='{"spec": {"componentSpecs": [{"name": "mongodb", "stop": true}]}}'
-  ```
+```bash
+kubectl patch cluster mongo-cluster -n demo --type='json' -p='[
+{
+  "op": "add",
+  "path": "/spec/componentSpecs/0/stop",
+  "value": true
+}
+]'
+```
 
   ```yaml
   spec:
@@ -500,11 +504,15 @@ Restarting a stopped cluster resumes operations with all data and configuration 
   <TabItem value="ClusterAPI" label="Cluster API">
   Restart by setting `spec.componentSpecs.stop` to false:
 
-  ```bash
-  kubectl patch cluster mongo-cluster -n demo \
-  --type=merge \
-  -p='{"spec": {"componentSpecs": [{"name": "mongodb", "stop": false}]}}'
-  ```
+```bash
+kubectl patch cluster mongo-cluster -n demo --type='json' -p='[
+{
+  "op": "remove",
+  "path": "/spec/componentSpecs/0/stop"
+}
+]'
+```
+
   </TabItem>
 </Tabs>
 

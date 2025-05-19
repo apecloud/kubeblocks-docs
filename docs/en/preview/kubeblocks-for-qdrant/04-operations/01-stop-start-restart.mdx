@@ -86,12 +86,16 @@ This operation is ideal for:
 
   Modify the cluster spec directly by patching the stop field:
 
-  ```bash
-  kubectl patch cluster qdrant-cluster -n demo \
-  --type=merge \
-  -p='{"spec": {"componentSpecs": [{"name": "qdrant", "stop": true}]}}'
-  ```
 
+  ```bash
+  kubectl patch cluster qdrant-cluster -n demo --type='json' -p='[
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/0/stop",
+    "value": true
+  }
+  ]'
+  ```
   </TabItem>
 
 </Tabs>
@@ -169,10 +173,14 @@ Expected behavior:
   1. Set stop: false, or
   2. Remove the stop field entirely
 
+
   ```bash
-  kubectl patch cluster qdrant-cluster -n demo \
-  --type=merge \
-  -p='{"spec": {"componentSpecs": [{"name": "qdrant", "stop": false}]}}'
+  kubectl patch cluster qdrant-cluster -n demo --type='json' -p='[
+  {
+    "op": "remove",
+    "path": "/spec/componentSpecs/0/stop"
+  }
+  ]'
   ```
 
   </TabItem>

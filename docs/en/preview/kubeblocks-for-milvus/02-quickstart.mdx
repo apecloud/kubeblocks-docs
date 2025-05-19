@@ -343,9 +343,23 @@ Stopping a cluster temporarily suspends operations while preserving all data and
   Alternatively, stop by setting `spec.componentSpecs.stop` to true:
 
   ```bash
-  kubectl patch cluster milvus-standalone -n demo \
-  --type=merge \
-  -p='{"spec": {"componentSpecs": [{"name": "milvus", "stop": true}, {"name": "etcd", "stop": true}, {"name": "minio", "stop": true}]}}'
+  kubectl patch cluster milvus-standalone -n demo --type='json' -p='[
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/0/stop",
+    "value": true
+  },
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/1/stop",
+    "value": true
+  },
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/2/stop",
+    "value": true
+  }
+  ]'
   ```
   </TabItem>
 </Tabs>
@@ -377,9 +391,20 @@ Restarting a stopped cluster resumes operations with all data and configuration 
   Restart by setting `spec.componentSpecs.stop` to false:
 
   ```bash
-  kubectl patch cluster milvus-standalone -n demo \
-  --type=merge \
-  -p='{"spec": {"componentSpecs": [{"name": "milvus", "stop": false}, {"name": "etcd", "stop": false}, {"name": "minio", "stop": false}]}}'
+  kubectl patch cluster milvus-standalone -n demo --type='json' -p='[
+  {
+    "op": "remove",
+    "path": "/spec/componentSpecs/0/stop"
+  },
+  {
+    "op": "remove",
+    "path": "/spec/componentSpecs/1/stop"
+  },
+  {
+    "op": "remove",
+    "path": "/spec/componentSpecs/2/stop"
+  }
+  ]'
   ```
   </TabItem>
 </Tabs>

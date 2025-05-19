@@ -87,9 +87,18 @@ This operation is ideal for:
   Modify the cluster spec directly by patching the stop field:
 
   ```bash
-  kubectl patch cluster redis-replication -n demo \
-  --type=merge \
-  -p='{"spec": {"componentSpecs": [{"name": "redis", "stop": true}, {"name": "redis-sentinel", "stop": true}]}}'
+  kubectl patch cluster redis-replication -n demo --type='json' -p='[
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/0/stop",
+    "value": true
+  },
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/1/stop",
+    "value": true
+  }
+  ]'
   ```
 
   </TabItem>
@@ -172,9 +181,16 @@ Expected behavior:
   2. Remove the stop field entirely
 
   ```bash
-  kubectl patch cluster redis-replication -n demo \
-  --type=merge \
-  -p='{"spec": {"componentSpecs": [{"name": "redis", "stop": false}, {"name": "redis-sentinel", "stop": false}]}}'
+  kubectl patch cluster redis-replication -n demo --type='json' -p='[
+  {
+    "op": "remove",
+    "path": "/spec/componentSpecs/0/stop"
+  },
+  {
+    "op": "remove",
+    "path": "/spec/componentSpecs/1/stop"
+  }
+  ]'
   ```
 
   </TabItem>
