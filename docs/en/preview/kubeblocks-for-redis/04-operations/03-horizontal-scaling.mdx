@@ -97,7 +97,7 @@ import VerifyCluster from '../_tpl/_verify-redis-replication-cluster.mdx'
       - name: redis
         serviceVersion: "7.2.4"
         disableExporter: false
-        replicas: 3 # increase replcias to scale-out
+        replicas: 3 # increase replicas to scale-out
   ...
   ```
 
@@ -211,7 +211,7 @@ If the replica being scaled-in happens to be a primary replica, KubeBlocks will 
       - name: redis
         serviceVersion: "7.2.4"
         disableExporter: false
-        replicas: 1 # decrease replcias to scale-out
+        replicas: 1 # decrease replicas to scale-out
   ```
 
   Or you can patch the cluster CR with command:

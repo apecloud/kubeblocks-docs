@@ -86,7 +86,7 @@ Please refer to [Deploying a Milvus Cluster with KubeBlocks](../03-topologies/02
   spec:
     componentSpecs:
       - name: querynode
-        replicas: 3 # increase replcias from 2 to 3 by 1
+        replicas: 3 # increase replicas from 2 to 3 by 1
   ...
   ```
 
@@ -108,7 +108,6 @@ kubectl patch cluster milvus-cluster -n demo --type='json' -p='[
 
 After applying the operation, you will see a new pod created and the Milvus cluster status goes from `Updating` to `Running`, and the newly created pod has a new role `secondary`.
 
-New replicas automatically join as secondary nodes.
 ```bash
 kubectl get pods -n demo -l app.kubernetes.io/instance=milvus-cluster,apps.kubeblocks.io/component-name=querynode
 ```

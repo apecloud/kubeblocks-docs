@@ -95,7 +95,7 @@ import VerifyCluster from '../_tpl/_verify-cluster.mdx'
   spec:
     componentSpecs:
       - name: mongodb
-        replicas: 4 # increase replcias to scale-out
+        replicas: 4 # increase replicas to scale-out
   ...
   ```
 
@@ -203,7 +203,7 @@ If the replica being scaled-in happens to be a primary replica, KubeBlocks will 
   spec:
     componentSpecs:
       - name: mongodb
-        replicas: 1 # decrease replcias to scale-out
+        replicas: 1 # decrease replicas to scale-out
   ```
 
   Or you can patch the cluster CR with command:

@@ -102,7 +102,7 @@ Better to have an odd number of replicas, such as 3, 5, 7, to avoid split-brain 
   spec:
     componentSpecs:
       - name: qdrant
-        replicas: 4 # increase replcias to scale-out
+        replicas: 4 # increase replicas to scale-out
   ...
   ```
 
@@ -118,7 +118,6 @@ Better to have an odd number of replicas, such as 3, 5, 7, to avoid split-brain 
 
 After applying the operation, you will see a new pod created and the Qdrant cluster status goes from `Updating` to `Running`, and the newly created pod has a new role `secondary`.
 
-New replicas automatically join as secondary nodes.
 ```bash
 kubectl get pods -n demo -l app.kubernetes.io/instance=qdrant-cluster
 ```
@@ -200,7 +199,7 @@ It is handled by Qdrant `MemberLeave` operation, and Pods won't be deleted until
   spec:
     componentSpecs:
       - name: qdrant
-        replicas: 1 # decrease replcias to scale-out
+        replicas: 1 # decrease replicas to scale-out
   ```
 
   Or you can patch the cluster CR with command:
