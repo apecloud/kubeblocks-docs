@@ -225,7 +225,7 @@ nslookup <EXTERNAL-IP>  # replace <EXTERNAL-IP> with the real IP from previous o
 
 ### Retrieve Credentials
 
-KubeBlocks automatically creates a Secret containing the Redis postgres credentials. Retrieve the Redis postgres credentials:
+KubeBlocks automatically creates a Secret containing the Redis default credentials. Retrieve the Redis default credentials:
 ```bash
 NAME=`kubectl get secrets -n demo redis-replication-redis-account-default -o jsonpath='{.data.username}' | base64 -d`
 PASSWD=`kubectl get secrets -n demo redis-replication-redis-account-default -o jsonpath='{.data.password}' | base64 -d`

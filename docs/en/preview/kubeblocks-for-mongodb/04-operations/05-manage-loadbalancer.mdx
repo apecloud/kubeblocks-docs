@@ -228,7 +228,7 @@ nslookup <EXTERNAL-IP>  # replace <EXTERNAL-IP> with the real IP from previous o
 
 ### Retrieve Credentials
 
-KubeBlocks automatically creates a Secret containing the MongoDB postgres credentials. Retrieve the MongoDB postgres credentials:
+KubeBlocks automatically creates a Secret containing the MongoDB root credentials. Retrieve the MongoDB root credentials:
 ```bash
 NAME=`kubectl get secrets -n demo mongo-cluster-mongodb-account-root -o jsonpath='{.data.username}' | base64 -d`
 PASSWD=`kubectl get secrets -n demo mongo-cluster-mongodb-account-root -o jsonpath='{.data.password}' | base64 -d`
