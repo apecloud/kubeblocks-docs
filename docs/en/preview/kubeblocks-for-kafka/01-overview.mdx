@@ -1,0 +1,43 @@
+---
+title: Overview of KubeBlocks Kafka Addon
+description: Learn about the features and capabilities of the KubeBlocks Kafka addon, including deployment topologies, lifecycle management, backup and restore, and supported versions.
+keywords: [Kafka, KubeBlocks, database, features, lifecycle management, backup, restore]
+sidebar_position: 1
+sidebar_label: Overview
+---
+
+# Overview of KubeBlocks Kafka Addon
+
+Apache Kafka is a distributed streaming platform designed to build real-time pipelines and can be used as a message broker or as a replacement for a log aggregation solution for big data applications.
+
+- A broker is a Kafka server that stores data and handles requests from producers and consumers. Kafka clusters consist of multiple brokers, each identified by a unique ID. Brokers work together to distribute and replicate data across the cluster.
+- KRaft was introduced in Kafka 3.3.1 in October 2022 as an alternative to Zookeeper. A subset of brokers are designated as controllers, and these controllers provide the consensus services that used to be provided by Zookeeper.
+
+## Key features
+
+### Lifecycle Management
+
+KubeBlocks simplifies Kafka operations with comprehensive lifecycle management:
+
+| Feature                      | Description                                                                 |
+|------------------------------|-----------------------------------------------------------------------------|
+| **Horizontal Scaling**       | Scale replicas in/out to adjust capacity                                   |
+| **Vertical Scaling**         | Adjust CPU/memory resources for Kafka instances                       |
+| **Volume Expansion**         | Dynamically increase storage capacity without downtime                     |
+| **Restart Operations**       | Controlled cluster restarts with minimal disruption                        |
+| **Start/Stop**               | Temporarily suspend/resume cluster operations                              |
+| **Custom Services**          | Expose specialized database endpoints                                      |
+| **Replica Management**       | Safely decommission or rebuild specific replicas                          |
+| **Version Upgrades**         | Perform minor version upgrades seamlessly                                  |
+| **Advanced Scheduling**      | Customize pod placement and resource allocation                           |
+| **Monitoring**               | Integrated Prometheus metrics collection                                  |
+| **Logging**                  | Centralized logs via Loki Stack                                           |
+
+### Supported Versions
+
+KubeBlocks Kafka Addon supports these Kafka versions:
+
+| Major Version | Supported Minor Versions       |
+|---------------|--------------------------------|
+| 3.x | 3.3.2 |
+| 2.x | 2.7.0 |

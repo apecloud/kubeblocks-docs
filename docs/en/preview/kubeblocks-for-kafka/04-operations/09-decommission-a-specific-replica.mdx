@@ -1,0 +1,162 @@
+---
+title: Decommission a Specific Pod in KubeBlocks-Managed Kafka Clusters
+description: Learn how to decommission (take offline) a specific Pod in a Kafka cluster managed by KubeBlocks.
+keywords: [KubeBlocks, Kafka, Decommission Pod, Horizontal Scaling, Kubernetes]
+sidebar_position: 9
+sidebar_label: Decommission Kafka Replica
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+
+# Decommission a Specific Pod in KubeBlocks-Managed Kafka Clusters
+
+This guide explains how to decommission (take offline) specific Pods in Kafka clusters managed by KubeBlocks. Decommissioning provides precise control over cluster resources while maintaining availability. Use this for workload rebalancing, node maintenance, or addressing failures.
+
+## Why Decommission Pods with KubeBlocks?
+
+In traditional StatefulSet-based deployments, Kubernetes lacks the ability to decommission specific Pods. StatefulSets ensure the order and identity of Pods, and scaling down always removes the Pod with the highest ordinal number (e.g., scaling down from 3 replicas removes Pod `-2` first). This limitation prevents precise control over which Pod to take offline, which can complicate maintenance, workload distribution, or failure handling.
+
+KubeBlocks overcomes this limitation by enabling administrators to decommission specific Pods directly. This fine-grained control ensures high availability and allows better resource management without disrupting the entire cluster.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploy a Kafka Cluster
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+## Verifying the Deployment
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+## Decommission a Pod
+
+**Expected Workflow**:
+
+1. Replica specified in `onlineInstancesToOffline` is removed
+2. Pod terminates gracefully
+3. Cluster transitions from `Updating` to `Running`
+
+
+Before decommissioning a specific pod from a component, make sure this component has more than one replicas.
+If not, please scale out the component ahead.
+
+E.g. you can patch the cluster CR with command, to declare there are 3 replicas in component querynode.
+
+```bash
+kubectl patch cluster kafka-separated-cluster -n demo --type='json' -p='[
+  {
+    "op": "replace",
+    "path": "/spec/componentSpecs/1/replicas",
+    "value": 3
+  }
+]'
+```
+
+Wait till all pods are running
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=kafka-separated-cluster,apps.kubeblocks.io/component-name=kafka-broker
+```
+Example Output:
+```
+NAME                                     READY   STATUS    RESTARTS   AGE
+kafka-separated-cluster-kafka-broker-0   2/2     Running   0          18m
+kafka-separated-cluster-kafka-broker-1   2/2     Running   0          3m33m
+kafka-separated-cluster-kafka-broker-2   2/2     Running   0          2m1s
+```
+
+
+To decommission a specific Pod (e.g., 'kafka-separated-cluster-kafka-broker-1'), you can use one of the following methods:
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  Option 1: Using OpsRequest
+
+  Create an OpsRequest to mark the Pod as offline:
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: kafka-separated-cluster-decommission-ops
+    namespace: demo
+  spec:
+    clusterName: kafka-separated-cluster
+    type: HorizontalScaling
+    horizontalScaling:
+    - componentName: kafka-broker
+      scaleIn:
+        onlineInstancesToOffline:
+          - 'kafka-separated-cluster-kafka-broker-1'  # Specifies the instance names that need to be taken offline
+  ```
+
+  #### Monitor the Decommissioning Process
+  Check the progress of the decommissioning operation:
+
+  ```bash
+  kubectl get ops kafka-separated-cluster-decommission-ops -n demo -w
+  ```
+  Expected Output:
+
+  ```bash
+  NAME                                       TYPE                CLUSTER                   STATUS    PROGRESS   AGE
+  kafka-separated-cluster-decommission-ops   HorizontalScaling   kafka-separated-cluster   Running   0/1        8s
+  kafka-separated-cluster-decommission-ops   HorizontalScaling   kafka-separated-cluster   Running   1/1        31s
+  kafka-separated-cluster-decommission-ops   HorizontalScaling   kafka-separated-cluster   Succeed   1/1        31s
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  Option 1: Using Cluster API
+
+  Alternatively, update the Cluster resource directly to decommission the Pod:
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: kafka-broker
+        replicas: 2       # explected replicas after decommission
+        offlineInstances:
+          - kafka-separated-cluster-kafka-broker-1   # <----- Specify Pod to be decommissioned
+   ...
+  ```
+  </TabItem>
+
+</Tabs>
+
+### Verify the Decommissioning
+
+After applying the updated configuration, verify the remaining Pods in the cluster:
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=kafka-separated-cluster,apps.kubeblocks.io/component-name=kafka-broker
+```
+
+Expected Output:
+```bash
+NAME                                     READY   STATUS    RESTARTS   AGE
+kafka-separated-cluster-kafka-broker-0   2/2     Running   0          24m
+kafka-separated-cluster-kafka-broker-2   2/2     Running   0          2m1s
+```
+
+## Summary
+Key takeaways:
+- Traditional StatefulSets lack precise Pod removal control
+- KubeBlocks enables targeted Pod decommissioning
+- Two implementation methods: OpsRequest or Cluster API
+This provides granular cluster management while maintaining availability.
