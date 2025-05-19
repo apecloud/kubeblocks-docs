@@ -1,0 +1,66 @@
+---
+title: Overview of KubeBlocks Elasticsearch Addon
+description: Learn about the features and capabilities of the KubeBlocks Elasticsearch addon, including deployment topologies, lifecycle management, backup and restore, and supported versions.
+keywords: [Elasticsearch, KubeBlocks, database, features, lifecycle management, backup, restore]
+sidebar_position: 1
+sidebar_label: Overview
+---
+
+# Overview of KubeBlocks Elasticsearch Addon
+
+## Overview
+
+Elasticsearch is a distributed, RESTful search engine optimized for speed and relevance on production-scale workloads. Each Elasticsearch cluster consists of one or more nodes, with each node assuming specific roles.
+
+### Node Roles
+
+| Role | Description |
+|------|-------------|
+| **master** | Manages cluster state and coordinates operations |
+| **data** | Stores data and handles data-related operations |
+| **data_content** | Stores document data |
+| **data_hot** | Handles recent, frequently accessed data |
+| **data_warm** | Stores less frequently accessed data |
+| **data_cold** | Handles rarely accessed data |
+| **data_frozen** | Manages archived data |
+| **ingest** | Processes documents before indexing |
+| **ml** | Runs machine learning jobs |
+| **remote_cluster_client** | Connects to remote clusters |
+| **transform** | Handles data transformations |
+
+[See Elasticsearch Node Roles documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-node.html)
+
+## Key features
+
+### Lifecycle Management
+
+KubeBlocks simplifies Elasticsearch operations with comprehensive lifecycle management:
+
+| Feature                      | Description                                                                 |
+|------------------------------|-----------------------------------------------------------------------------|
+| **Horizontal Scaling**       | Scale replicas in/out to adjust capacity                                   |
+| **Vertical Scaling**         | Adjust CPU/memory resources for Elasticsearch instances                       |
+| **Volume Expansion**         | Dynamically increase storage capacity without downtime                     |
+| **Restart Operations**       | Controlled cluster restarts with minimal disruption                        |
+| **Start/Stop**               | Temporarily suspend/resume cluster operations                              |
+| **Custom Services**          | Expose specialized database endpoints                                      |
+| **Replica Management**       | Safely decommission or rebuild specific replicas                          |
+| **Version Upgrades**         | Perform minor version upgrades seamlessly                                  |
+| **Advanced Scheduling**      | Customize pod placement and resource allocation                           |
+| **Monitoring**               | Integrated Prometheus metrics collection                                  |
+| **Logging**                  | Centralized logs via Loki Stack                                           |
+
+### Supported Versions
+
+KubeBlocks Elasticsearch Addon supports these Elasticsearch versions:
+
+| Major Version | Supported Minor Versions       |
+|---------------|--------------------------------|
+| 7.x | 7.7.1,7.8.1,7.10.1 |
+| 8.x | 8.1.3, 8.8.2 |
+
+
+The list of supported versions can be found by following command:
+```
+kubectl get cmpv elasticsearch
+```
