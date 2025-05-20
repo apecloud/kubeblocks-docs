@@ -1,0 +1,174 @@
+---
+title: Vertical Scaling in a Kafka  Cluster
+description: Learn how to perform vertical scaling in a Kafka  Cluster managed by KubeBlocks to optimize resource utilization and improve performance.
+keywords: [KubeBlocks, Kafka, Vertical Scaling, Kubernetes, Resources]
+sidebar_position: 2
+sidebar_label: Vertical Scaling
+---
+
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# Vertical Scaling for Kafka  Clusters with KubeBlocks
+
+This guide demonstrates how to vertically scale a Kafka  Cluster managed by KubeBlocks by adjusting compute resources (CPU and memory) while maintaining the same number of replicas.
+
+Vertical scaling modifies compute resources (CPU/memory) for Kafka instances while maintaining replica count. Key characteristics:
+
+- **Non-disruptive**: When properly configured, maintains availability during scaling
+- **Granular**: Adjust CPU, memory, or both independently
+- **Reversible**: Scale up or down as needed
+
+KubeBlocks ensures minimal impact during scaling operations by following a controlled, role-aware update strategy:
+**Role-Aware Replicas (Primary/Secondary Replicas)**
+- Secondary replicas update first – Non-leader pods are upgraded to minimize disruption.
+- Primary updates last – Only after all secondaries are healthy does the primary pod restart.
+- Cluster state progresses from Updating → Running once all replicas are stable.
+
+**Role-Unaware Replicas (Ordinal-Based Scaling)**
+If replicas have no defined roles, updates follow Kubernetes pod ordinal order:
+- Highest ordinal first (e.g., pod-2 → pod-1 → pod-0) to ensure deterministic rollouts.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploy a Kafka  Cluster
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+## Verifying the Deployment
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+## Vertical Scale
+
+**Expected Workflow**:
+
+1. Pods are updated in pod ordinal order, from highest to lowest, (e.g., pod-2 → pod-1 → pod-0)
+1. Cluster status transitions from `Updating` to `Running`
+
+<Tabs>
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+  Option 1: Using VerticalScaling OpsRequest
+
+  Apply the following YAML to scale up the resources for the kafka-broker component:
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: kafka-separated-cluster-vscale-ops
+    namespace: demo
+  spec:
+    clusterName: kafka-separated-cluster
+    type: VerticalScaling
+    verticalScaling:
+    - componentName: kafka-broker
+      requests:
+        cpu: '1'
+        memory: 1Gi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+  ```
+
+  You can check the progress of the scaling operation with following command:
+
+  ```bash
+  kubectl -n demo get ops kafka-separated-cluster-vscale-ops -w
+  ```
+
+  Expected Result:
+
+  ```bash
+  NAME                                 TYPE              CLUSTER                   STATUS    PROGRESS   AGE
+  kafka-separated-cluster-vscale-ops   VerticalScaling   kafka-separated-cluster   Running   0/1        12s
+  kafka-separated-cluster-vscale-ops   VerticalScaling   kafka-separated-cluster   Running   1/1        13s
+  kafka-separated-cluster-vscale-ops   VerticalScaling   kafka-separated-cluster   Running   1/1        13s
+  kafka-separated-cluster-vscale-ops   VerticalScaling   kafka-separated-cluster   Succeed   1/1        13s
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  Option 2: Direct Cluster API Update
+
+  Alternatively, you may update `spec.componentSpecs.resources` field to the desired resources for vertical scale.
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: kafka-broker
+        replicas: 1
+        resources:
+          requests:
+            cpu: "1"       # Update the resources to your need.
+            memory: "1Gi"  # Update the resources to your need.
+          limits:
+            cpu: "1"       # Update the resources to your need.
+            memory: "1Gi"  # Update the resources to your need.
+    ...
+    ```
+  </TabItem>
+</Tabs>
+
+## Best Practices & Considerations
+
+**Planning:**
+- Scale during maintenance windows or low-traffic periods
+- Verify Kubernetes cluster has sufficient resources
+- Check for any ongoing operations before starting
+
+**Execution:**
+- Maintain balanced CPU:Memory ratios
+- Set identical requests/limits for guaranteed QoS
+
+**Post-Scaling:**
+- Monitor resource utilization and application performance
+- Consider adjusting Kafka parameters if needed
+
+## Verification
+Verify the updated resources by inspecting the cluster configuration or Pod details:
+```bash
+kbcli cluster describe kafka-separated-cluster -n demo
+```
+
+Example Output:
+```bash
+Resources Allocation:
+COMPONENT          INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+kafka-broker                           1 / 1                1Gi / 1Gi               data:20Gi      <none>
+```
+
+## Key Benefits of Vertical Scaling with KubeBlocks
+- Seamless Scaling: Pods are recreated in a specific order to ensure minimal disruption.
+- Dynamic Resource Adjustments: Easily scale CPU and memory based on workload requirements.
+- Flexibility: Choose between OpsRequest for dynamic scaling or direct API updates for precise control.
+- Improved Availability: The cluster remains operational during the scaling process, maintaining high availability.
+
+## Cleanup
+To remove all created resources, delete the Kafka  Cluster along with its namespace:
+```bash
+kubectl delete cluster kafka-separated-cluster -n demo
+kubectl delete ns demo
+```
+
+## Summary
+In this guide, you learned how to:
+1. Deploy a Kafka  Cluster managed by KubeBlocks.
+2. Perform vertical scaling by increasing or decreasing resources for the kafka component.
+3. Use both OpsRequest and direct Cluster API updates to adjust resource allocations.
+
+Vertical scaling is a powerful tool for optimizing resource utilization and adapting to changing workload demands, ensuring your Kafka  Cluster remains performant and resilient.

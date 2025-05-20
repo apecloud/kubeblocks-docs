@@ -1,0 +1,202 @@
+---
+title: Deploy a PostgreSQL Cluster with Custom TLS Certificates on KubeBlocks
+description: Step-by-step guide to deploy a PostgreSQL cluster on KubeBlocks using custom TLS certificates for secure communication. Includes certificate generation, cluster deployment, and connection verification.
+keywords: [KubeBlocks, PostgreSQL, Kubernetes, TLS, Security, Custom Certificates]
+sidebar_position: 2
+sidebar_label: PostgreSQL Cluster with Custom TLS
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Deploy a PostgreSQL Cluster with Custom TLS Certificates on KubeBlocks
+
+This guide demonstrates how to deploy a PostgreSQL cluster with **custom TLS certificates** using KubeBlocks. By providing your own certificates, you maintain complete control over the security configuration for encrypted client-server communication.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Generate Certificates
+
+Generate the required certificates using OpenSSL:
+
+1. **Root Certificate (CA)**
+```bash
+# Generate CA private key (password protected)
+openssl genrsa -aes256 -out ca-key.pem 4096
+
+# Create self-signed root certificate (10-year validity)
+openssl req -x509 -new -nodes -key ca-key.pem -sha256 -days 3650 -out ca.pem
+# Enter certificate details (e.g., Common Name = "PostgreSQL Root CA")
+```
+
+2. **Server Certificate**
+```bash
+# Generate server private key
+openssl genrsa -out server-key.pem 4096
+
+# Create Certificate Signing Request
+openssl req -new -key server-key.pem -out server-req.pem
+# Enter server details (Common Name must match PostgreSQL server address)
+
+# Sign server certificate with CA (10-year validity)
+openssl x509 -req -in server-req.pem -CA ca.pem -CAkey ca-key.pem \
+  -CAcreateserial -out server-cert.pem -days 3650 -sha256
+```
+
+:::note
+
+The Common Name (CN) must match your PostgreSQL server address (e.g., service name `pg-cluster-postgresql-postgresql`).
+
+:::
+
+3. **Verify Certificates**
+```bash
+openssl verify -CAfile ca.pem server-cert.pem
+# Expected output: server-cert.pem: OK
+```
+
+## Create Kubernetes Secret
+
+Store certificates in a Kubernetes Secret for cluster access:
+
+```bash
+kubectl create secret generic postgresql-tls-secret \
+  --namespace=demo \
+  --from-file=ca.crt=ca.pem \
+  --from-file=tls.crt=server-cert.pem \
+  --from-file=tls.key=server-key.pem \
+  --type=kubernetes.io/tls
+```
+
+## Deploy PostgreSQL Cluster
+
+Deploy a 2-node PostgreSQL cluster (1 primary, 1 replica) with TLS:
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: pg-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: postgresql
+  topology: replication
+  componentSpecs:
+    - name: postgresql
+      serviceVersion: 16.4.0
+      tls: true
+      issuer:
+        name: UserProvided
+        secretRef:
+          name: postgresql-tls-secret
+          namespace: demo
+          ca: ca.crt
+          cert: tls.crt
+          key: tls.key
+      labels:
+        apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
+      disableExporter: true
+      replicas: 2
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+**Key Configuration**:
+- `tls: true`: Enables TLS encryption
+- `issuer.name: UserProvided`: Specifies custom certificates
+- `issuer.secretRef`: Links to the certificate Secret
+
+## Verify Deployment
+
+Monitor cluster status until it reaches Running state:
+
+```bash
+kubectl get cluster pg-cluster -n demo -w
+```
+
+Verify SSL configuration on replicas:
+
+```sql
+postgres=# show ssl;
+ ssl
+-----
+ on
+
+postgres=# show ssl_ca_file;
+     ssl_ca_file
+---------------------
+ /etc/pki/tls/ca.pem
+
+postgres=# show ssl_cert_file;
+     ssl_cert_file
+----------------------
+ /etc/pki/tls/cert.pem
+
+postgres=# show ssl_key_file;
+     ssl_key_file
+----------------------
+ /etc/pki/tls/key.pem
+```
+
+## Access PostgreSQL Cluster
+
+### Retrieve Credentials
+
+```bash
+NAME=$(kubectl get secret -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.username}' | base64 --decode)
+PASSWD=$(kubectl get secret -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.password}' | base64 --decode)
+```
+
+### Connect Securely
+
+<Tabs>
+<TabItem value="require" label="sslmode=require" default>
+
+```bash
+kubectl port-forward svc/pg-cluster-postgresql-postgresql 5432:5432 -n demo
+
+psql "host=127.0.0.1 dbname=postgres user=${NAME} password=${PASSWD} sslmode=require"
+# Output shows SSL connection details
+```
+
+</TabItem>
+
+<TabItem value="verify-full" label="sslmode=verify-full">
+
+```bash
+kubectl exec -it -n demo pg-cluster-postgresql-0 -c postgresql -- \
+  env PGUSER=${NAME} PGPASSWORD=${PASSWD} \
+  psql 'host=pg-cluster-postgresql-postgresql sslmode=require sslrootcert=/etc/pki/tls/ca.pem'
+# Output shows SSL connection details
+```
+
+</TabItem>
+</Tabs>
+
+## Summary
+
+In this guide you:
+1. Generated self-signed CA and server certificates
+2. Stored certificates in a Kubernetes Secret
+3. Deployed a TLS-enabled PostgreSQL cluster
+4. Verified secure connections
+
+Using custom TLS certificates ensures encrypted communication between PostgreSQL clients and servers, protecting sensitive data in transit.

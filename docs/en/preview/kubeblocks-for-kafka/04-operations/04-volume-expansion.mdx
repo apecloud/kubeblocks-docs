@@ -1,0 +1,258 @@
+---
+title: Expanding Volume in a Kafka Cluster
+description: Learn how to expand Persistent Volume Claims (PVCs) in a Kafka cluster managed by KubeBlocks without downtime.
+keywords: [KubeBlocks, Kafka, Volume Expansion, Kubernetes, PVC]
+sidebar_position: 4
+sidebar_label: Volume Expansion
+---
+
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# Expanding Volume in a Kafka Cluster
+
+This guide explains how to expand Persistent Volume Claims (PVCs) in a Kafka cluster managed by **KubeBlocks**. Volume expansion enables dynamic storage capacity increases, allowing your database to scale seamlessly as data grows. When supported by the underlying storage class, this operation can be performed without downtime.
+
+Volume expansion allows you to increase the size of a Persistent Volume Claim (PVC) after it has been created. This feature was introduced in Kubernetes v1.11 and became generally available (GA) in Kubernetes v1.24.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+### Check the Storage Class for Volume Expansion Support
+
+List all available storage classes and verify if volume expansion is supported by checking the `ALLOWVOLUMEEXPANSION` field:
+```bash
+kubectl get storageclass
+```
+
+Example Outputs:
+```bash
+NAME                PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+gp2                 kubernetes.io/aws-ebs   Delete          WaitForFirstConsumer   false                  4d10h
+kb-default-sc       ebs.csi.aws.com         Delete          WaitForFirstConsumer   true                   3d7h
+sc-s3-repo-2qsxfh   ru.yandex.s3.csi        Retain          Immediate              false                  3d7h
+```
+Ensure the storage class you are using has `ALLOWVOLUMEEXPANSION` set to true. If it is false, the storage class does not support volume expansion.
+
+## Deploy a Kafka  Cluster with StorageClass
+
+KubeBlocks uses a declarative approach to manage Kafka clusters. Below is an example configuration for deploying a Kafka cluster with 3 replicas.
+
+Apply the following YAML configuration to deploy the cluster:
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: kafka-separated-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: kafka
+  topology: separated_monitor
+  componentSpecs:
+    - name: kafka-broker
+      replicas: 3
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      env:
+        - name: KB_KAFKA_BROKER_HEAP
+          value: "-XshowSettings:vm -XX:MaxRAMPercentage=100 -Ddepth=64"
+        - name: KB_KAFKA_CONTROLLER_HEAP
+          value: "-XshowSettings:vm -XX:MaxRAMPercentage=100 -Ddepth=64"
+        - name: KB_BROKER_DIRECT_POD_ACCESS
+          value: "true"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: "<STORAGE_CLASS_NAME>"
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+        - name: metadata
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 1Gi
+    - name: kafka-controller
+      replicas: 1
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: metadata
+          spec:
+            storageClassName: "<STORAGE_CLASS_NAME>"
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 1Gi
+    - name: kafka-exporter
+      replicas: 1
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "1Gi"
+        requests:
+          cpu: "0.1"
+          memory: "0.2Gi"
+```
+
+**Explanation of Key Fields**
+- `storageClassName`: specify StorageClass name that supports volume expansion. If not set, the StorageClass annotated `default` will be used.
+
+:::note
+**ALLOWVOLUMEEXPANSION**
+
+Ensure the storage class supports volume expansion (check ALLOWVOLUMEEXPANSION) when creating cluster.
+
+:::
+
+
+## Verifying the Deployment
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+## Expand volume
+
+:::note
+1. Ensure the storage class supports volume expansion (check ALLOWVOLUMEEXPANSION).
+2. The new size must be larger than the current size.
+3. Volume expansion may require additional configurations depending on the storage provider.
+:::
+
+You can expand the volume in one of two ways:
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  Option 1: Using VolumeExpansion OpsRequest
+
+  Apply the following YAML to increase the volume size for the kafka component:
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: kafka-separated-cluster-expand-volume-ops
+    namespace: demo
+  spec:
+    clusterName: kafka-separated-cluster
+    type: VolumeExpansion
+    volumeExpansion:
+    - componentName: kafka-broker
+      volumeClaimTemplates:
+      - name: data
+        storage: 30Gi
+  ```
+
+  Monitor the expansion progress with:
+
+  ```bash
+  kubectl describe ops kafka-separated-cluster-expand-volume-ops -n demo
+  ```
+
+  Expected Result:
+  ```bash
+  Status:
+    Phase:            Succeed
+  ```
+  Once completed, the PVC size will be updated.
+
+  :::note
+  If the storage class you use does not support volume expansion, this OpsRequest fails fast with information like:
+  `storageClass: [STORAGE_CLASS_NAME] of volumeClaimTemplate: [VOLUME_NAME]] not support volume expansion in component [COMPONENT_NAME]`
+  :::
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  Option 2: Direct Cluster API Update
+
+  Alternatively, you may update the `spec.componentSpecs.volumeClaimTemplates.spec.resources.requests.storage` field to the desired size.
+
+  ```yaml
+  componentSpecs:
+    - name: kafka-broker
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: <STORAGE_CLASS_NAME>
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                # specify new size, and make sure it is larger than current size
+                storage: 30Gi
+  ```
+  KubeBlocks will automatically update the PVC size based on the new specifications.
+  </TabItem>
+</Tabs>
+
+## Verification
+
+Verify the updated cluster configuration:
+```bash
+kbcli cluster describe kafka-separated-cluster -n demo
+```
+Example Output:
+```bash
+Resources Allocation:
+COMPONENT         INSTANCE-TEMPLATE     CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+kafka-broker                            500m / 500m          512Mi / 512Mi           data:30Gi      <STORAGE_CLASS_NAME>
+```
+The volume size for the data PVC has been updated to the specified value (e.g., 30Gi in this case).
+
+Confirm PVC resizing completion:
+```bash
+kubectl get pvc -l app.kubernetes.io/instance=kafka-separated-cluster,apps.kubeblocks.io/component-name=kafka-broker -n demo
+```
+Example Output:
+```bash
+NAME                                              STATUS   VOLUME    CAPACITY   ACCESS MODES   STORAGECLASS
+data-kafka-separated-cluster-kafka-broker-0       Bound    pvc-uuid  30Gi       RWO            <STORAGE_CLASS_NAME>
+data-kafka-separated-cluster-kafka-broker-1       Bound    pvc-uuid  30Gi       RWO            <STORAGE_CLASS_NAME>
+```
+
+## Cleanup
+To remove all created resources, delete the Kafka cluster along with its namespace:
+```bash
+kubectl delete cluster kafka-separated-cluster -n demo
+kubectl delete ns demo
+```
+
+## Summary
+
+In this guide you learned how to:
+1. Verify storage class compatibility for volume expansion.
+2. Perform volume expansion using either:
+   - OpsRequest for dynamic updates.
+   - Cluster API for manual updates.
+3. Verify the updated PVC size and ensure the resize operation is complete.
+
+With volume expansion, you can efficiently scale your Kafka cluster's storage capacity without service interruptions, ensuring your database can grow alongside your application needs.
+
+

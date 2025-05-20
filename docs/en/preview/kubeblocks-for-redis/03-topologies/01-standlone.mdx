@@ -1,0 +1,93 @@
+---
+title: Deploying a Redis Standalone Cluster with KubeBlocks
+description: Learn how to deploy a Redis Standalone cluster using KubeBlocks. This guide covers configuration, verification, failover testing, and timeout configuration.
+keywords: [KubeBlocks, Redis, Kubernetes, High Availability]
+sidebar_position: 1
+sidebar_label: Redis Standalone Cluster
+---
+
+# Deploying a Redis Standalone Cluster with KubeBlocks
+
+A standalone Redis deployment consists of a single Redis server instance running independently without any replication or clustering. It is the simplest and most lightweight deployment model.
+
+**Use Cases**
+- Development & testing environments.
+- Small applications with low traffic.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploying the Redis Standalone Cluster
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: redis-standalone
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: redis    # set to reids
+  topology: standalone # set topology to standalone
+  componentSpecs:
+  - name: redis
+    replicas: 1       # set replica to 1
+    serviceVersion: 7.2.4
+    resources:
+      limits:
+        cpu: "0.5"
+        memory: "0.5Gi"
+      requests:
+        cpu: "0.5"
+        memory: "0.5Gi"
+    volumeClaimTemplates:
+      - name: data
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 20Gi
+```
+
+**Key Configuration Details**:
+- `clusterDef: redis`: Specifies the ClusterDefinition CR for the cluster.
+- `topology: standalone`: Configures the cluster to use standalone topology.
+- `componentSpecs`: Defines the components in the cluster:
+  - Component 'redis':
+    - `serviceVersion: 7.2.4`: Specifies the version of the Redis service to be deployed.
+
+
+## Verifying the Deployment
+
+### Check the Cluster Status
+Once the cluster is deployed, check its status:
+```bash
+kubectl get cluster redis-standalone  -n demo -w
+```
+Example Output:
+```bash
+NAME               CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+redis-standalone   redis                Delete               Running   34s
+```
+
+### Verify Component Status
+```bash
+kubectl get component redis-standalone-redis -n demo
+```
+Example Output:
+```bash
+NAME                     DEFINITION              SERVICE-VERSION   STATUS    AGE
+redis-standalone-redis   redis-7-1.0.0-alpha.0   7.2.4             Running   90s
+```
+
+## Cleanup
+To remove all resources created during this tutorial:
+
+```bash
+kubectl delete cluster redis-standalone -n demo
+kubectl delete ns demo
+```

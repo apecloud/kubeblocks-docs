@@ -1,0 +1,370 @@
+---
+title: Deploying a MySQL Cluster and Orchestrator with KubeBlocks
+description: A step-by-step guide to deploying a MySQL semi-synchronous replication cluster with Orchestrator using KubeBlocks.
+keywords: [KubeBlocks, MySQL, Orchestrator, Kubernetes, DBaaS]
+sidebar_position: 5
+sidebar_label: MySQL Cluster with Orchestrator
+---
+
+# Deploying a MySQL Cluster And Orchestrator with KubeBlocks
+
+Semi-synchronous replication improves data consistency between primary and replica nodes by requiring acknowledgment from at least one replica before committing transactions.
+
+Orchestrator is a robust MySQL High Availability (HA) and failover management tool. It provides automated monitoring, fault detection, and topology management for MySQL clusters, making it an essential component for managing large-scale MySQL deployments. With Orchestrator, you can:
+- **Monitor Replication Topology**: Orchestrator continuously monitors the MySQL replication topology and provides a real-time view of the cluster's state.
+- **Automated Failover**: In case of a primary node failure, Orchestrator automatically promotes a healthy replica to primary, ensuring minimal downtime.
+- **Topology Management**: Orchestrator allows you to reconfigure, rebalance, and recover your MySQL topology with ease.
+
+This guide walks you through the process of setting up a MySQL semi-synchronous replication cluster using **KubeBlocks**, alongside **Orchestrator** for effective failover and recovery management.
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+  - A Kubernetes cluster is up and running.
+  - The kubectl CLI tool is configured to communicate with your cluster.
+  - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+$ kubectl create ns demo
+namespace/demo created
+```
+
+## Install the Orchestrator Addon
+
+1. View the Addon versions.
+```bash
+# including pre-release versions
+$ helm search repo kubeblocks/orchestrator --devel --versions
+```
+
+2. Install the Addon. Specify a version with '--version'.
+```bash
+$ helm install kb-addon-orc kubeblocks/orchestrator --namespace kb-system --create-namespace --version x.y.z 
+```
+
+3. Verify whether this Addon is installed.
+```bash
+$ helm list -A
+```
+Example Output:
+```bash
+orchestrator           	kb-system  	1       	2025-02-14 11:12:32.286516 +0800 CST   deployed	orchestrator-1.0.0-alpha.0  	3.2.6
+```
+The STATUS is deployed and this Addon is installed successfully.
+
+## Deploying the MySQL Cluster with Orchestrator
+
+KubeBlocks uses a declarative approach for managing MySQL clusters. Below is an example configuration for deploying a MySQL cluster with 3 nodes (1 primary, 2 replicas) in semi-synchronous mode. Additionally, it creates an Orchestrator cluster using the Raft high-availability mode and configure the relationship between the MySQL semi-synchronous cluster and the Orchestrator cluster.
+
+Cluster Configuration
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: orc
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      serviceRefs:
+        - name: orchestrator
+          namespace: demo
+          clusterServiceSelector:
+            cluster: example-orc-cluster
+            service:
+              component: orchestrator
+              service: orchestrator
+              port: orc-http
+            credential:
+              component: orchestrator
+              name: orchestrator
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+---
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-orc-cluster
+  namespace: demo
+spec:
+  clusterDef: orchestrator
+  topology: raft
+  terminationPolicy: Delete
+  services:
+    - name: orchestrator
+      componentSelector: orchestrator
+      spec:
+        ports:
+          - name: orc-http
+            port: 80
+  componentSpecs:
+    - name: orchestrator
+      disableExporter: true
+      replicas: 3
+      resources:
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+**Explanation of Key Fields:**
+MySQL Semi-Synchronous Cluster Configuration
+- `clusterDef`: Specifies the ClusterDefinition CR for the cluster. The ClusterDefinition 'mysql' contains multiple topologies, such as 'semisync', 'semisync-proxysql', 'mgr', 'mgr-proxysql', 'orc', 'orc-proxysql'.
+- `topology : orc`: Specifies the topology of the cluster. Use 'orc' topology to setup MySQL with Orchestrator integration for managing failover and replication.
+- `serviceRefs`: Configures the MySQL cluster to connect to the Orchestrator cluster.
+  - `name : orchestrator`: The name of the service reference for Orchestrator.
+  - `namespace: demo`: Specifies that the Orchestrator cluster is in the same demo namespace.
+  - `clusterServiceSelector`:
+    - `cluster: example-orc-cluster`: Selects the Orchestrator cluster named example-orc-cluster.
+    - `service`:
+      - `component: orchestrator`: Uses the Orchestrator component from the example-orc-cluster cluster. 
+      - `service: orchestrator`: Specifies the service name. 
+      - `port: orc-http`: Refers to the HTTP port of the Orchestrator service.
+
+Orchestrator Cluster Configuration
+- `componentDef: orchestrator-raft`: Specifies that this component uses the Raft high-availability model.
+- `replicas: 3`: Configures the Orchestrator cluster to run with 3 nodes for Raft-based high availability.
+
+The first part of the YAML file configures a MySQL cluster ('example-mysql-cluster') with 1 primary and 1 replica in semi-synchronous mode, and integrates it with the Orchestrator cluster.
+
+The second part of the YAML file defines an Orchestrator cluster ('example-orc-cluster') using Raft high-availability mode. This cluster manages the MySQL cluster, monitoring its topology and handling failover.
+
+The serviceRefs in the MySQL cluster configuration establishes the connection between the MySQL semi-synchronous cluster and the Orchestrator cluster:
+- It specifies the Orchestrator cluster ('example-orc-cluster') that will manage the MySQL cluster.
+- Orchestrator will monitor the MySQL cluster's topology and handle failover when the primary node fails.
+- The 'orc-http' port is used by Orchestrator to communicate with the MySQL cluster.
+
+
+## Verifying the Deployment
+
+Monitor the cluster status until it transitions to the Running state:
+
+```bash
+$ kubectl get cluster -n demo
+```
+Expected Output:
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Running   13m
+example-orc-cluster     orchestrator         Delete               Running   13m
+```
+
+To get detailed information about the MySQL cluster:
+
+```bash
+$ kbcli cluster describe example-mysql-cluster -n demo
+```
+Expected Output:
+```bash
+Name: example-mysql-cluster	 Created Time: Mar 11,2025 10:21 UTC+0800
+NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY       STATUS    TERMINATION-POLICY
+demo        mysql                orc-proxysql   Running   Delete
+
+Endpoints:
+COMPONENT   INTERNAL                                                                     EXTERNAL
+mysql       example-mysql-cluster-mysql-0.demo.svc.cluster.local:3306                    <none>
+            example-mysql-cluster-mysql-1.demo.svc.cluster.local:3306
+            example-mysql-cluster-mysql-server.demo.svc.cluster.local:3306
+proxysql    example-mysql-cluster-proxysql-proxy-ordinal-0.demo.svc.cluster.local:6032   <none>
+            example-mysql-cluster-proxysql-proxy-ordinal-0.demo.svc.cluster.local:6033
+            example-mysql-cluster-proxysql-proxy-ordinal-1.demo.svc.cluster.local:6032
+            example-mysql-cluster-proxysql-proxy-ordinal-1.demo.svc.cluster.local:6033
+            example-mysql-cluster-proxysql-proxy-server.demo.svc.cluster.local:6033
+
+Topology:
+COMPONENT   SERVICE-VERSION   INSTANCE                           ROLE        STATUS    AZ                NODE                                                       CREATED-TIME
+mysql       8.0.35            example-mysql-cluster-mysql-0      primary     Running   ap-southeast-1c   ip-10-0-3-233.ap-southeast-1.compute.internal/10.0.3.233   Mar 11,2025 10:21 UTC+0800
+mysql       8.0.35            example-mysql-cluster-mysql-1      secondary   Running   ap-southeast-1c   ip-10-0-3-233.ap-southeast-1.compute.internal/10.0.3.233   Mar 11,2025 10:22 UTC+0800
+proxysql    2.4.4             example-mysql-cluster-proxysql-0   <none>      Running   ap-southeast-1c   ip-10-0-3-55.ap-southeast-1.compute.internal/10.0.3.55     Mar 11,2025 10:23 UTC+0800
+proxysql    2.4.4             example-mysql-cluster-proxysql-1   <none>      Running   ap-southeast-1c   ip-10-0-3-40.ap-southeast-1.compute.internal/10.0.3.40     Mar 11,2025 10:23 UTC+0800
+
+Resources Allocation:
+COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+mysql                           500m / 500m          512Mi / 512Mi           <none>         <none>
+proxysql                        500m / 500m          512Mi / 512Mi           data:20Gi      <none>
+
+Images:
+COMPONENT   COMPONENT-DEFINITION           IMAGE
+mysql       mysql-orc-8.0-1.0.0-alpha.0    docker.io/apecloud/mysql:8.0.35
+                                           docker.io/apecloud/mysqld-exporter:0.15.1
+                                           apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.0-beta.30
+proxysql    proxysql-mysql-1.0.0-alpha.0   docker.io/apecloud/proxysql:2.4.4
+
+Show cluster events: kbcli cluster list-events -n demo example-mysql-cluster
+```
+
+To get detailed information about the Orchestrator cluster:
+
+```bash
+$ kbcli cluster describe example-orc-cluster -n demo
+```
+Expected Output:
+```bash
+Name: example-orc-cluster	 Created Time: Mar 11,2025 10:21 UTC+0800
+NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY   STATUS    TERMINATION-POLICY
+demo        orchestrator         raft       Running   Delete
+
+Endpoints:
+COMPONENT      INTERNAL                                                     EXTERNAL
+orchestrator   example-orc-cluster-orchestrator.demo.svc.cluster.local:80   <none>
+
+Topology:
+COMPONENT      SERVICE-VERSION   INSTANCE                             ROLE        STATUS    AZ                NODE                                                       CREATED-TIME
+orchestrator   3.2.6             example-orc-cluster-orchestrator-0   primary     Running   ap-southeast-1c   ip-10-0-3-55.ap-southeast-1.compute.internal/10.0.3.55     Mar 11,2025 10:21 UTC+0800
+orchestrator   3.2.6             example-orc-cluster-orchestrator-1   secondary   Running   ap-southeast-1c   ip-10-0-3-233.ap-southeast-1.compute.internal/10.0.3.233   Mar 11,2025 10:21 UTC+0800
+orchestrator   3.2.6             example-orc-cluster-orchestrator-2   secondary   Running   ap-southeast-1c   ip-10-0-3-55.ap-southeast-1.compute.internal/10.0.3.55     Mar 11,2025 10:22 UTC+0800
+
+Resources Allocation:
+COMPONENT      INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+orchestrator                       500m / 500m          512Mi / 512Mi           data:20Gi      kb-default-sc
+
+Images:
+COMPONENT      COMPONENT-DEFINITION   IMAGE
+orchestrator   orchestrator-raft      docker.io/apecloud/orchestrator:v3.2.6
+
+Show cluster events: kbcli cluster list-events -n demo example-orc-cluster
+```
+
+## Connecting to the MySQL Cluster
+KubeBlocks automatically creates a secret containing the MySQL root credentials. Retrieve the credentials with the following commands:
+
+```bash
+$ kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
+root
+
+$ kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+d3a5iS499Z
+```
+
+### Connect via ProxySQL
+Use ProxySQL to connect to the MySQL cluster:
+```bash
+$ kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-proxysql-proxy-server.demo.svc.cluster.local -P6033 -uroot -pd3a5iS499Z
+```
+
+### Connect Directly to MySQL
+Alternatively, connect directly to the MySQL instance:
+```bash
+$ kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-server.demo.svc.cluster.local -uroot -pd3a5iS499Z
+```
+
+## Testing Semi-Synchronous Replication
+
+In this section, we will test the semi-synchronous replication of the MySQL cluster by verifying the roles of the pods and checking their replication statuses.
+
+First, list all the pods in the cluster, along with their roles, to identify the primary and secondary instances:
+
+```bash
+$ kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+```
+Expected Output:
+```
+example-mysql-cluster-mysql-0	primary
+example-mysql-cluster-mysql-1	secondary
+```
+
+From the output, we can see the following:
+- 'example-mysql-cluster-mysql-0' is the primary instance.
+- 'example-mysql-cluster-mysql-1' is the secondary instance.
+The 'kubeblocks.io/role' label helps us easily distinguish between the roles of the instances in the replication setup.
+
+
+Next, connect to the primary instance ('example-mysql-cluster-mysql-0') and check its semi-synchronous replication status. Use the following command to execute a query inside the MySQL pod:
+```bash
+$  kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-0.demo.svc.cluster.local -uroot -pd3a5iS499Z -e "show status like 'Rpl%_status';"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++------------------------------+-------+
+| Variable_name                | Value |
++------------------------------+-------+
+| Rpl_semi_sync_replica_status | OFF   |
+| Rpl_semi_sync_source_status  | ON   |
++------------------------------+-------+
+```
+Explanation:
+- "Rpl_semi_sync_source_status: ON": This indicates that the primary instance is configured for semi-synchronous replication as the source (or master).
+- "Rpl_semi_sync_replica_status: OFF": This indicates that the primary instance is not acting as a replica in the replication setup.
+
+```bash
+$  kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-1.demo.svc.cluster.local -uroot -pd3a5iS499Z -e "show status like 'Rpl%_status';"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++------------------------------+-------+
+| Variable_name                | Value |
++------------------------------+-------+
+| Rpl_semi_sync_replica_status | ON   |
+| Rpl_semi_sync_source_status  | OFF   |
++------------------------------+-------+
+```
+Explanation:
+- "Rpl_semi_sync_replica_status: ON": This indicates that the secondary instance is acting as a semi-synchronous replica and is actively receiving and acknowledging changes from the primary instance.
+- "Rpl_semi_sync_source_status: OFF": This indicates that the secondary instance is not acting as a source (or master) in the replication setup.
+
+## Failover Testing
+
+The following steps demonstrate how to trigger a failover in a MySQL cluster and verify the role changes of the pods.
+
+To initiate a failover, delete the Pod currently assigned the primary role:
+
+```bash
+$ kubectl delete pod example-mysql-cluster-mysql-0 -n demo
+pod "example-mysql-cluster-mysql-0" deleted
+```
+
+This will trigger a failover, and the secondary instance will be promoted to the primary role. 
+After a while, the killed pod will be recreated and will take the secondary role:
+
+```bash
+$ kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+```
+Example Output:
+```bash
+example-semisync-mysql-mysql-0	secondary
+example-semisync-mysql-mysql-1	primary
+```
+
+This process demonstrates how the failover mechanism ensures high availability by automatically promoting a secondary instance to the primary role in the event of a failure.
+
+## Cleanup
+To remove all created resources, delete the MySQL cluster along with its namespace:
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete cluster example-orc-cluster -n demo
+kubectl delete ns demo
+```
+
+## Summary
+
+This guide demonstrated how to deploy a MySQL cluster with semi-synchronous replication and integrate it with Orchestrator for high availability and failover management using KubeBlocks. With the declarative configuration approach, you can easily scale and manage MySQL clusters in Kubernetes environments.

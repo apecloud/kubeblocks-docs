@@ -1,0 +1,278 @@
+---
+title: Horizontal Scaling of Qdrant Clusters with KubeBlocks
+description: Learn how to perform horizontal scaling (scale-out and scale-in) on a Qdrant cluster managed by KubeBlocks using OpsRequest and direct Cluster API updates.
+keywords: [KubeBlocks, Qdrant, Horizontal Scaling, Scale-Out, Scale-In, Kubernetes]
+sidebar_position: 3
+sidebar_label: Horizontal Scaling
+---
+
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# Horizontal Scaling for Qdrant Clusters with KubeBlocks
+
+This guide explains how to perform horizontal scaling (scale-out and scale-in) on a Qdrant cluster managed by KubeBlocks. You'll learn how to use both **OpsRequest** and direct **Cluster API** updates to achieve this.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploy a Qdrant Cluster
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+## Verifying the Deployment
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+
+## Scale-out (Add Replicas)
+
+**Expected Workflow**:
+
+1. New pod is provisioned, and transitions from `Pending` to `Running`.
+2. Cluster status changes from `Updating` to `Running`
+
+:::note
+
+Qdrant uses the **Raft consensus protocol** to maintain consistency regarding the cluster topology and the collections structure.
+Better to have an odd number of replicas, such as 3, 5, 7, to avoid split-brain scenarios, after scaling out/in the cluster.
+
+:::
+
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  Option 1: Using Horizontal Scaling OpsRequest
+
+  Scale out the Qdrant cluster by adding 1 replica to qdrant component:
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: qdrant-cluster-scale-out-ops
+    namespace: demo
+  spec:
+    clusterName: qdrant-cluster
+    type: HorizontalScaling
+    horizontalScaling:
+    - componentName: qdrant
+      # Specifies the replica changes for scaling in components
+      scaleOut:
+        # Specifies the replica changes for the component.
+        # add one more replica to current component
+        replicaChanges: 1
+  ```
+
+  Monitor the progress of the scaling operation:
+
+  ```bash
+  kubectl get ops qdrant-cluster-scale-out-ops -n demo -w
+  ```
+
+  Expected Result:
+  ```bash
+  NAME                           TYPE                CLUSTER          STATUS    PROGRESS   AGE
+  qdrant-cluster-scale-out-ops   HorizontalScaling   qdrant-cluster   Running   0/1        9s
+  qdrant-cluster-scale-out-ops   HorizontalScaling   qdrant-cluster   Running   1/1        16s
+  qdrant-cluster-scale-out-ops   HorizontalScaling   qdrant-cluster   Succeed   1/1        16s
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  Option 2: Direct Cluster API Update
+
+  Alternatively, you can perform a direct update to the `replicas` field in the Cluster resource:
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: qdrant
+        replicas: 4 # increase replicas to scale-out
+  ...
+  ```
+
+  Or you can patch the cluster CR with command:
+
+  ```bash
+  kubectl patch cluster qdrant-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 4}]'
+  ```
+  </TabItem>
+</Tabs>
+
+### Verify Scale-Out
+
+After applying the operation, you will see a new pod created and the Qdrant cluster status goes from `Updating` to `Running`, and the newly created pod has a new role `secondary`.
+
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=qdrant-cluster
+```
+
+Expected Outputs:
+```bash
+NAME                      READY   STATUS    RESTARTS   AGE
+qdrant-cluster-qdrant-0   2/2     Running   0          6m24s
+qdrant-cluster-qdrant-1   2/2     Running   0          7m19s
+qdrant-cluster-qdrant-2   2/2     Running   0          5m57s
+qdrant-cluster-qdrant-3   2/2     Running   0          3m54s
+```
+
+## Scale-in (Remove Replicas)
+
+**Expected Workflow**:
+
+1. Selected replica (the one with the largest ordinal) is removed
+3. Pod is terminated gracefully
+4. Cluster status changes from `Updating` to `Running`
+
+:::note
+
+On Qdrant scale-in, data will be redistributed among the remaining replicas. Make sure the cluster have enough capacity to accommodate the data.
+The data redistribution process may take some time depending on the amount of data.
+It is handled by Qdrant `MemberLeave` operation, and Pods won't be deleted until the data redistribution, i.e. the `MemberLeave` actions completed successfully.
+
+:::
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  Option 1: Using Horizontal Scaling OpsRequest
+
+  Scale in the Qdrant cluster by removing ONE replica:
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: qdrant-cluster-scale-in-ops
+    namespace: demo
+  spec:
+    clusterName: qdrant-cluster
+    type: HorizontalScaling
+    horizontalScaling:
+    - componentName: qdrant
+      # Specifies the replica changes for scaling in components
+      scaleIn:
+        # Specifies the replica changes for the component.
+        # remove one replica from current component
+        replicaChanges: 1
+  ```
+
+  Monitor progress:
+  ```bash
+  kubectl get ops qdrant-cluster-scale-in-ops -n demo -w
+  ```
+
+  Expected Result:
+  ```bash
+  NAME                         TYPE                 CLUSTER          STATUS    PROGRESS   AGE
+  qdrant-cluster-scale-in-ops   HorizontalScaling   qdrant-cluster   Running   0/1        8s
+  qdrant-cluster-scale-in-ops   HorizontalScaling   qdrant-cluster   Running   1/1        24s
+  qdrant-cluster-scale-in-ops   HorizontalScaling   qdrant-cluster   Succeed   1/1        24s
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  Option 2: Direct Cluster API Update
+
+  Alternatively, you can perform a direct update to the `replicas` field in the Cluster resource:
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: qdrant
+        replicas: 1 # decrease replicas to scale-out
+  ```
+
+  Or you can patch the cluster CR with command:
+
+  ```bash
+  kubectl patch cluster qdrant-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 1}]'
+  ```
+  </TabItem>
+
+</Tabs>
+
+### Verify Scale-In
+
+Expected Output (ONE Pod):
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=qdrant-cluster
+NAME                        READY   STATUS   RESTARTS   AGE
+qdrant-cluster-qdrant-0     2/2     Running  0          18m
+```
+
+## Troubleshooting
+
+On scale-in, KubeBlocks Qdrant will redistribute data in following steps:
+
+1. Cluster Information Gathering:
+
+- Identifies the leaving member
+- Retrieves cluster state including peer IDs and leader information
+
+2. Data Migration:
+
+- Discovers all collections on the leaving member
+- For each collection, finds all local shards
+- Moves each shard to the cluster leader
+- Verifies successful shard transfer before proceeding
+
+3. Cluster Membership Update:
+
+- Removes the leaving peer from the cluster membership
+- Uses file locking to prevent concurrent removal operations
+
+
+If the scale-in operations gets stuck for quite a long time, please check these resources:
+
+```bash
+# Check agent logs
+kubectl logs -n demo <pod-name> -c kbagent
+
+# Check cluster events for errors
+kubectl get events -n demo --field-selector involvedObject.name=pg-cluster
+
+# Check kubeblocks logs
+kubectl -n kb-system logs deploy/kubeblocks
+```
+
+## Best Practices
+
+When performing horizontal scaling:
+- Scale during low-traffic periods when possible
+- Monitor cluster health during scaling operations
+- Verify sufficient resources exist before scaling out
+- Consider storage requirements for new replicas
+
+## Cleanup
+To remove all created resources, delete the Qdrant cluster along with its namespace:
+```bash
+kubectl delete cluster qdrant-cluster -n demo
+kubectl delete ns demo
+```
+
+## Summary
+In this guide you learned how to:
+- Perform scale-out operations to add replicas to a Qdrant cluster.
+- Perform scale-in operations to remove replicas from a Qdrant cluster.
+- Use both OpsRequest and direct Cluster API updates for horizontal scaling.
+KubeBlocks ensures seamless scaling with minimal disruption to your database operations.

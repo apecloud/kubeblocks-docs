@@ -1,0 +1,271 @@
+---
+title: Upgrading the Minor Version of a Qdrant Cluster in KubeBlocks
+description: Learn how to deploy and upgrade a Qdrant Cluster managed by KubeBlocks with minimal downtime.
+keywords: [KubeBlocks, Qdrant, Upgrade, Rolling Upgrade, Kubernetes]
+sidebar_position: 6
+sidebar_label: Minor Version Upgrade
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Upgrading the Minor Version of a Qdrant Cluster in KubeBlocks
+
+This guide walks you through the deployment and minor version upgrade of a Qdrant Cluster managed by KubeBlocks, ensuring minimal downtime during the process.
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## Deploy a Qdrant Cluster
+
+KubeBlocks uses a declarative approach for managing Qdrant Clusters. Below is an example configuration for deploying a Qdrant Cluster with 3 replicas.
+
+Apply the following YAML configuration to deploy the cluster:
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: qdrant-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: qdrant
+  topology: cluster
+  componentSpecs:
+    - name: qdrant
+      serviceVersion: 1.10.0
+      replicas: 3
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+## Verifying the Deployment
+Monitor the cluster status until it transitions to the Running state:
+```bash
+kubectl get cluster qdrant-cluster -n demo -w
+```
+
+Example Output::
+
+```bash
+NAME             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+qdrant-cluster   qdrant               Delete               Creating   49s
+qdrant-cluster   qdrant               Delete               Running    62s
+```
+Once the cluster status becomes Running, your Qdrant Cluster is ready for use.
+
+:::tip
+If you are creating the cluster for the very first time, it may take some time to pull images before running.
+
+:::
+
+## List All Available Qdrant Versions
+
+Use the following command to display the Qdrant versions supported by your KubeBlocks installation:
+```bash
+kubectl get cmpv qdrant
+```
+Example Output:
+```bash
+NAME     VERSIONS                                STATUS      AGE
+qdrant   1.14.0,1.10.0,1.8.4,1.8.1,1.7.3,1.5.0   Available   26d
+```
+
+Note: The list of supported versions may vary depending on your KubeBlocks version.
+
+## Upgrading the Qdrant Version
+
+### Check compatible versions for the same ComponentDefinition
+
+**Step 1.** Get the list of `ComponentDefinition` associated with a given `ComponentVersion`
+
+```bash
+kubectl get cmpv qdrant -ojson | jq -r '.metadata.annotations."componentversion.kubeblocks.io/compatible-definitions"' | tr ',' '\n'
+```
+
+<details>
+<summary>Sample Output</summary>
+```text
+qdrant-1.0.0-alpha.0
+```
+</details>
+
+**Step 2.** Get the list of ComponentDefinition associated with a given ComponentVersion
+
+```bash
+kubectl get cmpv qdrant -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("^qdrant"))) | .releases[]'
+```
+
+This returns versions compatible with `ComponentDefinition` named `qdrant`:
+
+<details open>
+<summary>Sample Output</summary>
+```text
+1.5.0
+1.7.3
+1.8.1
+1.8.4
+1.10.0
+1.14.0
+```
+</details>
+
+### Apply the Upgrade
+
+To upgrade the Qdrant version, modify the serviceVersion field in the Cluster resource. In this example, we will upgrade the Qdrant version from `1.10.0` to `1.14.0`
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  Option 1: Using OpsRequest
+
+  You can upgrade the cluster using an OpsRequest:
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: qdrant-upgrade
+    namespace: demo
+  spec:
+    # Specifies the name of the Cluster resource that this operation is targeting.
+    clusterName: qdrant-cluster
+    type: Upgrade
+    upgrade:
+      components:
+      - componentName: qdrant
+        # Specifies the desired service version of component
+        serviceVersion: "1.14.0"
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+  Option 1: Using the Declarative Cluster API
+
+  Alternatively, you may stop the cluster by setting the `spec.componentSpecs.serviceVersion` field in the cluster configuration:
+
+  ```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: qdrant-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: qdrant
+  topology: cluster
+  componentSpecs:
+    - name: qdrant
+      serviceVersion: 1.14.0  # set to 1.14.0 for upgrading
+      replicas: 3
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+  ```
+  </TabItem>
+</Tabs>
+
+## Verification
+
+
+### Monitor the Upgrade Process
+
+Check OpsRequest progress:
+```bash
+kubectl get ops -n demo qdrant-upgrade -w
+```
+
+Sample Output:
+```
+NAME             TYPE      CLUSTER          STATUS    PROGRESS   AGE
+qdrant-upgrade   Upgrade   qdrant-cluster   Succeed   3/3        8m13s
+```
+
+Check pods:
+```
+kubectl get pods -n demo -l app.kubernetes.io/instance=qdrant-cluster
+```
+
+Example Output:
+```bash
+NAME                      READY   STATUS    RESTARTS        AGE
+qdrant-cluster-qdrant-0   2/2     Running   1 (7m23s ago)   13m
+qdrant-cluster-qdrant-1   2/2     Running   1 (7m49s ago)   12m
+qdrant-cluster-qdrant-2   2/2     Running   1 (7m59s ago)   12m
+```
+
+**Key Observations:**
+- Pods are not recreated, `RESTARTS` counter increased by one.
+- Pods are updated one by one in pod ordinal order, from highest to lowest
+
+
+### Check Cluster Status
+Ensure the cluster is in the Running state:
+```bash
+kubectl get cluster qdrant-cluster -n demo -w
+```
+Example Output:
+```bash
+NAME             CLUSTER-DEFINITION   TERMINATION-POLICY    STATUS    AGE
+qdrant-cluster   qdrant               Delete               Running   17m
+```
+
+### Verify the Qdrant Version
+
+Connect to the upgraded instances and verify the Qdrant version:
+```bash
+kubectl exec -ti -n demo qdrant-cluster-qdrant-0 -c kbagent -- \
+   curl http://127.0.0.1:6333
+```
+
+Example Output:
+```
+curl http://127.0.0.1:6333
+{"title":"qdrant - vector search engine","version":"1.14.0","commit":"3617a0111fc8590c4adcc6e88882b63ca4dda9e7"}%
+```
+
+## Summary
+In this guide, you learned how to:
+- Deploy a Qdrant Cluster using KubeBlocks.
+- Perform a rolling upgrade of the Qdrant minor version with minimal downtime.
+- Verify that the upgrade was successful.

@@ -1,0 +1,179 @@
+---
+title: Restore a PostgreSQL Cluster from Backup
+description: Learn how to restore a new PostgreSQL cluster from an existing backup in KubeBlocks using the Cluster Annotation or OpsRequest API.
+keywords: [PostgreSQL, Restore, Backup, KubeBlocks, Kubernetes]
+sidebar_position: 5
+sidebar_label: Restore PostgreSQL Cluster
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Restore a PostgreSQL Cluster from Backup
+
+This guide demonstrates two methods to restore a PostgreSQL cluster from backup in KubeBlocks:
+
+1. **Cluster Annotation Method** - Simple declarative approach using YAML annotations
+2. **OpsRequest API Method** - Enhanced operational control with progress monitoring
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Preparing for Restoration: Locate one Full Backup
+Before restoring, ensure that there is a full backup is available. The restoration process will use this backup to create a new PostgreSQL cluster.
+
+- Backup repository accessible from new cluster
+- Valid full backup in `Completed` state
+- Adequate CPU/memory resources
+- Sufficient storage capacity
+
+Find available full backups:
+
+```bash
+kubectl get backup -n demo -l dataprotection.kubeblocks.io/backup-type=Full,app.kubernetes.io/instance=pg-cluster # get the list of full backups
+```
+
+Pick ONE of the Backups whose status is `Completed`.
+
+## Method 1: Cluster Annotation Restoration
+
+### Step 1: Retrieve System Credentials
+Get encrypted system account credentials from backup metadata:
+
+```bash
+kubectl get backup <BACKUP_NAME> -n demo -ojson | jq -r '.metadata.annotations | ."kubeblocks.io/encrypted-system-accounts" | fromjson .postgresql | tojson |gsub("\""; "\\\"")'
+```
+
+Example Output:
+
+```bash
+{\"kbadmin\":\"Surpe3nrr4FFe82M34nCY2bThlztdifAVmrO8qHd3DYG5vRR33Y=\",\"kbdataprotection\":\"0gddL2+mEQ6DBeLYlijk5pd3YwuDWChSmvwlPWTS9QSfbY/kLFE=\",\"kbmonitoring\":\"ajWxjW2xMuysUq/UmP66+zCEltD1zVmO5Ec7sELSPvGEzaPzsHY=\",\"kbprobe\":\"qRoPyT8cUAVEaUjd/HIdmrVV6sJ6nO03G9MExVJryEEcs5LciCI=\",\"kbreplicator\":\"8xLt6zAIU5b2t9KmVy0LOaJsugQ8wNULyS+6LpRjRCfg05VnATk=\",\"postgres\":\"MNlRXK7nctiUyQSmTbbJUGeb6PsxDULm52abMYa2oBhyW+lWSFs=\"}
+```
+
+### Step 2: Create Restored Cluster
+Create a new cluster with restore configuration:
+
+Key parameters:
+- `kubeblocks.io/restore-from-backup` annotation
+- `encryptedSystemAccounts` from previous steps
+- Backup name and namespace located from previous steps
+
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: pg-restored
+  namespace: demo
+  annotations:
+    # NOTE: replace <ENCRYPTED-SYSTEM-ACCOUNTS> with the accounts info from you backup
+    # NOTE: replcae <FULL_BACKUP_NAME> with the backup name
+    kubeblocks.io/restore-from-backup: '{"postgresql":{"encryptedSystemAccounts":"<ENCRYPTED-SYSTEM-ACCOUNTS>","name":"<FULL_BACKUP_NAME>","namespace":"demo","volumeRestorePolicy":"Parallel"}}'
+spec:
+  terminationPolicy: Delete
+  clusterDef: postgresql
+  topology: replication
+  componentSpecs:
+    - name: postgresql
+      serviceVersion: 16.4.0
+      disableExporter: true
+      labels:
+        apps.kubeblocks.postgres.patroni/scope: pg-restored-postgresql
+      replicas: 2
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+### Step 3: Monitor Restoration
+Track restore progress with:
+
+```bash
+# Watch restore status
+kubectl get restore -n demo -w
+
+# Watch cluster status
+kubectl get cluster -n demo -w
+```
+
+## Method 2: OpsRequest API Restoration
+
+### Step 1: Initiate Restore Operation
+Create restore request via OpsRequest API:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-cluster-restore
+  namespace: demo
+spec:
+  clusterName: pg-restored
+  force: false
+  restore:
+    backupName: <FULL_BACKUP_NAME>
+    backupNamespace: demo
+  type: Restore
+```
+
+### Step 2: Track Operation Progress
+Monitor restore status:
+
+```bash
+# Watch restore status
+kubectl get restore -n demo -w
+
+# Watch cluster status
+kubectl get cluster -n demo -w
+```
+
+### Step 3: Validate Restored Cluster
+Confirm successful restoration:
+```bash
+kubectl get cluster pg-cluster-restored -n demo
+```
+Expected Output:
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+pg-cluster-restored     postgresql           Delete               Running   3m2s
+```
+
+
+## Cleanup
+To remove all created resources, delete the PostgreSQL cluster along with its namespace:
+
+```bash
+kubectl delete cluster pg-cluster -n demo
+kubectl delete cluster pg-cluster-restored -n demo
+kubectl delete ns demo
+```
+
+## Summary
+
+This guide covered two restoration methods:
+
+1. **Cluster Annotation** - Simple YAML-based approach
+   - Retrieve system credentials
+   - Create cluster with restore annotation
+   - Monitor progress
+
+2. **OpsRequest API** - Enhanced operational control
+   - Create restore request
+   - Track operation status
+   - Verify completion

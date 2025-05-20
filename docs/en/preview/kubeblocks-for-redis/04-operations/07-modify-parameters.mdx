@@ -1,0 +1,127 @@
+---
+title: Modify Redis Parameters
+description: Learn how to modify dynamic and static Redis parameters in KubeBlocks using Reconfiguring OpsRequest to optimize database performance and availability.
+keywords: [Redis, KubeBlocks, OpsRequest, dynamic parameters, static parameters, database configuration]
+sidebar_position: 7
+sidebar_label: Modify Redis Parameters
+---
+
+# Modify Redis Parameters
+
+Database reconfiguration involves modifying parameters, settings, or configurations to optimize performance, security, or availability. Parameter changes fall into two categories:
+
+| Type | Restart Required | Scope | Example Parameters |
+|------|------------------|-------|--------------------|
+| **Dynamic** | No | Immediate effect | `max_connections` |
+| **Static** | Yes | After restart | `shared_buffers` |
+
+For static parameters, KubeBlocks minimizes downtime by:
+1. Modifying and restarting replica nodes first
+2. Performing a switchover to promote the updated replica as primary (typically completes in milliseconds)
+3. Restarting the original primary node
+
+:::note
+
+KubeBlocks Redis Addons does not implement any dynamic reload action for `Dynamic Parameters`, thus changes on any parameters will cause a restart.
+
+:::
+
+This guide demonstrates how to modify static parameters of a Redis cluster managed by KubeBlocks using a Reconfiguring OpsRequest.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploy a Redis Cluster
+
+import CreatePGCluster from '../_tpl/_create-redis-replication-cluster.mdx'
+
+<CreatePGCluster />
+
+## Verifying the Deployment
+
+import VerifyPGCluster from '../_tpl/_verify-redis-replication-cluster.mdx'
+
+<VerifyPGCluster />
+
+## Check Parameter Values
+
+### Retrieve Credentials
+KubeBlocks automatically creates a secret containing the Redis root credentials. Retrieve the credentials with the following commands:
+```bash
+NAME=`kubectl get secrets -n demo redis-replication-redis-account-default -o jsonpath='{.data.username}' | base64 -d`
+PASSWD=`kubectl get secrets -n demo redis-replication-redis-account-default -o jsonpath='{.data.password}' | base64 -d`
+```
+
+### Access Redis Cluster
+To connect to the cluster's primary node, use the Redis client:
+```bash
+kubectl exec -it -n demo redis-replication-redis-0 -c redis -- redis-cli -a ${PASSWD}
+```
+
+### Query Parameter Values
+
+Once connected, you can query the current value of 'max_connections' and 'shared_buffers':
+```sql
+127.0.0.1:6379> CONFIG GET aof-timestamp-enabled
+1) "aof-timestamp-enabled"
+2) "no"
+```
+
+## Static Parameter Example: Modifying aof-timestamp-enabled
+
+Create a Reconfigure OpsRequest. Apply the following OpsRequest YAML to set the 'aof-timestamp-enabled' to 'yes':
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: redis-reconfigure-static
+  namespace: demo
+spec:
+  clusterName: redis-replication
+  reconfigures:
+  - componentName: redis
+    parameters:
+    - key: aof-timestamp-enabled
+      value: 'yes'
+  type: Reconfiguring
+```
+
+Check the status of the OpsRequest until it completes:
+
+```bash
+kubectl get ops redis-reconfigure-static -n demo -w
+```
+
+Example output:
+```bash
+redis-reconfigure-static   Reconfiguring   redis-replication   Running   -/-        5s
+redis-reconfigure-static   Reconfiguring   redis-replication   Succeed   -/-        33s
+```
+
+**Verify the Configuration Change**
+
+Log into the Redis instance and confirm that the `aof-timestamp-enabled` parameter has been updated:
+
+```sql
+127.0.0.1:6379> CONFIG GET aof-timestamp-enabled
+1) "aof-timestamp-enabled"
+2) "yes"
+```
+
+## Cleanup
+To remove all created resources, delete the Redis cluster along with its namespace:
+```bash
+kubectl delete cluster redis-replication -n demo
+kubectl delete ns demo
+```
+
+## Summary
+This guide covered modifying Redis parameters through KubeBlocks:
+- Dynamic changes (e.g., `max_connections`) apply immediately
+- Static changes (e.g., `shared_buffers`) require restart but with minimal downtime
+- All changes are validated before application
+- Configuration follows declarative management principles

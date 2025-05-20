@@ -1,0 +1,179 @@
+---
+title: PostgreSQL Cluster Switchover
+description: Perform planned role transitions in PostgreSQL clusters with KubeBlocks for minimal downtime and controlled maintenance
+keywords: [PostgreSQL, KubeBlocks, Switchover, High Availability, Role Transition, Kubernetes]
+sidebar_position: 8
+sidebar_label: PostgreSQL Switchover
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# PostgreSQL Cluster Switchover
+
+A **switchover** is a planned operation that transfers the primary role from one PostgreSQL instance to another. Unlike failover which occurs during failures, switchover provides:
+- Controlled role transitions
+- Minimal downtime (typically a few hundred milliseconds).
+- Predictable maintenance windows
+
+SwitchOver are ideal for:
+- Node maintenance/upgrades
+- Workload rebalancing
+- Testing high availability
+- Planned infrastructure changes
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploy a PostgreSQL Cluster
+
+import CreatePGCluster from '../_tpl/_create-pg-replication-cluster.mdx'
+
+<CreatePGCluster />
+
+## Verifying the Deployment
+
+import VerifyPGCluster from '../_tpl/_verify-pg-replication-cluster.mdx'
+
+<VerifyPGCluster />
+
+## Check Roles
+List the Pods and their roles (primary or secondary):
+
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster -L kubeblocks.io/role
+```
+
+Example Outputs:
+
+```text
+NAME                      READY   STATUS    RESTARTS   AGE     ROLE
+pg-cluster-postgresql-0   4/4     Running   0          9m59s   primary
+pg-cluster-postgresql-1   4/4     Running   0          11m     secondary
+```
+
+## Performing a Planned Switchover
+
+To initiate a planned switchover, create an OpsRequest resource as shown below:
+
+<Tabs>
+  <TabItem value="Automatic Switchover" label="Automatic Switchover" default>
+  Option 1: Automatic Switchover (No preferred candidate)
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: pg-switchover-ops
+    namespace: demo
+  spec:
+    clusterName: pg-cluster
+    type: Switchover
+    switchover:
+    - componentName: postgresql
+      instanceName: pg-cluster-postgresql-0
+  ```
+ **Key Parameters:**
+  - `instanceName`: Specifies the instance (Pod) that is primary or leader before a switchover operation.
+
+  </TabItem>
+  <TabItem value="Targeted Switchover" label="Targeted Switchover" >
+  Option 2: Targeted Switchover (Specific candidate)
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: pg-switchover-targeted
+    namespace: demo
+  spec:
+    clusterName: pg-cluster
+    type: Switchover
+    switchover:
+    - componentName: postgresql
+      # Specifies the instance whose role will be transferred.
+      # A typical usage is to transfer the leader role in a consensus system.
+      instanceName: pg-cluster-postgresql-0
+      # If CandidateName is specified, the role will be transferred to this instance.
+      # The name must match one of the pods in the component.
+      # Refer to ComponentDefinition's Swtichover lifecycle action for more details.
+      candidateName: pg-cluster-postgresql-1
+  ```
+
+  **Key Parameters:**
+  - `instanceName`: Specifies the instance (Pod) that is primary or leader before a switchover operation.
+  - `candidateName`: If Candidate Name is specified, the role will be transferred to this instance.
+  </TabItem>
+</Tabs>
+
+## Monitoring the Switchover
+
+Monitor the switchover progress:
+
+```bash
+kubectl get ops pg-switchover-ops -n demo -w
+```
+
+Expected Result:
+```bash
+NAME                TYPE         CLUSTER      STATUS    PROGRESS   AGE
+pg-switchover-ops   Switchover   pg-cluster   Succeed   1/1        17s
+```
+## Verify the Switchover
+
+After the switchover is executed, the specified instance will be promoted to the primary role, while the previously primary instance will take on the secondary role.
+
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster -L kubeblocks.io/role
+```
+
+Example Output:
+
+```text
+NAME                      READY   STATUS    RESTARTS   AGE     ROLE
+pg-cluster-postgresql-0   4/4     Running   0          19m59s  secondary
+pg-cluster-postgresql-1   4/4     Running   0          21m     primary
+```
+
+In this example:
+- Pod 'pg-cluster-postgresql-1' has been promoted to the primary role.
+- Pod 'pg-cluster-postgresql-0' has transitioned to the secondary role.
+
+## Troubleshooting
+
+### Common Switchover Issues
+
+If the switchover operation gets stuck, check these resources:
+```bash
+# Check agent logs on both current primary and candidate
+kubectl logs -n demo <primary-pod> -c kbagent
+kubectl logs -n demo <candidate-pod> -c kbagent
+
+# Check cluster events for errors
+kubectl get events -n demo --field-selector involvedObject.name=pg-cluster
+
+# Check kubeblocks logs
+kubectl -n kb-system logs deploy/kubeblocks
+```
+
+## Summary
+
+This guide demonstrated how to:
+1. Deploy a PostgreSQL HA cluster
+2. Perform both automatic and targeted SwitchOver
+3. Verify role transitions
+
+**Key takeaways:**
+- SwitchOver enable controlled maintenance with minimal downtime (~100-500ms)
+- KubeBlocks provides declarative operations for reliable role transitions
+- Always verify:
+  - Cluster status immediately after switchover
+  - Application connectivity
+  - Replication health
+- Check logs for troubleshooting:
+  - KubeBlocks operator (kb-system namespace)
+  - kbagent on database pods
+

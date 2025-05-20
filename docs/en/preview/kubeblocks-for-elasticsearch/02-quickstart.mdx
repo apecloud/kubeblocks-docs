@@ -1,0 +1,325 @@
+---
+title: Elasticsearch QuickStart Guide
+description: Comprehensive guide to deploying and managing Elasticsearch ReplicaSet  Clusters with KubeBlocks, including installation, configuration, and operational best practices.
+keywords: [Kubernetes, Elasticsearch, KubeBlocks, Helm, Cluster Management, QuickStart]
+sidebar_position: 2
+sidebar_label: QuickStart
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Elasticsearch QuickStart Guide
+
+This guide provides a comprehensive walkabout for deploying and managing Elasticsearch ReplicaSet  Clusters using the **KubeBlocks Elasticsearch Add-on**, covering:
+- System prerequisites and add-on installation
+- Cluster creation and configuration
+- Operational management including start/stop procedures
+- Connection methods and cluster monitoring
+
+## Prerequisites
+
+### System Requirements
+
+Before proceeding, verify your environment meets these requirements:
+
+- A functional Kubernetes cluster (v1.21+ recommended)
+- `kubectl` v1.21+ installed and configured with cluster access
+- Helm installed ([installation guide](https://helm.sh/docs/intro/install/))
+- KubeBlocks installed ([installation guide](../user_docs/installation/install-kubeblocks.md))
+
+### Verify Elasticsearch Add-on
+
+The Elasticsearch Add-on is included with KubeBlocks by default. Check its status:
+
+```bash
+helm list -n kb-system | grep elasticsearch
+```
+
+<details open>
+<summary>Expected Output:</summary>
+
+```bash
+NAME                       NAMESPACE   REVISION    UPDATED                     STATUS      CHART
+kb-addon-elasticsearch     kb-system   1           2025-05-21                  deployed    elasticsearch-1.0.0
+```
+</details>
+
+If the add-on isn't enabled, choose an installation method:
+
+<Tabs>
+
+  <TabItem value="helm" label="helm" default>
+  ```bash
+  # Add Helm repo
+  helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
+  # For users in Mainland China, if GitHub is inaccessible or slow, use this alternative repo:
+  #helm repo add kubeblocks-addons https://jihulab.com/api/v4/projects/150246/packages/helm/stable
+
+  # Update helm repo
+  helm repo update
+  # Search available Add-on versions
+  helm search repo kubeblocks/elasticsearch --versions
+  # Install your desired version (replace <VERSION> with your chosen version)
+  helm upgrade -i kb-addon-elasticsearch kubeblocks-addons/elasticsearch --version <VERSION> -n kb-system
+  ```
+  </TabItem>
+
+  <TabItem value="kbcli" label="kbcli">
+
+  ```bash
+  # Add an index (kubeblocks is added by default)
+  kbcli addon index add kubeblocks https://github.com/apecloud/block-index.git
+  # Update the index
+  kbcli addon index update kubeblocks
+  # Update all indexes
+  kbcli addon index update --all
+  ```
+
+  To search and install an addon:
+
+  ```bash
+  # Search Add-on
+  kbcli addon search elasticsearch
+  # Install Add-on with your desired version (replace <VERSION> with your chosen version)
+  kbcli addon install elasticsearch --version <VERSION>
+  ```
+  **Sample Output:**
+  ```bash
+  ADDON   VERSION         INDEX
+  elasticsearch   0.9.0           kubeblocks
+  elasticsearch   0.9.1           kubeblocks
+  elasticsearch   1.0.0           kubeblocks
+  ```
+  To enable or disable an addon:
+
+  ```bash
+  # Enable Add-on
+  kbcli addon enable elasticsearch
+  # Disable Add-on
+  kbcli addon disable elasticsearch
+  ```
+
+  </TabItem>
+</Tabs>
+
+:::note
+**Version Compatibility**
+
+Always verify that the Elasticsearch Add-on version matches your KubeBlocks major version to avoid compatibility issues.
+
+:::
+
+## Deploy a Elasticsearch  Cluster
+
+For development and testing purposes, you can deploy a single-node cluster where one node handles all roles.
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/elasticsearch/cluster-single-node.yaml
+```
+
+This creates:
+- A Elasticsearch Cluster with 1 component, where one replica handles all roles.
+- Default resource allocations (1 CPU, 2Gi memory)
+- 20Gi persistent storage
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: es-singlenode
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mdit
+      componentDef: elasticsearch-8
+      serviceVersion: 8.8.2
+      replicas: 1
+      configs:
+        - name: es-cm
+          variables:
+            mode: "single-node"
+      resources:
+        limits:
+          cpu: "1"
+          memory: "2Gi"
+        requests:
+          cpu: "1"
+          memory: "2Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+For more API fields and descriptions, refer to the [API Reference](https://kubeblocks.io/docs/preview/developer_docs/api-reference/cluster).
+
+## Verify Cluster Status
+
+When deploying a Elasticsearch Cluster with 1 replicas:
+
+Confirm successful deployment by checking:
+
+1. Cluster phase is `Running`
+2. All pods are operational
+
+Check status using either method:
+
+<Tabs>
+  <TabItem value='kubectl' label='kubectl' default>
+```bash
+kubectl get cluster es-singlenode -n demo -w
+NAME            CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+es-singlenode                        Delete               Running   49s
+
+kubectl get pods -l app.kubernetes.io/instance=es-singlenode -n demo
+NAME                   READY   STATUS    RESTARTS   AGE
+es-singlenode-mdit-0   3/3     Running   0          58s
+```
+  </TabItem>
+
+  <TabItem value='kbcli' label='kbcli'>
+
+  With `kbcli` installed, you can view comprehensive cluster information:
+
+```bash
+kbcli cluster describe es-singlenode -n demo
+
+Name: es-singlenode      Created Time: May 19,2025 20:34 UTC+0800
+NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY   STATUS    TERMINATION-POLICY
+demo                                        Running   Delete
+
+Endpoints:
+COMPONENT   INTERNAL                                              EXTERNAL
+mdit        es-singlenode-mdit-http.demo.svc.cluster.local:9200   <none>
+
+Topology:
+COMPONENT   SERVICE-VERSION   INSTANCE               ROLE     STATUS    AZ       NODE                             CREATED-TIME
+mdit        8.8.2             es-singlenode-mdit-0   <none>   Running   <none>   kbv10-control-plane/172.19.0.2   May 19,2025 20:34 UTC+0800
+
+Resources Allocation:
+COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+mdit                            1 / 1                2Gi / 2Gi               data:20Gi      standard
+
+Images:
+COMPONENT   COMPONENT-DEFINITION            IMAGE
+mdit        elasticsearch-8-1.0.0-alpha.0   docker.io/library/elasticsearch:8.8.2
+                                            docker.io/prometheuscommunity/elasticsearch-exporter:v1.7.0
+                                            docker.io/apecloud/curl-jq:0.1.0
+
+Data Protection:
+BACKUP-REPO   AUTO-BACKUP   BACKUP-SCHEDULE   BACKUP-METHOD   BACKUP-RETENTION   RECOVERABLE-TIME
+
+Show cluster events: kbcli cluster list-events -n demo es-singlenode
+```
+
+  </TabItem>
+</Tabs>
+
+
+## Stop the Elasticsearch Cluster
+
+Stopping a cluster temporarily suspends operations while preserving all data and configuration:
+
+**Key Effects:**
+- Compute resources (Pods) are released
+- Persistent storage (PVCs) remains intact
+- Service definitions are maintained
+- Cluster configuration is preserved
+- Operational costs are reduced
+
+<Tabs>
+  <TabItem value="OpsRequest" label="OpsRequest API" default>
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: elasticsearch-stop
+    namespace: demo
+  spec:
+    clusterName: es-singlenode
+    type: Stop
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+  Alternatively, stop by setting `spec.componentSpecs.stop` to true:
+
+  ```bash
+  kubectl patch cluster es-singlenode -n demo --type='json' -p='[
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/0/stop",
+    "value": true
+  }
+  ```
+  </TabItem>
+</Tabs>
+
+## Start the Elasticsearch Cluster
+
+Restarting a stopped cluster resumes operations with all data and configuration intact:
+
+**Key Effects:**
+- Compute resources (Pods) are recreated
+- Services become available again
+- Cluster returns to previous state
+
+<Tabs>
+  <TabItem value="OpsRequest" label="OpsRequest API" default>
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: elasticsearch-start
+    namespace: demo
+  spec:
+    clusterName: es-singlenode
+    type: Start
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+  Restart by setting `spec.componentSpecs.stop` to false:
+
+  ```bash
+  kubectl patch cluster es-singlenode -n demo --type='json' -p='[
+  {
+    "op": "remove",
+    "path": "/spec/componentSpecs/0/stop"
+  }
+  ```
+  </TabItem>
+</Tabs>
+
+
+## Delete Elasticsearch Cluster
+
+Choose carefully based on your data retention needs:
+
+| Policy          | Resources Removed | Data Removed | Recommended For |
+|-----------------|-------------------|--------------|-----------------|
+| DoNotTerminate  | None              | None         | Critical production clusters |
+| Delete          | All resources     | PVCs deleted | Non-critical environments |
+| WipeOut         | All resources     | Everything*  | Test environments only |
+
+*Includes snapshots and backups in external storage
+
+**Pre-Deletion Checklist:**
+1. Verify no applications are using the cluster
+2. Ensure required backups exist
+3. Confirm proper terminationPolicy is set
+4. Check for dependent resources
+
+For test environments, use this complete cleanup:
+
+```bash
+kubectl patch cluster es-singlenode -p '{"spec":{"terminationPolicy":"WipeOut"}}' --type="merge" -n demo
+kubectl delete cluster es-singlenode -n demo
+```

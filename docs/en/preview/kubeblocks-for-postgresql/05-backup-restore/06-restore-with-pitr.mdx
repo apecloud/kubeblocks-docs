@@ -1,0 +1,195 @@
+---
+title: Restore a PostgreSQL Cluster from Backup with Point-In-Time-Recovery(PITR) on KubeBlocks
+description: Learn how to restore a PostgreSQL cluster using a full backup and continuous binlog backup for Point-In-Time Recovery (PITR) on KubeBlocks.
+keywords: [PostgreSQL, Full Backup, PITR, KubeBlocks]
+sidebar_position: 6
+sidebar_label: Restore with PITR
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Restore a PostgreSQL Cluster from Backup with Point-In-Time-Recovery(PITR) on KubeBlocks
+
+This guide demonstrates how to perform Point-In-Time Recovery (PITR) for PostgreSQL clusters in KubeBlocks using:
+
+1. A full base backup
+2. Continuous WAL (Write-Ahead Log) backups
+3. Two restoration methods:
+   - Cluster Annotation (declarative approach)
+   - OpsRequest API (operational control)
+
+PITR enables recovery to any moment within the timeRange the backup for.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Prepare for PITR Restoration
+To perform a PITR restoration, both a full backup and continuous backup are required. Refer to the documentation to configure these backups if they are not already set up.
+
+- Completed full backup
+- Active continuous WAL backup
+- Backup repository accessible
+- Sufficient resources for new cluster
+
+To identify the list of full and continuous backups, you may follow steps:
+
+### 1. Verify Continuous Backup
+Confirm you have an continuous WAL backup, either running or completed:
+
+```bash
+# expect EXACTLY ONE continuous backup per cluster
+kubectl get backup -n demo -l dataprotection.kubeblocks.io/backup-type=Continuous,app.kubernetes.io/instance=pg-cluster
+```
+
+### 2. Check Backup Time Range
+Get the valid recovery window:
+
+```bash
+kubectl get backup <continuous-backup-name> -n demo -o yaml | yq '.status.timeRange'
+```
+
+Example Output:
+```text
+start: "2025-05-07T09:12:47Z"
+end: "2025-05-07T09:22:50Z"
+```
+
+### 3. Identify Full Backup
+Find available full backups that meet:
+- Status: Completed
+- Completion time after continuous backup start time
+
+```bash
+# expect one or more Full backups
+kubectl get backup -n demo -l dataprotection.kubeblocks.io/backup-type=Full,app.kubernetes.io/instance=pg-cluster
+```
+
+:::tip
+KubeBlocks automatically selects the most recent qualifying full backup as the base.
+Make sure there is a full backup meets the condition: its stopTime/completionTimestamp must **AFTER** Continuous backup's startTime, otherwise PITR restoration will fail.
+:::
+
+## Method 1: Cluster Annotation Restoration
+
+### Step 1: Retrieve System Credentials
+Get encrypted account credentials from backup:
+
+```bash
+kubectl get backup <continuous-backup-name> -n demo -o json | \
+  jq -r '.metadata.annotations | ."kubeblocks.io/encrypted-system-accounts" | fromjson .postgresql | tojson | gsub("\""; "\\\"")'
+```
+
+### Step 2: Create Restored Cluster
+Configure PITR parameters in cluster annotation:
+
+Key parameters:
+- `encryptedSystemAccounts`: From previous step
+- `name`: Continuous backup name
+- `restoreTime`: Target recovery time (within backup `timeRange`)
+
+Apply this YAML configuration:
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: pg-restore-pitr
+  namespace: demo
+  annotations:
+    # NOTE: replace <ENCRYPTED-SYSTEM-ACCOUNTS> with the accounts info from you backup
+    # NOTE: replace <CONTINUOUS_BACKUP_NAME> with the continuouse backup name
+    # NOTE: replace <RESTORE_POINT_TIME>  with a valid time within the backup timeRange.
+    kubeblocks.io/restore-from-backup: '{"postgresql":{"encryptedSystemAccounts":"<ENCRYPTED-SYSTEM-ACCOUNTS>","name":"<CONTINUOUS_BACKUP_NAME>","namespace":"demo","restoreTime":"<RESTORE_POINT_TIME>","volumeRestorePolicy":"Parallel"}}'
+spec:
+  terminationPolicy: Delete
+  clusterDef: postgresql
+  topology: replication
+  componentSpecs:
+    - name: postgresql
+      serviceVersion: "14.7.2"
+      disableExporter: true
+      labels:
+        # NOTE: update the label accordingly
+        apps.kubeblocks.postgres.patroni/scope: pg-restore-pitr-postgresql
+      replicas: 1
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+### Step 3: Monitor Restoration
+Track restore progress with:
+
+```bash
+# Watch restore status
+kubectl get restore -n demo -w
+
+# Watch cluster status
+kubectl get cluster -n demo -w
+```
+
+## Method 2: OpsRequest API Restoration
+
+For operational control and monitoring, use the OpsRequest API:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-cluster-restore
+  namespace: demo
+spec:
+  clusterName: pg-cluster-restore
+  force: false
+  restore:
+    backupName: <CONTINUOUS_BACKUP_NAME>
+    backupNamespace: demo
+    restorePointInTime: <RESTORE_POINT_TIME>
+  type: Restore
+```
+
+### Monitor Restoration
+Track progress with:
+
+```bash
+# Watch restore operation
+kubectl get restore -n demo -w
+
+# Verify cluster status
+kubectl get cluster -n demo -w
+```
+
+## Cleanup
+To remove all created resources, delete the PostgreSQL cluster along with its namespace:
+
+```bash
+kubectl delete cluster pg-cluster -n demo
+kubectl delete cluster pg-cluster-restore -n demo
+kubectl delete ns demo
+```
+
+## Summary
+This guide demonstrated how to restore a PostgreSQL cluster in KubeBlocks using a full backup and continuous backup for Point-In-Time Recovery (PITR). Key steps included:
+- Verifying available backups.
+- Extracting encrypted system account credentials.
+- Creating a new PostgreSQL cluster with restoration configuration.
+- Monitoring the restoration process.
+
+With this approach, you can restore a PostgreSQL cluster to a specific point in time, ensuring minimal data loss and operational continuity.
+

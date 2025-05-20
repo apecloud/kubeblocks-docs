@@ -38,5 +38,8 @@ export const StarRocksIcon = (props: BoxProps) => (
 export const ElasticSearchIcon = (props: BoxProps) => (
   <Box {...props} className="iconfont icon-elasticsearch" />
 );
+export const RedisIcon = (props: BoxProps) => (
+  <Box {...props} className="iconfont icon-redis" />
+);
 
 
