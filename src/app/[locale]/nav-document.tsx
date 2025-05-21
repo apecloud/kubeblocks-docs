@@ -15,6 +15,7 @@ import {
   ExpandMore,
   PermIdentityOutlined,
   PestControlOutlined,
+  DataArray,
 } from "@mui/icons-material";
 import { useState } from "react";
 import { DropDown } from "@/components/DropDown";
@@ -36,6 +37,12 @@ export default function DocumentationNav() {
       description: "KubeBlocks CLI",
       icon: <DataObjectOutlined />,
       href: "/docs/preview/cli",
+    },
+    {
+      title: "API Reference",
+      description: "API Reference",
+      icon: <DataArray />,
+      href: "/docs/preview/user_docs/references/api-reference/cluster",
     },
     {
       type: "divider",
