@@ -7,7 +7,6 @@ import { JSX, useRef } from "react";
 
 const StyledCode = styled("code")(() => {
   return {
-    position: "relative",
     ".copy-to-clipboard": {
       display: "none",
     },
@@ -39,12 +38,13 @@ export default function CodeWithCopyButton(
           className="copy-to-clipboard"
           sx={{
             position: "absolute",
-            right: 12,
-            top: 12,
-            padding: 1,
+            right: 8,
+            top: 8,
+            padding: 0.8,
             minWidth: "auto",
             color: "rgba(255, 255, 255, 0.5)",
             borderColor: "rgba(255, 255, 255, 0.3)",
+            background: "#1A1E22",
             borderWidth: 1,
             "&:hover": {
               borderColor: theme.palette.primary.main,
