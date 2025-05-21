@@ -1,13 +1,13 @@
 ---
 title: Kubernetes and Operator 101
-description: things about K8s you need to know 
+description: things about K8s you need to know
 keywords: [K8s, operator, concept]
-sidebar_position: 3
+sidebar_position: 6
 ---
 
 # Kubernetes and Operator 101
 
-# K8s
+## K8s
 
 What is Kubernetes? Some say it's a container orchestration system, others describe it as a distributed operating system, while some view it as a multi-cloud PaaS (Platform as a Service) platform, and others consider it a platform for building PaaS solutions.
 
@@ -79,7 +79,7 @@ A ConfigMap is used to store configuration data in key-value pairs, allowing you
 
 ## Secret
 
-A Secret is used to store sensitive data such as passwords, tokens, or encryption keys. Secrets allow you to manage confidential information separately from your application code and avoid exposing sensitive data in your container images. Kubernetes Secrets can be injected into Pods as environment variables or mounted as files, ensuring that sensitive information is handled in a secure and controlled manner. 
+A Secret is used to store sensitive data such as passwords, tokens, or encryption keys. Secrets allow you to manage confidential information separately from your application code and avoid exposing sensitive data in your container images. Kubernetes Secrets can be injected into Pods as environment variables or mounted as files, ensuring that sensitive information is handled in a secure and controlled manner.
 
 However, Secrets are not encrypted by default—they are simply base64-encoded, which does not provide real encryption. They should still be used with care, ensuring proper access controls are in place.
 
@@ -106,7 +106,7 @@ In essence, a Kubernetes Operator encapsulates complex operational knowledge int
 
 ## Helm and Helm Chart
 
-Helm is a popular package manager for Kubernetes that helps manage and deploy applications. It packages all the necessary Kubernetes resources into a single Helm Chart, allowing you to install applications with a single command (helm install). Helm also handles configuration management and updates (helm upgrade), making the entire lifecycle of the application much easier to manage. 
+Helm is a popular package manager for Kubernetes that helps manage and deploy applications. It packages all the necessary Kubernetes resources into a single Helm Chart, allowing you to install applications with a single command (helm install). Helm also handles configuration management and updates (helm upgrade), making the entire lifecycle of the application much easier to manage.
 Key components of a Helm Chart:
 
 - Templates: YAML files with placeholders that define Kubernetes resources (like Pods, Services, and ConfigMaps).
