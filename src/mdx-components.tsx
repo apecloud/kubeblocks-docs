@@ -58,6 +58,9 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     th: (props: JSX.IntrinsicElements["th"]) => (
       <TableCell>{props.children}</TableCell>
     ),
+    pre: (props: JSX.IntrinsicElements["pre"]) => (
+      <pre style={{ position: 'relative' }}>{props.children}</pre>
+    ),
     code: (props: JSX.IntrinsicElements["code"]) => {
       const match = /language-(\w+)/.exec(props.className || "");
       if (match?.length) {
