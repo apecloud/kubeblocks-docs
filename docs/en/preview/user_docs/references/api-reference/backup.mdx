@@ -6,6 +6,7 @@ sidebar_position: 2
 sidebar_label: Backup
 ---
 <br />
+
 <p>
 Packages:
 </p>
@@ -54,6 +55,7 @@ ActionSet
 
 </h3>
 <div>
+
 <p>
 ActionSet is the Schema for the actionsets API
 </p>
@@ -146,6 +148,7 @@ BackupType
 </td>
 <td>
 
+
 <p>
 Specifies the backup type. Supported values include:
 </p>
@@ -166,6 +169,7 @@ Specifies the backup type. Supported values include:
 `Selective` back up data more precisely, use custom parameters, such as specific databases or tables.
 </li>
 </ul>
+
 <p>
 Continuous backup is essential for implementing Point-in-Time Recovery (PITR).
 </p>
@@ -188,6 +192,7 @@ ActionSetParametersSchema
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the schema of parameters in backups and restores before their usage.
 </p>
@@ -210,6 +215,7 @@ Specifies the schema of parameters in backups and restores before their usage.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies a list of environment variables to be set in the container.
 </p>
@@ -232,6 +238,7 @@ Specifies a list of environment variables to be set in the container.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies a list of sources to populate environment variables in the container.
 The keys within a source must be a C_IDENTIFIER. Any invalid keys will be
@@ -239,6 +246,7 @@ reported as an event when the container starts. If a key exists in multiple
 sources, the value from the last source will take precedence. Any values
 defined by an Env with a duplicate key will take precedence.
 </p>
+
 <p>
 This field cannot be updated.
 </p>
@@ -261,6 +269,7 @@ BackupActionSpec
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the backup action.
 </p>
@@ -283,6 +292,7 @@ RestoreActionSpec
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the restore action.
 </p>
@@ -320,6 +330,7 @@ Backup
 
 </h3>
 <div>
+
 <p>
 Backup is the Schema for the backups API.
 </p>
@@ -410,6 +421,7 @@ string
 </td>
 <td>
 
+
 <p>
 Specifies the backup policy to be applied for this backup.
 </p>
@@ -428,6 +440,7 @@ string
 
 </td>
 <td>
+
 
 <p>
 Specifies the backup method name that is defined in the backup policy.
@@ -450,6 +463,7 @@ BackupDeletionPolicy
 </td>
 <td>
 
+
 <p>
 Determines whether the backup contents stored in the backup repository
 should be deleted when the backup custom resource(CR) is deleted.
@@ -463,6 +477,7 @@ Supported values are `Retain` and `Delete`.
 `Delete` means that the backup content and its physical snapshot on backup repository are deleted.
 </li>
 </ul>
+
 <p>
 the backup CR but retaining the backup contents in backup repository.
 The current implementation only prevent accidental deletion of backup data.
@@ -486,6 +501,7 @@ RetentionPeriod
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Determines a duration up to which the backup should be kept.
 Controller will remove all backups that are older than the RetentionPeriod.
@@ -510,6 +526,7 @@ hours: 	12h
 minutes: 	30m
 </li>
 </ul>
+
 <p>
 You can also combine the above durations. For example: 30d12h30m.
 </p>
@@ -530,6 +547,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Determines the parent backup name for incremental or differential backup.
 </p>
@@ -552,6 +570,7 @@ Determines the parent backup name for incremental or differential backup.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies a list of name-value pairs representing parameters and their corresponding values.
 Parameters match the schema specified in the `actionset.spec.parametersSchema`
@@ -590,6 +609,7 @@ BackupPolicy
 
 </h3>
 <div>
+
 <p>
 BackupPolicy is the Schema for the backuppolicies API.
 </p>
@@ -681,6 +701,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the name of BackupRepo where the backup data will be stored.
 If not set, data will be stored in the default backup repository.
@@ -702,6 +723,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the directory inside the backup repository to store the backup.
 This path is relative to the path of the backup repository.
@@ -723,6 +745,7 @@ int32
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the number of retries before marking the backup as failed.
 </p>
@@ -743,6 +766,7 @@ BackupTarget
 
 </td>
 <td>
+
 
 <p>
 Specifies the target information to back up, such as the target pod, the
@@ -765,6 +789,7 @@ cluster connection credential.
 
 </td>
 <td>
+
 
 <p>
 Specifies multiple target information for backup operations. This includes details
@@ -790,6 +815,7 @@ optional
 </td>
 <td>
 
+
 <p>
 Defines the backup methods.
 </p>
@@ -810,15 +836,18 @@ bool
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies whether backup data should be stored in a Kopia repository.
 </p>
+
 <p>
 Data within the Kopia repository is both compressed and encrypted. Furthermore,
 data deduplication is implemented across various backups of the same cluster.
 This approach significantly reduces the actual storage usage, particularly
 for clusters with a low update frequency.
 </p>
+
 <p>
 NOTE: This feature should NOT be enabled when using KubeBlocks Community Edition, otherwise the backup will not be processed.
 </p>
@@ -841,9 +870,33 @@ EncryptionConfig
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the parameters for encrypting backup data.
 Encryption will be disabled if the field is not set.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`retentionPolicy`<br/>
+<em>
+<a href="#dataprotection.kubeblocks.io/v1alpha1.BackupPolicyRetentionPolicy">
+BackupPolicyRetentionPolicy
+</a>
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+Specifies the backup retention policy. This has a precedence over `backup.spec.retentionPeriod`.
 </p>
 
 </td>
@@ -879,6 +932,7 @@ BackupRepo
 
 </h3>
 <div>
+
 <p>
 BackupRepo is a repository for storing backup data.
 </p>
@@ -969,6 +1023,7 @@ string
 </td>
 <td>
 
+
 <p>
 Specifies the name of the `StorageProvider` used by this backup repository.
 </p>
@@ -991,6 +1046,7 @@ AccessMethod
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the access method of the backup repository.
 </p>
@@ -1013,6 +1069,7 @@ Kubernetes resource.Quantity
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the capacity of the PVC created by this backup repository.
 </p>
@@ -1034,6 +1091,7 @@ Kubernetes core/v1.PersistentVolumeReclaimPolicy
 </td>
 <td>
 
+
 <p>
 Specifies reclaim policy of the PV created by this backup repository.
 </p>
@@ -1054,6 +1112,7 @@ map[string]string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Stores the non-secret configuration parameters for the `StorageProvider`.
 </p>
@@ -1076,6 +1135,7 @@ Kubernetes core/v1.SecretReference
 <td>
 
 <em>(Optional)</em>
+
 <p>
 References to the secret that holds the credentials for the `StorageProvider`.
 </p>
@@ -1096,6 +1156,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the prefix of the path for storing backup data.
 </p>
@@ -1133,6 +1194,7 @@ BackupSchedule
 
 </h3>
 <div>
+
 <p>
 BackupSchedule is the Schema for the backupschedules API.
 </p>
@@ -1223,6 +1285,7 @@ string
 </td>
 <td>
 
+
 <p>
 Specifies the backupPolicy to be applied for the `schedules`.
 </p>
@@ -1243,6 +1306,7 @@ int64
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Defines the deadline in minutes for starting the backup workload if it
 misses its scheduled time for any reason.
@@ -1264,6 +1328,7 @@ misses its scheduled time for any reason.
 
 </td>
 <td>
+
 
 <p>
 Defines the list of backup schedules.
@@ -1302,6 +1367,7 @@ Restore
 
 </h3>
 <div>
+
 <p>
 Restore is the Schema for the restores API
 </p>
@@ -1394,6 +1460,7 @@ BackupRef
 </td>
 <td>
 
+
 <p>
 Specifies the backup to be restored. The restore behavior is based on the backup type:
 </p>
@@ -1428,6 +1495,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the point in time for restoring.
 </p>
@@ -1450,6 +1518,7 @@ RestoreKubeResources
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Restores the specified resources of Kubernetes.
 </p>
@@ -1472,6 +1541,7 @@ PrepareDataConfig
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Configuration for the action of &ldquo;prepareData&rdquo; phase, including the persistent volume claims
 that need to be restored and scheduling strategy of temporary recovery pod.
@@ -1493,6 +1563,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the service account name needed for recovery pod.
 </p>
@@ -1515,6 +1586,7 @@ ReadyConfig
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Configuration for the action of &ldquo;postReady&rdquo; phase.
 </p>
@@ -1537,10 +1609,12 @@ Configuration for the action of &ldquo;postReady&rdquo; phase.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 List of environment variables to set in the container for restore. These will be
 merged with the env of Backup and ActionSet.
 </p>
+
 <p>
 The priority of merging is as follows: `Restore env &gt; Backup env &gt; ActionSet env`.
 </p>
@@ -1563,6 +1637,7 @@ Kubernetes core/v1.ResourceRequirements
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the required resources of restore job&rsquo;s container.
 </p>
@@ -1583,6 +1658,7 @@ int32
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the number of retries before marking the restore failed.
 </p>
@@ -1605,6 +1681,7 @@ Specifies the number of retries before marking the restore failed.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies a list of name-value pairs representing parameters and their corresponding values.
 Parameters match the schema specified in the `actionset.spec.parametersSchema`
@@ -1643,6 +1720,7 @@ StorageProvider
 
 </h3>
 <div>
+
 <p>
 StorageProvider comprises specifications that provide guidance on accessing remote storage.
 Currently the supported access methods are via a dedicated CSI driver or the `datasafed` tool.
@@ -1738,6 +1816,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the name of the CSI driver used to access remote storage.
 This field can be empty, it indicates that the storage is not accessible via CSI.
@@ -1759,6 +1838,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 A Go template that used to render and generate `k8s.io/api/core/v1.Secret`
 resources for a specific CSI driver.
@@ -1782,6 +1862,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 A Go template utilized to render and generate `kubernetes.storage.k8s.io.v1.StorageClass`
 resources. The `StorageClass&rsquo; created by this template is aimed at using the CSI driver.
@@ -1803,6 +1884,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 A Go template that renders and generates `k8s.io/api/core/v1.PersistentVolumeClaim`
 resources. This PVC can reference the `StorageClass` created from `storageClassTemplate`,
@@ -1825,6 +1907,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 A Go template used to render and generate `k8s.io/api/core/v1.Secret`.
 This `Secret` involves the configuration details required by the `datasafed` tool
@@ -1852,6 +1935,7 @@ ParametersSchema
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Describes the parameters required for storage.
 The parameters defined here can be referenced in the above templates,
@@ -1890,12 +1974,14 @@ StorageProviderStatus
 AccessMethod
 (`string` alias)
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupRepoSpec">BackupRepoSpec</a>)
 
 </p>
 <div>
+
 <p>
 AccessMethod represents an enumeration type that outlines
 how the `BackupRepo` can be accessed.
@@ -1912,11 +1998,13 @@ how the `BackupRepo` can be accessed.
 </thead>
 <tbody><tr>
 <td>
+
 <p>
 &#34;Mount&#34;
 </p>
 </td>
 <td>
+
 <p>
 AccessMethodMount suggests that the storage is mounted locally
 which allows for remote files to be accessed akin to local ones.
@@ -1926,11 +2014,13 @@ which allows for remote files to be accessed akin to local ones.
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Tool&#34;
 </p>
 </td>
 <td>
+
 <p>
 AccessMethodTool indicates the utilization of a command-line
 tool for accessing the storage.
@@ -1944,12 +2034,14 @@ tool for accessing the storage.
 ActionErrorMode
 (`string` alias)
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.ExecActionSpec">ExecActionSpec</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.JobActionSpec">JobActionSpec</a>)
 
 </p>
 <div>
+
 <p>
 ActionErrorMode defines how to handle an error from an action.
 Currently, only the Fail mode is supported, but the Continue mode will be supported in the future.
@@ -1966,11 +2058,13 @@ Currently, only the Fail mode is supported, but the Continue mode will be suppor
 </thead>
 <tbody><tr>
 <td>
+
 <p>
 &#34;Continue&#34;
 </p>
 </td>
 <td>
+
 <p>
 ActionErrorModeContinue signifies that an error from an action is acceptable and can be ignored.
 </p>
@@ -1979,11 +2073,13 @@ ActionErrorModeContinue signifies that an error from an action is acceptable and
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Fail&#34;
 </p>
 </td>
 <td>
+
 <p>
 ActionErrorModeFail signifies that an error from an action is problematic and should be treated as a failure.
 </p>
@@ -1996,6 +2092,7 @@ ActionErrorModeFail signifies that an error from an action is problematic and sh
 ActionPhase
 (`string` alias)
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.ActionStatus">ActionStatus</a>)
@@ -2014,11 +2111,13 @@ ActionPhase
 </thead>
 <tbody><tr>
 <td>
+
 <p>
 &#34;Completed&#34;
 </p>
 </td>
 <td>
+
 <p>
 ActionPhaseCompleted means the action has run successfully without errors.
 </p>
@@ -2027,11 +2126,13 @@ ActionPhaseCompleted means the action has run successfully without errors.
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Failed&#34;
 </p>
 </td>
 <td>
+
 <p>
 ActionPhaseFailed means the action ran but encountered an error that
 </p>
@@ -2040,11 +2141,13 @@ ActionPhaseFailed means the action ran but encountered an error that
 
 </tr><tr>
 <td>
+
 <p>
 &#34;New&#34;
 </p>
 </td>
 <td>
+
 <p>
 ActionPhaseNew means the action has been created but not yet processed by
 the BackupController.
@@ -2054,11 +2157,13 @@ the BackupController.
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Running&#34;
 </p>
 </td>
 <td>
+
 <p>
 ActionPhaseRunning means the action is currently executing.
 </p>
@@ -2071,6 +2176,7 @@ ActionPhaseRunning means the action is currently executing.
 ActionSetParametersSchema
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.ActionSetSpec">ActionSetSpec</a>)
@@ -2103,6 +2209,7 @@ Kubernetes api extensions v1.JSONSchemaProps
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Defines the schema for parameters using the OpenAPI v3.
 The supported property types include:
@@ -2121,12 +2228,14 @@ The supported property types include:
 ActionSetSpec
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.ActionSet">ActionSet</a>)
 
 </p>
 <div>
+
 <p>
 ActionSetSpec defines the desired state of ActionSet
 </p>
@@ -2155,6 +2264,7 @@ BackupType
 </td>
 <td>
 
+
 <p>
 Specifies the backup type. Supported values include:
 </p>
@@ -2175,6 +2285,7 @@ Specifies the backup type. Supported values include:
 `Selective` back up data more precisely, use custom parameters, such as specific databases or tables.
 </li>
 </ul>
+
 <p>
 Continuous backup is essential for implementing Point-in-Time Recovery (PITR).
 </p>
@@ -2197,6 +2308,7 @@ ActionSetParametersSchema
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the schema of parameters in backups and restores before their usage.
 </p>
@@ -2219,6 +2331,7 @@ Specifies the schema of parameters in backups and restores before their usage.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies a list of environment variables to be set in the container.
 </p>
@@ -2241,6 +2354,7 @@ Specifies a list of environment variables to be set in the container.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies a list of sources to populate environment variables in the container.
 The keys within a source must be a C_IDENTIFIER. Any invalid keys will be
@@ -2248,6 +2362,7 @@ reported as an event when the container starts. If a key exists in multiple
 sources, the value from the last source will take precedence. Any values
 defined by an Env with a duplicate key will take precedence.
 </p>
+
 <p>
 This field cannot be updated.
 </p>
@@ -2270,6 +2385,7 @@ BackupActionSpec
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the backup action.
 </p>
@@ -2292,6 +2408,7 @@ RestoreActionSpec
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the restore action.
 </p>
@@ -2305,12 +2422,14 @@ Specifies the restore action.
 ActionSetStatus
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.ActionSet">ActionSet</a>)
 
 </p>
 <div>
+
 <p>
 ActionSetStatus defines the observed state of ActionSet
 </p>
@@ -2340,6 +2459,7 @@ Phase
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Indicates the phase of the ActionSet. This can be either &lsquo;Available&rsquo; or &lsquo;Unavailable&rsquo;.
 </p>
@@ -2360,6 +2480,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Provides a human-readable explanation detailing the reason for the current phase of the ActionSet.
 </p>
@@ -2380,6 +2501,7 @@ int64
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Represents the generation number that has been observed by the controller.
 </p>
@@ -2393,12 +2515,14 @@ Represents the generation number that has been observed by the controller.
 ActionSpec
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupActionSpec">BackupActionSpec</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.RestoreActionSpec">RestoreActionSpec</a>)
 
 </p>
 <div>
+
 <p>
 ActionSpec defines an action that should be executed. Only one of the fields may be set.
 </p>
@@ -2428,6 +2552,7 @@ ExecActionSpec
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies that the action should be executed using the pod&rsquo;s exec API within a container.
 </p>
@@ -2450,6 +2575,7 @@ JobActionSpec
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies that the action should be executed by a Kubernetes Job.
 </p>
@@ -2463,6 +2589,7 @@ Specifies that the action should be executed by a Kubernetes Job.
 ActionStatus
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupStatus">BackupStatus</a>)
@@ -2493,6 +2620,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 The name of the action.
 </p>
@@ -2511,6 +2639,7 @@ string
 
 </td>
 <td>
+
 
 <p>
 Records the target pod name which has been backed up.
@@ -2534,6 +2663,7 @@ ActionPhase
 <td>
 
 <em>(Optional)</em>
+
 <p>
 The current phase of the action.
 </p>
@@ -2556,6 +2686,7 @@ Kubernetes meta/v1.Time
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the time an action was started.
 </p>
@@ -2578,6 +2709,7 @@ Kubernetes meta/v1.Time
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the time an action was completed.
 </p>
@@ -2598,6 +2730,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 An error that caused the action to fail.
 </p>
@@ -2620,6 +2753,7 @@ ActionType
 <td>
 
 <em>(Optional)</em>
+
 <p>
 The type of the action.
 </p>
@@ -2640,6 +2774,7 @@ int32
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Available replicas for statefulSet action.
 </p>
@@ -2662,6 +2797,7 @@ Kubernetes core/v1.ObjectReference
 <td>
 
 <em>(Optional)</em>
+
 <p>
 The object reference for the action.
 </p>
@@ -2682,6 +2818,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 The total size of backed up data size.
 A string with capacity units in the format of &ldquo;1Gi&rdquo;, &ldquo;1Mi&rdquo;, &ldquo;1Ki&rdquo;.
@@ -2706,6 +2843,7 @@ BackupTimeRange
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the time range of backed up data, for PITR, this is the time
 range of recoverable data.
@@ -2729,6 +2867,7 @@ range of recoverable data.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the volume snapshot status for the action.
 </p>
@@ -2742,6 +2881,7 @@ Records the volume snapshot status for the action.
 ActionType
 (`string` alias)
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.ActionStatus">ActionStatus</a>)
@@ -2760,6 +2900,7 @@ ActionType
 </thead>
 <tbody><tr>
 <td>
+
 <p>
 &#34;Job&#34;
 </p>
@@ -2770,6 +2911,7 @@ ActionType
 
 </tr><tr>
 <td>
+
 <p>
 &#34;&#34;
 </p>
@@ -2780,6 +2922,7 @@ ActionType
 
 </tr><tr>
 <td>
+
 <p>
 &#34;StatefulSet&#34;
 </p>
@@ -2794,6 +2937,7 @@ ActionType
 BackupActionSpec
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.ActionSetSpec">ActionSetSpec</a>)
@@ -2825,6 +2969,7 @@ BackupDataActionSpec
 </td>
 <td>
 
+
 <p>
 Represents the action to be performed for backing up data.
 </p>
@@ -2847,6 +2992,7 @@ Represents the action to be performed for backing up data.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Represents a set of actions that should be executed before the backup process begins.
 </p>
@@ -2869,6 +3015,7 @@ Represents a set of actions that should be executed before the backup process be
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Represents a set of actions that should be executed after the backup process has completed.
 </p>
@@ -2891,6 +3038,7 @@ BaseJobActionSpec
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Represents a custom deletion action that can be executed before the built-in deletion action.
 Note: The preDelete action job will ignore the env/envFrom.
@@ -2912,6 +3060,7 @@ Note: The preDelete action job will ignore the env/envFrom.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the parameters used by the backup action
 </p>
@@ -2925,12 +3074,14 @@ Specifies the parameters used by the backup action
 BackupDataActionSpec
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupActionSpec">BackupActionSpec</a>)
 
 </p>
 <div>
+
 <p>
 BackupDataActionSpec defines how to back up data.
 </p>
@@ -2959,6 +3110,7 @@ JobActionSpec
 </td>
 <td>
 
+
 <p>
 
 (Members of `JobActionSpec` are embedded into this type.)
@@ -2983,6 +3135,7 @@ SyncProgress
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Determines if the backup progress should be synchronized and the interval
 for synchronization in seconds.
@@ -2997,12 +3150,14 @@ for synchronization in seconds.
 BackupDeletionPolicy
 (`string` alias)
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupSpec">BackupSpec</a>)
 
 </p>
 <div>
+
 <p>
 BackupDeletionPolicy describes the policy for end-of-life maintenance of backup content.
 </p>
@@ -3018,6 +3173,7 @@ BackupDeletionPolicy describes the policy for end-of-life maintenance of backup 
 </thead>
 <tbody><tr>
 <td>
+
 <p>
 &#34;Delete&#34;
 </p>
@@ -3028,6 +3184,7 @@ BackupDeletionPolicy describes the policy for end-of-life maintenance of backup 
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Retain&#34;
 </p>
@@ -3042,12 +3199,14 @@ BackupDeletionPolicy describes the policy for end-of-life maintenance of backup 
 BackupMethod
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupPolicySpec">BackupPolicySpec</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.BackupStatus">BackupStatus</a>)
 
 </p>
 <div>
+
 <p>
 BackupMethod defines the backup method.
 </p>
@@ -3074,6 +3233,7 @@ string
 </td>
 <td>
 
+
 <p>
 The name of backup method.
 </p>
@@ -3094,6 +3254,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 The name of the compatible full backup method, used by incremental backups.
 </p>
@@ -3114,6 +3275,7 @@ bool
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies whether to take snapshots of persistent volumes. If true,
 the ActionSetName is not required, the controller will use the CSI volume
@@ -3136,6 +3298,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Refers to the ActionSet object that defines the backup actions.
 For volume snapshot backup, the actionSet is not required, the controller
@@ -3160,6 +3323,7 @@ TargetVolumeInfo
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies which volumes from the target should be mounted in the backup workload.
 </p>
@@ -3182,6 +3346,7 @@ Specifies which volumes from the target should be mounted in the backup workload
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the environment variables for the backup workload.
 </p>
@@ -3204,6 +3369,7 @@ RuntimeSettings
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies runtime settings for the backup workload container.
 </p>
@@ -3226,6 +3392,7 @@ BackupTarget
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the target information to back up, it will override the target in backup policy.
 </p>
@@ -3247,6 +3414,7 @@ Specifies the target information to back up, it will override the target in back
 </td>
 <td>
 
+
 <p>
 Specifies multiple target information for backup operations. This includes details
 such as the target pod and cluster connection credentials. All specified targets
@@ -3262,6 +3430,7 @@ will be backed up collectively.
 BackupMethodTPL
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupPolicyTemplateSpec">BackupPolicyTemplateSpec</a>)
@@ -3291,6 +3460,7 @@ string
 </td>
 <td>
 
+
 <p>
 The name of backup method.
 </p>
@@ -3311,6 +3481,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 The name of the compatible full backup method, used by incremental backups.
 </p>
@@ -3331,6 +3502,7 @@ bool
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies whether to take snapshots of persistent volumes. If true,
 the ActionSetName is not required, the controller will use the CSI volume
@@ -3353,6 +3525,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Refers to the ActionSet object that defines the backup actions.
 For volume snapshot backup, the actionSet is not required, the controller
@@ -3377,6 +3550,7 @@ TargetVolumeInfo
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies which volumes from the target should be mounted in the backup workload.
 </p>
@@ -3399,6 +3573,7 @@ Specifies which volumes from the target should be mounted in the backup workload
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the environment variables for the backup workload.
 </p>
@@ -3421,6 +3596,7 @@ RuntimeSettings
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies runtime settings for the backup workload container.
 </p>
@@ -3443,10 +3619,12 @@ TargetInstance
 <td>
 
 <em>(Optional)</em>
+
 <p>
 If set, specifies the method for selecting the replica to be backed up using the criteria defined here.
 If this field is not set, the selection method specified in `backupPolicy.target` is used.
 </p>
+
 <p>
 This field provides a way to override the global `backupPolicy.target` setting for specific BackupMethod.
 </p>
@@ -3460,12 +3638,14 @@ This field provides a way to override the global `backupPolicy.target` setting f
 BackupPhase
 (`string` alias)
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupStatus">BackupStatus</a>)
 
 </p>
 <div>
+
 <p>
 BackupPhase describes the lifecycle phase of a Backup.
 </p>
@@ -3481,11 +3661,13 @@ BackupPhase describes the lifecycle phase of a Backup.
 </thead>
 <tbody><tr>
 <td>
+
 <p>
 &#34;Completed&#34;
 </p>
 </td>
 <td>
+
 <p>
 BackupPhaseCompleted means the backup has run successfully without errors.
 </p>
@@ -3494,11 +3676,13 @@ BackupPhaseCompleted means the backup has run successfully without errors.
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Deleting&#34;
 </p>
 </td>
 <td>
+
 <p>
 BackupPhaseDeleting means the backup and all its associated data are being deleted.
 </p>
@@ -3507,11 +3691,13 @@ BackupPhaseDeleting means the backup and all its associated data are being delet
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Failed&#34;
 </p>
 </td>
 <td>
+
 <p>
 BackupPhaseFailed means the backup ran but encountered an error that
 prevented it from completing successfully.
@@ -3521,11 +3707,13 @@ prevented it from completing successfully.
 
 </tr><tr>
 <td>
+
 <p>
 &#34;New&#34;
 </p>
 </td>
 <td>
+
 <p>
 BackupPhaseNew means the backup has been created but not yet processed by
 the BackupController.
@@ -3535,11 +3723,13 @@ the BackupController.
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Running&#34;
 </p>
 </td>
 <td>
+
 <p>
 BackupPhaseRunning means the backup is currently executing.
 </p>
@@ -3553,6 +3743,7 @@ BackupPolicyPhase
 (`string` alias)
 </h3>
 <div>
+
 <p>
 BackupPolicyPhase defines phases for BackupPolicy.
 </p>
@@ -3568,6 +3759,7 @@ BackupPolicyPhase defines phases for BackupPolicy.
 </thead>
 <tbody><tr>
 <td>
+
 <p>
 &#34;Available&#34;
 </p>
@@ -3578,6 +3770,7 @@ BackupPolicyPhase defines phases for BackupPolicy.
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Failed&#34;
 </p>
@@ -3588,16 +3781,75 @@ BackupPolicyPhase defines phases for BackupPolicy.
 
 </tr></tbody>
 </table>
+<h3 id="dataprotection.kubeblocks.io/v1alpha1.BackupPolicyRetentionPolicy">
+BackupPolicyRetentionPolicy
+(`string` alias)
+</h3>
+
+<p>
+
+(<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupPolicySpec">BackupPolicySpec</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.BackupPolicyTemplateSpec">BackupPolicyTemplateSpec</a>)
+
+</p>
+<div>
+
+<p>
+BackupPolicyRetentionPolicy defines the backup retention policy.
+</p>
+</div>
+<table>
+<thead>
+<tr>
+
+<th>Value</th>
+<th>Description</th>
+
+</tr>
+</thead>
+<tbody><tr>
+<td>
+
+<p>
+&#34;&#34;
+</p>
+</td>
+<td>
+
+<p>
+BackupPolicyRetentionPolicyNone indicates that no backup retention policy is set.
+</p>
+
+</td>
+
+</tr><tr>
+<td>
+
+<p>
+&#34;retainLatestBackup&#34;
+</p>
+</td>
+<td>
+
+<p>
+BackupPolicyRetentionPolicyRetainLatestBackup indicates that the latest backup is retained.
+</p>
+
+</td>
+
+</tr></tbody>
+</table>
 <h3 id="dataprotection.kubeblocks.io/v1alpha1.BackupPolicySpec">
 BackupPolicySpec
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupPolicy">BackupPolicy</a>)
 
 </p>
 <div>
+
 <p>
 BackupPolicySpec defines the desired state of BackupPolicy
 </p>
@@ -3625,6 +3877,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the name of BackupRepo where the backup data will be stored.
 If not set, data will be stored in the default backup repository.
@@ -3646,6 +3899,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the directory inside the backup repository to store the backup.
 This path is relative to the path of the backup repository.
@@ -3667,6 +3921,7 @@ int32
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the number of retries before marking the backup as failed.
 </p>
@@ -3687,6 +3942,7 @@ BackupTarget
 
 </td>
 <td>
+
 
 <p>
 Specifies the target information to back up, such as the target pod, the
@@ -3709,6 +3965,7 @@ cluster connection credential.
 
 </td>
 <td>
+
 
 <p>
 Specifies multiple target information for backup operations. This includes details
@@ -3734,6 +3991,7 @@ optional
 </td>
 <td>
 
+
 <p>
 Defines the backup methods.
 </p>
@@ -3754,15 +4012,18 @@ bool
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies whether backup data should be stored in a Kopia repository.
 </p>
+
 <p>
 Data within the Kopia repository is both compressed and encrypted. Furthermore,
 data deduplication is implemented across various backups of the same cluster.
 This approach significantly reduces the actual storage usage, particularly
 for clusters with a low update frequency.
 </p>
+
 <p>
 NOTE: This feature should NOT be enabled when using KubeBlocks Community Edition, otherwise the backup will not be processed.
 </p>
@@ -3785,9 +4046,33 @@ EncryptionConfig
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the parameters for encrypting backup data.
 Encryption will be disabled if the field is not set.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`retentionPolicy`<br/>
+<em>
+<a href="#dataprotection.kubeblocks.io/v1alpha1.BackupPolicyRetentionPolicy">
+BackupPolicyRetentionPolicy
+</a>
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+Specifies the backup retention policy. This has a precedence over `backup.spec.retentionPeriod`.
 </p>
 
 </td>
@@ -3799,12 +4084,14 @@ Encryption will be disabled if the field is not set.
 BackupPolicyStatus
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupPolicy">BackupPolicy</a>)
 
 </p>
 <div>
+
 <p>
 BackupPolicyStatus defines the observed state of BackupPolicy
 </p>
@@ -3834,6 +4121,7 @@ Phase
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Phase - in list of [Available,Unavailable]
 </p>
@@ -3854,6 +4142,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 A human-readable message indicating details about why the BackupPolicy
 is in this phase.
@@ -3875,6 +4164,7 @@ int64
 <td>
 
 <em>(Optional)</em>
+
 <p>
 ObservedGeneration is the most recent generation observed for this BackupPolicy.
 It refers to the BackupPolicy&rsquo;s generation, which is updated on mutation by the API Server.
@@ -3890,6 +4180,7 @@ BackupPolicyTemplate
 
 </h3>
 <div>
+
 <p>
 BackupPolicyTemplate should be provided by addon developers.
 It is responsible for generating BackupPolicies for the addon that requires backup operations,
@@ -3920,6 +4211,7 @@ Kubernetes meta/v1.ObjectMeta
 </td>
 <td>
 
+
 <p>
 The metadata for the BackupPolicyTemplate object, including name, namespace, labels, and annotations.
 </p>
@@ -3943,6 +4235,7 @@ BackupPolicyTemplateSpec
 </td>
 <td>
 
+
 <p>
 Defines the desired state of the BackupPolicyTemplate.
 </p>
@@ -3962,6 +4255,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Defines the type of well-known service protocol that the BackupPolicyTemplate provides, and it is optional.
 Some examples of well-known service protocols include:
@@ -3996,10 +4290,12 @@ Some examples of well-known service protocols include:
 </td>
 <td>
 
+
 <p>
 CompDefs specifies names for the component definitions associated with this BackupPolicyTemplate.
 Each name in the list can represent an exact name, a name prefix, or a regular expression pattern.
 </p>
+
 <p>
 For example:
 </p>
@@ -4033,6 +4329,7 @@ TargetInstance
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Defines the selection criteria of instance to be backed up, and the connection credential to be used
 during the backup process.
@@ -4056,6 +4353,7 @@ during the backup process.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Defines the execution plans for backup tasks, specifying when and how backups should occur,
 and the retention period of backup files.
@@ -4078,6 +4376,7 @@ and the retention period of backup files.
 </td>
 <td>
 
+
 <p>
 Defines an array of BackupMethods to be used.
 </p>
@@ -4098,8 +4397,32 @@ int32
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the maximum number of retry attempts for a backup before it is considered a failure.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`retentionPolicy`<br/>
+<em>
+<a href="#dataprotection.kubeblocks.io/v1alpha1.BackupPolicyRetentionPolicy">
+BackupPolicyRetentionPolicy
+</a>
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+Defines the backup retention policy to be used.
 </p>
 
 </td>
@@ -4124,6 +4447,7 @@ BackupPolicyTemplateStatus
 </td>
 <td>
 
+
 <p>
 Populated by the system, it represents the current information about the BackupPolicyTemplate.
 </p>
@@ -4137,12 +4461,14 @@ Populated by the system, it represents the current information about the BackupP
 BackupPolicyTemplateSpec
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupPolicyTemplate">BackupPolicyTemplate</a>)
 
 </p>
 <div>
+
 <p>
 BackupPolicyTemplateSpec contains the settings in a BackupPolicyTemplate.
 </p>
@@ -4170,6 +4496,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Defines the type of well-known service protocol that the BackupPolicyTemplate provides, and it is optional.
 Some examples of well-known service protocols include:
@@ -4204,10 +4531,12 @@ Some examples of well-known service protocols include:
 </td>
 <td>
 
+
 <p>
 CompDefs specifies names for the component definitions associated with this BackupPolicyTemplate.
 Each name in the list can represent an exact name, a name prefix, or a regular expression pattern.
 </p>
+
 <p>
 For example:
 </p>
@@ -4241,6 +4570,7 @@ TargetInstance
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Defines the selection criteria of instance to be backed up, and the connection credential to be used
 during the backup process.
@@ -4264,6 +4594,7 @@ during the backup process.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Defines the execution plans for backup tasks, specifying when and how backups should occur,
 and the retention period of backup files.
@@ -4286,6 +4617,7 @@ and the retention period of backup files.
 </td>
 <td>
 
+
 <p>
 Defines an array of BackupMethods to be used.
 </p>
@@ -4306,8 +4638,32 @@ int32
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the maximum number of retry attempts for a backup before it is considered a failure.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`retentionPolicy`<br/>
+<em>
+<a href="#dataprotection.kubeblocks.io/v1alpha1.BackupPolicyRetentionPolicy">
+BackupPolicyRetentionPolicy
+</a>
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+Defines the backup retention policy to be used.
 </p>
 
 </td>
@@ -4319,12 +4675,14 @@ Specifies the maximum number of retry attempts for a backup before it is conside
 BackupPolicyTemplateStatus
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupPolicyTemplate">BackupPolicyTemplate</a>)
 
 </p>
 <div>
+
 <p>
 BackupPolicyTemplateStatus defines the observed state of BackupPolicyTemplate.
 </p>
@@ -4352,6 +4710,7 @@ int64
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Represents the most recent generation observed for this BackupPolicyTemplate.
 </p>
@@ -4372,6 +4731,7 @@ Phase
 
 </td>
 <td>
+
 
 <p>
 Specifies the current phase of the BackupPolicyTemplate. Valid values are `empty`, `Available`, `Unavailable`.
@@ -4394,6 +4754,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Provides additional information about the current phase.
 </p>
@@ -4407,12 +4768,14 @@ Provides additional information about the current phase.
 BackupRef
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.RestoreSpec">RestoreSpec</a>)
 
 </p>
 <div>
+
 <p>
 BackupRef describes the backup info.
 </p>
@@ -4439,6 +4802,7 @@ string
 </td>
 <td>
 
+
 <p>
 Specifies the backup name.
 </p>
@@ -4457,6 +4821,7 @@ string
 
 </td>
 <td>
+
 
 <p>
 Specifies the backup namespace.
@@ -4477,6 +4842,7 @@ string
 </td>
 <td>
 
+
 <p>
 Specifies the source target for restoration, identified by its name.
 </p>
@@ -4490,12 +4856,14 @@ Specifies the source target for restoration, identified by its name.
 BackupRepoPhase
 (`string` alias)
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupRepoStatus">BackupRepoStatus</a>)
 
 </p>
 <div>
+
 <p>
 BackupRepoPhase denotes different stages for the `BackupRepo`.
 </p>
@@ -4511,11 +4879,13 @@ BackupRepoPhase denotes different stages for the `BackupRepo`.
 </thead>
 <tbody><tr>
 <td>
+
 <p>
 &#34;Deleting&#34;
 </p>
 </td>
 <td>
+
 <p>
 BackupRepoDeleting indicates the backup repository is being deleted.
 </p>
@@ -4524,11 +4894,13 @@ BackupRepoDeleting indicates the backup repository is being deleted.
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Failed&#34;
 </p>
 </td>
 <td>
+
 <p>
 BackupRepoFailed indicates the pre-check has been failed.
 </p>
@@ -4537,11 +4909,13 @@ BackupRepoFailed indicates the pre-check has been failed.
 
 </tr><tr>
 <td>
+
 <p>
 &#34;PreChecking&#34;
 </p>
 </td>
 <td>
+
 <p>
 BackupRepoPreChecking indicates the backup repository is being pre-checked.
 </p>
@@ -4550,11 +4924,13 @@ BackupRepoPreChecking indicates the backup repository is being pre-checked.
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Ready&#34;
 </p>
 </td>
 <td>
+
 <p>
 BackupRepoReady indicates the backup repository is ready for use.
 </p>
@@ -4567,12 +4943,14 @@ BackupRepoReady indicates the backup repository is ready for use.
 BackupRepoSpec
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupRepo">BackupRepo</a>)
 
 </p>
 <div>
+
 <p>
 BackupRepoSpec defines the desired state of `BackupRepo`.
 </p>
@@ -4599,6 +4977,7 @@ string
 </td>
 <td>
 
+
 <p>
 Specifies the name of the `StorageProvider` used by this backup repository.
 </p>
@@ -4621,6 +5000,7 @@ AccessMethod
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the access method of the backup repository.
 </p>
@@ -4643,6 +5023,7 @@ Kubernetes resource.Quantity
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the capacity of the PVC created by this backup repository.
 </p>
@@ -4664,6 +5045,7 @@ Kubernetes core/v1.PersistentVolumeReclaimPolicy
 </td>
 <td>
 
+
 <p>
 Specifies reclaim policy of the PV created by this backup repository.
 </p>
@@ -4684,6 +5066,7 @@ map[string]string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Stores the non-secret configuration parameters for the `StorageProvider`.
 </p>
@@ -4706,6 +5089,7 @@ Kubernetes core/v1.SecretReference
 <td>
 
 <em>(Optional)</em>
+
 <p>
 References to the secret that holds the credentials for the `StorageProvider`.
 </p>
@@ -4726,6 +5110,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the prefix of the path for storing backup data.
 </p>
@@ -4739,12 +5124,14 @@ Specifies the prefix of the path for storing backup data.
 BackupRepoStatus
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupRepo">BackupRepo</a>)
 
 </p>
 <div>
+
 <p>
 BackupRepoStatus defines the observed state of `BackupRepo`.
 </p>
@@ -4774,6 +5161,7 @@ BackupRepoPhase
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Represents the current phase of reconciliation for the backup repository.
 Permissible values are PreChecking, Failed, Ready, Deleting.
@@ -4797,6 +5185,7 @@ Permissible values are PreChecking, Failed, Ready, Deleting.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Provides a detailed description of the current state of the backup repository.
 </p>
@@ -4817,6 +5206,7 @@ int64
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Represents the latest generation of the resource that the controller has observed.
 </p>
@@ -4839,6 +5229,7 @@ Kubernetes core/v1.SecretReference
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Refers to the generated secret for the `StorageProvider`.
 </p>
@@ -4859,6 +5250,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Represents the name of the generated storage class.
 </p>
@@ -4879,6 +5271,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Represents the name of the PVC that stores backup data.
 </p>
@@ -4899,6 +5292,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Represents the name of the secret that contains the configuration for the tool.
 </p>
@@ -4919,6 +5313,7 @@ bool
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Indicates if this backup repository is the default one.
 </p>
@@ -4932,12 +5327,14 @@ Indicates if this backup repository is the default one.
 BackupSchedulePhase
 (`string` alias)
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupScheduleStatus">BackupScheduleStatus</a>)
 
 </p>
 <div>
+
 <p>
 BackupSchedulePhase defines the phase of BackupSchedule
 </p>
@@ -4953,11 +5350,13 @@ BackupSchedulePhase defines the phase of BackupSchedule
 </thead>
 <tbody><tr>
 <td>
+
 <p>
 &#34;Available&#34;
 </p>
 </td>
 <td>
+
 <p>
 BackupSchedulePhaseAvailable indicates the backup schedule is available.
 </p>
@@ -4966,11 +5365,13 @@ BackupSchedulePhaseAvailable indicates the backup schedule is available.
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Failed&#34;
 </p>
 </td>
 <td>
+
 <p>
 BackupSchedulePhaseFailed indicates the backup schedule has failed.
 </p>
@@ -4983,12 +5384,14 @@ BackupSchedulePhaseFailed indicates the backup schedule has failed.
 BackupScheduleSpec
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupSchedule">BackupSchedule</a>)
 
 </p>
 <div>
+
 <p>
 BackupScheduleSpec defines the desired state of BackupSchedule.
 </p>
@@ -5015,6 +5418,7 @@ string
 </td>
 <td>
 
+
 <p>
 Specifies the backupPolicy to be applied for the `schedules`.
 </p>
@@ -5035,6 +5439,7 @@ int64
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Defines the deadline in minutes for starting the backup workload if it
 misses its scheduled time for any reason.
@@ -5057,6 +5462,7 @@ misses its scheduled time for any reason.
 </td>
 <td>
 
+
 <p>
 Defines the list of backup schedules.
 </p>
@@ -5070,12 +5476,14 @@ Defines the list of backup schedules.
 BackupScheduleStatus
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupSchedule">BackupSchedule</a>)
 
 </p>
 <div>
+
 <p>
 BackupScheduleStatus defines the observed state of BackupSchedule.
 </p>
@@ -5105,6 +5513,7 @@ BackupSchedulePhase
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Describes the phase of the BackupSchedule.
 </p>
@@ -5125,6 +5534,7 @@ int64
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Represents the most recent generation observed for this BackupSchedule.
 It refers to the BackupSchedule&rsquo;s generation, which is updated on mutation
@@ -5147,6 +5557,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Represents an error that caused the backup to fail.
 </p>
@@ -5169,6 +5580,7 @@ map[string]github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1.ScheduleS
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Describes the status of each schedule.
 </p>
@@ -5182,12 +5594,14 @@ Describes the status of each schedule.
 BackupSpec
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.Backup">Backup</a>)
 
 </p>
 <div>
+
 <p>
 BackupSpec defines the desired state of Backup.
 </p>
@@ -5214,6 +5628,7 @@ string
 </td>
 <td>
 
+
 <p>
 Specifies the backup policy to be applied for this backup.
 </p>
@@ -5232,6 +5647,7 @@ string
 
 </td>
 <td>
+
 
 <p>
 Specifies the backup method name that is defined in the backup policy.
@@ -5254,6 +5670,7 @@ BackupDeletionPolicy
 </td>
 <td>
 
+
 <p>
 Determines whether the backup contents stored in the backup repository
 should be deleted when the backup custom resource(CR) is deleted.
@@ -5267,6 +5684,7 @@ Supported values are `Retain` and `Delete`.
 `Delete` means that the backup content and its physical snapshot on backup repository are deleted.
 </li>
 </ul>
+
 <p>
 the backup CR but retaining the backup contents in backup repository.
 The current implementation only prevent accidental deletion of backup data.
@@ -5290,6 +5708,7 @@ RetentionPeriod
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Determines a duration up to which the backup should be kept.
 Controller will remove all backups that are older than the RetentionPeriod.
@@ -5314,6 +5733,7 @@ hours: 	12h
 minutes: 	30m
 </li>
 </ul>
+
 <p>
 You can also combine the above durations. For example: 30d12h30m.
 </p>
@@ -5334,6 +5754,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Determines the parent backup name for incremental or differential backup.
 </p>
@@ -5356,6 +5777,7 @@ Determines the parent backup name for incremental or differential backup.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies a list of name-value pairs representing parameters and their corresponding values.
 Parameters match the schema specified in the `actionset.spec.parametersSchema`
@@ -5370,12 +5792,14 @@ Parameters match the schema specified in the `actionset.spec.parametersSchema`
 BackupStatus
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.Backup">Backup</a>)
 
 </p>
 <div>
+
 <p>
 BackupStatus defines the observed state of Backup.
 </p>
@@ -5403,6 +5827,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the backup format version, which includes major, minor, and patch versions.
 </p>
@@ -5425,6 +5850,7 @@ BackupPhase
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Indicates the current state of the backup operation.
 </p>
@@ -5447,6 +5873,7 @@ Kubernetes meta/v1.Time
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Indicates when this backup becomes eligible for garbage collection.
 A &lsquo;null&rsquo; value implies that the backup will not be cleaned up unless manually deleted.
@@ -5470,6 +5897,7 @@ Kubernetes meta/v1.Time
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the time when the backup operation was started.
 The server&rsquo;s time is used for this timestamp.
@@ -5493,6 +5921,7 @@ Kubernetes meta/v1.Time
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the time when the backup operation was completed.
 This timestamp is recorded even if the backup operation fails.
@@ -5517,6 +5946,7 @@ Kubernetes meta/v1.Duration
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the duration of the backup operation.
 When converted to a string, the format is &ldquo;1h2m0.5s&rdquo;.
@@ -5538,6 +5968,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the total size of the data backed up.
 The size is represented as a string with capacity units in the format of &ldquo;1Gi&rdquo;, &ldquo;1Mi&rdquo;, &ldquo;1Ki&rdquo;.
@@ -5560,6 +5991,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Any error that caused the backup operation to fail.
 </p>
@@ -5580,6 +6012,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 The name of the backup repository.
 </p>
@@ -5600,6 +6033,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 The directory within the backup repository where the backup data is stored.
 This is an absolute path within the backup repository.
@@ -5621,6 +6055,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the path of the Kopia repository.
 </p>
@@ -5641,6 +6076,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the name of the persistent volume claim used to store the backup data.
 </p>
@@ -5663,6 +6099,7 @@ BackupTimeRange
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the time range of the data backed up. For Point-in-Time Recovery (PITR),
 this is the time range of recoverable data.
@@ -5686,6 +6123,7 @@ BackupStatusTarget
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the target information for this backup.
 </p>
@@ -5708,6 +6146,7 @@ Records the target information for this backup.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the targets information for this backup.
 </p>
@@ -5730,6 +6169,7 @@ BackupMethod
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the backup method information for this backup.
 Refer to BackupMethod for more details.
@@ -5753,6 +6193,7 @@ EncryptionConfig
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the encryption config for this backup.
 </p>
@@ -5775,6 +6216,7 @@ Records the encryption config for this backup.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the actions status for this backup.
 </p>
@@ -5797,6 +6239,7 @@ Records the actions status for this backup.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the volume snapshot status for the action.
 </p>
@@ -5817,6 +6260,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the parent backup name for incremental or differential backup.
 When the parent backup is deleted, the backup will also be deleted.
@@ -5838,6 +6282,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the base full backup name for incremental backup or differential backup.
 When the base backup is deleted, the backup will also be deleted.
@@ -5859,6 +6304,7 @@ When the base backup is deleted, the backup will also be deleted.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records any additional information for the backup.
 </p>
@@ -5872,6 +6318,7 @@ Records any additional information for the backup.
 BackupStatusTarget
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupStatus">BackupStatus</a>)
@@ -5903,6 +6350,7 @@ BackupTarget
 </td>
 <td>
 
+
 <p>
 
 (Members of `BackupTarget` are embedded into this type.)
@@ -5924,6 +6372,7 @@ BackupTarget
 </td>
 <td>
 
+
 <p>
 Records the selected pods by the target info during backup.
 </p>
@@ -5937,6 +6386,7 @@ Records the selected pods by the target info during backup.
 BackupTarget
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupMethod">BackupMethod</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.BackupPolicySpec">BackupPolicySpec</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.BackupStatusTarget">BackupStatusTarget</a>)
@@ -5966,6 +6416,7 @@ string
 </td>
 <td>
 
+
 <p>
 Specifies a mandatory and unique identifier for each target when using the &ldquo;targets&rdquo; field.
 The backup data for the current target is stored in a uniquely named subdirectory.
@@ -5987,6 +6438,7 @@ PodSelector
 
 </td>
 <td>
+
 
 <p>
 Used to find the target pod. The volumes of the target pod will be backed up.
@@ -6010,6 +6462,7 @@ ConnectionCredential
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the connection credential to connect to the target database cluster.
 </p>
@@ -6032,6 +6485,7 @@ KubeResources
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the kubernetes resources to back up.
 </p>
@@ -6050,6 +6504,7 @@ string
 
 </td>
 <td>
+
 
 <p>
 Specifies the service account to run the backup workload.
@@ -6073,6 +6528,7 @@ ContainerPort
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the container port in the target pod.
 If not specified, the first container and its first port will be used.
@@ -6087,12 +6543,14 @@ If not specified, the first container and its first port will be used.
 BackupTimeRange
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.ActionStatus">ActionStatus</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.BackupStatus">BackupStatus</a>)
 
 </p>
 <div>
+
 <p>
 BackupTimeRange records the time range of backed up data, for PITR, this is the
 time range of recoverable data.
@@ -6121,6 +6579,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 time zone, supports only zone offset, with a value range of &ldquo;-12:59 ~ +13:00&rdquo;.
 </p>
@@ -6143,6 +6602,7 @@ Kubernetes meta/v1.Time
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the start time of the backup, in Coordinated Universal Time (UTC).
 </p>
@@ -6165,6 +6625,7 @@ Kubernetes meta/v1.Time
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the end time of the backup, in Coordinated Universal Time (UTC).
 </p>
@@ -6178,12 +6639,14 @@ Records the end time of the backup, in Coordinated Universal Time (UTC).
 BackupType
 (`string` alias)
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.ActionSetSpec">ActionSetSpec</a>)
 
 </p>
 <div>
+
 <p>
 BackupType the backup type.
 </p>
@@ -6199,6 +6662,7 @@ BackupType the backup type.
 </thead>
 <tbody><tr>
 <td>
+
 <p>
 &#34;Continuous&#34;
 </p>
@@ -6209,6 +6673,7 @@ BackupType the backup type.
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Differential&#34;
 </p>
@@ -6219,6 +6684,7 @@ BackupType the backup type.
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Full&#34;
 </p>
@@ -6229,6 +6695,7 @@ BackupType the backup type.
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Incremental&#34;
 </p>
@@ -6239,6 +6706,7 @@ BackupType the backup type.
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Selective&#34;
 </p>
@@ -6253,12 +6721,14 @@ BackupType the backup type.
 BaseJobActionSpec
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupActionSpec">BackupActionSpec</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.JobActionSpec">JobActionSpec</a>)
 
 </p>
 <div>
+
 <p>
 BaseJobActionSpec is an action that creates a Kubernetes Job to execute a command.
 </p>
@@ -6285,6 +6755,7 @@ string
 </td>
 <td>
 
+
 <p>
 Specifies the image of the backup container.
 </p>
@@ -6304,6 +6775,7 @@ Specifies the image of the backup container.
 </td>
 <td>
 
+
 <p>
 Defines the commands to back up the volume data.
 </p>
@@ -6317,12 +6789,14 @@ Defines the commands to back up the volume data.
 ConnectionCredential
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupTarget">BackupTarget</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.ReadyConfig">ReadyConfig</a>)
 
 </p>
 <div>
+
 <p>
 ConnectionCredential specifies the connection credential to connect to the
 target database cluster.
@@ -6350,6 +6824,7 @@ string
 </td>
 <td>
 
+
 <p>
 Refers to the Secret object that contains the connection credential.
 </p>
@@ -6369,6 +6844,7 @@ string
 </td>
 <td>
 
+
 <p>
 Specifies the map key of the user in the connection credential secret.
 </p>
@@ -6387,6 +6863,7 @@ string
 
 </td>
 <td>
+
 
 <p>
 Specifies the map key of the password in the connection credential secret.
@@ -6410,6 +6887,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the map key of the host in the connection credential secret.
 </p>
@@ -6430,6 +6908,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the map key of the port in the connection credential secret.
 </p>
@@ -6443,6 +6922,7 @@ Specifies the map key of the port in the connection credential secret.
 ContainerPort
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupTarget">BackupTarget</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.TargetInstance">TargetInstance</a>)
@@ -6472,6 +6952,7 @@ string
 </td>
 <td>
 
+
 <p>
 Specifies the name of container with the port.
 </p>
@@ -6491,6 +6972,7 @@ string
 </td>
 <td>
 
+
 <p>
 Specifies the port name.
 </p>
@@ -6504,6 +6986,7 @@ Specifies the port name.
 DataRestorePolicy
 (`string` alias)
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.RequiredPolicyForAllPodSelection">RequiredPolicyForAllPodSelection</a>)
@@ -6522,6 +7005,7 @@ DataRestorePolicy
 </thead>
 <tbody><tr>
 <td>
+
 <p>
 &#34;OneToMany&#34;
 </p>
@@ -6532,6 +7016,7 @@ DataRestorePolicy
 
 </tr><tr>
 <td>
+
 <p>
 &#34;OneToOne&#34;
 </p>
@@ -6546,12 +7031,14 @@ DataRestorePolicy
 EncryptionConfig
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupPolicySpec">BackupPolicySpec</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.BackupStatus">BackupStatus</a>)
 
 </p>
 <div>
+
 <p>
 EncryptionConfig defines the parameters for encrypting backup data.
 </p>
@@ -6577,6 +7064,7 @@ string
 
 </td>
 <td>
+
 
 <p>
 Specifies the encryption algorithm. Currently supported algorithms are:
@@ -6610,6 +7098,7 @@ Kubernetes core/v1.SecretKeySelector
 </td>
 <td>
 
+
 <p>
 Selects the key of a secret in the current namespace, the value of the secret
 is used as the encryption key.
@@ -6624,6 +7113,7 @@ is used as the encryption key.
 EnvVar
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupMethodTPL">BackupMethodTPL</a>)
@@ -6653,6 +7143,7 @@ string
 </td>
 <td>
 
+
 <p>
 Specifies the environment variable key.
 </p>
@@ -6673,6 +7164,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the environment variable value.
 </p>
@@ -6695,6 +7187,7 @@ ValueFrom
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the source used to determine the value of the environment variable.
 Cannot be used if value is not empty.
@@ -6709,6 +7202,7 @@ Cannot be used if value is not empty.
 ExecAction
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.ReadyConfig">ReadyConfig</a>)
@@ -6741,6 +7235,7 @@ ExecActionTarget
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Defines the pods that need to be executed for the exec action.
 Execution will occur on all pods that meet the conditions.
@@ -6755,12 +7250,14 @@ Execution will occur on all pods that meet the conditions.
 ExecActionSpec
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.ActionSpec">ActionSpec</a>)
 
 </p>
 <div>
+
 <p>
 ExecActionSpec is an action that uses the pod exec API to execute a command in a container
 in a pod.
@@ -6789,6 +7286,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the container within the pod where the command should be executed.
 If not specified, the first container in the pod is used by default.
@@ -6808,6 +7306,7 @@ If not specified, the first container in the pod is used by default.
 
 </td>
 <td>
+
 
 <p>
 Defines the command and arguments to be executed.
@@ -6831,6 +7330,7 @@ ActionErrorMode
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Indicates how to behave if an error is encountered during the execution of this action.
 </p>
@@ -6853,6 +7353,7 @@ Kubernetes meta/v1.Duration
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the maximum duration to wait for the hook to complete before
 considering the execution a failure.
@@ -6867,6 +7368,7 @@ considering the execution a failure.
 ExecActionTarget
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.ExecAction">ExecAction</a>)
@@ -6898,6 +7400,7 @@ Kubernetes meta/v1.LabelSelector
 </td>
 <td>
 
+
 <p>
 Executes kubectl in all selected pods.
 </p>
@@ -6911,6 +7414,7 @@ Executes kubectl in all selected pods.
 IncludeResource
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.RestoreKubeResources">RestoreKubeResources</a>)
@@ -6959,6 +7463,7 @@ Kubernetes meta/v1.LabelSelector
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Selects the specified resource for recovery by label.
 </p>
@@ -6972,6 +7477,7 @@ Selects the specified resource for recovery by label.
 JobAction
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.ReadyConfig">ReadyConfig</a>)
@@ -7003,6 +7509,7 @@ RequiredPolicyForAllPodSelection
 </td>
 <td>
 
+
 <p>
 Specifies the restore policy, which is required when the pod selection strategy for the source target is &lsquo;All&rsquo;.
 This field is ignored if the pod selection strategy is &lsquo;Any&rsquo;.
@@ -7026,6 +7533,7 @@ JobActionTarget
 </td>
 <td>
 
+
 <p>
 Defines the pods that needs to be executed for the job action.
 </p>
@@ -7039,12 +7547,14 @@ Defines the pods that needs to be executed for the job action.
 JobActionSpec
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.ActionSpec">ActionSpec</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.BackupDataActionSpec">BackupDataActionSpec</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.RestoreActionSpec">RestoreActionSpec</a>)
 
 </p>
 <div>
+
 <p>
 JobActionSpec is an action that creates a Kubernetes Job to execute a command.
 </p>
@@ -7073,6 +7583,7 @@ BaseJobActionSpec
 </td>
 <td>
 
+
 <p>
 
 (Members of `BaseJobActionSpec` are embedded into this type.)
@@ -7095,6 +7606,7 @@ bool
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Determines whether to run the job workload on the target pod node.
 If the backup container needs to mount the target pod&rsquo;s volumes, this field
@@ -7119,6 +7631,7 @@ ActionErrorMode
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Indicates how to behave if an error is encountered during the execution of this action.
 </p>
@@ -7132,6 +7645,7 @@ Indicates how to behave if an error is encountered during the execution of this 
 JobActionTarget
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.JobAction">JobAction</a>)
@@ -7163,6 +7677,7 @@ PodSelector
 </td>
 <td>
 
+
 <p>
 Selects one of the pods, identified by labels, to build the job spec.
 This includes mounting required volumes and injecting built-in environment variables of the selected pod.
@@ -7186,6 +7701,7 @@ This includes mounting required volumes and injecting built-in environment varia
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Defines which volumes of the selected pod need to be mounted on the restoring pod.
 </p>
@@ -7199,12 +7715,14 @@ Defines which volumes of the selected pod need to be mounted on the restoring po
 KubeResources
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupTarget">BackupTarget</a>)
 
 </p>
 <div>
+
 <p>
 KubeResources defines the kubernetes resources to back up.
 </p>
@@ -7233,6 +7751,7 @@ Kubernetes meta/v1.LabelSelector
 </td>
 <td>
 
+
 <p>
 A metav1.LabelSelector to filter the target kubernetes resources that need
 to be backed up. If not set, will do not back up any kubernetes resources.
@@ -7254,6 +7773,7 @@ to be backed up. If not set, will do not back up any kubernetes resources.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 included is a slice of namespaced-scoped resource type names to include in
 the kubernetes resources.
@@ -7276,6 +7796,7 @@ The default value is empty.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 excluded is a slice of namespaced-scoped resource type names to exclude in
 the kubernetes resources.
@@ -7291,6 +7812,7 @@ The default value is empty.
 ParameterPair
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupSpec">BackupSpec</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.RestoreSpec">RestoreSpec</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.SchedulePolicy">SchedulePolicy</a>)
@@ -7320,6 +7842,7 @@ string
 </td>
 <td>
 
+
 <p>
 Represents the name of the parameter.
 </p>
@@ -7339,6 +7862,7 @@ string
 </td>
 <td>
 
+
 <p>
 Represents the parameter values.
 </p>
@@ -7352,12 +7876,14 @@ Represents the parameter values.
 ParametersSchema
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.StorageProviderSpec">StorageProviderSpec</a>)
 
 </p>
 <div>
+
 <p>
 ParametersSchema describes the parameters needed for a certain storage.
 </p>
@@ -7387,6 +7913,7 @@ Kubernetes api extensions v1.JSONSchemaProps
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Defines the parameters in OpenAPI V3.
 </p>
@@ -7407,6 +7934,7 @@ Defines the parameters in OpenAPI V3.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Defines which parameters are credential fields, which need to be handled specifically.
 For instance, these should be stored in a `Secret` instead of a `ConfigMap`.
@@ -7421,12 +7949,14 @@ For instance, these should be stored in a `Secret` instead of a `ConfigMap`.
 Phase
 (`string` alias)
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.ActionSetStatus">ActionSetStatus</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.BackupPolicyStatus">BackupPolicyStatus</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.BackupPolicyTemplateStatus">BackupPolicyTemplateStatus</a>)
 
 </p>
 <div>
+
 <p>
 Phase defines the BackupPolicy and ActionSet CR .status.phase
 </p>
@@ -7442,6 +7972,7 @@ Phase defines the BackupPolicy and ActionSet CR .status.phase
 </thead>
 <tbody><tr>
 <td>
+
 <p>
 &#34;Available&#34;
 </p>
@@ -7452,6 +7983,7 @@ Phase defines the BackupPolicy and ActionSet CR .status.phase
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Unavailable&#34;
 </p>
@@ -7466,12 +7998,14 @@ Phase defines the BackupPolicy and ActionSet CR .status.phase
 PodSelectionStrategy
 (`string` alias)
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.PodSelector">PodSelector</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.TargetInstance">TargetInstance</a>)
 
 </p>
 <div>
+
 <p>
 PodSelectionStrategy specifies the strategy to select when multiple pods are
 selected for backup target
@@ -7488,11 +8022,13 @@ selected for backup target
 </thead>
 <tbody><tr>
 <td>
+
 <p>
 &#34;All&#34;
 </p>
 </td>
 <td>
+
 <p>
 PodSelectionStrategyAll selects all pods that match the labelsSelector.
 </p>
@@ -7501,11 +8037,13 @@ PodSelectionStrategyAll selects all pods that match the labelsSelector.
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Any&#34;
 </p>
 </td>
 <td>
+
 <p>
 PodSelectionStrategyAny selects any one pod that match the labelsSelector.
 </p>
@@ -7518,6 +8056,7 @@ PodSelectionStrategyAny selects any one pod that match the labelsSelector.
 PodSelector
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupTarget">BackupTarget</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.JobActionTarget">JobActionTarget</a>)
@@ -7549,11 +8088,13 @@ Kubernetes meta/v1.LabelSelector
 </td>
 <td>
 
+
 <p>
 
 (Members of `LabelSelector` are embedded into this type.)
 
 </p>
+
 <p>
 labelsSelector is the label selector to filter the target pods.
 </p>
@@ -7576,6 +8117,7 @@ Kubernetes meta/v1.LabelSelector
 <td>
 
 <em>(Optional)</em>
+
 <p>
 fallbackLabelSelector is used to filter available pods when the labelSelector fails.
 This only takes effect when the `strategy` field below is set to `Any`.
@@ -7598,6 +8140,7 @@ PodSelectionStrategy
 </td>
 <td>
 
+
 <p>
 Specifies the strategy to select the target pod when multiple pods are selected.
 Valid values are:
@@ -7615,12 +8158,36 @@ will be stored in a subdirectory named after the pod.
 </td>
 
 </tr>
+<tr>
+
+<td>
+
+`useParentSelectedPods`<br/>
+<em>
+bool
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+UseParentSelectedPods indicates whether to use the pods selected by the parent for backup.
+If set to true, the backup will use the same pods selected by the parent.
+And only takes effect when the &lsquo;strategy&rsquo; is set to &lsquo;Any&rsquo;.
+</p>
+
+</td>
+
+</tr>
 </tbody>
 </table>
 <h3 id="dataprotection.kubeblocks.io/v1alpha1.PrepareDataConfig">
 PrepareDataConfig
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.RestoreSpec">RestoreSpec</a>)
@@ -7652,6 +8219,7 @@ RequiredPolicyForAllPodSelection
 </td>
 <td>
 
+
 <p>
 Specifies the restore policy, which is required when the pod selection strategy for the source target is &lsquo;All&rsquo;.
 This field is ignored if the pod selection strategy is &lsquo;Any&rsquo;.
@@ -7676,6 +8244,7 @@ VolumeConfig
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the configuration when using `persistentVolumeClaim.spec.dataSourceRef` method for restoring.
 Describes the source volume of the backup targetVolumes and the mount path in the restoring container.
@@ -7699,6 +8268,7 @@ Describes the source volume of the backup targetVolumes and the mount path in th
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Defines the persistent Volume claims that need to be restored and mounted together into the restore job.
 These persistent Volume claims will be created if they do not exist.
@@ -7722,6 +8292,7 @@ RestoreVolumeClaimsTemplate
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Defines a template to build persistent Volume claims that need to be restored.
 These claims will be created in an orderly manner based on the number of replicas or reused if they already exist.
@@ -7743,6 +8314,7 @@ VolumeClaimRestorePolicy
 
 </td>
 <td>
+
 
 <p>
 Defines restore policy for persistent volume claim.
@@ -7775,6 +8347,7 @@ SchedulingSpec
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the scheduling spec for the restoring pod.
 </p>
@@ -7788,6 +8361,7 @@ Specifies the scheduling spec for the restoring pod.
 ReadinessProbe
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.ReadyConfig">ReadyConfig</a>)
@@ -7818,6 +8392,7 @@ int
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the number of seconds after the container has started before the probe is initiated.
 </p>
@@ -7838,6 +8413,7 @@ int
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the number of seconds after which the probe times out.
 The default value is 30 seconds, and the minimum value is 1.
@@ -7859,6 +8435,7 @@ int
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies how often (in seconds) to perform the probe.
 The default value is 5 seconds, and the minimum value is 1.
@@ -7881,6 +8458,7 @@ ReadinessProbeExecAction
 </td>
 <td>
 
+
 <p>
 Specifies the action to take.
 </p>
@@ -7894,6 +8472,7 @@ Specifies the action to take.
 ReadinessProbeExecAction
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.ReadinessProbe">ReadinessProbe</a>)
@@ -7923,6 +8502,7 @@ string
 </td>
 <td>
 
+
 <p>
 Refers to the container image.
 </p>
@@ -7942,6 +8522,7 @@ Refers to the container image.
 </td>
 <td>
 
+
 <p>
 Refers to the container command.
 </p>
@@ -7955,6 +8536,7 @@ Refers to the container command.
 ReadyConfig
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.RestoreSpec">RestoreSpec</a>)
@@ -7987,6 +8569,7 @@ JobAction
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the configuration for a job action.
 </p>
@@ -8009,6 +8592,7 @@ ExecAction
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the configuration for an exec action.
 </p>
@@ -8031,6 +8615,7 @@ ConnectionCredential
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Defines the credential template used to create a connection credential.
 </p>
@@ -8053,6 +8638,7 @@ ReadinessProbe
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Defines a periodic probe of the service readiness.
 The controller will perform postReadyHooks of BackupScript.spec.restore
@@ -8068,6 +8654,7 @@ after the service readiness when readinessProbe is configured.
 RequiredPolicyForAllPodSelection
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.JobAction">JobAction</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.PrepareDataConfig">PrepareDataConfig</a>)
@@ -8099,6 +8686,7 @@ DataRestorePolicy
 </td>
 <td>
 
+
 <p>
 Specifies the data restore policy. Options include:
 - OneToMany: Enables restoration of all volumes from a single data copy of the original target instance.
@@ -8124,6 +8712,7 @@ SourceOfOneToMany
 </td>
 <td>
 
+
 <p>
 Specifies the name of the source target pod. This field is mandatory when the DataRestorePolicy is configured to &lsquo;OneToMany&rsquo;.
 </p>
@@ -8137,12 +8726,14 @@ Specifies the name of the source target pod. This field is mandatory when the Da
 RestoreActionSpec
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.ActionSetSpec">ActionSetSpec</a>)
 
 </p>
 <div>
+
 <p>
 RestoreActionSpec defines how to restore data.
 </p>
@@ -8172,6 +8763,7 @@ JobActionSpec
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the action required to prepare data for restoration.
 </p>
@@ -8194,6 +8786,7 @@ Specifies the action required to prepare data for restoration.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the actions that should be executed after the data has been prepared and is ready for restoration.
 </p>
@@ -8214,6 +8807,7 @@ bool
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Determines if a base backup is required during restoration.
 </p>
@@ -8234,6 +8828,7 @@ Determines if a base backup is required during restoration.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the parameters used by the restore action
 </p>
@@ -8247,12 +8842,14 @@ Specifies the parameters used by the restore action
 RestoreActionStatus
 (`string` alias)
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.RestoreStatusAction">RestoreStatusAction</a>)
 
 </p>
 <div>
+
 <p>
 RestoreActionStatus the status of restore action.
 </p>
@@ -8268,6 +8865,7 @@ RestoreActionStatus the status of restore action.
 </thead>
 <tbody><tr>
 <td>
+
 <p>
 &#34;Completed&#34;
 </p>
@@ -8278,6 +8876,7 @@ RestoreActionStatus the status of restore action.
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Failed&#34;
 </p>
@@ -8288,6 +8887,7 @@ RestoreActionStatus the status of restore action.
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Processing&#34;
 </p>
@@ -8302,6 +8902,7 @@ RestoreActionStatus the status of restore action.
 RestoreKubeResources
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.RestoreSpec">RestoreSpec</a>)
@@ -8334,6 +8935,7 @@ RestoreKubeResources
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Restores the specified resources.
 </p>
@@ -8347,12 +8949,14 @@ Restores the specified resources.
 RestorePhase
 (`string` alias)
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.RestoreStatus">RestoreStatus</a>)
 
 </p>
 <div>
+
 <p>
 RestorePhase The current phase. Valid values are Running, Completed, Failed, AsDataSource.
 </p>
@@ -8368,6 +8972,7 @@ RestorePhase The current phase. Valid values are Running, Completed, Failed, AsD
 </thead>
 <tbody><tr>
 <td>
+
 <p>
 &#34;AsDataSource&#34;
 </p>
@@ -8378,6 +8983,7 @@ RestorePhase The current phase. Valid values are Running, Completed, Failed, AsD
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Completed&#34;
 </p>
@@ -8388,6 +8994,7 @@ RestorePhase The current phase. Valid values are Running, Completed, Failed, AsD
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Failed&#34;
 </p>
@@ -8398,6 +9005,7 @@ RestorePhase The current phase. Valid values are Running, Completed, Failed, AsD
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Running&#34;
 </p>
@@ -8412,12 +9020,14 @@ RestorePhase The current phase. Valid values are Running, Completed, Failed, AsD
 RestoreSpec
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.Restore">Restore</a>)
 
 </p>
 <div>
+
 <p>
 RestoreSpec defines the desired state of Restore
 </p>
@@ -8445,6 +9055,7 @@ BackupRef
 
 </td>
 <td>
+
 
 <p>
 Specifies the backup to be restored. The restore behavior is based on the backup type:
@@ -8480,6 +9091,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the point in time for restoring.
 </p>
@@ -8502,6 +9114,7 @@ RestoreKubeResources
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Restores the specified resources of Kubernetes.
 </p>
@@ -8524,6 +9137,7 @@ PrepareDataConfig
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Configuration for the action of &ldquo;prepareData&rdquo; phase, including the persistent volume claims
 that need to be restored and scheduling strategy of temporary recovery pod.
@@ -8545,6 +9159,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the service account name needed for recovery pod.
 </p>
@@ -8567,6 +9182,7 @@ ReadyConfig
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Configuration for the action of &ldquo;postReady&rdquo; phase.
 </p>
@@ -8589,10 +9205,12 @@ Configuration for the action of &ldquo;postReady&rdquo; phase.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 List of environment variables to set in the container for restore. These will be
 merged with the env of Backup and ActionSet.
 </p>
+
 <p>
 The priority of merging is as follows: `Restore env &gt; Backup env &gt; ActionSet env`.
 </p>
@@ -8615,6 +9233,7 @@ Kubernetes core/v1.ResourceRequirements
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the required resources of restore job&rsquo;s container.
 </p>
@@ -8635,6 +9254,7 @@ int32
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the number of retries before marking the restore failed.
 </p>
@@ -8657,6 +9277,7 @@ Specifies the number of retries before marking the restore failed.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies a list of name-value pairs representing parameters and their corresponding values.
 Parameters match the schema specified in the `actionset.spec.parametersSchema`
@@ -8684,6 +9305,7 @@ RestoreStage
 </thead>
 <tbody><tr>
 <td>
+
 <p>
 &#34;postReady&#34;
 </p>
@@ -8694,6 +9316,7 @@ RestoreStage
 
 </tr><tr>
 <td>
+
 <p>
 &#34;prepareData&#34;
 </p>
@@ -8708,12 +9331,14 @@ RestoreStage
 RestoreStatus
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.Restore">Restore</a>)
 
 </p>
 <div>
+
 <p>
 RestoreStatus defines the observed state of Restore
 </p>
@@ -8743,6 +9368,7 @@ RestorePhase
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Represents the current phase of the restore.
 </p>
@@ -8765,6 +9391,7 @@ Kubernetes meta/v1.Time
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the date/time when the restore started being processed.
 </p>
@@ -8787,6 +9414,7 @@ Kubernetes meta/v1.Time
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the date/time when the restore finished being processed.
 </p>
@@ -8809,6 +9437,7 @@ Kubernetes meta/v1.Duration
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the duration of the restore execution.
 When converted to a string, the form is &ldquo;1h2m0.5s&rdquo;.
@@ -8832,6 +9461,7 @@ RestoreStatusActions
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records all restore actions performed.
 </p>
@@ -8854,6 +9484,7 @@ Records all restore actions performed.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Describes the current state of the restore API Resource, like warning.
 </p>
@@ -8867,6 +9498,7 @@ Describes the current state of the restore API Resource, like warning.
 RestoreStatusAction
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.RestoreStatusActions">RestoreStatusActions</a>)
@@ -8896,6 +9528,7 @@ string
 </td>
 <td>
 
+
 <p>
 Describes the name of the restore action based on the current backup.
 </p>
@@ -8915,6 +9548,7 @@ string
 </td>
 <td>
 
+
 <p>
 Describes which backup&rsquo;s restore action belongs to.
 </p>
@@ -8933,6 +9567,7 @@ string
 
 </td>
 <td>
+
 
 <p>
 Describes the execution object of the restore action.
@@ -8954,6 +9589,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Provides a human-readable message indicating details about the object condition.
 </p>
@@ -8974,6 +9610,7 @@ RestoreActionStatus
 
 </td>
 <td>
+
 
 <p>
 The status of this action.
@@ -8997,6 +9634,7 @@ Kubernetes meta/v1.Time
 <td>
 
 <em>(Optional)</em>
+
 <p>
 The start time of the restore job.
 </p>
@@ -9019,6 +9657,7 @@ Kubernetes meta/v1.Time
 <td>
 
 <em>(Optional)</em>
+
 <p>
 The completion time of the restore job.
 </p>
@@ -9032,6 +9671,7 @@ The completion time of the restore job.
 RestoreStatusActions
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.RestoreStatus">RestoreStatus</a>)
@@ -9064,6 +9704,7 @@ RestoreStatusActions
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the actions for the prepareData phase.
 </p>
@@ -9086,6 +9727,7 @@ Records the actions for the prepareData phase.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the actions for the postReady phase.
 </p>
@@ -9099,6 +9741,7 @@ Records the actions for the postReady phase.
 RestoreVolumeClaim
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.PrepareDataConfig">PrepareDataConfig</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.RestoreVolumeClaimsTemplate">RestoreVolumeClaimsTemplate</a>)
@@ -9130,6 +9773,7 @@ Kubernetes meta/v1.ObjectMeta
 </td>
 <td>
 
+
 <p>
 Specifies the standard metadata for the object.
 More info: <a href="https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata">https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata</a>
@@ -9154,6 +9798,7 @@ Kubernetes core/v1.PersistentVolumeClaimSpec
 </td>
 <td>
 
+
 <p>
 Defines the desired characteristics of a persistent volume claim.
 </p>
@@ -9175,11 +9820,13 @@ VolumeConfig
 </td>
 <td>
 
+
 <p>
 
 (Members of `VolumeConfig` are embedded into this type.)
 
 </p>
+
 <p>
 Describes the source volume of the backup target volumes and the mount path in the restoring container.
 At least one must exist for volumeSource and mountPath.
@@ -9194,6 +9841,7 @@ At least one must exist for volumeSource and mountPath.
 RestoreVolumeClaimsTemplate
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.PrepareDataConfig">PrepareDataConfig</a>)
@@ -9225,6 +9873,7 @@ RestoreVolumeClaimsTemplate
 </td>
 <td>
 
+
 <p>
 Contains a list of volume claims.
 </p>
@@ -9243,6 +9892,7 @@ int32
 
 </td>
 <td>
+
 
 <p>
 Specifies the replicas of persistent volume claim that need to be created and restored.
@@ -9264,6 +9914,7 @@ int32
 </td>
 <td>
 
+
 <p>
 Specifies the starting index for the created persistent volume claim according to the template.
 The minimum value is 0.
@@ -9278,12 +9929,14 @@ The minimum value is 0.
 RetentionPeriod
 (`string` alias)
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupSpec">BackupSpec</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.SchedulePolicy">SchedulePolicy</a>)
 
 </p>
 <div>
+
 <p>
 RetentionPeriod represents a duration in the format &ldquo;1y2mo3w4d5h6m&rdquo;, where
 y=year, mo=month, w=week, d=day, h=hour, m=minute.
@@ -9293,6 +9946,7 @@ y=year, mo=month, w=week, d=day, h=hour, m=minute.
 RuntimeSettings
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupMethod">BackupMethod</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.BackupMethodTPL">BackupMethodTPL</a>)
@@ -9325,6 +9979,7 @@ Kubernetes core/v1.ResourceRequirements
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the resource required by container.
 More info: <a href="https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/">https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/</a>
@@ -9339,12 +9994,14 @@ More info: <a href="https://kubernetes.io/docs/concepts/configuration/manage-com
 SchedulePhase
 (`string` alias)
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.ScheduleStatus">ScheduleStatus</a>)
 
 </p>
 <div>
+
 <p>
 SchedulePhase represents the phase of a schedule.
 </p>
@@ -9360,6 +10017,7 @@ SchedulePhase represents the phase of a schedule.
 </thead>
 <tbody><tr>
 <td>
+
 <p>
 &#34;Failed&#34;
 </p>
@@ -9370,6 +10028,7 @@ SchedulePhase represents the phase of a schedule.
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Running&#34;
 </p>
@@ -9384,6 +10043,7 @@ SchedulePhase represents the phase of a schedule.
 SchedulePolicy
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupPolicyTemplateSpec">BackupPolicyTemplateSpec</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.BackupScheduleSpec">BackupScheduleSpec</a>)
@@ -9414,6 +10074,7 @@ bool
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies whether the backup schedule is enabled or not.
 </p>
@@ -9434,6 +10095,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the name of the schedule. Names cannot be duplicated.
 If the name is empty, it will be considered the same as the value of the backupMethod below.
@@ -9454,6 +10116,7 @@ string
 </td>
 <td>
 
+
 <p>
 Specifies the backup method name that is defined in backupPolicy.
 </p>
@@ -9472,6 +10135,7 @@ string
 
 </td>
 <td>
+
 
 <p>
 Specifies the cron expression for the schedule. The timezone is in UTC.
@@ -9496,6 +10160,7 @@ RetentionPeriod
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Determines the duration for which the backup should be kept.
 KubeBlocks will remove all backups that are older than the RetentionPeriod.
@@ -9519,6 +10184,7 @@ hours: 	12h
 minutes: 	30m
 </li>
 </ul>
+
 <p>
 You can also combine the above durations. For example: 30d12h30m
 </p>
@@ -9541,6 +10207,7 @@ You can also combine the above durations. For example: 30d12h30m
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies a list of name-value pairs representing parameters and their corresponding values.
 Parameters match the schema specified in the `actionset.spec.parametersSchema`
@@ -9555,12 +10222,14 @@ Parameters match the schema specified in the `actionset.spec.parametersSchema`
 ScheduleStatus
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupScheduleStatus">BackupScheduleStatus</a>)
 
 </p>
 <div>
+
 <p>
 ScheduleStatus represents the status of each schedule.
 </p>
@@ -9590,6 +10259,7 @@ SchedulePhase
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Describes the phase of the schedule.
 </p>
@@ -9610,6 +10280,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Represents an error that caused the backup to fail.
 </p>
@@ -9632,6 +10303,7 @@ Kubernetes meta/v1.Time
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the last time the backup was scheduled.
 </p>
@@ -9654,6 +10326,7 @@ Kubernetes meta/v1.Time
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Records the last time the backup was successfully completed.
 </p>
@@ -9667,6 +10340,7 @@ Records the last time the backup was successfully completed.
 SchedulingSpec
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.PrepareDataConfig">PrepareDataConfig</a>)
@@ -9699,6 +10373,7 @@ SchedulingSpec
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the tolerations for the restoring pod.
 </p>
@@ -9719,6 +10394,7 @@ map[string]string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Defines a selector which must be true for the pod to fit on a node.
 The selector must match a node&rsquo;s labels for the pod to be scheduled on that node.
@@ -9741,6 +10417,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies a request to schedule this pod onto a specific node. If it is non-empty,
 the scheduler simply schedules this pod onto that node, assuming that it fits resource
@@ -9765,6 +10442,7 @@ Kubernetes core/v1.Affinity
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Contains a group of affinity scheduling rules.
 Refer to <a href="https://kubernetes.io/docs/concepts/configuration/assign-pod-node/">https://kubernetes.io/docs/concepts/configuration/assign-pod-node/</a>
@@ -9788,6 +10466,7 @@ Refer to <a href="https://kubernetes.io/docs/concepts/configuration/assign-pod-n
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Describes how a group of pods ought to spread across topology
 domains. The scheduler will schedule pods in a way which abides by the constraints.
@@ -9810,6 +10489,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the scheduler to dispatch the pod.
 If not specified, the pod will be dispatched by the default scheduler.
@@ -9824,6 +10504,7 @@ If not specified, the pod will be dispatched by the default scheduler.
 SourceOfOneToMany
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.RequiredPolicyForAllPodSelection">RequiredPolicyForAllPodSelection</a>)
@@ -9853,6 +10534,7 @@ string
 </td>
 <td>
 
+
 <p>
 Specifies the name of the source target pod.
 </p>
@@ -9866,12 +10548,14 @@ Specifies the name of the source target pod.
 StorageProviderPhase
 (`string` alias)
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.StorageProviderStatus">StorageProviderStatus</a>)
 
 </p>
 <div>
+
 <p>
 StorageProviderPhase defines phases of a `StorageProvider`.
 </p>
@@ -9887,11 +10571,13 @@ StorageProviderPhase defines phases of a `StorageProvider`.
 </thead>
 <tbody><tr>
 <td>
+
 <p>
 &#34;NotReady&#34;
 </p>
 </td>
 <td>
+
 <p>
 StorageProviderNotReady indicates that the `StorageProvider` is not ready,
 usually because the specified CSI driver is not yet installed.
@@ -9901,11 +10587,13 @@ usually because the specified CSI driver is not yet installed.
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Ready&#34;
 </p>
 </td>
 <td>
+
 <p>
 StorageProviderReady indicates that the `StorageProvider` is ready for use.
 </p>
@@ -9918,12 +10606,14 @@ StorageProviderReady indicates that the `StorageProvider` is ready for use.
 StorageProviderSpec
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.StorageProvider">StorageProvider</a>)
 
 </p>
 <div>
+
 <p>
 StorageProviderSpec defines the desired state of `StorageProvider`.
 </p>
@@ -9951,6 +10641,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the name of the CSI driver used to access remote storage.
 This field can be empty, it indicates that the storage is not accessible via CSI.
@@ -9972,6 +10663,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 A Go template that used to render and generate `k8s.io/api/core/v1.Secret`
 resources for a specific CSI driver.
@@ -9995,6 +10687,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 A Go template utilized to render and generate `kubernetes.storage.k8s.io.v1.StorageClass`
 resources. The `StorageClass&rsquo; created by this template is aimed at using the CSI driver.
@@ -10016,6 +10709,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 A Go template that renders and generates `k8s.io/api/core/v1.PersistentVolumeClaim`
 resources. This PVC can reference the `StorageClass` created from `storageClassTemplate`,
@@ -10038,6 +10732,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 A Go template used to render and generate `k8s.io/api/core/v1.Secret`.
 This `Secret` involves the configuration details required by the `datasafed` tool
@@ -10065,6 +10760,7 @@ ParametersSchema
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Describes the parameters required for storage.
 The parameters defined here can be referenced in the above templates,
@@ -10080,12 +10776,14 @@ and `kbcli` uses this definition for dynamic command-line parameter parsing.
 StorageProviderStatus
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.StorageProvider">StorageProvider</a>)
 
 </p>
 <div>
+
 <p>
 StorageProviderStatus defines the observed state of `StorageProvider`.
 </p>
@@ -10114,6 +10812,7 @@ StorageProviderPhase
 </td>
 <td>
 
+
 <p>
 The phase of the `StorageProvider`. Valid phases are `NotReady` and `Ready`.
 </p>
@@ -10136,6 +10835,7 @@ The phase of the `StorageProvider`. Valid phases are `NotReady` and `Ready`.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Describes the current state of the `StorageProvider`.
 </p>
@@ -10149,6 +10849,7 @@ Describes the current state of the `StorageProvider`.
 SyncProgress
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupDataActionSpec">BackupDataActionSpec</a>)
@@ -10179,6 +10880,7 @@ bool
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Determines if the backup progress should be synchronized. If set to true,
 a sidecar container will be instantiated to synchronize the backup progress with the
@@ -10201,6 +10903,7 @@ int32
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Defines the interval in seconds for synchronizing the backup progress.
 </p>
@@ -10214,6 +10917,7 @@ Defines the interval in seconds for synchronizing the backup progress.
 TargetInstance
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupMethodTPL">BackupMethodTPL</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.BackupPolicyTemplateSpec">BackupPolicyTemplateSpec</a>)
@@ -10242,6 +10946,7 @@ string
 
 </td>
 <td>
+
 
 <p>
 Specifies the role to select one or more replicas for backup.
@@ -10277,6 +10982,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the fallback role to select one replica for backup, this only takes effect when the
 `strategy` field below is set to `Any`.
@@ -10298,6 +11004,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 If `backupPolicy.componentDefs` is set, this field is required to specify the system account name.
 This account must match one listed in `componentDefinition.spec.systemAccounts[*].name`.
@@ -10322,6 +11029,7 @@ PodSelectionStrategy
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the PodSelectionStrategy to use when multiple pods are
 selected for the backup target.
@@ -10343,6 +11051,29 @@ All: Selects all pods that match the labelsSelector.
 
 <td>
 
+`useParentSelectedPods`<br/>
+<em>
+bool
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+UseParentSelectedPods indicates whether to use the pods selected by the parent for backup.
+If set to true, the backup will use the same pods selected by the parent.
+And only takes effect when the &lsquo;strategy&rsquo; is set to &lsquo;Any&rsquo;.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
 `containerPort`<br/>
 <em>
 <a href="#dataprotection.kubeblocks.io/v1alpha1.ContainerPort">
@@ -10354,6 +11085,7 @@ ContainerPort
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the container port in the target pod.
 If not specified, the first container and its first port will be used.
@@ -10368,12 +11100,14 @@ If not specified, the first container and its first port will be used.
 TargetVolumeInfo
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.BackupMethod">BackupMethod</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.BackupMethodTPL">BackupMethodTPL</a>)
 
 </p>
 <div>
+
 <p>
 TargetVolumeInfo specifies the volumes and their mounts of the targeted application
 that should be mounted in backup workload.
@@ -10402,6 +11136,7 @@ that should be mounted in backup workload.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the list of volumes of targeted application that should be mounted
 on the backup workload.
@@ -10425,6 +11160,7 @@ on the backup workload.
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the mount for the volumes specified in `volumes` section.
 </p>
@@ -10438,6 +11174,7 @@ Specifies the mount for the volumes specified in `volumes` section.
 ValueFrom
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.EnvVar">EnvVar</a>)
@@ -10470,6 +11207,7 @@ ValueFrom
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Determine the appropriate version of the backup tool image from service version.
 </p>
@@ -10483,6 +11221,7 @@ Determine the appropriate version of the backup tool image from service version.
 VersionMapping
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.ValueFrom">ValueFrom</a>)
@@ -10512,10 +11251,12 @@ VersionMapping
 </td>
 <td>
 
+
 <p>
 Represents an array of the service version that can be mapped to the appropriate value.
 Each name in the list can represent an exact name, a name prefix, or a regular expression pattern.
 </p>
+
 <p>
 For example:
 </p>
@@ -10546,6 +11287,7 @@ string
 </td>
 <td>
 
+
 <p>
 Specifies a mapping value based on service version.
 Typically used to set up the tools image required for backup operations.
@@ -10560,12 +11302,14 @@ Typically used to set up the tools image required for backup operations.
 VolumeClaimRestorePolicy
 (`string` alias)
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.PrepareDataConfig">PrepareDataConfig</a>)
 
 </p>
 <div>
+
 <p>
 VolumeClaimRestorePolicy defines restore policy for persistent volume claim.
 Supported policies are as follows:
@@ -10590,6 +11334,7 @@ Serial: restore the persistent volume claim in sequence, and wait until the prev
 </thead>
 <tbody><tr>
 <td>
+
 <p>
 &#34;Parallel&#34;
 </p>
@@ -10600,6 +11345,7 @@ Serial: restore the persistent volume claim in sequence, and wait until the prev
 
 </tr><tr>
 <td>
+
 <p>
 &#34;Serial&#34;
 </p>
@@ -10614,6 +11360,7 @@ Serial: restore the persistent volume claim in sequence, and wait until the prev
 VolumeConfig
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.PrepareDataConfig">PrepareDataConfig</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.RestoreVolumeClaim">RestoreVolumeClaim</a>)
@@ -10644,6 +11391,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Describes the volume that will be restored from the specified volume of the backup targetVolumes.
 This is required if the backup uses a volume snapshot.
@@ -10665,6 +11413,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 Specifies the path within the restoring container at which the volume should be mounted.
 </p>
@@ -10678,6 +11427,7 @@ Specifies the path within the restoring container at which the volume should be 
 VolumeSnapshotStatus
 
 </h3>
+
 <p>
 
 (<em>Appears on:</em><a href="#dataprotection.kubeblocks.io/v1alpha1.ActionStatus">ActionStatus</a>, <a href="#dataprotection.kubeblocks.io/v1alpha1.BackupStatus">BackupStatus</a>)
@@ -10708,6 +11458,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 The name of the volume snapshot.
 </p>
@@ -10728,6 +11479,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 The name of the volume snapshot content.
 </p>
@@ -10748,6 +11500,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 The name of the volume.
 </p>
@@ -10768,6 +11521,7 @@ string
 <td>
 
 <em>(Optional)</em>
+
 <p>
 The size of the volume snapshot.
 </p>
@@ -10787,6 +11541,7 @@ string
 </td>
 <td>
 
+
 <p>
 Associates this volumeSnapshot with its corresponding target.
 </p>
@@ -10797,6 +11552,7 @@ Associates this volumeSnapshot with its corresponding target.
 </tbody>
 </table>
 <hr/>
+
 <p>
 <em>
 Generated with `gen-crd-api-reference-docs`
