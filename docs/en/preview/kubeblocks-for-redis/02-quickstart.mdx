@@ -136,7 +136,7 @@ kubectl get cmpv redis -ojson | jq -r '.metadata.annotations."componentversion.k
 <details>
 <summary>Sample Output</summary>
 ```text
-redis-7-1.0.0-alpha.0
+redis-7-1.0.0
 ```
 </details>
 
@@ -332,10 +332,10 @@ redis-sentinel                       500m / 500m          512Mi / 512Mi         
 
 Images:
 COMPONENT        COMPONENT-DEFINITION             IMAGE
-redis            redis-7-1.0.0-alpha.0            docker.io/redis/redis-stack-server:7.2.0-v10
+redis            redis-7-1.0.0                    docker.io/redis/redis-stack-server:7.2.0-v10
                                                   docker.io/apecloud/agamotto:0.1.2-beta.1
                                                   docker.io/redis/redis-stack-server:7.2.0-v14
-redis-sentinel   redis-sentinel-7-1.0.0-alpha.0   docker.io/redis/redis-stack-server:7.2.0-v14
+redis-sentinel   redis-sentinel-7-1.0.0           docker.io/redis/redis-stack-server:7.2.0-v14
 
 Data Protection:
 BACKUP-REPO   AUTO-BACKUP   BACKUP-SCHEDULE   BACKUP-METHOD   BACKUP-RETENTION   RECOVERABLE-TIME
