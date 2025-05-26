@@ -26,6 +26,8 @@ files
     .replace(/<tr>/g, '<tr>\n')
     .replace(/<\/tr>/g, '\n</tr>')
     .replace(/<td>/g, '<td>\n')
-    .replace(/<\/td>/g, '\n</td>');
+    .replace(/<\/td>/g, '\n</td>')
+    .replace(/<persistentVolumeClaimName>/g, '&lt;persistentVolumeClaimName&gt;')
+    .replace(/<ordinal>/g, '&lt;ordinal&gt;')
   fs.writeFileSync(file, content);
 })

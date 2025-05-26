@@ -11,7 +11,6 @@ import {
 import _ from "lodash";
 import { SidebarMenuItem } from "@/components/SidebarMenu";
 
-
 export default async function MarkdownPage({
   params,
 }: {
@@ -22,19 +21,18 @@ export default async function MarkdownPage({
   /**
    * redirect to default document when docs path is empty;
    */
-  if (_.isEmpty(paths)) {
-    const dir = path.join(DOCS_DIR, locale, version, category);
-    const defaultEnDir = path.join(DOCS_DIR, "en", version, category);
-    let menu: SidebarMenuItem[] = [];
-    if (fs.existsSync(dir)) {
-      menu = await getMarkDownSideBar(dir);
-    } else if (fs.existsSync(defaultEnDir)) {
-      menu = await getMarkDownSideBar(defaultEnDir);
-    }
-    const first = getFirstMenuItem(menu);
-    if (first?.href) {
-      redirect(first.href);
-    }
+  const dir = path.join(DOCS_DIR, locale, version, category);
+  const defaultEnDir = path.join(DOCS_DIR, "en", version, category);
+  let menu: SidebarMenuItem[] = [];
+  if (fs.existsSync(dir)) {
+    menu = await getMarkDownSideBar(dir);
+  } else if (fs.existsSync(defaultEnDir)) {
+    menu = await getMarkDownSideBar(defaultEnDir);
+  }
+  const first = getFirstMenuItem(menu);
+
+  if (_.isEmpty(paths) && first?.href) {
+    redirect(first.href);
   }
 
   /**
@@ -54,8 +52,8 @@ export default async function MarkdownPage({
       `@docs/${defaultRelativeEnPath}.mdx`
     );
     return <MDXContent />;
-  } else {
-    notFound();
+  } else if (first?.href) {
+    redirect(first.href);
   }
 }
 

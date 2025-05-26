@@ -26,6 +26,7 @@ import "./global.css";
 // import LocaleSwitcher from "./locale-switch";
 import ThemeSwitcher from "./theme-switch";
 import MessageBox from "@/components/MessageBox";
+import { ElevationScrollAppBar } from "@/components/ElevationScrollAppBar";
 
 export const metadata: Metadata = {
   title: "KubeBlocks",
@@ -53,7 +54,7 @@ export default async function RootLayout({
               <MuiThemeProvider>
                 <CssBaseline />
                 <MessageBox />
-                <AppBar>
+                <ElevationScrollAppBar>
                   <Toolbar>
                     <Logo />
                     <Stack
@@ -117,7 +118,7 @@ export default async function RootLayout({
                       {/* <LocaleSwitcher /> */}
                     </Box>
                   </Toolbar>
-                </AppBar>
+                </ElevationScrollAppBar>
                 <Toolbar />
                 <Box component="main">{children}</Box>
                 <ScrollTop />
