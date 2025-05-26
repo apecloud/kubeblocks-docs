@@ -30,6 +30,8 @@ export default function CodeWithCopyButton(
     }
   };
 
+  if(navigator.clipboard === undefined) return;
+
   return (
     <StyledCode {...props} ref={ref}>
       <Tooltip title="Copy" placement="top">
