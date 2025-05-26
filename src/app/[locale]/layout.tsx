@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 import { MuiThemeProvider } from "@/components/MuiThemeProvider";
 import {
-  AppBar,
   Box,
   Button,
   CssBaseline,
