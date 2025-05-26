@@ -16,11 +16,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
     - A Kubernetes cluster is up and running.
     - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -73,7 +73,7 @@ EOF
 
 Monitor the cluster status until it transitions to the Running state:
 ```bash
-$ kubectl get cluster -n demo
+kubectl get cluster -n demo
 ```
 
 Example Output:
@@ -89,7 +89,7 @@ KubeBlocks automatically creates a secret containing the MySQL root credentials.
 
 1. Retrieve the root username:
 ```bash
-$ kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
 ```
 Example Output:
 ```bash
@@ -98,7 +98,7 @@ root
 
 2. Retrieve the root password:
 ```bash
-$ kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
 ```
 Example Output:
 ```bash
@@ -108,7 +108,7 @@ Example Output:
 ### Step 2: Connect to MySQL Securely Using TLS
 Use the MySQL client to connect securely with TLS enabled. The '--ssl-mode=REQUIRED' option enforces the use of TLS for encryption.
 ```bash
-$ kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -p43Rysk6w10 --ssl-mode=REQUIRED
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -p43Rysk6w10 --ssl-mode=REQUIRED
 ```
 
 ### Step 3: Verify the TLS Connection

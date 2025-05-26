@@ -70,7 +70,7 @@ mycluster   demo        postgresql           postgresql-14.8.0   Delete         
      namespace: demo
    spec:
      clusterName: mycluster
-     type: VerticalScaling 
+     type: VerticalScaling
      verticalScaling:
      - componentName: postgresql
        requests:
@@ -119,7 +119,7 @@ mycluster   demo        postgresql           postgresql-14.8.0   Delete         
 
 <TabItem value="Edit cluster YAML file" label="Edit cluster YAML file">
 
-1. Change the configuration of `spec.componentSpecs.resources` in the YAML file. 
+1. Change the configuration of `spec.componentSpecs.resources` in the YAML file.
 
    `spec.components.resources` controls the requirement and limit of resources and changing them triggers a vertical scaling.
 
@@ -229,7 +229,7 @@ mycluster   demo        postgresql           postgresql-14.8.0   Delete         
 
 Horizontal scaling changes the amount of pods. For example, you can scale out replicas from three to five.
 
-From v0.9.0, besides replicas, KubeBlocks also supports scaling in and out instances, refer to the [Horizontal Scale tutorial](./../../maintenance/scale/horizontal-scale.md) for more details and examples.
+From v0.9.0, besides replicas, KubeBlocks also supports scaling in and out instances, refer to the Horizontal Scale tutorial](./../user_docs/maintenance/scale//horizontal-scale) for more details and examples.
 
 ### Before you start
 
@@ -327,7 +327,7 @@ mycluster   demo        postgresql           postgresql-14.8.0   Delete         
     ```
 
 </TabItem>
-  
+
 <TabItem value="Edit cluster YAML file" label="Edit cluster YAML file">
 
 1. Change the configuration of `spec.componentSpecs.replicas` in the YAML file.
@@ -407,7 +407,7 @@ In the example below, a snapshot exception occurs.
 
 ```bash
 Status:
-  conditions: 
+  conditions:
   - lastTransitionTime: "2023-04-08T04:20:26Z"
     message: VolumeSnapshot/mycluster-postgresql-scaling-dbqgp: Failed to set default snapshot
       class with error cannot find default snapshot class
@@ -441,7 +441,7 @@ This exception occurs because the `VolumeSnapshotClass` is not configured. This 
 
     ```bash
     kubectl delete backup -l app.kubernetes.io/instance=mycluster
-   
+
     kubectl delete volumesnapshot -l app.kubernetes.io/instance=mycluster
     ```
 

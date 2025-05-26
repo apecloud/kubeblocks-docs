@@ -17,11 +17,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
     - A Kubernetes cluster is up and running.
     - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -70,7 +70,7 @@ EOF
 Run the following command to monitor the creation and initialization of the MySQL pods in the demo namespace:
 
 ```bash
-$ kubectl get pods -n demo -w
+kubectl get pods -n demo -w
 ```
 
 Sample Output:
@@ -152,7 +152,7 @@ EOF
 Sample Output:
 
 ```bash
-$ kubectl get pods -n demo -w
+kubectl get pods -n demo -w
 NAME                            READY   STATUS     RESTARTS   AGE
 example-mysql-cluster-mysql-0   4/4     Running    0          32m
 example-mysql-cluster-mysql-1   4/4     Running    0          29m
@@ -230,7 +230,7 @@ EOF
 Sample Output:
 
 ```bash
-$ kubectl get pods -n demo -w
+kubectl get pods -n demo -w
 NAME                            READY   STATUS    RESTARTS   AGE
 example-mysql-cluster-mysql-0   4/4     Running   0          36m
 example-mysql-cluster-mysql-1   4/4     Running   0          34m
@@ -259,7 +259,7 @@ kubectl delete ns demo
 
 
 ## Explanation of parallelPodManagementConcurrency
-The `parallelPodManagementConcurrency` parameter defines the maximum number of Pods that can be created or deleted in parallel. 
+The `parallelPodManagementConcurrency` parameter defines the maximum number of Pods that can be created or deleted in parallel.
 
 ### Behaviors:
 - When set to 1, it enforces sequential Pod creation, scaling, and deletion. This behavior ensures the primary Pod must be fully initialized before the secondary Pod starts.

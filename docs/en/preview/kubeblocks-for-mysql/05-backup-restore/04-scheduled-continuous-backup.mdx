@@ -21,11 +21,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
     - A Kubernetes cluster is up and running.
     - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -90,7 +90,7 @@ EOF
 
 Monitor the cluster status until it transitions to Running:
 ```bash
-$ kubectl get cluster example-mysql-cluster -n demo
+kubectl get cluster example-mysql-cluster -n demo
 ```
 
 Expected Output:
@@ -105,7 +105,7 @@ Once the status is Running, the MySQL cluster is successfully deployed.
 KubeBlocks automatically creates a BackupSchedule resource when scheduled backups are enabled. Verify the configuration using the following command:
 
 ```bash
-$ kubectl get backupschedule example-mysql-cluster-mysql-backup-schedule  -n demo -oyaml
+kubectl get backupschedule example-mysql-cluster-mysql-backup-schedule  -n demo -oyaml
 ```
 
 Expected Output:
@@ -138,12 +138,12 @@ With this setup, a combination of full and incremental backups ensures robust da
 After the scheduled backup task has been executed, verify the backup files in the configured S3 bucket with the following command:
 
 ```bash
-$ TZ=":UTC" aws s3 ls s3://kubeblocks-backup-repo/ --recursive
+TZ=":UTC" aws s3 ls s3://kubeblocks-backup-repo/ --recursive
 ```
 
 Expected Output:
 ```bash
-$ TZ=":UTC" aws s3 ls s3://kubeblocks-backup-repo/ --recursive
+TZ=":UTC" aws s3 ls s3://kubeblocks-backup-repo/ --recursive
 2025-03-04 02:35:09        127 demo/example-mysql-cluster-77a788fa-352d-40b2-8262-7fcd0c706f58/mysql/77a788fa-example-mysql-cluster-archive-binlog/binlog_005/example-mysql-cluster-mysql-0-bin.000001.zst
 2025-03-04 02:35:10        127 demo/example-mysql-cluster-77a788fa-352d-40b2-8262-7fcd0c706f58/mysql/77a788fa-example-mysql-cluster-archive-binlog/binlog_005/example-mysql-cluster-mysql-0-bin.000002.zst
 2025-03-04 02:35:11       2107 demo/example-mysql-cluster-77a788fa-352d-40b2-8262-7fcd0c706f58/mysql/77a788fa-example-mysql-cluster-archive-binlog/binlog_005/example-mysql-cluster-mysql-0-bin.000003.zst

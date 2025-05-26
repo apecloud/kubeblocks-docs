@@ -15,13 +15,13 @@ This guide walks you through the process of getting started with the **KubeBlock
 
 This tutorial assumes that you have a Kubernetes cluster installed and running, and that you have installed the `kubectl` command line tool and `helm` somewhere in your path. Please see the [getting started](https://kubernetes.io/docs/setup/)  and [Installing Helm](https://helm.sh/docs/intro/install/) for installation instructions for your platform.
 
-Also, this example requires KubeBlocks installed and running. Please see the [Install KubeBlocks](../user_docs/installation/install-kubeblocks.md) to install KubeBlocks.
+Also, this example requires KubeBlocks installed and running. Please see the [Install KubeBlocks](../user_docs/overview/install-kubeblocks) to install KubeBlocks.
 
 ### Enable MySQL Add-on
 
 Verify whether MySQL Addon is installed. By default, the MySQL Addon is installed along with the KubeBlocks Helm chart.
 ```bash
-$ helm list -A
+helm list -A
 NAME                        	NAMESPACE  	REVISION	UPDATED                                	STATUS  	CHART                       	APP VERSION
 ...
 kb-addon-mysql              	kb-system  	1       	2024-12-16 00:28:52.78819557 +0000 UTC 	deployed	mysql-1.0.0-alpha.0         	5.7.44
@@ -31,22 +31,22 @@ If MySQL Addon is not enabled, you can enable it by following the steps below.
 
 ```bash
 # Add Helm repo
-$ helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
+helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
 # For users in Mainland China, if github is not accessible or very slow for you, please use following repo instead
 #helm repo add kubeblocks-addons https://jihulab.com/api/v4/projects/150246/packages/helm/stable
 
 # Update helm repo
-$ helm repo update
+helm repo update
 # Search versions of the Addon
-$ helm search repo kubeblocks/mysql --versions
+helm search repo kubeblocks/mysql --versions
 # Install the version you want (replace $version with the one you need)
-$ helm upgrade -i mysql kubeblocks-addons/mysql --version $version -n kb-system
+helm upgrade -i mysql kubeblocks-addons/mysql --version $version -n kb-system
 ```
 
 ### Create A MySQL Cluster
 
 ```bash
-$ kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/mysql/cluster.yaml
+kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/mysql/cluster.yaml
 ```
 
 ```yaml
@@ -143,13 +143,13 @@ If you want to create a cluster of specified version, set `spec.componentSpecs.c
 
 The list of available componentDef can be found by following command:
 ```bash
-$ kubectl get cmpd -l app.kubernetes.io/name=mysql
+kubectl get cmpd -l app.kubernetes.io/name=mysql
 ```
 
 The list of supported versions can be found by following command:
 
 ```bash
-$ kubectl get cmpv mysql
+kubectl get cmpv mysql
 ```
 
 When you create a MySQL cluster, KubeBlocks automatically creates a MySQL cluster that includes one primary replica and one secondary replica. The primary and secondary replicas are synchronized using semi-synchronous replication.
@@ -157,11 +157,11 @@ When you create a MySQL cluster, KubeBlocks automatically creates a MySQL cluste
 When the cluster's status.phase changes to Running, it indicates that the cluster has been successfully created, and both the primary and secondary replicas have been started.
 
 ```bash
-$ kubectl get cluster mysql-cluster
+kubectl get cluster mysql-cluster
 NAME            CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 mysql-cluster                        Delete               Running   22m
 
-$ kubectl get pods -l app.kubernetes.io/instance=mysql-cluster
+kubectl get pods -l app.kubernetes.io/instance=mysql-cluster
 NAME                    READY   STATUS    RESTARTS   AGE
 mysql-cluster-mysql-0   4/4     Running   0          31m
 mysql-cluster-mysql-1   4/4     Running   0          31m
@@ -170,7 +170,7 @@ mysql-cluster-mysql-1   4/4     Running   0          31m
 If you have installed `kbcli`, you can use the `kbcli` tool to quickly view important information related to the cluster.
 
 ```bash
-$ kbcli cluster describe mysql-cluster
+kbcli cluster describe mysql-cluster
 Name: mysql-cluster	 Created Time: Dec 16,2024 08:37 UTC+0800
 NAMESPACE   CLUSTER-DEFINITION   VERSION   STATUS    TERMINATION-POLICY
 default                                    Running   Delete
@@ -203,7 +203,7 @@ Show cluster events: kbcli cluster list-events -n default mysql-cluster
 When creating a MySQL Cluster, KubeBlocks creates a Secret named "mysql-cluster-mysql-account-root" to store the MySQL root username and password.
 
 ```bash
-$ kubectl get secret -l app.kubernetes.io/instance=mysql-cluster
+kubectl get secret -l app.kubernetes.io/instance=mysql-cluster
 NAME                                           TYPE     DATA   AGE
 mysql-cluster-mysql-account-kbadmin            Opaque   2      61s
 mysql-cluster-mysql-account-kbdataprotection   Opaque   2      61s
@@ -217,15 +217,15 @@ mysql-cluster-mysql-account-root               Opaque   2      61s
 You can obtain the MySQL root username and password from secret 'mysql-cluster-mysql-account-root' using the following two commands:
 
 ```bash
-$ kubectl get secret mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 --decode
+kubectl get secret mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 --decode
 
-$ kubectl get secret mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 --decode
+kubectl get secret mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 --decode
 ```
 
 KubeBlocks by default creates a Service of type ClusterIP named "mysql-cluster-mysql" to access the MySQL Cluster.
 
 ```bash
-$ kubectl get svc  -l app.kubernetes.io/instance=mysql-cluster
+kubectl get svc  -l app.kubernetes.io/instance=mysql-cluster
 NAME                  TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
 mysql-cluster-mysql   ClusterIP   172.20.253.119   <none>        3306/TCP   153m
 ```
@@ -233,13 +233,13 @@ mysql-cluster-mysql   ClusterIP   172.20.253.119   <none>        3306/TCP   153m
 You can log in to a Pod within the Kubernetes cluster, such as the primary replica of the MySQL Cluster, and access the database through this Service. Within the same Kubernetes cluster, the ClusterIP is accessible.
 
 ```bash
-$ kubectl exec -ti -n default mysql-cluster-mysql-0 -- mysql -h mysql-cluster-mysql -uroot -pkni676X2W1
+kubectl exec -ti -n default mysql-cluster-mysql-0 -- mysql -h mysql-cluster-mysql -uroot -pkni676X2W1
 ```
 
 Alternatively, you can use the `kubectl port-forward` command to map port 3306 of the primary replica of the MySQL Cluster to port 3306 on your local machine:
 
 ```bash
-$ kubectl port-forward svc/mysql-cluster-mysql 3306:3306 -n default
+kubectl port-forward svc/mysql-cluster-mysql 3306:3306 -n default
 Forwarding from 127.0.0.1:3306 -> 3306
 Forwarding from [::1]:3306 -> 3306
 ```
@@ -247,7 +247,7 @@ Forwarding from [::1]:3306 -> 3306
 Then, open another shell and use the mysql command-line tool to connect to the local port 3306:
 
 ```bash
-$ mysql -h 127.0.0.1 -P3306 -uroot -pkni676X2W1
+mysql -h 127.0.0.1 -P3306 -uroot -pkni676X2W1
 ```
 
 Using `kubectl exec` and `kubectl port-forward` are methods intended for quickly testing the operator's functionality and should not be used in production environments. In production, you should use a Service to access the MySQL Cluster. If accessing the database from outside Kubernetes, a LoadBalancer or NodePort type Service that provides an EXTERNAL-IP is required. Refer to [Accessing MySQL Cluster](operations/create-loadbalancer/loadbalancer-via-operations-api) to configure the Service in your environment.
@@ -275,7 +275,7 @@ spec:
 Alternatively, you may stop the cluster by setting the spec.componentSpecs.stop field to true.
 
 ```bash
-$ kubectl edit cluster mysql-cluster
+kubectl edit cluster mysql-cluster
 ```
 
 ```yaml
@@ -309,7 +309,7 @@ spec:
 Alternatively, you may start the stopped cluster by setting the spec.componentSpecs.stop field to false.
 
 ```bash
-$ kubectl edit cluster mysql-cluster
+kubectl edit cluster mysql-cluster
 ```
 
 ```yaml
@@ -325,7 +325,7 @@ spec:
 You can delete the Cluster using the following command:
 
 ```bash
-$ kubectl delete cluster mysql-cluster
+kubectl delete cluster mysql-cluster
 ```
 
 The behavior when deleting the Cluster depends on the value of the terminationPolicy field:

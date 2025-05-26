@@ -21,11 +21,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
     - A Kubernetes cluster is up and running.
     - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -70,7 +70,7 @@ EOF
 ## Verifying the Deployment
 Monitor the status of the MySQL cluster as it is created:
 ```bash
-$ kubectl get cluster -n demo -w
+kubectl get cluster -n demo -w
 ```
 Expected Output:
 ```bash
@@ -196,7 +196,7 @@ KubeBlocks will automatically update the PVC size based on the new specification
 
 Use the following command to inspect the updated cluster configuration:
 ```bash
-$ kbcli cluster describe example-mysql-cluster -n demo
+kbcli cluster describe example-mysql-cluster -n demo
 ```
 Example Output:
 ```bash

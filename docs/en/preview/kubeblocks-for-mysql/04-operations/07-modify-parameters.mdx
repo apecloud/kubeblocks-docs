@@ -3,7 +3,7 @@ title: Modify MySQL Parameters
 description: Learn how to modify dynamic and static MySQL parameters in KubeBlocks using Reconfiguring OpsRequest to optimize database performance and availability.
 keywords: [MySQL, KubeBlocks, OpsRequest, dynamic parameters, static parameters, database configuration]
 sidebar_position: 7
-sidebar_label: Modify MySQL Parameters  
+sidebar_label: Modify MySQL Parameters
 ---
 
 # Modify MySQL Parameters
@@ -22,11 +22,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
     - A Kubernetes cluster is up and running.
     - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -75,7 +75,7 @@ EOF
 After the cluster is deployed, verify its status using the following command:
 
 ```bash
-$ kubectl get cluster example-mysql-cluster -n demo -w
+kubectl get cluster example-mysql-cluster -n demo -w
 NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 example-mysql-cluster   mysql                Delete               Creating   12s
 example-mysql-cluster   mysql                Delete               Running   46s
@@ -86,13 +86,13 @@ This indicates that the MySQL cluster is running successfully.
 ## Connecting to the MySQL Cluster
 KubeBlocks automatically creates a secret containing the MySQL root credentials. Retrieve the credentials with the following commands:
 ```bash
-$ kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
 mDvdY62156
 ```
 
 To connect to the cluster's primary node, use the MySQL client:
 ```bash
-$ kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pmDvdY62156
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pmDvdY62156
 ```
 
 Once connected, you can query the current value of 'max_connections' and 'performance_schema':
@@ -143,7 +143,7 @@ EOF
 
 Wait for the OpsRequest to complete:
 ```bash
-$ kubectl get ops mysql-reconfigure-dynamic -n demo -w
+kubectl get ops mysql-reconfigure-dynamic -n demo -w
 ```
 Example output:
 ```bash
@@ -211,7 +211,7 @@ mysql-reconfigure-static   Reconfiguring   example-mysql-cluster   Succeed   -/-
 Once the Pods are restarted, connect to the MySQL instance and confirm that the 'performance_schema' parameter has been updated to 'ON'.
 
 ```bash
-$ kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pmDvdY62156
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pmDvdY62156
 ```
 
 ```sql

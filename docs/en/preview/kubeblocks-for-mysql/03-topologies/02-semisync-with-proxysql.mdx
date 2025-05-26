@@ -21,11 +21,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
   - A Kubernetes cluster is up and running.
   - The kubectl CLI tool is configured to communicate with your cluster.
-  - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+  - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -95,7 +95,7 @@ EOF
 Once the cluster is deployed, check its status:
 
 ```bash
-$ kubectl get cluster -n demo -w
+kubectl get cluster -n demo -w
 ```
 Example Output:
 ```
@@ -106,7 +106,7 @@ example-mysql-cluster   mysql                Delete               Running   3m1s
 ### Detailed Cluster Information
 To get detailed information about the cluster:
 ```bash
-$ kbcli cluster describe example-mysql-cluster -n demo
+kbcli cluster describe example-mysql-cluster -n demo
 ```
 Example Output:
 ```
@@ -152,22 +152,22 @@ Show cluster events: kbcli cluster list-events -n demo example-mysql-cluster
 
 KubeBlocks automatically creates a secret containing the MySQL root credentials. Retrieve the credentials with the following commands:
 ```bash
-$ kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
 root
 
-$ kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
 22mue70Hx6
 ```
 
 ### Connect via ProxySQL
 Use ProxySQL to connect to the MySQL cluster:
 ```bash
-$ kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-proxysql-proxy-server.demo.svc.cluster.local -P6033 -uroot -p22mue70Hx6
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-proxysql-proxy-server.demo.svc.cluster.local -P6033 -uroot -p22mue70Hx6
 ```
 ### Connect Directly to MySQL
 Alternatively, connect directly to the MySQL instance:
 ```bash
-$ kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -p22mue70Hx6
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -p22mue70Hx6
 ```
 
 ## Testing Semi-Synchronous Replication
@@ -176,7 +176,7 @@ $ kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h ex
 List all pods in the cluster and check their roles:
 
 ```bash
-$ kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
 Example Output:
 ```bash
@@ -190,7 +190,7 @@ Verify the replication status for the primary and replica nodes:
 ### Primary Node
 Run the following command on the primary node:
 ```bash
-$  kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-0.example-mysql-cluster-mysql-headless.demo.svc.cluster.local -uroot -p22mue70Hx6 -e "show status like 'Rpl%_status';"
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-0.example-mysql-cluster-mysql-headless.demo.svc.cluster.local -uroot -p22mue70Hx6 -e "show status like 'Rpl%_status';"
 ```
 Example Output:
 ```sql
@@ -208,7 +208,7 @@ Explanation:
 ### Replica Node
 Run the following command on the replica node:
 ```bash
-$  kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-1.example-mysql-cluster-mysql-headless.demo.svc.cluster.local -uroot -p22mue70Hx6 -e "show status like 'Rpl%_status';"
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-1.example-mysql-cluster-mysql-headless.demo.svc.cluster.local -uroot -p22mue70Hx6 -e "show status like 'Rpl%_status';"
 ```
 Example Output:
 ```sql
@@ -227,12 +227,12 @@ Explanation:
 ### Trigger a Failover
 To test the failover mechanism, delete the primary pod:
 ```bash
-$ kubectl delete pod example-mysql-cluster-mysql-1 -n demo
+kubectl delete pod example-mysql-cluster-mysql-1 -n demo
 ```
 This will trigger a failover, and the secondary instance will be promoted to the primary role. You can verify the new roles of the pods:
 ### Verify the Updated Roles
 ```bash
-$ kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
 Example Output:
 ```bash

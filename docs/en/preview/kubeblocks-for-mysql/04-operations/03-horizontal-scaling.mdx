@@ -21,11 +21,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
     - A Kubernetes cluster is up and running.
     - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -70,7 +70,7 @@ EOF
 ## Verifying the Deployment
 Monitor the cluster status until it transitions to the Running state:
 ```bash
-$ kubectl get cluster example-mysql-cluster -n demo -w
+kubectl get cluster example-mysql-cluster -n demo -w
 ```
 Expected Output:
 ```bash
@@ -136,7 +136,7 @@ Status:
 
 Alternatively, you can perform a direct update to the `replicas` field in the Cluster resource:
 ```yaml
-$ kubectl patch cluster example-mysql-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 3}]'
+kubectl patch cluster example-mysql-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 3}]'
 ```
 
     </TabItem>
@@ -149,7 +149,7 @@ $ kubectl patch cluster example-mysql-cluster -n demo --type=json -p='[{"op": "r
 After applying the operation, you will see a new pod created and the MySQL cluster status goes from `Updating` to `Running`, and the newly created pod has a new role `secondary`.
 
 ```bash
-$ kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster
+kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster
 ```
 
 Expected Output (3 Pods):
@@ -162,7 +162,7 @@ example-mysql-cluster-mysql-2   4/4     Running   0          49s
 
 New replicas automatically join as secondary nodes.
 ```bash
-$ kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
 Expected Outputs:
 ```bash
@@ -206,7 +206,7 @@ EOF
 
 Monitor progress:
 ```bash
-$ kubectl describe ops example-mysql-cluster-scale-in-ops -n demo
+kubectl describe ops example-mysql-cluster-scale-in-ops -n demo
 ```
 
 Expected Outputs:
@@ -225,7 +225,7 @@ Option 2: Direct Cluster API Update
 
 Alternatively, update the `replicas` field in the Cluster resource:
 ```yaml
-$ kubectl patch cluster example-mysql-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 2}]'
+kubectl patch cluster example-mysql-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 2}]'
 ```
 
     </TabItem>
@@ -236,7 +236,7 @@ $ kubectl patch cluster example-mysql-cluster -n demo --type=json -p='[{"op": "r
 
 Expected Output (2 Pods):
 ```bash
-$ kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster
+kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster
 NAME                           READY   STATUS    RESTARTS   AGE
 example-mysql-cluster-mysql-0   4/4     Running   0          10m
 example-mysql-cluster-mysql-1   4/4     Running   0          10m

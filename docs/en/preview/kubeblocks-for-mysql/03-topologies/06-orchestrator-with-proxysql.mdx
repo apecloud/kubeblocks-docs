@@ -35,11 +35,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
     - A Kubernetes cluster is up and running.
     - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -48,17 +48,17 @@ namespace/demo created
 1. View the Addon versions.
 ```bash
 # including pre-release versions
-$ helm search repo kubeblocks/orchestrator --devel --versions
+helm search repo kubeblocks/orchestrator --devel --versions
 ```
 
 2. Install the Addon. Specify a version with '--version'.
 ```bash
-$ helm install kb-addon-orc kubeblocks/orchestrator --namespace kb-system --create-namespace --version x.y.z 
+helm install kb-addon-orc kubeblocks/orchestrator --namespace kb-system --create-namespace --version x.y.z
 ```
 
 3. Verify whether this Addon is installed.
 ```bash
-$ helm list -A
+helm list -A
 ```
 Example Output:
 ```bash
@@ -194,7 +194,7 @@ The serviceRefs in the MySQL cluster configuration establishes the connection be
 
 Monitor the cluster status until it transitions to the Running state:
 ```bash
-$ kubectl get cluster -n demo
+kubectl get cluster -n demo
 ```
 Expected Output:
 ```bash
@@ -206,7 +206,7 @@ example-orc-cluster     orchestrator         Delete               Running   2m31
 To get detailed information about the MySQL cluster:
 
 ```bash
-$ kbcli cluster describe example-mysql-cluster -n demo
+kbcli cluster describe example-mysql-cluster -n demo
 ```
 Expected Output:
 ```bash
@@ -241,7 +241,7 @@ Show cluster events: kbcli cluster list-events -n demo example-mysql-cluster
 To get detailed information about the Orchestrator cluster:
 
 ```bash
-$ kbcli cluster describe example-orc-cluster -n demo
+kbcli cluster describe example-orc-cluster -n demo
 ```
 Expected Output:
 ```bash
@@ -274,16 +274,16 @@ Show cluster events: kbcli cluster list-events -n demo example-orc-cluster
 KubeBlocks automatically creates a secret containing the MySQL root credentials. Retrieve the credentials with the following commands:
 
 ```bash
-$ kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
 root
 
-$ kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
 GX596H32Oz
 ```
 
 To connect to the cluster's primary node, use the MySQL client:
 ```bash
-$ kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-server.demo.svc.cluster.local -uroot -pGX596H32Oz
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-server.demo.svc.cluster.local -uroot -pGX596H32Oz
 ```
 
 ## Testing Semi-Synchronous Replication
@@ -293,7 +293,7 @@ In this section, we will test the semi-synchronous replication of the MySQL clus
 First, list all the pods in the cluster, along with their roles, to identify the primary and secondary instances:
 
 ```bash
-$ kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
 Expected Output:
 ```
@@ -309,7 +309,7 @@ From the output, we can see the following:
 
 Next, connect to the primary instance ('example-mysql-cluster-mysql-0') and check its semi-synchronous replication status. Use the following command to execute a query inside the MySQL pod:
 ```bash
-$  kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-0.demo.svc.cluster.local -uroot -pGX596H32Oz -e "show status like 'Rpl%_status';"
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-0.demo.svc.cluster.local -uroot -pGX596H32Oz -e "show status like 'Rpl%_status';"
 mysql: [Warning] Using a password on the command line interface can be insecure.
 +------------------------------+-------+
 | Variable_name                | Value |
@@ -323,7 +323,7 @@ Explanation:
 - "Rpl_semi_sync_replica_status: OFF": This indicates that the primary instance is not acting as a replica in the replication setup.
 
 ```bash
-$  kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-1.demo.svc.cluster.local -uroot -pGX596H32Oz -e "show status like 'Rpl%_status';"
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-1.demo.svc.cluster.local -uroot -pGX596H32Oz -e "show status like 'Rpl%_status';"
 mysql: [Warning] Using a password on the command line interface can be insecure.
 +------------------------------+-------+
 | Variable_name                | Value |
@@ -343,7 +343,7 @@ The following steps demonstrate how to trigger a failover in a MySQL cluster and
 To initiate a failover, delete the Pod currently assigned the primary role:
 
 ```bash
-$ kubectl delete pod example-mysql-cluster-mysql-0 -n demo
+kubectl delete pod example-mysql-cluster-mysql-0 -n demo
 pod "example-mysql-cluster-mysql-0" deleted
 ```
 
@@ -351,7 +351,7 @@ This will trigger a failover, and the secondary instance will be promoted to the
 After a while, the killed pod will be recreated and will take the secondary role:
 
 ```bash
-$ kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
 Example Output:
 ```bash

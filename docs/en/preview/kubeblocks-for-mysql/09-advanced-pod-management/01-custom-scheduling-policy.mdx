@@ -19,11 +19,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
    - A Kubernetes cluster is up and running.
    - The kubectl CLI tool is configured to communicate with your cluster.
-   - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+   - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -32,7 +32,7 @@ namespace/demo created
 Our Kubernetes cluster (EKS) consists of 9 nodes distributed across 3 availability zones, with 3 nodes in each AZ. To confirm the node distribution across availability zones, run the following command:
 
 ```bash
-$ kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | while read node; do echo -n "Node: $node, Zone: "; kubectl get node "$node" -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}'; echo; done
+kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | while read node; do echo -n "Node: $node, Zone: "; kubectl get node "$node" -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}'; echo; done
 ```
 Example Output:
 ```bash
@@ -99,7 +99,7 @@ EOF
 ```
 **Key Configurations:**
 - `podAntiAffinity`:
-  - Ensures that Pods belonging to the same component (mysql) are not scheduled on nodes in the same AZ. 
+  - Ensures that Pods belonging to the same component (mysql) are not scheduled on nodes in the same AZ.
   - By using `requiredDuringSchedulingIgnoredDuringExecution`, this rule strictly enforces that Pods must be scheduled in separate AZs.
 - `labelSelector`:
   - Matches Pods with the label 'apps.kubeblocks.io/component-name=mysql' (automatically added by the KubeBlocks controller). Update this label if your MySQL Pods use a different label.
@@ -109,11 +109,11 @@ EOF
   - Enforces strict scheduling rules. If no resources are available to satisfy the rule, the Pod will remain unscheduled.
   - If you want a "soft" requirement (i.e., Pods are scheduled in the same AZ if resources are insufficient), use `preferredDuringSchedulingIgnoredDuringExecution` instead.
 
-   
+
 ### Verifying the Deployment
 To monitor the deployment, check the cluster status until it transitions to Running:
 ```bash
-$ kubectl get cluster -n demo -w
+kubectl get cluster -n demo -w
 ```
 Example output:
 ```bash
@@ -125,7 +125,7 @@ example-mysql-cluster   mysql                Delete               Running   2m44
 ### Check Pod Distribution
 To verify that the MySQL Pods are distributed across different availability zones, use the following command:
 ```bash
-$ kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster -o=jsonpath='{range .items[*]}{"Pod: "}{.metadata.name}{"\tZone: "}{.spec.nodeName}{"\n"}{end}' | while read line; do pod=$(echo $line | awk '{print $2}'); node=$(echo $line | awk '{print $4}'); zone=$(kubectl get node $node -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}'); echo "Pod: $pod, Zone: $zone"; done
+kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster -o=jsonpath='{range .items[*]}{"Pod: "}{.metadata.name}{"\tZone: "}{.spec.nodeName}{"\n"}{end}' | while read line; do pod=$(echo $line | awk '{print $2}'); node=$(echo $line | awk '{print $4}'); zone=$(kubectl get node $node -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}'); echo "Pod: $pod, Zone: $zone"; done
 ```
 Example Output:
 ```bash
@@ -203,7 +203,7 @@ EOF
 ### Verifying the Deployment
 To monitor the deployment, check the cluster status until it transitions to Running:
 ```bash
-$ kubectl get cluster -n demo -w
+kubectl get cluster -n demo -w
 ```
 Example output:
 ```bash
@@ -215,7 +215,7 @@ example-mysql-cluster2   mysql                Delete               Running   2m4
 ### Check Pod Distribution
 
 ```bash
-$ kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster2 -o=jsonpath='{range .items[*]}{"Pod: "}{.metadata.name}{"\tZone: "}{.spec.nodeName}{"\n"}{end}' | while read line; do pod=$(echo $line | awk '{print $2}'); node=$(echo $line | awk '{print $4}'); zone=$(kubectl get node $node -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}'); echo "Pod: $pod, Zone: $zone"; done
+kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster2 -o=jsonpath='{range .items[*]}{"Pod: "}{.metadata.name}{"\tZone: "}{.spec.nodeName}{"\n"}{end}' | while read line; do pod=$(echo $line | awk '{print $2}'); node=$(echo $line | awk '{print $4}'); zone=$(kubectl get node $node -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}'); echo "Pod: $pod, Zone: $zone"; done
 ```
 Example Output:
 ```bash

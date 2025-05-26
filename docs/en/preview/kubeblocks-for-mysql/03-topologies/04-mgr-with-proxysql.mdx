@@ -20,11 +20,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
     - A Kubernetes cluster is up and running.
     - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -91,7 +91,7 @@ EOF
 ### 1. Check the Cluster Status
 Monitor the status of the MySQL cluster as it is created:
 ```bash
-$ kubectl get cluster -n demo -w
+kubectl get cluster -n demo -w
 ```
 Expected Output:
 ```bash
@@ -103,7 +103,7 @@ example-mysql-cluster   mysql                Delete               Running    2m3
 ### 2. Detailed Cluster Information
 To get detailed information about the deployed cluster, use the following command:
 ```bash
-$ kbcli cluster describe example-mysql-cluster -n demo
+kbcli cluster describe example-mysql-cluster -n demo
 ```
 Expected Output:
 ```bash
@@ -146,7 +146,7 @@ Show cluster events: kbcli cluster list-events -n demo example-mysql-cluster
 ## Checking Cluster Roles
 To verify the roles of MySQL instances (e.g., primary and secondary), run:
 ```bash
-$ kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
 Expected Output:
 ```bash
@@ -159,23 +159,23 @@ example-mysql-cluster-mysql-2	secondary
 KubeBlocks automatically creates a secret containing the MySQL root credentials. Retrieve the credentials with the following commands:
 
 ```bash
-$ kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
 root
 
-$ kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
 XKNv07D612
 ```
 
 ### Connect via ProxySQL
 Use ProxySQL to connect to the MySQL cluster:
 ```bash
-$ kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-proxysql-proxy-server.demo.svc.cluster.local -P6033 -uroot -pXKNv07D612
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-proxysql-proxy-server.demo.svc.cluster.local -P6033 -uroot -pXKNv07D612
 ```
 
 ### Connect Directly to MySQL
 Alternatively, connect directly to the MySQL instance:
 ```bash
-$ kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pXKNv07D612
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pXKNv07D612
 ```
 
 ## Check Group Replication Status
@@ -201,18 +201,18 @@ The roles in the output should match the roles shown in the kubectl output.
 ### Trigger a Failover
 To test the MySQL Group Replication failover mechanism, delete the primary node:
 ```bash
-$ kubectl delete pod example-mysql-cluster-mysql-0 -n demo
+kubectl delete pod example-mysql-cluster-mysql-0 -n demo
 pod "example-mysql-cluster-mysql-0" deleted
 ```
 This triggers a failover, and one of the secondary nodes will be promoted to the primary role.
 ### Verify the New Roles
 Run the following command to check the updated roles:
 ```bash
-$ kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
 Expected Output:
 ```bash
-example-mysql-cluster-mysql-0	
+example-mysql-cluster-mysql-0
 example-mysql-cluster-mysql-1	secondary
 example-mysql-cluster-mysql-2	primary
 ```
