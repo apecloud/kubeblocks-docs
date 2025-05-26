@@ -17,10 +17,10 @@ This tutorial shows how to create and connect to a PostgreSQL cluster.
 
 ### Before you start
 
-* [Install kbcli](./../../installation/install-kbcli.md) if you want to manage the PostgreSQL cluster by `kbcli`.
-* [Install KubeBlocks](./../../installation/install-kubeblocks.md).
-* Make sure the PostgreSQL Addon is enabled. The PostgreSQL Addon is installed and enabled  by KubeBlocks by default. But if you disable it when installing KubeBlocks, [enable it](./../../installation/install-addons.md) first.
-  
+* [Install kbcli](./../../user_docs/installation/install-kbcli) if you want to manage the PostgreSQL cluster by `kbcli`.
+* [Install KubeBlocks](./../../user_docs/installation/install-kubeblocks).
+* Make sure the PostgreSQL Addon is enabled. The PostgreSQL Addon is installed and enabled  by KubeBlocks by default. But if you disable it when installing KubeBlocks, [enable it](./../../user_docs/installation/install-addons) first.
+
   <Tabs>
 
   <TabItem value="kubectl" label="kubectl" default>
@@ -39,7 +39,7 @@ This tutorial shows how to create and connect to a PostgreSQL cluster.
   ```bash
   kbcli addon list
   >
-  NAME                       TYPE   STATUS     EXTRAS         AUTO-INSTALL   
+  NAME                       TYPE   STATUS     EXTRAS         AUTO-INSTALL
   ...
   postgresql                 Helm   Enabled                   true
   ...
@@ -54,7 +54,7 @@ This tutorial shows how to create and connect to a PostgreSQL cluster.
   <Tabs>
 
   <TabItem value="kubectl" label="kubectl" default>
-  
+
   ```bash
   kubectl get clusterdefinition postgresql
   >
@@ -277,7 +277,7 @@ You can also port forward the service to connect to the database from your local
 1. Run the following command to port forward the service.
 
    ```bash
-   kubectl port-forward -n demo svc/mycluster-postgresql 5432:5432 
+   kubectl port-forward -n demo svc/mycluster-postgresql 5432:5432
    ```
 
 2. Open a new terminal and run the following command to connect to the database.

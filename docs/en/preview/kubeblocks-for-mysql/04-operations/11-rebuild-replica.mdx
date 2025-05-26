@@ -22,11 +22,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
     - A Kubernetes cluster is up and running.
     - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -74,7 +74,7 @@ EOF
 Monitor the cluster status until it transitions to Running:
 
 ```bash
-$ kubectl get cluster example-mysql-cluster -n demo -w
+kubectl get cluster example-mysql-cluster -n demo -w
 ```
 
 Expected Output:
@@ -86,7 +86,7 @@ example-mysql-cluster    mysql                Delete               Running   36m
 List all the Pods in the cluster along with their roles to identify the primary and secondary instances:
 
 ```bash
-$ kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 example-mysql-cluster-mysql-0	secondary
 example-mysql-cluster-mysql-1	primary
 ```
@@ -95,7 +95,7 @@ example-mysql-cluster-mysql-1	primary
 
 When creating a MySQL Cluster, KubeBlocks creates a Secret named "mysql-cluster-mysql-account-root" to store the MySQL root username and password.
 ```bash
-$ kubectl get secret -n demo -l app.kubernetes.io/instance=example-mysql-cluster
+kubectl get secret -n demo -l app.kubernetes.io/instance=example-mysql-cluster
 ```
 Example Output:
 ```bash
@@ -106,9 +106,9 @@ example-mysql-cluster-mysql-account-root   Opaque   2      12m
 You can obtain the MySQL root username and password using the following two commands:
 
 ```bash
-$ kubectl get secret example-mysql-cluster-mysql-account-root -n demo -o jsonpath='{.data.username}' | base64 --decode
+kubectl get secret example-mysql-cluster-mysql-account-root -n demo -o jsonpath='{.data.username}' | base64 --decode
 
-$ kubectl get secret example-mysql-cluster-mysql-account-root -n demo -o jsonpath='{.data.password}' | base64 --decode
+kubectl get secret example-mysql-cluster-mysql-account-root -n demo -o jsonpath='{.data.password}' | base64 --decode
 ```
 
 Example Output:
@@ -124,7 +124,7 @@ R0z5Z1DS02
 
 Connect to the primary instance ('example-mysql-cluster-mysql-1') using the retrieved credentials:
 ```bash
-$ kubectl exec -ti -n demo example-mysql-cluster-mysql-1 -- mysql  -uroot -pR0z5Z1DS02
+kubectl exec -ti -n demo example-mysql-cluster-mysql-1 -- mysql  -uroot -pR0z5Z1DS02
 ```
 Note: If the primary instance is 'example-mysql-cluster-mysql-0', you should connect to 'example-mysql-cluster-mysql-0' instead. Make sure to check the role of each instance before connecting.
 
@@ -142,7 +142,7 @@ mysql> INSERT INTO t1 VALUES (1, 'John Doe');
 ### Step 3: Verify Data Replication
 Connect to the replica instance (example-mysql-cluster-mysql-0) to verify that the data has been replicated:
 ```bash
-$ kubectl exec -ti -n demo example-mysql-cluster-mysql-0 -- mysql  -uroot -pR0z5Z1DS02
+kubectl exec -ti -n demo example-mysql-cluster-mysql-0 -- mysql  -uroot -pR0z5Z1DS02
 ```
 Note: If the primary instance is 'example-mysql-cluster-mysql-0', you should connect to 'example-mysql-cluster-mysql-1' instead. Make sure to check the role of each instance before connecting.
 
@@ -166,7 +166,7 @@ Expected Output:
 Fetch the HA configuration:
 
 ```bash
-$ k get configmap -n demo example-mysql-cluster-mysql-haconfig -o yaml
+k get configmap -n demo example-mysql-cluster-mysql-haconfig -o yaml
 ```
 Example Output:
 ```yaml
@@ -182,7 +182,7 @@ metadata:
 Patch the ConfigMap to disable HA:
 
 ```bash
-$ k patch configmap -n demo example-mysql-cluster-mysql-haconfig --type merge -p '{"metadata":{"annotations":{"enable":"false"}}}'
+k patch configmap -n demo example-mysql-cluster-mysql-haconfig --type merge -p '{"metadata":{"annotations":{"enable":"false"}}}'
 ```
 
 ### Step 2: Stop Replication
@@ -217,7 +217,7 @@ mysql> SET GLOBAL read_only = ON;
 ### Step 6: Enable HA
 Patch the ConfigMap to re-enable HA:
 ```bash
-$ k patch configmap -n demo example-mysql-cluster-mysql-haconfig --type merge -p '{"metadata":{"annotations":{"enable":"true"}}}'
+k patch configmap -n demo example-mysql-cluster-mysql-haconfig --type merge -p '{"metadata":{"annotations":{"enable":"true"}}}'
 ```
 
 ### Step 7: Verify Data Deletion
@@ -256,7 +256,7 @@ In this configuration, "example-mysql-cluster-mysql-0" refers to the instance na
 
 Monitor the rebuild operation:
 ```bash
-$ kubectl get ops example-mysql-ops-rebuild-replica-inplace -n demo -w
+kubectl get ops example-mysql-ops-rebuild-replica-inplace -n demo -w
 ```
 Expect Output:
 ```bash
@@ -266,7 +266,7 @@ example-mysql-ops-rebuild-replica-inplace   RebuildInstance   example-mysql-clus
 ```
 Verify the Pods to confirm the replica ("example-mysql-cluster-mysql-0") restarted:
 ```bash
-$ kubectl get pods -n demo
+kubectl get pods -n demo
 ```
 Expect Output:
 ```bash
@@ -279,7 +279,7 @@ example-mysql-cluster-mysql-1   4/4     Running   0          89m
 Connect to the replica and check if the data has been restored:
 
 ```bash
-$ kubectl exec -ti -n demo example-mysql-cluster-mysql-0 -- mysql  -uroot -pR0z5Z1DS02
+kubectl exec -ti -n demo example-mysql-cluster-mysql-0 -- mysql  -uroot -pR0z5Z1DS02
 ```
 
 ```sql
@@ -316,7 +316,7 @@ EOF
 In this configuration, "example-mysql-cluster-mysql-0" refers to the instance name (Pod name) that will be repaired.
 
 ```bash
-$ kubectl get ops -n demo example-mysql-ops-rebuild-replica-non-inplace -w
+kubectl get ops -n demo example-mysql-ops-rebuild-replica-non-inplace -w
 ```
 Expect Output:
 ```bash
@@ -324,7 +324,7 @@ example-mysql-ops-rebuild-replica-non-inplace   RebuildInstance   example-mysql-
 ```
 
 ```bash
-$ kubectl get pods -n demo -w
+kubectl get pods -n demo -w
 NAME                            READY   STATUS    RESTARTS   AGE
 example-mysql-cluster-mysql-1   4/4     Running   0          42m
 example-mysql-cluster-mysql-0   4/4     Running   0          3m53s
@@ -353,7 +353,7 @@ Expected Behavior:
 Connect to the new replica instance ('example-mysql-cluster-mysql-2') and verify the data:
 
 ```bash
-$ kubectl exec -ti -n demo example-mysql-cluster-mysql-2 -- mysql  -uroot -pR0z5Z1DS02
+kubectl exec -ti -n demo example-mysql-cluster-mysql-2 -- mysql  -uroot -pR0z5Z1DS02
 ```
 
 Expected Output:
@@ -370,7 +370,7 @@ mysql> SELECT * FROM test.t1;
 #### Check All Pods
 Run the following command to list all the Pods in the MySQL cluster:
 ```bash
-$ kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster
+kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster
 ```
 Example output:
 ```bash
@@ -382,7 +382,7 @@ At this point, you can see two Pods: 'example-mysql-cluster-mysql-1' and 'exampl
 
 To verify the cluster's status, inspect the cluster resource:
 ```bash
-$ kubectl get cluster example-mysql-cluster -n demo -oyaml
+kubectl get cluster example-mysql-cluster -n demo -oyaml
 ```
 Example output:
 ```yaml
@@ -394,5 +394,5 @@ The 'example-mysql-cluster-mysql-0' instance has been marked as offline.
 
 ## Summary
 - In-Place Repair: Successfully rebuilt the replica and restored the deleted data.
-- Non-In-Place Repair: Created a new replica instance and successfully restored the data. 
+- Non-In-Place Repair: Created a new replica instance and successfully restored the data.
 Both methods effectively recover the replica and ensure data consistency.

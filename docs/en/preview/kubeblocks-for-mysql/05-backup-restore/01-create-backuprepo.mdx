@@ -13,14 +13,14 @@ This guide walks you through creating and configuring a BackupRepo in KubeBlocks
 ## Prerequisites
 - AWS CLI configured with appropriate permissions to create S3 buckets.
 - kubectl access to your Kubernetes cluster.
-- KubeBlocks installed and running in the kb-system namespace.
+- KubeBlocks installed ([installation guide](../user_docs/overview/install-kubeblocks)) and running in the kb-system namespace.
 
 ## Step 1: Create S3 Bucket
 
 Use the AWS CLI to create an S3 bucket in your desired region. Replace `<your-region>` with your target AWS region (e.g., `us-east-1`, `ap-southeast-1`).
 
 ```bash
-$  aws s3api create-bucket --bucket kubeblocks-backup-repo --region <your-region> --create-bucket-configuration LocationConstraint=<your-region>
+aws s3api create-bucket --bucket kubeblocks-backup-repo --region <your-region> --create-bucket-configuration LocationConstraint=<your-region>
 ```
 
 Example (for us-west-1):
@@ -43,7 +43,7 @@ Verification:
 Confirm the bucket was created by listing its contents (it will be empty initially):
 
 ```bash
-$ aws s3 ls s3://kubeblocks-backup-repo
+aws s3 ls s3://kubeblocks-backup-repo
 ```
 
 ## Step 2: Create a Kubernetes Secret for AWS Credentials
@@ -121,6 +121,6 @@ s3-repo   Ready         s3                Tool           true      35s
 
 Troubleshooting:
  - If status becomes Failed:
-   - Verify bucket name and region match your S3 configuration. 
-   - Confirm AWS credentials in the Secret are correct. 
+   - Verify bucket name and region match your S3 configuration.
+   - Confirm AWS credentials in the Secret are correct.
    - Check network connectivity between KubeBlocks and AWS S3.

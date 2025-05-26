@@ -20,11 +20,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
     - A Kubernetes cluster is up and running.
     - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -73,7 +73,7 @@ EOF
 
 Monitor the cluster status until it transitions to the Running state:
 ```bash
-$ kubectl get cluster example-mysql-cluster -n demo -w
+kubectl get cluster example-mysql-cluster -n demo -w
 ```
 Expected Output:
 ```bash
@@ -117,7 +117,7 @@ kubectl patch cluster example-mysql-cluster -n demo --type='json' -p='[
 ### Step 2. Observe Update Blocking
 Check the cluster status after applying the patch:
 ```bash
-$ kubectl get cluster example-mysql-cluster -n demo
+kubectl get cluster example-mysql-cluster -n demo
 ```
 Expected Output:
 ```bash
@@ -128,7 +128,7 @@ The cluster status shows Updating, but the pods remain running without any resta
 
 Verify that the pods are still running:
 ```bash
-$ kubectl get pods -n demo
+kubectl get pods -n demo
 ```
 Expected Output:
 ```
@@ -143,12 +143,12 @@ To apply the changes, you need to manually delete the affected pods. Kubernetes 
 ### Restart Pods Sequentially
 Delete the pods one at a time to minimize impact on availability with maintenance window control:
 ```bash
-$ kubectl delete pod example-mysql-cluster-mysql-0 -n demo --wait=true --grace-period=300
-$ kubectl delete pod example-mysql-cluster-mysql-1 -n demo --wait=true --grace-period=300
+kubectl delete pod example-mysql-cluster-mysql-0 -n demo --wait=true --grace-period=300
+kubectl delete pod example-mysql-cluster-mysql-1 -n demo --wait=true --grace-period=300
 ```
 Monitor the pods as they are recreated:
 ```bash
-$ kubectl get pods -n demo  -w
+kubectl get pods -n demo  -w
 ```
 Expected Output:
 ```
@@ -159,7 +159,7 @@ example-mysql-cluster-mysql-1   4/4     Running   0          18s
 
 Once all Pods are running, the cluster status will update to 'Running':
 ```bash
-$ kubectl get cluster example-mysql-cluster -n demo -w
+kubectl get cluster example-mysql-cluster -n demo -w
 ```
 Expected Output:
 ```bash
@@ -170,8 +170,8 @@ example-mysql-cluster   mysql                Delete               Running   24m
 ## Cleanup
 To remove all created resources, delete the MySQL cluster along with its namespace:
 ```bash
-$ kubectl delete cluster example-mysql-cluster -n demo
-$ kubectl delete ns demo
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete ns demo
 ```
 
 

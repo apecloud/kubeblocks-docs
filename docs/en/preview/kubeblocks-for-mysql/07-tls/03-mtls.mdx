@@ -20,11 +20,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
     - A Kubernetes cluster is up and running.
     - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -154,7 +154,7 @@ EOF
 Check cluster status until it reaches Running state:
 
 ```bash
-$ kubectl get cluster -n demo
+kubectl get cluster -n demo
 ```
 
 Example Output:
@@ -171,7 +171,7 @@ KubeBlocks automatically creates a secret containing the MySQL root credentials.
 
 1. Retrieve the root username:
 ```bash
-$ kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
 ```
 Example Output:
 ```bash
@@ -180,7 +180,7 @@ root
 
 2. Retrieve the root password:
 ```bash
-$ kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
 ```
 Example Output:
 ```bash
@@ -190,7 +190,7 @@ D0o5P43S8G
 ### Connect Using the Root Account
 
 ```bash
-$ kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pD0o5P43S8G
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pD0o5P43S8G
 ```
 
 ### Create an mTLS User
@@ -213,7 +213,7 @@ Query OK, 0 rows affected (0.01 sec)
 use the `kubectl port-forward` command to map port 3306 of the primary replica of the MySQL Cluster to port 3306 on your local machine:
 
 ```bash
-$ kubectl port-forward svc/mysql-cluster-mysql 3306:3306 -n default
+kubectl port-forward svc/mysql-cluster-mysql 3306:3306 -n default
 Forwarding from 127.0.0.1:3306 -> 3306
 Forwarding from [::1]:3306 -> 3306
 ```
@@ -222,7 +222,7 @@ Then, open another shell and use the mysql command-line tool to connect to the l
 
 If connecting without client certificates, you will see an error:
 ```bash
-$ mysql -h 127.0.0.1 -umtls_user -pkni676X2W1 --ssl-mode=REQUIRED 
+mysql -h 127.0.0.1 -umtls_user -pkni676X2W1 --ssl-mode=REQUIRED
 ```
 Example Output:
 ```bash
@@ -231,7 +231,7 @@ ERROR 1045 (28000): Access denied for user 'mtls_user'@'127.0.0.1' (using passwo
 
 To connect successfully, provide the client certificate and key:
 ```bash
-$ mysql -h 127.0.0.1 -umtls_user -pkni676X2W1 --ssl-mode=REQUIRED --ssl-ca=/path/to/ca.pem --ssl-cert=/path/to/client-cert.pem --ssl-key=/path/to/client-key.pem
+mysql -h 127.0.0.1 -umtls_user -pkni676X2W1 --ssl-mode=REQUIRED --ssl-ca=/path/to/ca.pem --ssl-cert=/path/to/client-cert.pem --ssl-key=/path/to/client-key.pem
 ```
 
 Verify TLS connection status in MySQL shell:

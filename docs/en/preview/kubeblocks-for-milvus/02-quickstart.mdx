@@ -26,7 +26,7 @@ Before proceeding, verify your environment meets these requirements:
 - A functional Kubernetes cluster (v1.21+ recommended)
 - `kubectl` v1.21+ installed and configured with cluster access
 - Helm installed ([installation guide](https://helm.sh/docs/intro/install/))
-- KubeBlocks installed ([installation guide](../user_docs/installation/install-kubeblocks.md))
+- KubeBlocks installed ([installation guide](../user_docs/overview/install-kubeblocks))
 
 ### Verify Milvus Add-on
 
@@ -290,9 +290,9 @@ milvus                          500m / 500m          512Mi / 512Mi           dat
 
 Images:
 COMPONENT   COMPONENT-DEFINITION              IMAGE
-etcd        etcd-3-1.0.0-alpha.0              quay.io/coreos/etcd:v3.5.15
-minio       milvus-minio-1.0.0-alpha.0        docker.io/minio/minio:RELEASE.2022-03-17T06-34-49Z
-milvus      milvus-standalone-1.0.0-alpha.0   docker.io/milvusdb/milvus:v2.3.2
+etcd        etcd-3-1.0.0                      quay.io/coreos/etcd:v3.5.15
+minio       milvus-minio-1.0.0                docker.io/minio/minio:RELEASE.2022-03-17T06-34-49Z
+milvus      milvus-standalone-1.0.0           docker.io/milvusdb/milvus:v2.3.2
 
 Data Protection:
 BACKUP-REPO   AUTO-BACKUP   BACKUP-SCHEDULE   BACKUP-METHOD   BACKUP-RETENTION   RECOVERABLE-TIME

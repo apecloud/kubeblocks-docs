@@ -64,7 +64,7 @@ mycluster   demo        kafka                kafka-3.3.2   Delete               
      namespace: demo
    spec:
      clusterRef: mycluster
-     type: VerticalScaling 
+     type: VerticalScaling
      verticalScaling:
      - componentName: broker
        requests:
@@ -175,7 +175,7 @@ mycluster   demo        kafka                kafka-3.3.2   Delete               
 1. Configure the parameters `--components`, `--memory`, and `--cpu` and run the command.
 
    ```bash
-    kbcli cluster vscale mycluster -n demo --components="broker" --memory="4Gi" --cpu="2" 
+    kbcli cluster vscale mycluster -n demo --components="broker" --memory="4Gi" --cpu="2"
    ```
 
    - `--components` value can be `broker` or `controller`.
@@ -228,7 +228,7 @@ Vertical scaling does not synchronize parameters related to CPU and memory and i
 
 Horizontal scaling changes the amount of pods. For example, you can scale out replicas from three to five.
 
-From v0.9.0, besides replicas, KubeBlocks also supports scaling in and out instances, refer to the [Horizontal Scale tutorial](./../../maintenance/scale/horizontal-scale.md) for more details and examples.
+From v0.9.0, besides replicas, KubeBlocks also supports scaling in and out instances, refer to the Horizontal Scale tutorial](./../user_docs/maintenance/scale//horizontal-scale) for more details and examples.
 
 ### Before you start
 
@@ -358,7 +358,7 @@ From v0.9.0, besides replicas, KubeBlocks also supports scaling in and out insta
    ...
    spec:
      clusterDefinitionRef: kafka
-     clusterVersionRef: kafka-3.3.2 
+     clusterVersionRef: kafka-3.3.2
      componentSpecs:
      - name: broker
        componentDefRef: broker
@@ -438,7 +438,7 @@ In the example below, a snapshot exception occurs.
 
 ```bash
 Status:
-  conditions: 
+  conditions:
   - lastTransitionTime: "2023-02-08T04:20:26Z"
     message: VolumeSnapshot/mycluster-kafka-scaling-dbqgp: Failed to set default snapshot
       class with error cannot find default snapshot class
@@ -472,7 +472,7 @@ This exception occurs because the `VolumeSnapshotClass` is not configured. This 
 
    ```bash
    kubectl delete backup -l app.kubernetes.io/instance=mycluster -n demo
-   
+
    kubectl delete volumesnapshot -l app.kubernetes.io/instance=mycluster -n demo
 
    ```

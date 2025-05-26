@@ -26,7 +26,7 @@ Before proceeding, verify your environment meets these requirements:
 - A functional Kubernetes cluster (v1.21+ recommended)
 - `kubectl` v1.21+ installed and configured with cluster access
 - Helm installed ([installation guide](https://helm.sh/docs/intro/install/))
-- KubeBlocks installed ([installation guide](../user_docs/installation/install-kubeblocks.md))
+- KubeBlocks installed ([installation guide](../user_docs/overview/install-kubeblocks))
 
 ### Verify Kafka Add-on
 
@@ -275,11 +275,11 @@ kafka-exporter                         100m / 500m          214748364800m / 1Gi 
 
 Images:
 COMPONENT          COMPONENT-DEFINITION             IMAGE
-kafka-controller   kafka-controller-1.0.0-alpha.0   docker.io/bitnami/kafka:3.3.2-debian-11-r54
+kafka-controller   kafka-controller-1.0.0           docker.io/bitnami/kafka:3.3.2-debian-11-r54
                                                     docker.io/bitnami/jmx-exporter:0.18.0-debian-11-r20
-kafka-broker       kafka-broker-1.0.0-alpha.0       docker.io/bitnami/kafka:3.3.2-debian-11-r54
+kafka-broker       kafka-broker-1.0.0               docker.io/bitnami/kafka:3.3.2-debian-11-r54
                                                     docker.io/bitnami/jmx-exporter:0.18.0-debian-11-r20
-kafka-exporter     kafka-exporter-1.0.0-alpha.0     docker.io/bitnami/kafka-exporter:1.6.0-debian-11-r67
+kafka-exporter     kafka-exporter-1.0.0             docker.io/bitnami/kafka-exporter:1.6.0-debian-11-r67
 
 Show cluster events: kbcli cluster list-events -n demo kafka-separated-cluster
 ```

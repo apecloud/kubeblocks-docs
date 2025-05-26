@@ -17,9 +17,9 @@ KubeBlocks supports the management of Elasticsearch. This tutorial illustrates h
 
 ## Before you start
 
-- [Install kbcli](./../installation/install-kbcli.md) if you want to manage your Elasticsearch cluster with `kbcli`.
-- [Install KubeBlocks](./../installation/install-kubeblocks.md).
-- [Install and enable the elasticsearch Addon](./../installation/install-addons.md).
+- [Install kbcli](./../user_docs/installation/install-kbcli) if you want to manage your Elasticsearch cluster with `kbcli`.
+- [Install KubeBlocks](./../user_docs/installation/install-kubeblocks).
+- [Install and enable the elasticsearch Addon](./../user_docs/installation/install-addons).
 - To keep things isolated, create a separate namespace called `demo` throughout this tutorial.
 
   ```bash
@@ -177,7 +177,7 @@ kubectl get cluster mycluster -n demo -o yaml
 :::note
 
 If you want to customize your cluster specifications, kbcli provides various options, such as setting cluster version, termination policy, CPU, and memory. You can view these options by adding `--help` or `-h` flag.
-  
+
 ```bash
 kbcli cluster create elasticsearch --help
 
@@ -192,7 +192,7 @@ kbcli cluster create elasticsearch -h
    kbcli cluster list
    >
    NAME        NAMESPACE   CLUSTER-DEFINITION   VERSION   TERMINATION-POLICY   STATUS     CREATED-TIME
-   mycluster   demo                                       Delete               Creating   Sep 27,2024 11:42 UTC+0800  
+   mycluster   demo                                       Delete               Creating   Sep 27,2024 11:42 UTC+0800
    ```
 
 3. Check the cluster details.
@@ -251,10 +251,10 @@ mycluster   demo                                               Delete           
 
 Horizontal scaling changes the amount of pods. For example, you can scale out replicas from three to five.
 
-From v0.9.0, besides replicas, KubeBlocks also supports scaling in and out instances, refer to the [Horizontal Scale tutorial](./../maintenance/scale/horizontal-scale.md) for more details and examples.
+From v0.9.0, besides replicas, KubeBlocks also supports scaling in and out instances, refer to the [Horizontal Scale tutorial](./../user_docs/maintenance/scale//horizontal-scale) for more details and examples.
 
 <Tabs>
-  
+
 <TabItem value="OpsRequest" label="OpsRequest" default>
 
 1. Apply an OpsRequest to a specified cluster. Configure the parameters according to your needs.
@@ -319,7 +319,7 @@ From v0.9.0, besides replicas, KubeBlocks also supports scaling in and out insta
     ```
 
 </TabItem>
-  
+
 <TabItem value="Edit cluster YAML file" label="Edit cluster YAML file">
 
 1. Change the configuration of `spec.componentSpecs.replicas` in the YAML file. `spec.componentSpecs.replicas` stands for the pod amount and changing this value triggers a horizontal scaling of a cluster.
@@ -396,7 +396,7 @@ From v0.9.0, besides replicas, KubeBlocks also supports scaling in and out insta
 ### Scale vertically
 
 <Tabs>
-  
+
 <TabItem value="OpsRequest" label="OpsRequest" default>
 
 1. Apply an OpsRequest to a specified cluster. Configure the parameters according to your needs.
@@ -438,7 +438,7 @@ From v0.9.0, besides replicas, KubeBlocks also supports scaling in and out insta
     ```
 
 </TabItem>
-  
+
 <TabItem value="Edit cluster YAML file" label="Edit cluster YAML file">
 
 1. Change the configuration of `spec.componentSpecs.resources` in the YAML file. `spec.componentSpecs.resources` controls the requirement and limit of resources and changing them triggers a vertical scaling.
@@ -732,7 +732,7 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
       componentSpecs:
       - name: mdit
         componentDefRef: elasticsearch
-        disableExporter: true  
+        disableExporter: true
         replicas: 0 # Change this value
     ...
     ```
@@ -774,7 +774,7 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
 ### Start a cluster
 
 1. Configure the name of your cluster and run the command below to start this cluster.
-  
+
     <Tabs>
 
     <TabItem value="OpsRequest" label="OpsRequest" default>
@@ -791,7 +791,7 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
     spec:
       clusterName: mycluster
       type: Start
-    EOF 
+    EOF
     ```
 
     </TabItem>
@@ -811,7 +811,7 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
       componentSpecs:
       - name: mdit
         componentDefRef: elasticsearch
-        disableExporter: true  
+        disableExporter: true
         replicas: 1 # Change this value
     ...
     ```
@@ -867,7 +867,7 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
      namespace: demo
    spec:
      clusterName: mycluster
-     type: Restart 
+     type: Restart
      restart:
      - componentName: elasticsearch
    EOF

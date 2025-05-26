@@ -17,9 +17,9 @@ KubeBlocks supports the management of Qdrant. This tutorial illustrates how to c
 
 ## Before you start
 
-- [Install kbcli](./../installation/install-kbcli.md) if you want to manage the Qdrant cluster with `kbcli`.
-- [Install KubeBlocks](./../installation/install-kubeblocks.md).
-- [Install and enable the Qdrant Addon](./../installation/install-addons.md).
+- [Install kbcli](./../user_docs/installation/install-kbcli) if you want to manage the Milvus cluster with `kbcli`.
+- [Install KubeBlocks](./../user_docs/installation/install-kubeblocks).
+- [Install and enable the Qdrant Addon](./../user_docs/installation/install-addons).
 - To keep things isolated, create a separate namespace called `demo` throughout this tutorial.
 
    ```bash
@@ -58,7 +58,7 @@ spec:
       operator: Equal
       value: 'true'
       effect: NoSchedule
-    disableExporter: true 
+    disableExporter: true
     replicas: 2
     resources:
       limits:
@@ -316,7 +316,7 @@ mycluster   demo        qdrant                         Delete               Runn
     ```
 
 </TabItem>
-  
+
 <TabItem value="Edit cluster YAML file" label="Edit cluster YAML file">
 
 1. Change the configuration of `spec.componentSpecs.replicas` in the YAML file. `spec.componentSpecs.replicas` stands for the pod amount and changing this value triggers a horizontal scaling of a cluster.
@@ -357,7 +357,7 @@ mycluster   demo        qdrant                         Delete               Runn
 
     - `--components` describes the component name ready for horizontal scaling.
     - `--replicas` describes the replica amount of the specified components. Edit the amount based on your demands to scale in or out replicas.
-  
+
     Please wait a few seconds until the scaling process is over.
 
 2. Validate the horizontal scaling operation.
@@ -429,7 +429,7 @@ mycluster   demo        qdrant                         Delete               Runn
 #### Steps
 
 <Tabs>
-  
+
 <TabItem value="OpsRequest" label="OpsRequest" default>
 
 1. Apply an OpsRequest to the specified cluster. Configure the parameters according to your needs.
@@ -522,7 +522,7 @@ mycluster   demo        qdrant                         Delete               Runn
 1. Set the `--cpu` and `--memory` values according to your needs and run the following command to perform vertical scaling.
 
     ```bash
-    kbcli cluster vscale mycluster -n demo --cpu=0.5 --memory=512Mi --components=qdrant 
+    kbcli cluster vscale mycluster -n demo --cpu=0.5 --memory=512Mi --components=qdrant
     ```
 
     Please wait a few seconds until the scaling process is over.
@@ -695,7 +695,7 @@ mycluster   demo        qdrant                         Delete               Runn
     - View the OpsRequest progress.
 
        KubeBlocks outputs a command automatically for you to view the details of the OpsRequest progress. The output includes the status of this OpsRequest and PVC. When the status is `Succeed`, this OpsRequest is completed.
-   
+
        ```bash
        kbcli cluster describe-ops mycluster-volumeexpansion-5pbd2 -n demo
        >
@@ -742,7 +742,7 @@ mycluster   demo        qdrant                         Delete               Runn
      namespace: demo
    spec:
      clusterName: mycluster
-     type: Restart 
+     type: Restart
      restart:
      - componentName: qdrant
    EOF
@@ -837,7 +837,7 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
       componentSpecs:
       - name: qdrant
         componentDefRef: qdrant
-        disableExporter: true  
+        disableExporter: true
         replicas: 0 # Change this value
     ...
     ```
@@ -879,7 +879,7 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
 ### Start a cluster
 
 1. Configure the name of your cluster and run the command below to start this cluster.
-  
+
     <Tabs>
 
     <TabItem value="OpsRequest" label="OpsRequest" default>
@@ -896,7 +896,7 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
     spec:
       clusterName: mycluster
       type: Start
-    EOF 
+    EOF
     ```
 
     </TabItem>
@@ -918,7 +918,7 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
       componentSpecs:
       - name: qdrant
         componentDefRef: qdrant
-        disableExporter: true  
+        disableExporter: true
         replicas: 1 # Change this value
     ...
     ```
@@ -995,7 +995,7 @@ mycluster   qdrant                              Delete                 Running  
 kbcli cluster list mycluster -n demo
 >
 NAME        NAMESPACE   CLUSTER-DEFINITION     VERSION         TERMINATION-POLICY   STATUS    CREATED-TIME
-mycluster   demo        qdrant                                 Delete               Running   Aug 15,2023 23:03 UTC+0800 
+mycluster   demo        qdrant                                 Delete               Running   Aug 15,2023 23:03 UTC+0800
 ```
 
 </TabItem>

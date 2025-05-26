@@ -19,11 +19,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
     - A Kubernetes cluster is up and running.
     - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -68,7 +68,7 @@ EOF
 ## Verifying the Deployment
 Monitor the cluster status until it transitions to the Running state:
 ```bash
-$ kubectl get cluster example-mysql-cluster -n demo -w
+kubectl get cluster example-mysql-cluster -n demo -w
 ```
 Expected Output:
 ```bash
@@ -82,7 +82,7 @@ Once the cluster status becomes Running, your MySQL cluster is ready for use.
 
 Use the following command to display the MySQL versions supported by your KubeBlocks installation:
 ```bash
-$ kubectl get cmpv mysql
+kubectl get cmpv mysql
 ```
 Example Output:
 ```bash
@@ -96,7 +96,7 @@ Note: The list of supported versions may vary depending on your KubeBlocks versi
 ### Identify the Current Primary and Secondary Instances
 Run the following command to identify the roles of the cluster instances:
 ```bash
-$ kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
 Example Output:
 ```bash
@@ -143,7 +143,7 @@ EOF
 ### Monitor the Upgrade Process
 During the upgrade, observe the changes in the cluster's Pods:
 ```bash
-$ kubectl get pods -n demo -w
+kubectl get pods -n demo -w
 ```
 Example Output:
 ```bash
@@ -160,7 +160,7 @@ example-mysql-cluster-mysql-0   4/4     Running   2 (6s ago)   2m6s
 
 After the upgrade is completed, roles are switched:
 ```bash
-$ kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
 Updated Roles:
 ```bash
@@ -173,7 +173,7 @@ example-mysql-cluster-mysql-1	primary
 ### Check Cluster Status
 Ensure the cluster is in the Running state:
 ```bash
-$ kubectl get cluster example-mysql-cluster -n demo -w
+kubectl get cluster example-mysql-cluster -n demo -w
 ```
 Example Output:
 ```bash
@@ -184,7 +184,7 @@ example-mysql-cluster   mysql                Delete               Running   17m
 ### Verify the MySQL Version
 Retrieve the MySQL root credentials:
 ```bash
-$ kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
 ```
 Example Output:
 ```bash
@@ -193,7 +193,7 @@ Example Output:
 
 Connect to the upgraded instances and verify the MySQL version:
 ```bash
-$ kubectl exec -ti -n demo example-mysql-cluster-mysql-1 -- mysql -uroot -p79vJW1Vg43 -e "SELECT VERSION();"
+kubectl exec -ti -n demo example-mysql-cluster-mysql-1 -- mysql -uroot -p79vJW1Vg43 -e "SELECT VERSION();"
 ```
 Expected Output:
 ```sql

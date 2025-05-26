@@ -17,11 +17,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
     - A Kubernetes cluster is up and running.
     - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -85,7 +85,7 @@ EOF
 Monitor the cluster status until it transitions to Running:
 
 ```bash
-$ kubectl get cluster example-mysql-cluster -n demo
+kubectl get cluster example-mysql-cluster -n demo
 ```
 
 Expected Output:
@@ -100,7 +100,7 @@ Once the status is Running, the MySQL cluster is successfully deployed.
 KubeBlocks automatically creates a BackupSchedule resource when scheduled backups are enabled. Verify the configuration using the following command:
 
 ```bash
-$ kubectl get backupschedule example-mysql-cluster-mysql-backup-schedule  -n demo -oyaml
+kubectl get backupschedule example-mysql-cluster-mysql-backup-schedule  -n demo -oyaml
 ```
 
 Expected Output:
@@ -126,7 +126,7 @@ This confirms that the BackupSchedule resource is properly configured with the r
 After the scheduled backup task has been executed, verify the backup files in the configured S3 bucket with the following command:
 
 ```bash
-$ TZ=":UTC" aws s3 ls s3://kubeblocks-backup-repo/ --recursive
+TZ=":UTC" aws s3 ls s3://kubeblocks-backup-repo/ --recursive
 ```
 
 Expected Output:

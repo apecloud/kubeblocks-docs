@@ -11,93 +11,49 @@ import TabItem from '@theme/TabItem';
 
 # Restore data from backup set
 
-KubeBlocks supports restoring clusters from backups with the following instructions.
+KubeBlocks supports restoring clusters from backups.  This documentation takes MySQL as an example. Please refer to [MySQL Backup and Restore](../../../../kubeblocks-for-mysql/05-backup-restore/05-restoring-from-full-backup.mdx) for more details.
 
-1. View backups.
+**Step 1. View backups.**
 
-     <Tabs>
+<Tabs>
 
-     <TabItem value="kubectl" label="kubectl" default>
+<TabItem value="kubectl" label="kubectl" default>
 
-     ```bash
-     kubectl get backups
-     ```
+```bash
+kubectl get backups
+```
 
-     </TabItem>
+</TabItem>
 
-     <TabItem value="kbcli" label="kbcli">
+<TabItem value="kbcli" label="kbcli">
 
-     For existing clusters, execute:
+For existing clusters, execute:
 
-     ```bash
-     kbcli cluster list-backups mysql-cluster
-     ```
+```bash
+kbcli cluster list-backups mycluster
+```
 
-     If the cluster has been deleted, execute:
+If the cluster has been deleted, execute:
 
-     ```bash
-     kbcli dataprotection list-backups
-     ```
+```bash
+kbcli dataprotection list-backups
+```
 
-     </TabItem>
+</TabItem>
 
-     </Tabs>
+</Tabs>
 
-2. Restore clusters from a specific backup.
+**Step 2. Restore clusters from a specific backup.**
 
-     <Tabs>
+```bash
+# Restore new cluster
+kbcli cluster restore myrestore --backup mybackup
+>
+Cluster myrestore created
 
-     <TabItem value="kubectl" label="kubectl" default>
-
-     You can set the `connectionPassword.annotations` of the restored cluster as that of the original cluster. The password of the original cluster can be accessed by viewing the annotation of `dataprotection.kubeblocks.io/connection-password` in the backup YAML file.
-
-     ```bash
-     kubectl apply -f - <<-'EOF'
-     apiVersion: apps.kubeblocks.io/v1alpha1
-     kind: Cluster
-     metadata:
-       name: myrestore
-       namespace: demo
-       annotations:
-         kubeblocks.io/restore-from-backup: '{"mysql":{"name":"mybackup","namespace":"default","connectionPassword": "Bw1cR15mzfldc9hzGuK4m1BZQOzha6aBb1i9nlvoBdoE9to4"}}'
-     spec:
-       clusterDef: apecloud-mysql
-       clusterVersionRef: ac-mysql-8.0.30
-       terminationPolicy: WipeOut
-       componentSpecs:
-         - name: mysql
-           componentDefRef: mysql
-           replicas: 1
-           volumeClaimTemplates:
-             - name: data
-               spec:
-                 accessModes:
-                   - ReadWriteOnce
-                 resources:
-                   requests:
-                     storage: 20Gi
-     EOF
-     ```
-
-     </TabItem>
-
-     <TabItem value="kbcli" label="kbcli">
-
-     ```bash
-     # Restore new cluster
-     kbcli cluster restore myrestore --backup mybackup
-     >
-     Cluster myrestore created
-
-     # View the status of the restored cluster
-     kbcli cluster list myrestore
-     >
-     NAME        NAMESPACE   CLUSTER-DEFINITION   VERSION           TERMINATION-POLICY   STATUS    CREATED-TIME
-     myrestore   default     apecloud-mysql       ac-mysql-8.0.30   Delete               Running   Oct 30,2023 16:26 UTC+0800
-     ```
-
-     </TabItem>
-
-     </Tabs>
-
-3. Connect to the restored cluster for verification.  Once the cluster status is `Running`, [connect to the cluster](./../../../kubeblocks-for-apecloud-mysql/cluster-management/create-and-connect-an-apecloud-mysql-cluster.md#connect-to-a-cluster) for verification.
+# View the status of the restored cluster
+kbcli cluster list myrestore
+>
+NAME        NAMESPACE   CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     CREATED-TIME
+myrestore   default     mysql                Delete               Running   May 26,2025 18:42 UTC+0800
+```

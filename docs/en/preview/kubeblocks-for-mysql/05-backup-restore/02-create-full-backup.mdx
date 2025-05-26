@@ -23,11 +23,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
     - A Kubernetes cluster is up and running.
     - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -79,7 +79,7 @@ EOF
 Monitor the cluster status until it transitions to Running:
 
 ```bash
-$ kubectl get cluster example-mysql-cluster -n demo
+kubectl get cluster example-mysql-cluster -n demo
 ```
 
 Expected Output:
@@ -94,10 +94,10 @@ List available backup policies and schedules for the cluster:
 
 ```bash
 # List backup policies
-$ kubectl get backuppolicy -n demo
+kubectl get backuppolicy -n demo
 
 # List backup schedules
-$ kubectl get backupschedule -n demo
+kubectl get backupschedule -n demo
 ```
 
 Example Output:
@@ -112,7 +112,7 @@ example-mysql-cluster-mysql-backup-schedule        Available   60m
 View supported backup methods in the BackupPolicy CR 'example-mysql-cluster-mysql-backup-policy':
 
 ```bash
-$ kubectl get backuppolicy example-mysql-cluster-mysql-backup-policy -n demo -oyaml
+kubectl get backuppolicy example-mysql-cluster-mysql-backup-policy -n demo -oyaml
 ```
 Available Methods:
 - 'xtrabackup': Full database backup using Percona XtraBackup
@@ -153,7 +153,7 @@ EOF
 Check the backup status until it shows 'Completed':
 
 ```bash
-$ kubectl get backup example-mysql-cluster-backup  -n demo -w
+kubectl get backup example-mysql-cluster-backup  -n demo -w
 ```
 
 Expected Output:
@@ -169,7 +169,7 @@ example-mysql-cluster-backup   example-mysql-cluster-mysql-backup-policy   xtrab
 Verify the backup files in the configured S3 bucket:
 
 ```bash
-$ aws s3 ls s3://kubeblocks-backup-repo/ --recursive
+aws s3 ls s3://kubeblocks-backup-repo/ --recursive
 ```
 
 Expected Output:
@@ -210,7 +210,7 @@ EOF
 
 Execute the following command to monitor the backup operation status in real-time:
 ```bash
-$ kubectl get ops example-mysql-cluster-backup  -n demo -w
+kubectl get ops example-mysql-cluster-backup  -n demo -w
 ```
 Example Output:
 ```bash
@@ -224,7 +224,7 @@ example-mysql-cluster-backup   Backup   example-mysql-cluster   Succeed   -/-   
 Check the final backup status with:
 
 ```bash
-$ kubectl get backup  -n demo -w
+kubectl get backup  -n demo -w
 ```
 
 Expected Output:
@@ -239,7 +239,7 @@ backup-demo-example-mysql-cluster-20250307013939   example-mysql-cluster-mysql-b
 Verify the backup files in the configured S3 bucket:
 
 ```bash
-$ aws s3 ls s3://kubeblocks-backup-repo/ --recursive
+aws s3 ls s3://kubeblocks-backup-repo/ --recursive
 ```
 
 Expected Output:
