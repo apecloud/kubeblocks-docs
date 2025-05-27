@@ -37,7 +37,70 @@ Before proceeding, verify your environment meets these requirements:
 - A functional Kubernetes cluster (v1.21+ recommended). To try out KubeBlocks on your local host, you can [create a test Kubernetes cluster](../references/prepare-a-local-k8s-cluster)
 - `kubectl` v1.21+ installed and configured with cluster access
 - Helm installed ([installation guide](https://helm.sh/docs/intro/install/))
-- Snapshot Controller installed. Follow the steps in section [Install Snapshot Controller](#install-snapshot-controller) to install it.
+- Snapshot Controller installed.
+
+#### Install Snapshot Controller
+
+Snapshot Controller is a Kubernetes component that manages CSI Volume Snapshots, enabling users to create, restore, and delete snapshots of Persistent Volumes (PVs). KubeBlocks DataProtection Controller uses the Snapshot Controller to create and manage snapshots for databases.
+
+If your Kubernetes cluster does NOT have the following CRDs, you likely also do not have a snapshot controller deployed and you need to install one.
+
+```bash
+kubectl get crd volumesnapshotclasses.snapshot.storage.k8s.io
+kubectl get crd volumesnapshots.snapshot.storage.k8s.io
+kubectl get crd volumesnapshotcontents.snapshot.storage.k8s.io
+```
+
+:::note
+
+If you are sure you don't need the snapshot backup feature, you can install only the SnapshotController CRD and skip steps 1 and 2.
+
+```bash
+# v8.2.0 is the latest version of the external-snapshotter, you can replace it with the version you need.
+kubectl create -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml
+```
+
+:::
+
+**Step 1. Deploy Snapshot Controller**
+
+You can install the Snapshot Controller using Helm or kubectl. Here are the steps to install the Snapshot Controller using Helm.
+
+```bash
+helm repo add piraeus-charts https://piraeus.io/helm-charts/
+helm repo update
+# Update the namespace to an appropriate value for your environment (e.g. kb-system)
+helm install snapshot-controller piraeus-charts/snapshot-controller -n kb-system --create-namespace
+```
+
+For more information, please refer to [Snapshot Controller Configuration](https://artifacthub.io/packages/helm/piraeus-charts/snapshot-controller#configuration).
+
+**Step 2. Verify Snapshot Controller installation**
+
+Check if the snapshot-controller Pod is running:
+
+```bash
+kubectl get pods -n kb-system | grep snapshot-controller
+```
+
+<details open>
+
+<summary>Example Output</summary>
+
+```bash
+snapshot-controller-xxxx-yyyy   1/1   Running   0   30s
+```
+
+</details>
+
+If the pod is in a CrashLoopBackOff state, check logs:
+
+```bash
+kubectl logs -n kb-system deployment/snapshot-controller
+```
+
 
 ## Install KubeBlocks
 
@@ -309,7 +372,7 @@ helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-nam
 ### Skip Addon Auto Installation
 
 ```bash
-helm -n kb-system install kubeblocks kubeblocks/kubeblocks \
+helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace \
 --version <VERSION> \
 --set autoInstalledAddons="{}"
 ```
@@ -317,7 +380,7 @@ helm -n kb-system install kubeblocks kubeblocks/kubeblocks \
 ### Feature Gate: Enable In-place Vertical-Scaling
 
 ```bash
-helm -n kb-system install kubeblocks kubeblocks/kubeblocks \
+helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace \
 --version <VERSION> \
 --set featureGates.inPlacePodVerticalScaling.enabled=true
 ```
@@ -334,7 +397,7 @@ Please delete all clusters and backups before uninstalling KubeBlocks and kbcli.
 kubectl get cluster -A
 kubectl get backup -A
 
-# delete clusters and backups
+# delete clusters and backups by by namespace
 kubectl delete cluster <clusteName> -n <namespace>
 kubectl delete backup <clusteName> -n <namespace>
 ```
@@ -356,7 +419,7 @@ helm list -n kb-system | grep kb-addon | awk '{print $1}' | xargs -I {} helm -n 
 
 While uninstalling, you will get messages like
 ```
-elease "kb-addon-etcd" uninstalled
+Release "kb-addon-etcd" uninstalled
 These resources were kept due to the resource policy:
 [ConfigMap] kafka27-configuration-tpl-1.0.0
 [ComponentDefinition] kafka-combine-1.0.0
@@ -371,7 +434,7 @@ Some resources are kept due to resource policy, then check and remove them all
 3. check remaining resources, such as ComponentDefinition, and ConfigMaps for Configuration
 ```bash
 kubectl get componentdefinitions.apps.kubeblocks.io
-kubectl get parametersdefinitions.apps.kubeblocks.io
+kubectl get parametersdefinitions.parameters.kubeblocks.io
 kubectl get configmap -n kb-system | grep configuration
 kubectl get configmap -n kb-system | grep template
 ```
@@ -391,7 +454,7 @@ kubectl get configmap -n kb-system | grep template| awk '{print $1}' | xargs -I 
 kubectl delete addon.extensions.kubeblocks.io --all
 ```
 
-5. verify all kubeblocks resource are deleted
+5. Verify all KubeBlocks resources are deleted
 
 ```bash
 kubectl get crd  | grep kubeblocks.io | awk '{print $1}' | while read crd; do
@@ -416,7 +479,7 @@ Helm does not delete CRD objects. You can delete the ones KubeBlocks created wit
 kubectl get crd -o name | grep kubeblocks.io | xargs kubectl delete
 ```
 
-7. verify all kubeblocks resource are deleted
+7. Verify all KubeBlocks resources are deleted
 
 ```bash
 kubectl get crd  | grep kubeblocks.io | awk '{print $1}' | while read crd; do
@@ -471,7 +534,7 @@ kbcli addon disable postgresql
 kbcli addon disable redis
 ```
 
-4. verify all kubeblocks resource are deleted
+4. Verify all KubeBlocks resource are deleted
 
 ```bash
 kubectl get crd  | grep kubeblocks.io | awk '{print $1}' | while read crd; do
@@ -489,7 +552,7 @@ If the output shows some custom resource left, please remove them all.
 kbcli kubeblocks uninstall
 ```
 
-6. verify all kubeblocks resource are deleted
+6. Verify all KubeBlocks resource are deleted
 
 ```bash
 kubectl get crd  | grep kubeblocks.io | awk '{print $1}' | while read crd; do
@@ -507,65 +570,3 @@ kubectl get configmap -n kb-system
 </TabItem>
 
 </Tabs>
-
-## Install Snapshot Controller
-
-The SnapshotController is a Kubernetes component that manages CSI Volume Snapshots, enabling users to create, restore, and delete snapshots of Persistent Volumes (PVs). KubeBlocks DataProtection Controller uses the Snapshot Controller to create and manage snapshots for databases.
-
-If your Kubernetes cluster does NOT have the following CRDs, you likely also do not have a snapshot controller deployed and you need to install one.
-
-```bash
-kubectl get crd volumesnapshotclasses.snapshot.storage.k8s.io
-kubectl get crd volumesnapshots.snapshot.storage.k8s.io
-kubectl get crd volumesnapshotcontents.snapshot.storage.k8s.io
-```
-
-:::note
-
-If you are sure you don't need the snapshot backup feature, you can install only the SnapshotController CRD and skip steps 1 and 2.
-
-```bash
-# v8.2.0 is the latest version of the external-snapshotter, you can replace it with the version you need.
-kubectl create -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
-kubectl create -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml
-kubectl create -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml
-```
-
-:::
-
-**Step 1. Deploy Snapshot Controller**
-
-You can install the Snapshot Controller using Helm or kubectl. Here are the steps to install the Snapshot Controller using Helm.
-
-```bash
-helm repo add piraeus-charts https://piraeus.io/helm-charts/
-helm repo update
-# Update the namespace to an appropriate value for your environment (e.g. kb-system)
-helm install snapshot-controller piraeus-charts/snapshot-controller -n kb-system --create-namespace
-```
-
-For more information, please refer to [Snapshot Controller Configuration](https://artifacthub.io/packages/helm/piraeus-charts/snapshot-controller#configuration).
-
-**Step 2. Verify Snapshot Controller installation**
-
-Check if the snapshot-controller Pod is running:
-
-```bash
-kubectl get pods -n kb-system | grep snapshot-controller
-```
-
-<details open>
-
-<summary>Example Output</summary>
-
-```bash
-snapshot-controller-xxxx-yyyy   1/1   Running   0   30s
-```
-
-</details>
-
-If the pod is in a CrashLoopBackOff state, check logs:
-
-```bash
-kubectl logs -n kb-system deployment/snapshot-controller
-```
