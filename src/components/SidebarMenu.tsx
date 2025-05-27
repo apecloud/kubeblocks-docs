@@ -57,8 +57,6 @@ export function SidebarMenuItem({ level = 1, item }: SidebatMenuItemProps) {
     },
   };
 
-  console.log(item)
-
   useEffect(() => {
     const isOpen = checkOpen(pathname, item);
     if (isOpen) {

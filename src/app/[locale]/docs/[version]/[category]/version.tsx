@@ -36,10 +36,9 @@ export default function VersionList({ version, versions }: Props) {
       trigger={
         <Box
           sx={{
-            border: 1,
-            borderColor: "divider",
-            borderLeftWidth: 0,
-            borderTopWidth: 0,
+            borderBottomWidth: 1,
+            borderBottomStyle: 'solid',
+            borderBottomColor: "divider",
             paddingBlock: 1,
           }}
         >

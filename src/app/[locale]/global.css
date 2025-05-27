@@ -3,7 +3,13 @@
 }
 
 /* code hightlight */
-.hljs, pre code {
+code {
+  background: var(--css-palette-divider);
+  padding: 2px 8px;
+  border-radius: var(--css-shape-borderRadius);
+}
+
+.hljs, pre > code {
   border-radius: var(--css-shape-borderRadius);
   background: #1A1E22;
   color: #FFF;

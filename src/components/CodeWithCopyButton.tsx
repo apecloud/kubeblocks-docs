@@ -30,7 +30,7 @@ export default function CodeWithCopyButton(
     }
   };
 
-  if(navigator.clipboard === undefined) {
+  if(typeof window !== "undefined" && window.navigator.clipboard === undefined) {
     return <StyledCode {...props}>{props.children}</StyledCode>
   };
 
