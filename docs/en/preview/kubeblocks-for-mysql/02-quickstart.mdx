@@ -250,7 +250,7 @@ Then, open another shell and use the mysql command-line tool to connect to the l
 mysql -h 127.0.0.1 -P3306 -uroot -pkni676X2W1
 ```
 
-Using `kubectl exec` and `kubectl port-forward` are methods intended for quickly testing the operator's functionality and should not be used in production environments. In production, you should use a Service to access the MySQL Cluster. If accessing the database from outside Kubernetes, a LoadBalancer or NodePort type Service that provides an EXTERNAL-IP is required. Refer to [Accessing MySQL Cluster](operations/create-loadbalancer/loadbalancer-via-operations-api) to configure the Service in your environment.
+Using `kubectl exec` and `kubectl port-forward` are methods intended for quickly testing the operator's functionality and should not be used in production environments. In production, you should use a Service to access the MySQL Cluster. If accessing the database from outside Kubernetes, a LoadBalancer or NodePort type Service that provides an EXTERNAL-IP is required. Refer to [Accessing MySQL Cluster](./04-operations/05-manage-loadbalancer) to configure the Service in your environment.
 
 ### Stop the MySQL Cluster
 
