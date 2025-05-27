@@ -30,7 +30,7 @@ KubeBlocks is Kubernetes-native, you can use Helm or kubectl with a YAML file to
 - **Data Plane**: nodes running databases instances
 
 
-### System Requirements
+### Prerequisites
 
 Before proceeding, verify your environment meets these requirements:
 
@@ -431,7 +431,7 @@ These resources were kept due to the resource policy:
 
 Some resources are kept due to resource policy, then check and remove them all
 
-3. check remaining resources, such as ComponentDefinition, and ConfigMaps for Configuration
+3. Check remaining resources, such as ComponentDefinition, and ConfigMaps for Configuration
 ```bash
 kubectl get componentdefinitions.apps.kubeblocks.io
 kubectl get parametersdefinitions.parameters.kubeblocks.io
@@ -503,7 +503,7 @@ kbcli addon list | grep Enabled
 2. set `keepResource=false` for all addons
 ```bash
 # update addons values, to remove annotation 'helm.sh/resource-policy: keep' from ComponentDefinition/ConfigMaps
-kbcli addon enable <addoName>  --set extra.keepResource=false
+kbcli addon enable <addonName>  --set extra.keepResource=false
 ```
 
 For example

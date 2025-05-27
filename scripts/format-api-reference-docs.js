@@ -7,6 +7,8 @@ const files = [
   `${ROOT_DIR}/docs/en/preview/user_docs/references/api-reference/add-on.mdx`,
   `${ROOT_DIR}/docs/en/preview/user_docs/references/api-reference/backup.mdx`,
   `${ROOT_DIR}/docs/en/preview/user_docs/references/api-reference/cluster.mdx`,
+  `${ROOT_DIR}/docs/en/preview/user_docs/references/api-reference/operations.mdx`,
+  `${ROOT_DIR}/docs/en/preview/user_docs/references/api-reference/parameters.mdx`,
 ]
 
 files
