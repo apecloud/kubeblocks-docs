@@ -31,7 +31,7 @@ export default function CodeWithCopyButton(
   };
 
   if(navigator.clipboard === undefined) {
-    return props.children
+    return <StyledCode {...props}>{props.children}</StyledCode>
   };
 
   return (
