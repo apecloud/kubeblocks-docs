@@ -14,11 +14,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
     - A Kubernetes cluster is up and running.
     - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -27,16 +27,16 @@ namespace/demo created
 If the Prometheus Operator is not already installed, you can install it using Helm:
 
 ```bash
-$ kubectl create namespace monitoring
-$ helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-$ helm install prometheus prometheus-community/kube-prometheus-stack -n monitoring --create-namespace
+kubectl create namespace monitoring
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm install prometheus prometheus-community/kube-prometheus-stack -n monitoring --create-namespace
 ```
 
 Or you can follow the steps in [How to install the Prometheus Operator](../docs/install-prometheus.md) to install the Prometheus Operator.
 
 Check the status of deployed pods:
 ```bash
-$ kubectl get pods -n monitoring
+kubectl get pods -n monitoring
 ```
 
 Example Output:
@@ -99,7 +99,7 @@ EOF
 Monitor the cluster status until it transitions to Running:
 
 ```bash
-$ kubectl get cluster example-mysql-cluster -n demo -w
+kubectl get cluster example-mysql-cluster -n demo -w
 ```
 
 Expected Output:
@@ -174,7 +174,7 @@ EOF
 To confirm that Prometheus is scraping metrics, forward the Prometheus service to your local machine:
 
 ```bash
-$ kubectl port-forward svc/prometheus-kube-prometheus-prometheus -n monitoring 9090:9090
+kubectl port-forward svc/prometheus-kube-prometheus-prometheus -n monitoring 9090:9090
 ```
 Open your browser and navigate to:
 http://localhost:9090/targets
@@ -190,7 +190,7 @@ Expected State:
 ### Query Sample Metric
 Run the following query to confirm that metrics are being scraped:
 ```bash
-$ curl -sG "http://localhost:9090/api/v1/query" --data-urlencode 'query=mysql_up' | jq
+curl -sG "http://localhost:9090/api/v1/query" --data-urlencode 'query=mysql_up' | jq
 ```
 
 Expected Outputs:
@@ -222,7 +222,7 @@ Expected Outputs:
 Forward the Grafana service to your local machine:
 
 ```bash
-$ kubectl port-forward svc/prometheus-grafana -n monitoring 3000:80
+kubectl port-forward svc/prometheus-grafana -n monitoring 3000:80
 ```
 Open your browser and navigate to http://localhost:3000. Use the default credentials to log in:
 - Username: 'admin'

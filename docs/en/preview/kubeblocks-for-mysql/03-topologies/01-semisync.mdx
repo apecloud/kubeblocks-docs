@@ -16,11 +16,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
   - A Kubernetes cluster is up and running.
   - The kubectl CLI tool is configured to communicate with your cluster.
-  - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+  - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -69,7 +69,7 @@ EOF
 - `clusterDef: mysql`: Specifies the ClusterDefinition CR for the cluster. The ClusterDefinition 'mysql' contains multiple topologies, such as 'semisync', 'semisync-proxysql', 'mgr', 'mgr-proxysql', 'orc', 'orc-proxysql'.
 - `topology: semisync`: Configures the cluster to use semi-synchronous replication with primary and replica roles.
 - `componentSpecs`: Defines the components in the cluster:
-  - Component 'mysql': 
+  - Component 'mysql':
     - `serviceVersion: 8.0.35`: Specifies the version of the MySQL service to be deployed. This ensures that the cluster will use MySQL version 8.0.35.
     - `replicas: 2`: Deploys 2 MySQL instances (1 primary, 1 replica).
     - Environment Variable (`env`): Configures 'SEMI_SYNC_TIMEOUT' to 3000ms (3 seconds). This determines how long the primary waits for acknowledgment from a replica before falling back to asynchronous replication. The default is 10000ms (10 seconds).
@@ -79,7 +79,7 @@ EOF
 ### Check the Cluster Status
 Once the cluster is deployed, check its status:
 ```bash
-$ kubectl get cluster example-mysql-cluster  -n demo -w
+kubectl get cluster example-mysql-cluster  -n demo -w
 ```
 Example Output:
 ```bash
@@ -91,7 +91,7 @@ example-mysql-cluster   mysql                Delete               Running   35s
 ### Detailed Cluster Information
 To get detailed information about the cluster:
 ```bash
-$ kbcli cluster describe example-mysql-cluster -n demo
+kbcli cluster describe example-mysql-cluster -n demo
 ```
 Example Output:
 ```bash
@@ -123,12 +123,12 @@ Show cluster events: kbcli cluster list-events -n default example-mysql-cluster
 ```
 ### Verify Component Status
 ```bash
-$ kubectl get component example-mysql-cluster-mysql -n demo
+kubectl get component example-mysql-cluster-mysql -n demo
 ```
 Example Output:
 ```bash
 NAME                          DEFINITION                SERVICE-VERSION   STATUS    AGE
-example-mysql-cluster-mysql   mysql-8.0-1.0.0-alpha.0   8.0.35            Running   2m28s
+example-mysql-cluster-mysql   mysql-8.0-1.0.0           8.0.35            Running   2m28s
 ```
 
 ## Connecting to the MySQL Cluster
@@ -136,17 +136,17 @@ example-mysql-cluster-mysql   mysql-8.0-1.0.0-alpha.0   8.0.35            Runnin
 KubeBlocks automatically creates a secret containing the MySQL root credentials. Retrieve the credentials with the following commands:
 
 ```bash
-$ kubectl get secrets -n demo  example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
+kubectl get secrets -n demo  example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
 root
 
-$ kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
 z475N4c6ib
 ```
 
 ### Connect to the Primary Instance
 To connect to the cluster's primary node, use the MySQL client:
 ```bash
-$ kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pz475N4c6ib
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pz475N4c6ib
 ```
 
 ## Testing Semi-Synchronous Replication
@@ -156,7 +156,7 @@ In this section, we will test the semi-synchronous replication of the MySQL clus
 ### 1. Verify Pod Roles
 Identify the primary and replica instances by checking the roles of the pods:
 ```bash
-$ kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
 Example Output:
 ```bash
@@ -169,7 +169,7 @@ example-mysql-cluster-mysql-1	secondary
 Run the following command to check the semi-synchronous replication status on the primary node:
 
 ```bash
-$  kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-0.example-mysql-cluster-mysql-headless.demo.svc.cluster.local -uroot -pz475N4c6ib -e "show status like 'Rpl%_status';"
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-0.example-mysql-cluster-mysql-headless.demo.svc.cluster.local -uroot -pz475N4c6ib -e "show status like 'Rpl%_status';"
 ```
 Expected Output:
 ```sql
@@ -187,7 +187,7 @@ Explanation:
 #### Replica Node
 Check the semi-synchronous replication status on the replica node:
 ```bash
-$  kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-1.example-mysql-cluster-mysql-headless.demo.svc.cluster.local -uroot -pz475N4c6ib -e "show status like 'Rpl%_status';"
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-1.example-mysql-cluster-mysql-headless.demo.svc.cluster.local -uroot -pz475N4c6ib -e "show status like 'Rpl%_status';"
 ```
 Expected Output:
 ```sql
@@ -214,7 +214,7 @@ If the 'SEMI_SYNC_TIMEOUT' environment variable is not explicitly set, the defau
 In the following example, you can see that the value has been configured to 3000 ms:
 
 ```bash
-$ kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pz475N4c6ib -e "show variables like 'rpl_semi_sync_source_timeout';"
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pz475N4c6ib -e "show variables like 'rpl_semi_sync_source_timeout';"
 ```
 Example Output:
 ```sql
@@ -268,7 +268,7 @@ EOF
 Note: Reapplying the YAML file will restart the Pods, as this modification needs to update the container’s environment variables.
 
 ```bash
-$ kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pz475N4c6ib -e "show variables like 'rpl_semi_sync_source_timeout';"
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pz475N4c6ib -e "show variables like 'rpl_semi_sync_source_timeout';"
 ```
 Expected Output:
 ```sql
@@ -283,13 +283,13 @@ Expected Output:
 ### Trigger a Failover
 To test failover, delete the primary pod:
 ```bash
-$ kubectl delete pod example-mysql-cluster-mysql-0 -n demo
+kubectl delete pod example-mysql-cluster-mysql-0 -n demo
 pod "example-mysql-cluster-mysql-0" deleted
 ```
 ### Verify the Updated Roles
 This triggers a failover, promoting the replica node to primary. Verify the updated roles:
 ```bash
-$ kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
 Example Output:
 ```
@@ -298,7 +298,7 @@ example-mysql-cluster-mysql-1	primary
 ```
 Once the deleted pod is recreated, it rejoins as a replica.
 ```bash
-$ kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 example-mysql-cluster-mysql-0	secondary
 example-mysql-cluster-mysql-1	primary
 ```

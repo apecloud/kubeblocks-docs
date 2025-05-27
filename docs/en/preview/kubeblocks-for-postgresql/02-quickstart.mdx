@@ -26,7 +26,7 @@ Before proceeding, verify your environment meets these requirements:
 - A functional Kubernetes cluster (v1.21+ recommended)
 - `kubectl` v1.21+ installed and configured with cluster access
 - Helm installed ([installation guide](https://helm.sh/docs/intro/install/))
-- KubeBlocks installed ([installation guide](../user_docs/installation/install-kubeblocks.md))
+- KubeBlocks installed ([installation guide](../user_docs/overview/install-kubeblocks))
 
 ### Verify PostgreSQL Add-on
 
@@ -137,10 +137,10 @@ kubectl get cmpv postgresql -ojson | jq -r '.metadata.annotations."componentvers
 <details>
 <summary>Sample Output</summary>
 ```text
-postgresql-12-1.0.0-alpha.0
-postgresql-14-1.0.0-alpha.0
-postgresql-15-1.0.0-alpha.0
-postgresql-16-1.0.0-alpha.0
+postgresql-12-1.0.0
+postgresql-14-1.0.0
+postgresql-15-1.0.0
+postgresql-16-1.0.0
 ```
 </details>
 
@@ -317,10 +317,10 @@ kubectl get cmpd -l app.kubernetes.io/name=postgresql
 <summary>Sample Output</summary>
 ```bash
 NAME                          SERVICE      SERVICE-VERSION   STATUS      AGE
-postgresql-12-1.0.0-alpha.0   postgresql   12.15.0           Available   22d
-postgresql-14-1.0.0-alpha.0   postgresql   14.8.0            Available   22d
-postgresql-15-1.0.0-alpha.0   postgresql   15.7.0            Available   22d
-postgresql-16-1.0.0-alpha.0   postgresql   16.4.0            Available   22d
+postgresql-12-1.0.0           postgresql   12.15.0           Available   22d
+postgresql-14-1.0.0           postgresql   14.8.0            Available   22d
+postgresql-15-1.0.0           postgresql   15.7.0            Available   22d
+postgresql-16-1.0.0           postgresql   16.4.0            Available   22d
 ```
 </details>
 
@@ -390,7 +390,7 @@ postgresql                       500m / 500m          512Mi / 512Mi           da
 
 Images:
 COMPONENT    COMPONENT-DEFINITION          IMAGE
-postgresql   postgresql-14-1.0.0-alpha.0   docker.io/apecloud/spilo:14.7.2-pgvector-v0.6.1
+postgresql   postgresql-14-1.0.0           docker.io/apecloud/spilo:14.7.2-pgvector-v0.6.1
                                            docker.io/bitnami/pgbouncer:1.19.0
 
 Data Protection:

@@ -33,11 +33,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
   - A Kubernetes cluster is up and running.
   - The kubectl CLI tool is configured to communicate with your cluster.
-  - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+  - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -83,7 +83,7 @@ EOF
 
 Monitor the status of the MySQL cluster as it is created:
 ```bash
-$ kubectl get cluster -n demo -w
+kubectl get cluster -n demo -w
 ```
 Expected Output:
 ```bash
@@ -96,7 +96,7 @@ example-mysql-cluster   mysql                Delete               Running    62s
 List the Pods and their roles (primary or secondary):
 
 ```bash
-$ kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
 Example Outputs:
 ```
@@ -147,7 +147,7 @@ Status:
 After the switchover is executed, the specified instance ('example-semisync-mysql-mysql-0') will be promoted to the primary role, while the previously primary instance ('example-semisync-mysql-mysql-1') will take on the secondary role.
 
 ```bash
-$ kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 example-mysql-cluster-mysql-0	secondary
 example-mysql-cluster-mysql-1	primary
 ```

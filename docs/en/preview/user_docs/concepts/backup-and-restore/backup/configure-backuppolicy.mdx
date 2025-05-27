@@ -65,7 +65,7 @@ You can also use `kbcli` to simplify the process.
 ```bash
 # enable encryption
 kbcli cluster edit-backup-policy <backup-policy-name> --set encryption.algorithm=AES-256-CFB --set encryption.passPhrase="SECRET!"
-      
+
 # disable encryption
 kbcli cluster edit-backup-policy <backup-policy-name> --set encryption.disabled=true
 ```
@@ -84,18 +84,17 @@ By default, the `encrytpionKey` is only used for encrypting the connection passw
 
 ## Create a cluster
 
-Prepare a cluster for testing the backup and restore function. The following instructions use the MySQL cluster `mysql-cluster` in the default namespace as an example.
+Prepare a cluster for testing the backup and restore function. The following instructions use the MySQL cluster `mycluster` in the default namespace as an example.
 
 ```shell
 # Create a MySQL cluster
-kbcli cluster create mysql mysql-cluster
+kbcli cluster create mysql mycluster
 
 # View backupPolicy
-kbcli cluster list-backup-policy mysql-cluster
+kbcli cluster list-backup-policies mycluster
 >
-NAME                                       DEFAULT   CLUSTER         CREATE-TIME                  STATUS      
-mysql-cluster-mysql-backup-policy          true      mysql-cluster   May 23,2023 19:53 UTC+0800   Available   
-mysql-cluster-mysql-backup-policy-hscale   false     mysql-cluster   May 23,2023 19:53 UTC+0800   Available
+NAME                            NAMESPACE   DEFAULT   CLUSTER     COMPONENT   CREATE-TIME                  STATUS
+mycluster-mysql-backup-policy   default     true      mycluster   mysql       May 26,2025 18:11 UTC+0800   Available
 ```
 
 By default, all the backups are stored in the default global repository. You can execute the following command to view all BackupRepos. When the `DEFAULT` field is `true`, the BackupRepo is the default BackupRepo.
@@ -114,10 +113,10 @@ After creating a database cluster, a BackupPolicy is created automatically for d
 <TabItem value="kubectl" label="kubectl" default>
 
 ```bash
-kubectl get backuppolicy | grep mycluster
+kubectl get backuppolicy -l app.kubernetes.io/instance=mycluster
 >
-mycluster-mysql-backup-policy                            Available   35m
-mycluster-mysql-backup-policy-hscale                     Available   35m
+NAME                            BACKUP-REPO   STATUS      AGE
+mycluster-mysql-backup-policy                 Available   83s
 ```
 
 </TabItem>
@@ -125,11 +124,10 @@ mycluster-mysql-backup-policy-hscale                     Available   35m
 <TabItem value="kbcli" label="kbcli">
 
 ```bash
-kbcli cluster list-backup-policy mysql-cluster
+kbcli cluster list-backup-policies mycluster
 >
-NAME                                       NAMESPACE   DEFAULT   CLUSTER         CREATE-TIME                  STATUS
-mysql-cluster-mysql-backup-policy          default     true      mysql-cluster   Oct 30,2023 14:34 UTC+0800   Available
-mysql-cluster-mysql-backup-policy-hscale   default     false     mysql-cluster   Oct 30,2023 14:34 UTC+0800   Available
+NAME                            NAMESPACE   DEFAULT   CLUSTER     COMPONENT   CREATE-TIME                  STATUS
+mycluster-mysql-backup-policy   default     true      mycluster   mysql       May 26,2025 18:11 UTC+0800   Available
 ```
 
 </TabItem>
@@ -151,19 +149,20 @@ kubectl get backuppolicy mycluster-mysql-backup-policy -o yaml
 <TabItem value="kbcli" label="kbcli">
 
 ```bash
-kbcli cluster describe-backup-policy mysql-cluster
-> 
-kbcli cluster describe-backup-policy mysql-cluster
+kbcli cluster describe-backup-policy mycluster
+>
 Summary:
-  Name:               mysql-cluster-mysql-backup-policy
-  Cluster:            mysql-cluster
+  Name:               mycluster-mysql-backup-policy
+  Cluster:            mycluster
+  Component:          mysql
   Namespace:          default
   Default:            true
 
 Backup Methods:
-NAME              ACTIONSET                           SNAPSHOT-VOLUMES
-xtrabackup        xtrabackup-for-apecloud-mysql       false
-volume-snapshot   volumesnapshot-for-apecloud-mysql   true
+NAME              ACTIONSET               SNAPSHOT-VOLUMES
+xtrabackup        mysql-xtrabackup-br     false
+volume-snapshot   mysql-volume-snapshot   true
+archive-binlog    mysql-pitr              false
 ```
 
 </TabItem>

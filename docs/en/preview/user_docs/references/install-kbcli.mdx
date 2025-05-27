@@ -1,7 +1,7 @@
 ---
-title: Install kbcli
-description: Install kbcli
-keywords: [install, kbcli,]
+title: Install and Configure the KubeBlocks CLI (kbcli)
+description: Complete guide to installing, verifying, and configuring kbcli for KubeBlocks cluster management
+keywords: [kbcli, KubeBlocks CLI, installation, configuration, command-line]
 sidebar_position: 4
 sidebar_label: Install kbcli
 ---
@@ -9,65 +9,82 @@ sidebar_label: Install kbcli
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# kbcli
+# KubeBlocks Command Line (kbcli)
 
-kbcli is a command-line tool for KubeBlocks.
+kbcli is the official command-line tool for managing KubeBlocks clusters. It provides:
+- Cluster lifecycle management (create, scale, delete)
+- Configuration and troubleshooting tools
+- Version compatibility checks
+- Shell auto-completion support
 
-## Environment preparation
+## Prerequisites
 
-For Windows users, PowerShell version should be 5.0 or higher.
+Before installing kbcli, ensure your system meets these requirements:
+
+- **All platforms**:
+  - Network access to download packages
+  - Administrator/sudo privileges
+- **Windows**:
+  - PowerShell 5.0 or later
+- **macOS/Linux**:
+  - curl or wget installed
+  - Homebrew (for macOS brew installation)
 
 ## Install kbcli
 
-kbcli now supports macOS, Windows, and Linux.
+## Supported Platforms
+
+kbcli is available for:
+- **macOS** (Intel and Apple Silicon)
+- **Windows** (x86-64)
+- **Linux** (x86-64 and ARM64)
 
 <Tabs>
 <TabItem value="macOS" label="macOS" default>
 
-You can install kbcli with `curl` or `brew`.
+Choose your preferred installation method:
 
-- Option 1: Install kbcli using the `curl` command.
+- **curl** (recommended for most users)
+- **Homebrew** (macOS package manager)
 
-1. Install kbcli.
+**Method 1: Install with curl**
 
-   ```bash
-   curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash
-   ```
+To install the latest stable version:
 
-   If you want to install kbcli with a specified version, follow the steps below.
+```bash
+curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash
+```
 
-   1. Check the available versions in [kbcli Release](https://github.com/apecloud/kbcli/releases/).
-   2. Specify a version with `-s` and run the command below.
+To install a specific version:
 
-      ```bash
-      curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash -s vx.y.z
-      ```
-
-   You can view all versions of kbcli, including alpha and beta releases, on the [kbcli releases list](https://github.com/apecloud/kbcli/releases).
-
-   To get stable releases, use this command:
+1. Check the available versions in [kbcli Release](https://github.com/apecloud/kbcli/releases/).
+2. Specify a version with `-s` and run the command below.
 
    ```bash
-   curl -s "https://api.github.com/repos/apecloud/kbcli/releases?per_page=100&page=1" | jq -r '.[] | select(.prerelease == false) | .tag_name' | sort -V -r
+   curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash -s <VERSION>
    ```
 
-  :::note
 
-   By default, kbcli installs the latest release version. However, if you already have a running KubeBlocks instance, you need to install a matching version of kbcli.
-
-   For example, if your existing KubeBlocks deployment is v0.8.3, you should install kbcli v0.8.3 instead of a higher version like v0.9.0, as mismatched versions may lead to errors.
-
-  :::
+:::important
+**Version Compatibility**
+- Always match kbcli version with your KubeBlocks deployment
+- Latest stable is recommended for new installations
+- Existing deployments require version matching:
+  - KubeBlocks v1.0.0 → kbcli v1.0.x
+  - KubeBlocks v0.9.x → kbcli v0.9.x
+- Mismatches may cause operational issues
+:::
 
 2. Run `kbcli version` to check the version of kbcli and ensure that it is successfully installed.
 
-  :::note
+:::tip
+**Troubleshooting**
+If installation fails:
+1. Verify network connectivity
+2. Check firewall/proxy settings
+:::
 
-  If a timeout exception occurs during installation, please check your network settings and retry.
-
-  :::
-
-- Option 2: Install kbcli using Homebrew.
+**Method 2: Install with Homebrew**
 
 1. Install ApeCloud tap, the Homebrew package of ApeCloud.
 
@@ -101,9 +118,9 @@ You can install kbcli with `curl` or `brew`.
 
 <TabItem value="Windows" label="Windows">
 
-There are two ways to install kbcli on Windows:
+Choose your preferred installation method:
 
-- Option 1: Install using the script.
+**Method 1: Script Installation (Recommended)**
 
 :::note
 
@@ -128,7 +145,7 @@ If you need to customize the installation path, use the zip file.
     powershell -Command " & ([scriptblock]::Create((iwr https://www.kubeblocks.io/installer/install_cli.ps1))) -v 0.5.2"
     ```
 
-- Option 2: Install using the installation package.
+**Method 2: Manual Installation**
 
 1. Download the kbcli installation zip package from [kbcli Release](https://github.com/apecloud/kbcli/releases/).
 2. Extract the file and add it to the environment variables.
@@ -142,7 +159,7 @@ If you need to customize the installation path, use the zip file.
 
 <TabItem value="Linux" label="Linux">
 
-Install kbcli using the `curl` command.
+Install using `curl`:
 
 1. Install kbcli.
 
@@ -167,9 +184,9 @@ Install kbcli using the `curl` command.
 </TabItem>
 </Tabs>
 
-## Uninstall kbcli
+## Uninstallation
 
-Uninstall kbcli if you want to delete kbcli after your trial. Use the same option as the way you install kbcli.
+To completely remove kbcli and its configuration:
 
 <Tabs>
 
@@ -229,9 +246,13 @@ kbcli creates a hidden folder named `~/.kbcli` under the HOME directory to store
 </Tabs>
 
 
-## (Optional) Enable auto-completion for kbcli
+## Shell Auto-completion
 
-`kbcli` supports command line auto-completion.
+kbcli provides command completion for:
+- bash
+- zsh
+- fish
+- PowerShell
 
 ```bash
 # Configure SHELL-TYPE as one type from bash, fish, PowerShell, and zsh

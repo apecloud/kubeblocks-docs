@@ -18,11 +18,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
   - A Kubernetes cluster is up and running.
   - The kubectl CLI tool is configured to communicate with your cluster.
-  - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+  - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -31,7 +31,7 @@ To perform a PITR restoration, both a full backup and continuous backup are requ
 
 List available backups with the following command:
 ```bash
-$ kubectl get backup -n demo
+kubectl get backup -n demo
 ```
 
 Example Output:
@@ -47,7 +47,7 @@ example-mysql-cluster-xtrabackup-20250305000008    example-mysql-cluster-mysql-b
 Extract encrypted credentials for system accounts from the metadata of the full backup:
 
 ```bash
-$ kubectl get backup -n demo example-mysql-cluster-xtrabackup-20250305000008 -o jsonpath='{.metadata.annotations.kubeblocks\.io/encrypted-system-accounts}'
+kubectl get backup -n demo example-mysql-cluster-xtrabackup-20250305000008 -o jsonpath='{.metadata.annotations.kubeblocks\.io/encrypted-system-accounts}'
 ```
 
 Example Output:
@@ -125,7 +125,7 @@ EOF
 
 #### Step 1: Watch Pod Initialization
 ```bash
-$ kubectl get pods -n demo -w
+kubectl get pods -n demo -w
 ```
 
 Expected Workflow:
@@ -149,7 +149,7 @@ After restoration, MySQL cluster pods initialize with the restored data and star
 #### Step 2: Verify Cluster Status
 Check the status of the restored cluster:
 ```bash
-$ kubectl get cluster example-mysql-cluster-restored -n demo
+kubectl get cluster example-mysql-cluster-restored -n demo
 ```
 Successful Output:
 ```bash

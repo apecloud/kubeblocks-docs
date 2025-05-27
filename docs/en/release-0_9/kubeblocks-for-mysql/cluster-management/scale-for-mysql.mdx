@@ -70,7 +70,7 @@ mycluster   demo        mysql                mysql-8.0.33   Delete              
      namespace: demo
    spec:
      clusterName: mycluster
-     type: VerticalScaling 
+     type: VerticalScaling
      verticalScaling:
      - componentName: mysql
        requests:
@@ -143,7 +143,7 @@ mycluster   demo        mysql                mysql-8.0.33   Delete              
 1. Configure the parameters `--components`, `--memory`, and `--cpu` and run the command.
 
     ```bash
-    kbcli cluster vscale mycluster -n demo --components="mysql" --memory="4Gi" --cpu="2" 
+    kbcli cluster vscale mycluster -n demo --components="mysql" --memory="4Gi" --cpu="2"
     ```
 
     - `--components` describes the component name ready for vertical scaling.
@@ -189,7 +189,7 @@ mycluster   demo        mysql                mysql-8.0.33   Delete              
 
 Horizontal scaling changes the amount of pods. For example, you can scale out replicas from three to five.
 
-From v0.9.0, besides replicas, KubeBlocks also supports scaling in and out instances, refer to the [Horizontal Scale tutorial](./../../maintenance/scale/horizontal-scale.md) for more details and examples.
+From v0.9.0, besides replicas, KubeBlocks also supports scaling in and out instances, refer to the Horizontal Scale tutorial](./../user_docs/maintenance/scale//horizontal-scale) for more details and examples.
 
 ### Before you start
 
@@ -228,7 +228,7 @@ mycluster   demo        mysql                mysql-8.0.33   Delete              
 <TabItem value="OpsRequest" label="OpsRequest" default>
 
 1. Apply an OpsRequest to a specified cluster. Configure the parameters according to your needs.
-  
+
    The example below means adding two replicas.
 
    ```bash
@@ -370,7 +370,7 @@ In the example below, a snapshot exception occurs.
 
 ```bash
 Status:
-  conditions: 
+  conditions:
   - lastTransitionTime: "2024-07-05T04:20:26Z"
     message: VolumeSnapshot/mycluster-mysql-scaling-dbqgp: Failed to set default snapshot
       class with error cannot find default snapshot class
@@ -404,7 +404,7 @@ This exception occurs because the `VolumeSnapshotClass` is not configured. This 
 
     ```bash
     kubectl delete backup -l app.kubernetes.io/instance=mycluster
-   
+
     kubectl delete volumesnapshot -l app.kubernetes.io/instance=mycluster
     ```
 

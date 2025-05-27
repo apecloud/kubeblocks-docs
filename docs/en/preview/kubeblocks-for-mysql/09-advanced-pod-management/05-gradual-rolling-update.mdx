@@ -12,10 +12,10 @@ This guide demonstrates how to configure gradual rolling updates for MySQL clust
 **Key Parameters:**
 - `rollingUpdate.replicas`: Specifies the number of instances to update during each step of the rolling update. The remaining instances stay unaffected.
   - The value can be an absolute number (e.g., 5) or a percentage of desired instances (e.g., 10%).
-  - Absolute numbers are calculated by rounding up percentages. 
+  - Absolute numbers are calculated by rounding up percentages.
   - The default is the total number of replicas, meaning all instances are updated.
-- `rollingUpdate.maxUnavailable`: Limits the maximum number of instances that can be unavailable during the update. 
-  - The value can also be an absolute number (e.g., 5) or a percentage (e.g., 10%). 
+- `rollingUpdate.maxUnavailable`: Limits the maximum number of instances that can be unavailable during the update.
+  - The value can also be an absolute number (e.g., 5) or a percentage (e.g., 10%).
   - This value cannot be 0. The default is 1.
 
 ## Prerequisites
@@ -24,11 +24,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
     - A Kubernetes cluster is up and running.
     - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -72,7 +72,7 @@ EOF
 ## Verifying the Deployment
 Monitor the cluster status until it transitions to the Running state:
 ```bash
-$ kubectl get cluster example-mysql-cluster -n demo -w
+kubectl get cluster example-mysql-cluster -n demo -w
 ```
 Expected Output:
 ```bash
@@ -124,7 +124,7 @@ kubectl patch cluster example-mysql-cluster -n demo --type='json' -p='[
 ### Step 2. Observe the Update Process
 Check the cluster status after applying the patch:
 ```bash
-$ kubectl get cluster example-mysql-cluster -n demo
+kubectl get cluster example-mysql-cluster -n demo
 ```
 Expected Output:
 ```bash
@@ -135,7 +135,7 @@ The cluster status shows Updating, and one Pod will restart to apply the changes
 
 Monitor the Pod update process:
 ```bash
-$ kubectl get pods -n demo -w
+kubectl get pods -n demo -w
 ```
 Expected Output:
 ```
@@ -155,7 +155,7 @@ example-mysql-cluster-mysql-1   4/4     Running           0          34s
 
 After the first Pod is updated, increase `rollingUpdate.replicas` to 2 to update the next Pod.
 ```bash
-$ kubectl patch cluster example-mysql-cluster -n demo --type='json' -p='[
+kubectl patch cluster example-mysql-cluster -n demo --type='json' -p='[
   {
     "op": "replace",
     "path": "/spec/componentSpecs/0/instanceUpdateStrategy/rollingUpdate/replicas",
@@ -165,7 +165,7 @@ $ kubectl patch cluster example-mysql-cluster -n demo --type='json' -p='[
 ```
 Monitor the rest pod is updated:
 ```bash
-$ kubectl get pods -n demo  -w
+kubectl get pods -n demo  -w
 ```
 Expected Output:
 ```
@@ -185,7 +185,7 @@ example-mysql-cluster-mysql-0   4/4     Running           0          26s
 
 Once all Pods are running, the cluster status will update to 'Running':
 ```bash
-$ kubectl get cluster example-mysql-cluster -n demo -w
+kubectl get cluster example-mysql-cluster -n demo -w
 ```
 Expected Output:
 ```bash
@@ -196,8 +196,8 @@ example-mysql-cluster   mysql                Delete               Running   9m26
 ## Cleanup
 To remove all created resources, delete the MySQL cluster along with its namespace:
 ```bash
-$ kubectl delete cluster example-mysql-cluster -n demo
-$ kubectl delete ns demo
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete ns demo
 ```
 
 ## Summary

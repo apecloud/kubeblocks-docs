@@ -19,9 +19,9 @@ This tutorial illustrates how to create and manage a Milvus cluster by `kbcli`, 
 
 ## Before you start
 
-- [Install kbcli](./../installation/install-kbcli.md) if you want to manage the Milvus cluster with `kbcli`.
-- [Install KubeBlocks](./../installation/install-kubeblocks.md).
-- [Install and enable the milvus Addon](./../installation/install-addons.md).
+- [Install kbcli](./../user_docs/installation/install-kbcli) if you want to manage the Milvus cluster with `kbcli`.
+- [Install KubeBlocks](./../user_docs/installation/install-kubeblocks).
+- [Install and enable the milvus Addon](./../user_docs/installation/install-addons).
 - To keep things isolated, create a separate namespace called `demo` throughout this tutorial.
 
   ```bash
@@ -399,7 +399,7 @@ kbcli cluster create milvus -h
    kbcli cluster list -n demo
    >
    NAME        NAMESPACE   CLUSTER-DEFINITION        VERSION               TERMINATION-POLICY   STATUS           CREATED-TIME
-   mycluster   demo        milvus-2.3.2                                    Delete               Running          Jul 05,2024 17:35 UTC+0800   
+   mycluster   demo        milvus-2.3.2                                    Delete               Running          Jul 05,2024 17:35 UTC+0800
    ```
 
 3. Check the cluster information.
@@ -408,48 +408,48 @@ kbcli cluster create milvus -h
    kbcli cluster describe mycluster -n demo
    >
    Name: milvus	 Created Time: Jul 05,2024 17:35 UTC+0800
-   NAMESPACE   CLUSTER-DEFINITION   VERSION   STATUS    TERMINATION-POLICY   
-   demo        milvus-2.3.2                   Running   Delete               
+   NAMESPACE   CLUSTER-DEFINITION   VERSION   STATUS    TERMINATION-POLICY
+   demo        milvus-2.3.2                   Running   Delete
 
    Endpoints:
-   COMPONENT   MODE        INTERNAL                                        EXTERNAL   
-   milvus      ReadWrite   milvus-milvus.default.svc.cluster.local:19530   <none>     
-   minio       ReadWrite   milvus-minio.default.svc.cluster.local:9000     <none>     
-   proxy       ReadWrite   milvus-proxy.default.svc.cluster.local:19530    <none>     
-                           milvus-proxy.default.svc.cluster.local:9091                
+   COMPONENT   MODE        INTERNAL                                        EXTERNAL
+   milvus      ReadWrite   milvus-milvus.default.svc.cluster.local:19530   <none>
+   minio       ReadWrite   milvus-minio.default.svc.cluster.local:9000     <none>
+   proxy       ReadWrite   milvus-proxy.default.svc.cluster.local:19530    <none>
+                           milvus-proxy.default.svc.cluster.local:9091
 
    Topology:
-   COMPONENT   INSTANCE             ROLE     STATUS    AZ       NODE     CREATED-TIME                 
-   etcd        milvus-etcd-0        <none>   Running   <none>   <none>   Jul 05,2024 17:35 UTC+0800   
-   minio       milvus-minio-0       <none>   Running   <none>   <none>   Jul 05,2024 17:35 UTC+0800   
-   milvus      milvus-milvus-0      <none>   Running   <none>   <none>   Jul 05,2024 17:35 UTC+0800   
-   indexnode   milvus-indexnode-0   <none>   Running   <none>   <none>   Jul 05,2024 17:35 UTC+0800   
-   mixcoord    milvus-mixcoord-0    <none>   Running   <none>   <none>   Jul 05,2024 17:35 UTC+0800   
-   querynode   milvus-querynode-0   <none>   Running   <none>   <none>   Jul 05,2024 17:35 UTC+0800   
-   datanode    milvus-datanode-0    <none>   Running   <none>   <none>   Jul 05,2024 17:35 UTC+0800   
-   proxy       milvus-proxy-0       <none>   Running   <none>   <none>   Jul 05,2024 17:35 UTC+0800   
+   COMPONENT   INSTANCE             ROLE     STATUS    AZ       NODE     CREATED-TIME
+   etcd        milvus-etcd-0        <none>   Running   <none>   <none>   Jul 05,2024 17:35 UTC+0800
+   minio       milvus-minio-0       <none>   Running   <none>   <none>   Jul 05,2024 17:35 UTC+0800
+   milvus      milvus-milvus-0      <none>   Running   <none>   <none>   Jul 05,2024 17:35 UTC+0800
+   indexnode   milvus-indexnode-0   <none>   Running   <none>   <none>   Jul 05,2024 17:35 UTC+0800
+   mixcoord    milvus-mixcoord-0    <none>   Running   <none>   <none>   Jul 05,2024 17:35 UTC+0800
+   querynode   milvus-querynode-0   <none>   Running   <none>   <none>   Jul 05,2024 17:35 UTC+0800
+   datanode    milvus-datanode-0    <none>   Running   <none>   <none>   Jul 05,2024 17:35 UTC+0800
+   proxy       milvus-proxy-0       <none>   Running   <none>   <none>   Jul 05,2024 17:35 UTC+0800
 
    Resources Allocation:
-   COMPONENT   DEDICATED   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS     
-   milvus      false       1 / 1                1Gi / 1Gi               data:20Gi      csi-hostpath-sc   
-   etcd        false       1 / 1                1Gi / 1Gi               data:20Gi      csi-hostpath-sc   
-   minio       false       1 / 1                1Gi / 1Gi               data:20Gi      csi-hostpath-sc   
-   proxy       false       1 / 1                1Gi / 1Gi               data:20Gi      csi-hostpath-sc   
-   mixcoord    false       1 / 1                1Gi / 1Gi               data:20Gi      csi-hostpath-sc   
-   datanode    false       1 / 1                1Gi / 1Gi               data:20Gi      csi-hostpath-sc   
-   indexnode   false       1 / 1                1Gi / 1Gi               data:20Gi      csi-hostpath-sc   
-   querynode   false       1 / 1                1Gi / 1Gi               data:20Gi      csi-hostpath-sc   
+   COMPONENT   DEDICATED   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+   milvus      false       1 / 1                1Gi / 1Gi               data:20Gi      csi-hostpath-sc
+   etcd        false       1 / 1                1Gi / 1Gi               data:20Gi      csi-hostpath-sc
+   minio       false       1 / 1                1Gi / 1Gi               data:20Gi      csi-hostpath-sc
+   proxy       false       1 / 1                1Gi / 1Gi               data:20Gi      csi-hostpath-sc
+   mixcoord    false       1 / 1                1Gi / 1Gi               data:20Gi      csi-hostpath-sc
+   datanode    false       1 / 1                1Gi / 1Gi               data:20Gi      csi-hostpath-sc
+   indexnode   false       1 / 1                1Gi / 1Gi               data:20Gi      csi-hostpath-sc
+   querynode   false       1 / 1                1Gi / 1Gi               data:20Gi      csi-hostpath-sc
 
    Images:
-   COMPONENT   TYPE        IMAGE                                                
-   milvus      milvus      milvusdb/milvus:v2.3.2                               
-   etcd        etcd        docker.io/milvusdb/etcd:3.5.5-r2                     
-   minio       minio       docker.io/minio/minio:RELEASE.2022-03-17T06-34-49Z   
-   proxy       proxy       milvusdb/milvus:v2.3.2                               
-   mixcoord    mixcoord    milvusdb/milvus:v2.3.2                               
-   datanode    datanode    milvusdb/milvus:v2.3.2                               
-   indexnode   indexnode   milvusdb/milvus:v2.3.2                               
-   querynode   querynode   milvusdb/milvus:v2.3.2                               
+   COMPONENT   TYPE        IMAGE
+   milvus      milvus      milvusdb/milvus:v2.3.2
+   etcd        etcd        docker.io/milvusdb/etcd:3.5.5-r2
+   minio       minio       docker.io/minio/minio:RELEASE.2022-03-17T06-34-49Z
+   proxy       proxy       milvusdb/milvus:v2.3.2
+   mixcoord    mixcoord    milvusdb/milvus:v2.3.2
+   datanode    datanode    milvusdb/milvus:v2.3.2
+   indexnode   indexnode   milvusdb/milvus:v2.3.2
+   querynode   querynode   milvusdb/milvus:v2.3.2
 
    Show cluster events: kbcli cluster list-events -n demo milvus
    ```
@@ -588,7 +588,7 @@ mycluster   demo        milvus-2.3.2                           Delete           
 1. Set the `--cpu` and `--memory` values according to your needs and run the following command to perform vertical scaling.
 
     ```bash
-    kbcli cluster vscale mycluster -n demo --cpu=1 --memory=1Gi --components=milvus 
+    kbcli cluster vscale mycluster -n demo --cpu=1 --memory=1Gi --components=milvus
     ```
 
     Please wait a few seconds until the scaling process is over.
@@ -803,7 +803,7 @@ mycluster   demo        milvus-2.3.2                           Delete           
      namespace: demo
    spec:
      clusterName: mycluster
-     type: Restart 
+     type: Restart
      restart:
      - componentName: milvus
    EOF
@@ -899,7 +899,7 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
       componentSpecs:
       - name: milvus
         componentDefRef: milvus
-        disableExporter: true  
+        disableExporter: true
         replicas: 0 # Change this value
     ...
     ```
@@ -958,7 +958,7 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
     spec:
       clusterName: mycluster
       type: Start
-    EOF 
+    EOF
     ```
 
     </TabItem>
@@ -980,7 +980,7 @@ You can stop/start a cluster to save computing resources. When a cluster is stop
       componentSpecs:
       - name: milvus
         componentDefRef: milvus
-        disableExporter: true  
+        disableExporter: true
         replicas: 1 # Change this value
     ...
     ```
@@ -1056,7 +1056,7 @@ mycluster   milvus-2.3.2                                  Delete               R
 kbcli cluster list mycluster -n demo
 >
 NAME        NAMESPACE   CLUSTER-DEFINITION        VERSION               TERMINATION-POLICY   STATUS           CREATED-TIME
-mycluster   demo        milvus-2.3.2                                    Delete               Running          Jul 05,2024 17:35 UTC+0800  
+mycluster   demo        milvus-2.3.2                                    Delete               Running          Jul 05,2024 17:35 UTC+0800
 ```
 
 </TabItem>

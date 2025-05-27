@@ -99,7 +99,7 @@ mycluster   demo        apecloud-mysql       ac-mysql-8.0.30   Delete           
    ```
 
 </TabItem>
-  
+
 <TabItem value="Edit cluster YAML file" label="Edit cluster YAML file">
 
 1. Change the configuration of `spec.componentSpecs.resources` in the YAML file. `spec.componentSpecs.resources` controls the requirement and limit of resources and changing them triggers a vertical scaling.
@@ -188,7 +188,7 @@ mycluster   demo        apecloud-mysql       ac-mysql-8.0.30   Delete           
 
 Horizontal scaling changes the amount of pods. For example, you can scale out replicas from three to five. The scaling process includes the backup and restore of data.
 
-From v0.9.0, besides replicas, KubeBlocks also supports scaling in and out instances, refer to the [Horizontal Scale tutorial](./../../maintenance/scale/horizontal-scale.md) for more details and examples.
+From v0.9.0, besides replicas, KubeBlocks also supports scaling in and out instances, refer to the Horizontal Scale tutorial](./../user_docs/maintenance/scale//horizontal-scale) for more details and examples.
 
 ### Before you start
 
@@ -242,7 +242,7 @@ mycluster   demo        apecloud-mysql       ac-mysql-8.0.30   Delete           
      type: HorizontalScaling
      horizontalScaling:
      - componentName: mysql
-       scaleOut: 
+       scaleOut:
          replicaChanges: 2
    EOF
    ```
@@ -263,7 +263,7 @@ mycluster   demo        apecloud-mysql       ac-mysql-8.0.30   Delete           
      type: HorizontalScaling
      horizontalScaling:
      - componentName: mysql
-       scaleIn: 
+       scaleIn:
          replicaChanges: 2
    EOF
    ```
@@ -286,7 +286,7 @@ mycluster   demo        apecloud-mysql       ac-mysql-8.0.30   Delete           
    ```
 
 </TabItem>
-  
+
 <TabItem value="Edit cluster YAML file" label="Edit cluster YAML file">
 
 1. Change the value of `spec.componentSpecs.replicas` in the YAML file.
@@ -368,7 +368,7 @@ In the example below, a snapshot exception occurs.
 
 ```bash
 Status:
-  conditions: 
+  conditions:
   - lastTransitionTime: "2024-09-19T04:20:26Z"
     message: VolumeSnapshot/mycluster-mysql-scaling-dbqgp: Failed to set default snapshot
       class with error cannot find default snapshot class
@@ -402,7 +402,7 @@ This exception occurs because the `VolumeSnapshotClass` is not configured. This 
 
     ```bash
     kubectl delete backup -l app.kubernetes.io/instance=mycluster -n demo
-   
+
     kubectl delete volumesnapshot -l app.kubernetes.io/instance=mycluster -n demo
     ```
 

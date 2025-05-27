@@ -29,7 +29,7 @@ Before restoring, ensure that a full backup is available. The restoration proces
 
 Run the following command to check the backup status:
 ```bash
-$ kubectl get backup -n demo
+kubectl get backup -n demo
 ```
 
 Example Output:
@@ -45,7 +45,7 @@ example-mysql-cluster-backup   example-mysql-cluster-mysql-backup-policy   xtrab
 Extract encrypted credentials for system accounts from the backup metadata:
 
 ```bash
-$ kubectl get backup -n demo example-mysql-cluster-backup -o jsonpath='{.metadata.annotations.kubeblocks\.io/encrypted-system-accounts}'
+kubectl get backup -n demo example-mysql-cluster-backup -o jsonpath='{.metadata.annotations.kubeblocks\.io/encrypted-system-accounts}'
 ```
 
 Example Output:
@@ -101,7 +101,7 @@ EOF
 
 Watch Pod Initialization:
 ```bash
-$ kubectl get pods -n demo -w
+kubectl get pods -n demo -w
 ```
 
 Expected Workflow:
@@ -149,7 +149,7 @@ EOF
 
 Monitor the progress of the restoration operation:
 ```bash
-$ kubectl get ops example-mysql-cluster-restore -n demo -w
+kubectl get ops example-mysql-cluster-restore -n demo -w
 ```
 Example Output:
 ```bash
@@ -163,7 +163,7 @@ example-mysql-cluster-restore   Restore   example-mysql-cluster-restored   Succe
 
 After the restoration process is complete, verify the status of the newly restored cluster:
 ```bash
-$ kubectl get cluster example-mysql-cluster-restored -n demo
+kubectl get cluster example-mysql-cluster-restored -n demo
 ```
 Expected Output:
 ```bash

@@ -21,11 +21,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
     - A Kubernetes cluster is up and running.
     - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -72,7 +72,7 @@ EOF
 ## Verifying the Deployment
 Monitor the cluster status until it transitions to the Running state:
 ```bash
-$ kubectl get cluster example-mysql-cluster -n demo -w
+kubectl get cluster example-mysql-cluster -n demo -w
 ```
 Expected Output:
 ```bash
@@ -133,7 +133,7 @@ kubectl patch cluster example-mysql-cluster -n demo --type='json' -p='[
 ### Verifying Cluster Stop
 Monitor the cluster's status to ensure it transitions to the Stopped state:
 ```bash
-$ kubectl get cluster -n demo -w
+kubectl get cluster -n demo -w
 ```
 Expected Output:
 ```bash
@@ -144,7 +144,7 @@ example-mysql-cluster   mysql                Delete               Stopped    101
 
 There is no Pods running in the cluster, but the persistent storage is retained.
 ```bash
-$ kubectl get pods -n demo
+kubectl get pods -n demo
 ```
 Example Output:
 ```bash
@@ -152,7 +152,7 @@ No resources found in demo namespace.
 ```
 
 ```bash
-$ kubectl get pvc -n demo
+kubectl get pvc -n demo
 ```
 ```bash
 NAME                                 STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS    VOLUMEATTRIBUTESCLASS   AGE
@@ -212,7 +212,7 @@ kubectl patch cluster example-mysql-cluster -n demo --type='json' -p='[
 Monitor the cluster's status to ensure it transitions back to the Running state:
 
 ```bash
-$ kubectl get cluster -n demo -w
+kubectl get cluster -n demo -w
 ```
 
 Expected Output:

@@ -21,11 +21,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
     - A Kubernetes cluster is up and running.
     - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -73,7 +73,7 @@ EOF
 Monitor the cluster status until it transitions to the Running state:
 
 ```bash
-$ kubectl get cluster example-mysql-cluster -n demo -w
+kubectl get cluster example-mysql-cluster -n demo -w
 ```
 
 Expected Output:
@@ -86,7 +86,7 @@ example-mysql-cluster   mysql                Delete               Running    34s
 ## View Network Services
 List the Services created for the MySQL cluster:
 ```bash
-$ kubectl get service -n demo
+kubectl get service -n demo
 ```
 
 Example Services:
@@ -149,7 +149,7 @@ EOF
 
 Wait for the OpsRequest to complete:
 ```bash
-$ kubectl get ops example-mysql-cluster-expose-enable-ops -n demo
+kubectl get ops example-mysql-cluster-expose-enable-ops -n demo
 ```
 Expected Output:
 ```bash
@@ -262,7 +262,7 @@ To properly modify this behavior:
 
 Wait for the Cluster status to transition to Running using the following command:
 ```bash
-$ kubectl get cluster example-mysql-cluster -n demo -w
+kubectl get cluster example-mysql-cluster -n demo -w
 ```
 ```
 NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
@@ -276,7 +276,7 @@ example-mysql-cluster   mysql                Delete               Running   18m
 Check the service details to confirm the LoadBalancer service is created:
 
 ```bash
-$ kubectl get services -n demo
+kubectl get services -n demo
 ```
 
 Expected Output:
@@ -292,7 +292,7 @@ example-mysql-cluster-mysql-internet        LoadBalancer   172.20.60.24    a1d37
 The LoadBalancer DNS name may take 2-5 minutes to become resolvable. Verify the resolution status:
 
 ```bash
-$ nslookup a1d37733683d244e0bebad8559cbf24d-3728431cad3e24b5.elb.ap-southeast-1.amazonaws.com
+nslookup a1d37733683d244e0bebad8559cbf24d-3728431cad3e24b5.elb.ap-southeast-1.amazonaws.com
 ```
 
 Example Outputs:
@@ -312,7 +312,7 @@ Address: 54.251.110.4
 
 KubeBlocks automatically creates a Secret containing the MySQL root credentials. Retrieve the MySQL root credentials:
 ```bash
-$ kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
 KI260UK7E9
 ```
 
@@ -320,7 +320,7 @@ KI260UK7E9
 
 You can now connect to the MySQL database externally (e.g., from your laptop or EC2):
 ```bash
-$ mysql -h a1d37733683d244e0bebad8559cbf24d-3728431cad3e24b5.elb.ap-southeast-1.amazonaws.com -uroot -pKI260UK7E9
+mysql -h a1d37733683d244e0bebad8559cbf24d-3728431cad3e24b5.elb.ap-southeast-1.amazonaws.com -uroot -pKI260UK7E9
 ```
 
 ## Disable External Exposure
@@ -332,7 +332,7 @@ $ mysql -h a1d37733683d244e0bebad8559cbf24d-3728431cad3e24b5.elb.ap-southeast-1.
 ### Method 1: Using OpsRequest
 To disable external access, create an OpsRequest:
 ```yaml
-$ kubectl apply -f - <<EOF
+kubectl apply -f - <<EOF
 apiVersion: operations.kubeblocks.io/v1alpha1
 kind: OpsRequest
 metadata:
@@ -354,7 +354,7 @@ EOF
 
 Wait for the OpsRequest to complete:
 ```bash
-$ kubectl get ops example-mysql-cluster-expose-disable-ops -n demo
+kubectl get ops example-mysql-cluster-expose-disable-ops -n demo
 ```
 Expected Output:
 ```bash
@@ -370,7 +370,7 @@ example-mysql-cluster-expose-disable-ops   Expose   example-mysql-cluster   Succ
 
 Alternatively, remove the `spec.services` field from the Cluster resource:
 ```bash
-$ kubectl patch cluster example-mysql-cluster -n demo --type=json -p='[
+kubectl patch cluster example-mysql-cluster -n demo --type=json -p='[
   {
     "op": "remove",
     "path": "/spec/services"
@@ -380,7 +380,7 @@ $ kubectl patch cluster example-mysql-cluster -n demo --type=json -p='[
 
 Monitor the cluster status until it is Running:
 ```bash
-$ kubectl get cluster example-mysql-cluster -n demo -w
+kubectl get cluster example-mysql-cluster -n demo -w
 ```
 ```
 NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
@@ -396,7 +396,7 @@ example-mysql-cluster   mysql                Delete               Running   23m
 Ensure that the 'example-mysql-connect-mysql-internet' Service is removed:
 
 ```bash
-$ kubectl get service -n demo
+kubectl get service -n demo
 ```
 
 Expected Result: The 'example-mysql-cluster-mysql-internet' Service should be removed.

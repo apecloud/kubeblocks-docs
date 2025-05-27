@@ -27,11 +27,11 @@ Before proceeding, ensure the following:
 - Environment Setup:
     - A Kubernetes cluster is up and running.
     - The kubectl CLI tool is configured to communicate with your cluster.
-    - KubeBlocks CLI and KubeBlocks Operator are installed. Follow the installation instructions here.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
 - Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
 
 ```bash
-$ kubectl create ns demo
+kubectl create ns demo
 namespace/demo created
 ```
 
@@ -77,7 +77,7 @@ EOF
 
 Monitor the cluster status until it transitions to the Running state:
 ```bash
-$ kubectl get cluster example-mysql-cluster -n demo -w
+kubectl get cluster example-mysql-cluster -n demo -w
 ```
 Expected Output:
 ```bash
@@ -90,7 +90,7 @@ Once the cluster status becomes Running, your MySQL cluster is ready for use.
 
 List the Pods in the cluster to verify all three Pods are running:
 ```bash
-$ kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster
+kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster
 ```
 
 Expected Output (3 Pods):
@@ -196,7 +196,7 @@ EOF
 
 After applying the updated configuration, verify the remaining Pods in the cluster:
 ```bash
-$ kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster
+kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster
 ```
 
 Expected Output:

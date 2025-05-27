@@ -23,8 +23,8 @@ Currently, KubeBlocks only supports managing RabbitMQ by `kubectl`.
 
 ## Before you start
 
-- [Install KubeBlocks](./../installation/install-kubeblocks.md).
-- [Install and enable the rabbitmq addon](./../installation/install-addons.md).
+- [Install KubeBlocks](./../user_docs/installation/install-kubeblocks).
+- [Install and enable the rabbitmq addon](./../user_docs/installation/install-addons).
 
 ## Create a cluster
 
@@ -405,7 +405,7 @@ mycluster                                        Delete                 Running 
      namespace: demo
    spec:
      clusterName: mycluster
-     type: Restart 
+     type: Restart
      restart:
      - componentName: rabbitmq
    EOF
@@ -503,7 +503,7 @@ metadata:
 spec:
   clusterName: mycluster
   type: Start
-EOF 
+EOF
 ```
 
 </TabItem>

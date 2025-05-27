@@ -31,21 +31,22 @@ With object storage services prepared, it's time to configure BackupRepo. KubeBl
 * Automatic BackupRepo configuration during KubeBlocks installation;
 * Manual BackupRepo configuration for on-demand scenarios.
 
-
 If you don't have any object storage at hand, please refer to [Install MinIO](#install-minio)
 
 ### Access BackupRepo
 
 There are two methods to access remote object storage:
 
-* Use command-line tools to directly access remote storage.
-* Mount the remote storage to the local system with a CSI driver, allowing the work processes to access the remote storage as if it were local files.
+| Method | Description | Requirements | Security Consideration |
+|--------|-------------|--------------|------------------------|
+| Tool | Uses command-line tools to directly access remote storage | No additional driver required | Synchronizes credentials as secrets across namespaces |
+| Mount | Mounts remote storage locally using a CSI driver | Requires CSI driver installation | No credential sharing between namespaces |
 
-The two access methods are referred to as "Tool" and "Mount". When creating BackupRepo, you can specify the access method through the `accessMethod` field, which can not be changed after creation.
+The access method is specified in the `accessMethod` field when creating a BackupRepo and cannot be changed later.
 
-Generally, it is recommended to use the "Tool" method as it does not require installing an additional CSI driver, thus reducing dependencies.
-
-However, as backup and restore tasks require running in the namespace of the database cluster, using the "Tool" approach automatically synchronizes the necessary credentials for accessing the remote storage as secret resources in those namespaces. These credentials are used by the data transfer tool. If you have concerns about security risks associated with synchronizing secrets in a multi-tenant environment, you can choose to use the "Mount" method.
+**Recommendation**:
+- Use "Tool" method for simpler setups in trusted environments
+- Use "Mount" method for enhanced security in multi-tenant scenarios
 
 ### Manual BackupRepo configuration
 

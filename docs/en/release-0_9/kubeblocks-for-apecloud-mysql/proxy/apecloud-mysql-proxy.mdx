@@ -13,7 +13,7 @@ import TabItem from '@theme/TabItem';
 
 ## Before you start
 
-1. [Install kbcli](./../../installation/install-kbcli.md).
+1. [Install kbcli](./../../user_docs/installation/install-kbcli).
 2. [Install Helm](https://helm.sh/docs/intro/install/).
 3. Install KubeBlocks.
 
@@ -26,7 +26,7 @@ import TabItem from '@theme/TabItem';
    kbcli playground init --version='x.y.z'
    ```
 
-   Or if you already have a Kubernetes cluster, you can [install KubeBlocks](./../../installation/install-kubeblocks.md) directly.
+   Or if you already have a Kubernetes cluster, you can [install KubeBlocks](./../../user_docs/installation/install-kubeblocks) directly.
 4. Prepare an ApeCloud MySQL RaftGroup named `mycluster` for demonstrating how to enable the proxy function for an existing cluster. Refer to [Create a MySQL cluster](./../cluster-management/create-and-connect-an-apecloud-mysql-cluster.md) for details.
 
 ## Create a Proxy Cluster
@@ -72,7 +72,7 @@ It is recommended to use kbcli to create an ApeCloud MySQL Proxy Cluster.
    3. Install the etcd cluster.
 
        ```bash
-       helm install etcd-cluster kubeblocks/etcd-cluster 
+       helm install etcd-cluster kubeblocks/etcd-cluster
        ```
 
    4. view the status of the etcd cluster and make sure it is running.
@@ -95,7 +95,7 @@ It is recommended to use kbcli to create an ApeCloud MySQL Proxy Cluster.
        kubernetes                       ClusterIP   10.96.0.1      <none>        443/TCP                                                  13m
        ```
 
-       You can combine the service address to get the endpoint or you can use the IP of the service address as the access address. 
+       You can combine the service address to get the endpoint or you can use the IP of the service address as the access address.
 
        Here is an example of combining the service address.
 
@@ -152,7 +152,7 @@ helm install myproxy kubeblocks/apecloud-mysql-cluster --version=v0.9.0 --set mo
 
 1. Enable the etcd Addon and create an etcd cluster.
 
-   1. Install and enable the etcd Addon. You need to install the etcd Addon first since the etcd Addon is not installed by default. Refer to [Addons installation tutorial](./../../installation/install-addons.md) for details.
+   1. Install and enable the etcd Addon. You need to install the etcd Addon first since the etcd Addon is not installed by default. Refer to [Addons installation tutorial](./../../user_docs/installation/install-addons) for details.
 
        ```bash
        # 1. Check whether the KubeBlocks Addon index is added
@@ -446,10 +446,10 @@ VTGate, VTConsensus, and VTTablet support parameter configuration. You can confi
    ```bash
    # vtgate
    kbcli cluster describe-config myproxy --components vtgate --show-detail
-   
+
    # vtcontroller
    kbcli cluster describe-config myproxy --components vtcontroller --show-detail
-   
+
    # vttablet
    kbcli cluster describe-config myproxy --components mysql --show-detail --config-specs vttablet-config
    ```
@@ -609,7 +609,7 @@ You can enable the read-write splitting function.
    kubectl edit configurations.apps.kubeblocks.io myproxy-vtgate
    ```
 
-2. Configure `read_write_splitting_policy` as `random`. 
+2. Configure `read_write_splitting_policy` as `random`.
 
    ```yaml
    spec:
