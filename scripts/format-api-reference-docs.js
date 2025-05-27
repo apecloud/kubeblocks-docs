@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 
 const fs = require("fs");
+const path = require("path");
 
 const ROOT_DIR = process.cwd();
-const files = [
-  `${ROOT_DIR}/docs/en/preview/user_docs/references/api-reference/add-on.mdx`,
-  `${ROOT_DIR}/docs/en/preview/user_docs/references/api-reference/backup.mdx`,
-  `${ROOT_DIR}/docs/en/preview/user_docs/references/api-reference/cluster.mdx`,
-]
+const apiRefDir = path.join(ROOT_DIR, "docs/en/preview/user_docs/references/api-reference");
+const files = fs.readdirSync(apiRefDir)
+  .filter(file => file.endsWith(".mdx"))
+  .map(file => path.join(apiRefDir, file));
 
 files
 .filter(file => fs.existsSync(file)) // check exists
