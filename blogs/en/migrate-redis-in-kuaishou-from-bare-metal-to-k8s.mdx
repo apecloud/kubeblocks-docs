@@ -38,7 +38,7 @@ Consider a typical setup, as shown in the image below, where a single instance o
 ![Data replication](/img/blogs/redis-kuaishou-2.png)
 
 1. This is a single point of failure - the system is highly vulnerable to outages.
-2. The throughput of a single Redis instance is inherently limited. 
+2. The throughput of a single Redis instance is inherently limited.
 3. The risk of data loss is extremely high.
 
 To address these problems, we can scale out the StatefulSet horizontally, increasing the number of replicas from one to three. But this introduces a new set of problems about managing the replication relationships between these replicas.
@@ -71,7 +71,7 @@ The first is called "[In-place Instance Update](https://kubeblocks.io/docs/previ
 
 ![In-place update](/img/blogs/redis-kuaishou-4.png)
 
-We divide database parameters into three types: **Immutable**, **Static** and **Dynamic**. 
+We divide database parameters into three types: **Immutable**, **Static** and **Dynamic**.
 
 - A immutable parameter cannot be changed once set.
 - A static parameter can be changed but need a database restart.
@@ -135,7 +135,7 @@ What are stateful services, and how do they differ from stateless ones?
 
 At first glance, the difference might seem as simple as whether or not the service maintains state information. However, we think **the real distinction lies in the unequal relationship between instances**. Different instances in a stateful service play different roles and store different data, making them irreplaceable. You can’t just discard any instance randomly. This unequal relationship is dynamic and can change during runtime, such as during a switchover. KubeBlocks is built to manage this complexity, offering **role-based management capabilities**.
 
-Furthermore, KubeBlocks supports multiple databases, **eliminating the need to create a dedicated operator for each one**. It also provides **process-oriented APIs through OpsRequest**, simplifying database migration. For those interested in the specifics, you can delve deeper into [KubeBlocks APIs in the official documentation](https://kubeblocks.io/docs/preview/developer_docs/api-reference/cluster).
+Furthermore, KubeBlocks supports multiple databases, **eliminating the need to create a dedicated operator for each one**. It also provides **process-oriented APIs through OpsRequest**, simplifying database migration. For those interested in the specifics, you can delve deeper into [KubeBlocks APIs in the official documentation](../user_docs/references/api-reference/cluster).
 
 ![Why KubeBlocks](/img/blogs/redis-kuaishou-9.png)
 

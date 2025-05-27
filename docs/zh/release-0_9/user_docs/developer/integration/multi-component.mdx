@@ -76,7 +76,7 @@ spec:
       versionsContext:
         containers:
         - name: nebula-graphd
-          image: 
+          image:
     - componentDefRef: nebula-metad   # 指定 metad image
       versionsContext:
         containers:
@@ -166,7 +166,7 @@ spec:
 
 ```yaml
     - name: nebula-graphd
-      workloadType: Statelful    
+      workloadType: Statelful
       componentDefRef:
         - componentDefName: nebula-metad
           componentRefEnv:
@@ -235,8 +235,6 @@ KubeBlocks 在解析这里的 JSONPath 时，会默认注册两个 root objects�
 本文档以 NebulaGraph 为例，介绍了多组件之间依赖的几种类型和解决方案。
 
 除了 NebulaGraph，目前 GreptimeDB、Pulsar、RisingWave、StarRocks 等引擎也都使用了 `componentDefRef` API 来解决组件间引用的问题，可以参考它们的实现。
-
-更多 `componentDefRef` API 的说明请参考 [ComponentDefRef API](https://kubeblocks.io/docs/release-0.6/developer_docs/api-reference/cluster#apps.kubeblocks.io/v1alpha1.ComponentDefRef)。
 
 ## 附录
 
