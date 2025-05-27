@@ -15,6 +15,7 @@ export type SidebarMenuItem = {
   position: number;
   description?: string;
   hidden?: boolean,
+  collapsed?: boolean,
 };
 
 type SidebatMenuItemProps = {
@@ -36,7 +37,7 @@ const checkOpen = (pathname: string, item: SidebarMenuItem): boolean => {
 
 export function SidebarMenuItem({ level = 1, item }: SidebatMenuItemProps) {
   const pathname = usePathname();
-  const [open, setOpen] = useState<boolean>(checkOpen(pathname, item));
+  const [open, setOpen] = useState<boolean>(checkOpen(pathname, item) || !Boolean(item.collapsed));
   const theme = useTheme();
   const sx = {
     display: item.hidden ? "none" : "block",
@@ -55,6 +56,8 @@ export function SidebarMenuItem({ level = 1, item }: SidebatMenuItemProps) {
       background: theme.palette.action.hover,
     },
   };
+
+  console.log(item)
 
   useEffect(() => {
     const isOpen = checkOpen(pathname, item);
