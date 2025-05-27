@@ -136,7 +136,7 @@ By default, InstanceSet updates each instance sequentially in descending order. 
 
 If the instances are granted with roles (which will be discussed in the following sections), InstanceSet updates them according to their role priorities, starting from the lowest to the highest. If the role priorities are the same, the instances are updated further in descending ordinal order.
 
-InstanceSet supports more update behaviors by configuring `spec.updateStrategy`. For example, you can control the total number of instances to be updated using `spec.updateStrategy.rollingUpdate.partition` and manage the maximum number of unavailable instances during the update process with `spec.updateStrategy.rollingUpdate.maxUnavailable`. For more details, refer to the [`spec.updateStrategy` API documentation](https://kubeblocks.io/docs/preview/developer_docs/api-reference/cluster#apps.kubeblocks.io/v1alpha1.UpdateStrategy).
+InstanceSet supports more update behaviors by configuring `spec.updateStrategy`. For example, you can control the total number of instances to be updated using `spec.updateStrategy.rollingUpdate.partition` and manage the maximum number of unavailable instances during the update process with `spec.updateStrategy.rollingUpdate.maxUnavailable`. For more details, refer to the [`spec.updateStrategy` API documentation](../user_docs/references/api-reference/cluster#apps.kubeblocks.io/v1alpha1.UpdateStrategy).
 
 ### In-place update
 

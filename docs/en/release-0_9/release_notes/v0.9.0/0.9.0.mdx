@@ -1,7 +1,7 @@
 
 # KubeBlocks 0.9.0 (2024-07-09)
 
-We are thrilled to announce the release of KubeBlocks v0.9.0, which brings us one step closer to the highly anticipated v1.0 release. This version introduces several significant improvements and 
+We are thrilled to announce the release of KubeBlocks v0.9.0, which brings us one step closer to the highly anticipated v1.0 release. This version introduces several significant improvements and
 new features that enhance the overall functionality and user experience of the KubeBlocks platform.
 
 ## API Highlights
@@ -13,19 +13,19 @@ new features that enhance the overall functionality and user experience of the K
 Addon Highlights
 - KubeBlocks supports Redis Cluster mode (sharding mode) [#5833](https://github.com/apecloud/kubeblocks/issues/5833)
   Redis Cluster is designed to provide horizontal write scalability and intelligent client high-availability strategies, in addition to its excellent failover capability. Redis Cluster distributes data across multiple Redis nodes, significantly enhancing system capacity, performance, and availability.
-- KubeBlocks introduces MySQL Replication mode [#1330](https://github.com/apecloud/kubeblocks/issues/1330) 
+- KubeBlocks introduces MySQL Replication mode [#1330](https://github.com/apecloud/kubeblocks/issues/1330)
   Compared to MGR clusters, the MySQL Replication topology requires fewer resources (only two database replicas) and incurs less overhead for data replication. When there is no extreme demands for service availability and data reliability, the Replication topology is a more cost-effective choice. You can actively switch MySQL replica roles using kbcli or trigger a passive failover by deleting specified Kubernetes pods via kubectl. If there is no long transactions and large table DDLs, the failover generally can be completed within 30 seconds.
 
 ## What's Changed
 
 ### New Features
 
-**KubeBlocks** 
+**KubeBlocks**
 - ClusterDefinition API
   - Supports topology API, allowing developers to customize various topologies.  [#6582](https://github.com/apecloud/kubeblocks/pull/6582)
 - Cluster API
   - Supports ShardingSpec API. [#6437](https://github.com/apecloud/kubeblocks/pull/6437)
-  - Supports sharding scaling. [#6774](https://github.com/apecloud/kubeblocks/pull/6774) 
+  - Supports sharding scaling. [#6774](https://github.com/apecloud/kubeblocks/pull/6774)
 - ComponentDefinition  API
   - lifecycleActions API supports user-defined operation actions, including roleprobe, memberLeave, preTerminate, postProvision. [#6037](https://github.com/apecloud/kubeblocks/pull/6037) [#6582](https://github.com/apecloud/kubeblocks/pull/6582) [#6720](https://github.com/apecloud/kubeblocks/pull/6720) [#6774](https://github.com/apecloud/kubeblocks/pull/6774)
   - New Vars API for referencing instance-related dynamic resources and information, including secret, service, and service reference.
@@ -33,7 +33,7 @@ Addon Highlights
     - Supports cross-Component Vars referencing.  [#7155](https://github.com/apecloud/kubeblocks/pull/7155)
     - Optimizes ServiceRef referencing. [#7006](https://github.com/apecloud/kubeblocks/pull/7006)
   - Supports dynamic configuration, regenerating specified variables after vertical scaling or horizontal scaling is performed. [#6273](https://github.com/apecloud/kubeblocks/issues/6273) [#6690](https://github.com/apecloud/kubeblocks/issues/6690)
-- Component 
+- Component
   - Supports deleting Component. [#6774](https://github.com/apecloud/kubeblocks/pull/6774)
   - Supports ComponentVersion. [#6582](https://github.com/apecloud/kubeblocks/pull/6582)
 - InstanceSet API
@@ -46,16 +46,16 @@ Addon Highlights
   - Supports the force flag to control concurrency. [#6828](https://github.com/apecloud/kubeblocks/pull/6828)
   - Supports custom multi-task sequential execution. [#6735](https://github.com/apecloud/kubeblocks/pull/6735)
 - Supports NodeCountScaler.  [#7258](https://github.com/apecloud/kubeblocks/pull/7258)
-- Supports PITR.   [#6779](https://github.com/apecloud/kubeblocks/pull/6779) 
+- Supports PITR.   [#6779](https://github.com/apecloud/kubeblocks/pull/6779)
 - Supports cross-Namespace restore. [#6778](https://github.com/apecloud/kubeblocks/pull/6778)
 **kbcli**
 - Supports PostgreSQL point-in-time recovery. [#329](https://github.com/apecloud/kbcli/pull/329)
-- cluster supports the rebuild-instance subcommand to rebuild instances.  [#285](https://github.com/apecloud/kbcli/pull/295) 
+- cluster supports the rebuild-instance subcommand to rebuild instances.  [#285](https://github.com/apecloud/kbcli/pull/295)
 - cluster create subcommand supports elasticsearch. [#389](https://github.com/apecloud/kbcli/pull/389)
 - Supports specifying path prefix when creating a backup repository. [#294](https://github.com/apecloud/kbcli/pull/294)
 
 **Addons**
-*Redis* 
+*Redis*
 - Supports the official Redis Cluster topology.  [#301](https://github.com/apecloud/kubeblocks-addons/pull/301)
 - Enhances the functionality and stability of Redis.
   - Adapts to new APIs such as ComponentDefinition and ComponentVersion, supporting multiple topology forms. [#501](https://github.com/apecloud/kubeblocks-addons/pull/501)
@@ -107,5 +107,5 @@ kbcli Deprecated features
 
 
 ## Upgrade to v0.9
-Refer to [Upgrade to KubeBlocks v0.9](https://kubeblocks.io/docs/preview/user_docs/installation/upgrade/upgrade-kubeblocks-to-0.9).
+Refer to [Upgrade to KubeBlocks v0.9](../../user_docs/upgrade-kubeblocks/upgrade-to-0_9_0).
 

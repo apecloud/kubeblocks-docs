@@ -76,7 +76,7 @@ spec:
       versionsContext:
         containers:
         - name: nebula-graphd
-          image: 
+          image:
     - componentDefRef: nebula-metad   # Specify image for metad
       versionsContext:
         containers:
@@ -100,7 +100,7 @@ However, it can be observed that in a multi-component cluster, there are often i
 As discovered, components may refer to each other and the figure below shows the inter-component references in a NebulaGraph cluster. For example,
 
 1. Nebula-Console needs to know the port number and service name of Nebula-Graphd.
-2. Nebula-Graphd needs to know the DNS of each Pod of Nebula-Metad. 
+2. Nebula-Graphd needs to know the DNS of each Pod of Nebula-Metad.
 3. Nebula-Storaged also needs to know the DNS of each Pod of Nebula-Metad.
 
 ![Nebula Inter-Component References](/img/docs/en/nebula-inter-component-ref.png)
@@ -162,7 +162,7 @@ Case 2: Nebula-Graphd needs to configure the DNS of all PODs of Nebula-Metad.
 
 ```yaml
     - name: nebula-graphd
-      workloadType: Statelful    
+      workloadType: Statelful
       componentDefRef:
         - componentDefName: nebula-metad
           componentRefEnv:
@@ -228,8 +228,6 @@ Therefore, in `fieldPath`, you can use `$.componentDef.service.ports[?(@.name ==
 This tutorial takes NebulaGraph as an example and introduces several types and solutions of inter-component references.
 
 In addition to NebulaGraph, engines like GreptimeDB, Pulsar, RisingWave and StarRocks also adopt `componentDefRef` API to deal with component references. You can also refer to their solutions.
-
-For more information about the `componentDefRef`, refer to [ComponentDefRef API](https://kubeblocks.io/docs/release-0.6/developer_docs/api-reference/cluster#apps.kubeblocks.io/v1alpha1.ComponentDefRef).
 
 ## Appendix
 
