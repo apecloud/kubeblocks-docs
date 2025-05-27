@@ -5,7 +5,12 @@ import Image from "next/image";
 
 import boncloud from "@/assets/customers/boncloud.svg";
 import ecloud from "@/assets/customers/ecloud.svg";
+import ctyun from "@/assets/customers/ctyun.svg";
+import tilaa from '@/assets/customers/tilaa.svg'
+import pingan from "@/assets/customers/pingan.svg"
 import kuaishou from "@/assets/customers/kuaishou.svg";
+import fastgpt from "@/assets/customers/fastgpt.svg";
+import kubesphere from "@/assets/customers/kubesphere.svg";
 import logo360 from "@/assets/customers/logo360.svg";
 import momenta from "@/assets/customers/momenta.svg";
 import sealos from "@/assets/customers/sealos.svg";
@@ -21,15 +26,31 @@ import { KeyboardArrowLeft, KeyboardArrowRight } from "@mui/icons-material";
 const customers = [
   {
     img: boncloud,
-    title: "东方国信云",
+    title: "BONC Cloud",
   },
   {
     img: ecloud,
-    title: "移动云",
+    title: "China Mobile Cloud",
+  },
+  {
+    img: ctyun,
+    title: 'China Telecom Cloud',
+  },
+  {
+    img: tilaa,
+    title: 'Tilaa',
+  },
+  {
+    img: pingan,
+    title: 'Ping An',
+  },
+  {
+    img: kubesphere,
+    title: 'KubeSphere',
   },
   {
     img: kuaishou,
-    title: "快手",
+    title: "Kwai",
   },
   {
     img: logo360,
@@ -44,24 +65,28 @@ const customers = [
     title: "SealOS",
   },
   {
+    img: fastgpt,
+    title: "FastGPT",
+  },
+  {
     img: tencent,
     title: "Tencent",
   },
   {
     img: weipinhui,
-    title: "唯品会",
+    title: "VIP.com",
   },
   {
     img: xiaomi,
-    title: "小米",
+    title: "Xiaomi",
   },
   {
     img: zhongxinzhengquan,
-    title: "中信证券",
+    title: "CITIC",
   },
   {
     img: tigerbrokers,
-    title: "老虎证券",
+    title: "Tiger Brokers",
   },
 ];
 
