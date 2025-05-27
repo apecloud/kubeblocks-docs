@@ -6,6 +6,9 @@ sidebar_position: 2
 sidebar_label: QuickStart
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 # QuickStart Guide
 
 This guide walks you through the process of getting started with the **KubeBlocks MySQL Add-on**, including prerequisites, enabling the add-on, creating a MySQL cluster, and managing the cluster with ease.
@@ -16,6 +19,7 @@ This guide walks you through the process of getting started with the **KubeBlock
 This tutorial assumes that you have a Kubernetes cluster installed and running, and that you have installed the `kubectl` command line tool and `helm` somewhere in your path. Please see the [getting started](https://kubernetes.io/docs/setup/)  and [Installing Helm](https://helm.sh/docs/intro/install/) for installation instructions for your platform.
 
 Also, this example requires KubeBlocks installed and running. Please see the [Install KubeBlocks](../user_docs/overview/install-kubeblocks) to install KubeBlocks.
+
 
 ### Enable MySQL Add-on
 
@@ -43,7 +47,7 @@ helm search repo kubeblocks/mysql --versions
 helm upgrade -i mysql kubeblocks-addons/mysql --version $version -n kb-system
 ```
 
-### Create A MySQL Cluster
+## Create A MySQL Cluster
 
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/mysql/cluster.yaml
@@ -114,6 +118,9 @@ spec:
 
 If you want to create a cluster of specified version, set `spec.componentSpecs.componentDef` (major version) and `spec.componentSpecs.serviceVersion` (major and minor version) field in the yaml file before applying it, for examples:
 
+<Tabs>
+  <TabItem value="MySQL 5" label="MySQL 5.7">
+
 ```yaml
   componentSpecs:
     - name: mysql
@@ -122,7 +129,9 @@ If you want to create a cluster of specified version, set `spec.componentSpecs.c
       # Valid options are: [5.7.44]
       serviceVersion: 5.7.44
 ```
+    </TabItem>
 
+ <TabItem value="MySQL 8.0" label="MySQL 8.0" default>
 ```yaml
   componentSpecs:
     - name: mysql
@@ -131,7 +140,9 @@ If you want to create a cluster of specified version, set `spec.componentSpecs.c
       # Valid options are: [8.0.30,8.0.31,8.0.32,8.0.33,8.0.34,8.0.35,8.0.36,8.0.37,8.0.38,8.0.39]
       serviceVersion: 8.0.35
 ```
+  </TabItem>
 
+ <TabItem value="MySQL 8.4" label="MySQL 8.4">
 ```yaml
   componentSpecs:
     - name: mysql
@@ -140,6 +151,10 @@ If you want to create a cluster of specified version, set `spec.componentSpecs.c
       # Valid options are: [8.4.0, 8.4.1, 8.4.2]
       serviceVersion: 8.4.2
 ```
+  </TabItem>
+
+</Tabs>
+
 
 The list of available componentDef can be found by following command:
 ```bash
@@ -198,7 +213,7 @@ BACKUP-REPO   AUTO-BACKUP   BACKUP-SCHEDULE   BACKUP-METHOD   BACKUP-RETENTION  
 Show cluster events: kbcli cluster list-events -n default mysql-cluster
 ```
 
-### Connect to the MySQL Cluster
+## Connect to the MySQL Cluster
 
 When creating a MySQL Cluster, KubeBlocks creates a Secret named "mysql-cluster-mysql-account-root" to store the MySQL root username and password.
 
@@ -252,7 +267,7 @@ mysql -h 127.0.0.1 -P3306 -uroot -pkni676X2W1
 
 Using `kubectl exec` and `kubectl port-forward` are methods intended for quickly testing the operator's functionality and should not be used in production environments. In production, you should use a Service to access the MySQL Cluster. If accessing the database from outside Kubernetes, a LoadBalancer or NodePort type Service that provides an EXTERNAL-IP is required. Refer to [Accessing MySQL Cluster](./04-operations/05-manage-loadbalancer) to configure the Service in your environment.
 
-### Stop the MySQL Cluster
+## Stop the MySQL Cluster
 
 Stop the cluster will release all the Pods of the cluster, but the PVC, Secret, ConfigMap and Service resources will be retained. It is useful when you want to save the cost of the cluster.
 
@@ -286,7 +301,7 @@ spec:
       replicas: 2
 ```
 
-### Start the Stopped MySQL Cluster
+## Start the Stopped MySQL Cluster
 
 Start the stopped cluster
 
@@ -320,7 +335,7 @@ spec:
       replicas: 2
 ```
 
-### Destroy the MySQL Cluster
+## Destroy the MySQL Cluster
 
 You can delete the Cluster using the following command:
 
