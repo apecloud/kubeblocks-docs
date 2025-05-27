@@ -96,7 +96,7 @@ export default async function RootLayout({
                           whiteSpace: "nowrap",
                         }}
                       >
-                        Kubeblocks Cloud
+                        KubeBlocks Cloud
                       </Button>
                     </Stack>
                     <Box
