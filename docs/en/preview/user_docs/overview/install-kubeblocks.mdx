@@ -234,7 +234,7 @@ Or you can view all available versions in [KubeBlocks Releases](https://github.c
 **Step 2. Specify a version with `--version` and run the command below:**
 
 ```bash
-kbcli kubeblocks install --version=<VERSION>
+kbcli kubeblocks install --version=<VERSION> --create-namespace
 ```
 
 :::note
@@ -249,7 +249,7 @@ For example, you can install kbcli v1.0.0 with KubeBlocks v1.0.0, but using mism
 The command `kbcli kubeblocks install` installs KubeBlocks in the `kb-system` namespace, or you can use the `--namespace` flag to specify one.
 
 ```bash
-kbcli kubeblocks install --version=<VERSION> --namespace <NAMESPACE>
+kbcli kubeblocks install --version=<VERSION> --namespace <NAMESPACE> --create-namespace
 ```
 
 </TabItem>
