@@ -1,4 +1,4 @@
-import { Box, Container, Drawer, Stack, Toolbar } from "@mui/material";
+import { Box, Container, Stack } from "@mui/material";
 import fs from "fs";
 import { SidebarMenu, SidebarMenuItem } from "@/components/SidebarMenu";
 import path from "path";
@@ -10,6 +10,7 @@ import {
 import Footer from "@/components/Footer";
 import { setStaticParamsLocale } from "next-international/server";
 import VersionList from "./version";
+import Sidebar from "@/components/Sidebar";
 
 export default async function DocsLayout({
   children,
@@ -19,6 +20,7 @@ export default async function DocsLayout({
   params: Promise<MarkdownPageParams>;
 }>) {
   const { locale, version, category } = await params;
+
   setStaticParamsLocale(locale);
 
   const dir = path.join(DOCS_DIR, locale, version, category);
@@ -34,14 +36,11 @@ export default async function DocsLayout({
 
   const versions = fs.readdirSync(path.join(DOCS_DIR, locale));
 
-  const width = 280;
-
   return (
     <>
       <Stack direction="row">
         {menu.length ? (
-          <Drawer open={true} variant="permanent" sx={{ width }} PaperProps={{ sx: { width, background: 'var(--css-palette-background-default)' } }}>
-            <Toolbar />
+          <Sidebar>
             <VersionList version={version} versions={versions} />
             <Box
               flex={1}
@@ -53,13 +52,17 @@ export default async function DocsLayout({
             >
               <SidebarMenu data={menu} />
             </Box>
-          </Drawer>
+          </Sidebar>
         ) : null}
-        <Container
-          sx={{ minHeight: "var(--container-min-height)", paddingBlock: 3 }}
-          className="markdown-body with-sidebar"
-        >
-          {children}
+
+        <Container sx={{ paddingBlock: 3 }}>
+          <Box
+            className="markdown-body with-sidebar"
+            sx={{ minHeight: "var(--container-min-height)" }}
+          >
+            {children}
+          </Box>
+
           <Footer border={false} />
         </Container>
       </Stack>

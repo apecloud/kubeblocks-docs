@@ -20,7 +20,12 @@ export default createTheme({
     divider: borderColor,
   },
   typography: {
-    fontSize: 13,
+    fontSize: 14,
+  },
+  mixins: {
+    toolbar: {
+      minHeight: 64,
+    },
   },
   components: {
     MuiAppBar: {

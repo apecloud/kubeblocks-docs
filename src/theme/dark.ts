@@ -1,5 +1,6 @@
 import { createTheme } from "@mui/material/styles";
 import { alpha } from "@mui/material";
+import Link from "next/link";
 
 const borderColor = "#1D2226";
 
@@ -21,7 +22,12 @@ export default createTheme({
     divider: borderColor,
   },
   typography: {
-    fontSize: 13,
+    fontSize: 14,
+  },
+  mixins: {
+    toolbar: {
+      minHeight: 64,
+    },
   },
   components: {
     MuiAppBar: {
@@ -82,6 +88,7 @@ export default createTheme({
     MuiLink: {
       defaultProps: {
         underline: "hover",
+        component: Link,
       },
     },
   },
