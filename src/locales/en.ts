@@ -16,7 +16,7 @@ export default {
     report: "KubeBlocks Test Reports",
     owner: "Approved by",
     admin: "Reviewed by",
-    tester: "Prepared by",
+    tester: "Created by",
   },
   actions: {
     back: "Back"
