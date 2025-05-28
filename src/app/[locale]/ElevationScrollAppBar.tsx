@@ -65,7 +65,6 @@ export const ElevationScrollAppBar = (props: AppBarProps) => {
           <Link
             href="/"
             style={{ display: "block" }}
-            underline="none"
             color="textPrimary"
           >
             <Image
