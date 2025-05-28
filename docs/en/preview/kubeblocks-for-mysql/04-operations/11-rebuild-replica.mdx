@@ -166,7 +166,7 @@ Expected Output:
 Fetch the HA configuration:
 
 ```bash
-k get configmap -n demo example-mysql-cluster-mysql-haconfig -o yaml
+kubectl get configmap -n demo example-mysql-cluster-mysql-haconfig -o yaml
 ```
 Example Output:
 ```yaml
@@ -182,7 +182,7 @@ metadata:
 Patch the ConfigMap to disable HA:
 
 ```bash
-k patch configmap -n demo example-mysql-cluster-mysql-haconfig --type merge -p '{"metadata":{"annotations":{"enable":"false"}}}'
+kubectl patch configmap -n demo example-mysql-cluster-mysql-haconfig --type merge -p '{"metadata":{"annotations":{"enable":"false"}}}'
 ```
 
 ### Step 2: Stop Replication
@@ -217,7 +217,7 @@ mysql> SET GLOBAL read_only = ON;
 ### Step 6: Enable HA
 Patch the ConfigMap to re-enable HA:
 ```bash
-k patch configmap -n demo example-mysql-cluster-mysql-haconfig --type merge -p '{"metadata":{"annotations":{"enable":"true"}}}'
+kubectl patch configmap -n demo example-mysql-cluster-mysql-haconfig --type merge -p '{"metadata":{"annotations":{"enable":"true"}}}'
 ```
 
 ### Step 7: Verify Data Deletion

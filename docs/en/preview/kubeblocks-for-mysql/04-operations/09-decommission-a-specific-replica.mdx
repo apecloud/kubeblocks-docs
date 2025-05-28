@@ -17,7 +17,7 @@ This guide explains how to decommission (take offline) a specific Pod in a MySQL
 
 ## Why Decommission Pods with KubeBlocks?
 
-In traditional StatefulSet-based deployments, Kubernetes lacks the ability to decommission specific Pods. StatefulSets ensure the order and identity of Pods, and scaling down always removes the Pod with the highest ordinal number (e.g., scaling down from 3 replicas removes Pod `-2` first). This limitation prevents precise control over which Pod to take offline, which can complicate maintenance, workload distribution, or failure handling.
+In traditional StatefulSet-based deployments, Kubernetes lacks the ability to decommission specific Pods. StatefulSets ensure the order and identity of Pods, and scaling down always removes the Pod with the highest ordinal number (e.g., scaling down from 3 replicas removes `Pod-2` first). This limitation prevents precise control over which Pod to take offline, which can complicate maintenance, workload distribution, or failure handling.
 
 KubeBlocks overcomes this limitation by enabling administrators to decommission specific Pods directly. This fine-grained control ensures high availability and allows better resource management without disrupting the entire cluster.
 
@@ -110,7 +110,7 @@ To decommission a specific Pod (e.g., 'example-mysql-cluster-mysql-1'), you can 
 
     <TabItem value="opsRequest" label="Use the OpsRequest API" default>
 
-### Method 1: Using OpsRequest
+### Option 1.: Using OpsRequest
 Create an OpsRequest to mark the Pod as offline:
 
 ```yaml
@@ -150,7 +150,7 @@ Status:
 
     <TabItem value="ClusterAPI" label="Use the Cluster API">
 
-### Method 2: Using Cluster API
+### Option 2.: Using Cluster API
 Alternatively, update the Cluster resource directly to decommission the Pod:
 
 ```yaml

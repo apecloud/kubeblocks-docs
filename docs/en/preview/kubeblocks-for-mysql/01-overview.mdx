@@ -38,7 +38,7 @@ KubeBlocks provides robust lifecycle management features to simplify MySQL clust
 | Restart                       | Controlled restart of the MySQL cluster while maintaining high availability                                             |
 | Stop/Start                    | Ability to stop and start the MySQL cluster for maintenance                                                             |
 | Custom root password          | Ability to set and manage custom root password for the MySQL cluster during creation                                    |
-| Custom configuration template | Providing Customize MySQL configuration file templates during creation                                                  |
+| Custom configuration template | Providing customized MySQL configuration file templates during creation                                                  |
 | Dynamic Parameter Changes     | Reconfigure MySQL parameters dynamically without requiring a cluster restart                                            |
 | Expose Custom Services        | Ability to expose database services with custom configurations for different access requirements                        |
 | SwitchOver                    | Planned primary-secondary switch operation with minimal downtime	                                                       |
@@ -54,9 +54,9 @@ KubeBlocks provides robust lifecycle management features to simplify MySQL clust
 
 ### Backup and Restore
 
-| Feature     | Method     | Description                                                     |
+| Features    | Methods    | Description                                                     |
 |-------------|------------|-----------------------------------------------------------------|
-| Full Backup | xtrabackup | uses `xtrabackup` to perform full backups                       |
+| Full Backup | xtrabackup | Uses `xtrabackup` to perform full backups                       |
 | Continuous Backup |  archive-binlog | Support for continuous backups to enable point-in-time recovery |
 
 ### Supported Versions

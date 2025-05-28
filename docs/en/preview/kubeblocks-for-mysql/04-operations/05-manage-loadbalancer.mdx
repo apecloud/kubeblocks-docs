@@ -113,7 +113,7 @@ External addresses allow public internet access to the MySQL service, while inte
 
     <TabItem value="opsRequest" label="Use the OpsRequest API" default>
 
-### Method 1: Using OpsRequest
+### Option 1.: Using OpsRequest
 
 To expose the MySQL service externally using a LoadBalancer, create an OpsRequest resource:
 
@@ -161,7 +161,7 @@ example-mysql-cluster-expose-enable-ops   Expose   example-mysql-cluster   Succe
 
     <TabItem value="ClusterAPI" label="Use the Cluster API">
 
-### Method 2: Using Cluster API
+### Option 2.: Using Cluster API
 
 Alternatively, update the `spec.services` section in the Cluster resource to include a LoadBalancer service:
 ```yaml
@@ -329,7 +329,7 @@ mysql -h a1d37733683d244e0bebad8559cbf24d-3728431cad3e24b5.elb.ap-southeast-1.am
 
     <TabItem value="opsRequest" label="Use the OpsRequest API" default>
 
-### Method 1: Using OpsRequest
+### Option 1.: Using OpsRequest
 To disable external access, create an OpsRequest:
 ```yaml
 kubectl apply -f - <<EOF
@@ -366,7 +366,7 @@ example-mysql-cluster-expose-disable-ops   Expose   example-mysql-cluster   Succ
 
     <TabItem value="ClusterAPI" label="Use the Cluster API">
 
-### Method 2: Using Cluster API
+### Option 2.: Using Cluster API
 
 Alternatively, remove the `spec.services` field from the Cluster resource:
 ```bash
