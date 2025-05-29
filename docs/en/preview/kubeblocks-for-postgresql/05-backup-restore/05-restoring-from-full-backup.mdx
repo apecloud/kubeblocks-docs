@@ -47,7 +47,7 @@ Get encrypted system account credentials from backup metadata:
 kubectl get backup <BACKUP_NAME> -n demo -ojson | jq -r '.metadata.annotations | ."kubeblocks.io/encrypted-system-accounts" | fromjson .postgresql | tojson |gsub("\""; "\\\"")'
 ```
 
-Example Output:
+Expected Output:
 
 ```bash
 {\"kbadmin\":\"Surpe3nrr4FFe82M34nCY2bThlztdifAVmrO8qHd3DYG5vRR33Y=\",\"kbdataprotection\":\"0gddL2+mEQ6DBeLYlijk5pd3YwuDWChSmvwlPWTS9QSfbY/kLFE=\",\"kbmonitoring\":\"ajWxjW2xMuysUq/UmP66+zCEltD1zVmO5Ec7sELSPvGEzaPzsHY=\",\"kbprobe\":\"qRoPyT8cUAVEaUjd/HIdmrVV6sJ6nO03G9MExVJryEEcs5LciCI=\",\"kbreplicator\":\"8xLt6zAIU5b2t9KmVy0LOaJsugQ8wNULyS+6LpRjRCfg05VnATk=\",\"postgres\":\"MNlRXK7nctiUyQSmTbbJUGeb6PsxDULm52abMYa2oBhyW+lWSFs=\"}

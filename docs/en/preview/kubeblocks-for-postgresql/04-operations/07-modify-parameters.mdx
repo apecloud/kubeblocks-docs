@@ -127,7 +127,7 @@ Wait for the OpsRequest to complete:
 kubectl get ops pg-reconfigure-dynamic -n demo -w
 ```
 
-Example output:
+Expected Output:
 ```bash
 NAME                     TYPE            CLUSTER      STATUS    PROGRESS   AGE
 pg-reconfigure-dynamic   Reconfiguring   pg-cluster   Running   -/-        11s
@@ -185,7 +185,7 @@ Check the status of the OpsRequest until it completes:
 ```bash
 kubectl get ops postgresql-reconfigure-static -n demo -w
 ```
-Example output:
+Expected Output:
 ```bash
 postgresql-reconfigure-static   Reconfiguring   pg-cluster   Running   -/-        5s
 postgresql-reconfigure-static   Reconfiguring   pg-cluster   Succeed   -/-        31s

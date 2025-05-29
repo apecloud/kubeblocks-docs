@@ -52,7 +52,7 @@ Get the valid recovery window:
 kubectl get backup <continuous-backup-name> -n demo -o yaml | yq '.status.timeRange'
 ```
 
-Example Output:
+Expected Output:
 ```text
 start: "2025-05-07T09:12:47Z"
 end: "2025-05-07T09:22:50Z"

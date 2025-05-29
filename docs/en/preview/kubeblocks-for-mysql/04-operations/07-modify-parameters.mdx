@@ -145,7 +145,7 @@ Wait for the OpsRequest to complete:
 ```bash
 kubectl get ops mysql-reconfigure-dynamic -n demo -w
 ```
-Example output:
+Expected Output:
 ```bash
 NAME                        TYPE            CLUSTER                 STATUS    PROGRESS   AGE
 mysql-reconfigure-dynamic   Reconfiguring   example-mysql-cluster   Running   -/-        11s
@@ -200,7 +200,7 @@ Check the status of the OpsRequest until it completes:
 ```bash
 kubectl get ops mysql-reconfigure-static -n demo -w
 ```
-Example output:
+Expected Output:
 ```bash
 mysql-reconfigure-static   Reconfiguring   example-mysql-cluster   Running   -/-        5s
 mysql-reconfigure-static   Reconfiguring   example-mysql-cluster   Succeed   -/-        31s

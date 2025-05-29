@@ -71,7 +71,7 @@ Monitor the cluster status until it transitions to the Running state:
 kubectl get cluster qdrant-cluster -n demo -w
 ```
 
-Example Output::
+Expected Output:
 
 ```bash
 NAME             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
@@ -91,7 +91,7 @@ Use the following command to display the Qdrant versions supported by your KubeB
 ```bash
 kubectl get cmpv qdrant
 ```
-Example Output:
+Expected Output:
 ```bash
 NAME     VERSIONS                                STATUS      AGE
 qdrant   1.14.0,1.10.0,1.8.4,1.8.1,1.7.3,1.5.0   Available   26d
@@ -110,7 +110,7 @@ kubectl get cmpv qdrant -ojson | jq -r '.metadata.annotations."componentversion.
 ```
 
 <details>
-<summary>Sample Output</summary>
+<summary>Expected Output</summary>
 ```text
 qdrant-1.0.0
 ```
@@ -125,7 +125,7 @@ kubectl get cmpv qdrant -o json | jq -r '.spec.compatibilityRules[] | select(.co
 This returns versions compatible with `ComponentDefinition` named `qdrant`:
 
 <details open>
-<summary>Sample Output</summary>
+<summary>Expected Output</summary>
 ```text
 1.5.0
 1.7.3
@@ -215,7 +215,7 @@ Check OpsRequest progress:
 kubectl get ops -n demo qdrant-upgrade -w
 ```
 
-Sample Output:
+Expected Output:
 ```
 NAME             TYPE      CLUSTER          STATUS    PROGRESS   AGE
 qdrant-upgrade   Upgrade   qdrant-cluster   Succeed   3/3        8m13s
@@ -226,7 +226,7 @@ Check pods:
 kubectl get pods -n demo -l app.kubernetes.io/instance=qdrant-cluster
 ```
 
-Example Output:
+Expected Output:
 ```bash
 NAME                      READY   STATUS    RESTARTS        AGE
 qdrant-cluster-qdrant-0   2/2     Running   1 (7m23s ago)   13m
@@ -244,7 +244,7 @@ Ensure the cluster is in the Running state:
 ```bash
 kubectl get cluster qdrant-cluster -n demo -w
 ```
-Example Output:
+Expected Output:
 ```bash
 NAME             CLUSTER-DEFINITION   TERMINATION-POLICY    STATUS    AGE
 qdrant-cluster   qdrant               Delete               Running   17m
@@ -258,7 +258,7 @@ kubectl exec -ti -n demo qdrant-cluster-qdrant-0 -c kbagent -- \
    curl http://127.0.0.1:6333
 ```
 
-Example Output:
+Expected Output:
 ```
 curl http://127.0.0.1:6333
 {"title":"qdrant - vector search engine","version":"1.14.0","commit":"3617a0111fc8590c4adcc6e88882b63ca4dda9e7"}%

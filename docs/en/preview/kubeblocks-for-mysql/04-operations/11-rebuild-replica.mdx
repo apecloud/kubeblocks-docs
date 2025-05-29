@@ -97,7 +97,7 @@ When creating a MySQL Cluster, KubeBlocks creates a Secret named "mysql-cluster-
 ```bash
 kubectl get secret -n demo -l app.kubernetes.io/instance=example-mysql-cluster
 ```
-Example Output:
+Expected Output:
 ```bash
 NAME                                       TYPE     DATA   AGE
 example-mysql-cluster-mysql-account-root   Opaque   2      12m
@@ -111,7 +111,7 @@ kubectl get secret example-mysql-cluster-mysql-account-root -n demo -o jsonpath=
 kubectl get secret example-mysql-cluster-mysql-account-root -n demo -o jsonpath='{.data.password}' | base64 --decode
 ```
 
-Example Output:
+Expected Output:
 ```bash
 root
 
@@ -168,7 +168,7 @@ Fetch the HA configuration:
 ```bash
 kubectl get configmap -n demo example-mysql-cluster-mysql-haconfig -o yaml
 ```
-Example Output:
+Expected Output:
 ```yaml
 apiVersion: v1
 kind: ConfigMap
@@ -372,7 +372,7 @@ Run the following command to list all the Pods in the MySQL cluster:
 ```bash
 kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster
 ```
-Example output:
+Expected Output:
 ```bash
 NAME                            READY   STATUS    RESTARTS   AGE
 example-mysql-cluster-mysql-1   4/4     Running   0          13m
@@ -384,7 +384,7 @@ To verify the cluster's status, inspect the cluster resource:
 ```bash
 kubectl get cluster example-mysql-cluster -n demo -oyaml
 ```
-Example output:
+Expected Output:
 ```yaml
     offlineInstances:
     - example-mysql-cluster-mysql-0

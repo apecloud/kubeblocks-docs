@@ -218,7 +218,7 @@ Verify the updated cluster configuration:
 ```bash
 kbcli cluster describe kafka-separated-cluster -n demo
 ```
-Example Output:
+Expected Output:
 ```bash
 Resources Allocation:
 COMPONENT         INSTANCE-TEMPLATE     CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
@@ -230,7 +230,7 @@ Confirm PVC resizing completion:
 ```bash
 kubectl get pvc -l app.kubernetes.io/instance=kafka-separated-cluster,apps.kubeblocks.io/component-name=kafka-broker -n demo
 ```
-Example Output:
+Expected Output:
 ```bash
 NAME                                              STATUS   VOLUME    CAPACITY   ACCESS MODES   STORAGECLASS
 data-kafka-separated-cluster-kafka-broker-0       Bound    pvc-uuid  30Gi       RWO            <STORAGE_CLASS_NAME>

@@ -3,7 +3,7 @@ Monitor the cluster status until it transitions to the Running state:
 kubectl get cluster milvus-cluster -n demo -w
 ```
 
-Example Output:
+Expected Output:
 
 ```bash
 NAME                CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
@@ -19,7 +19,7 @@ Check the component and pod status:
 ```bash
 kubectl get component -n demo -l app.kubernetes.io/instance=milvus-standalone
 ```
-Example Output:
+Expected Output:
 ```bash
 NAME                       DEFINITION                        SERVICE-VERSION   STATUS    AGE
 milvus-standalone-etcd     etcd-3-1.0.0                      3.5.15            Running   3m5s
@@ -32,7 +32,7 @@ milvus-standalone-minio    milvus-minio-1.0.0                8.0.17            R
 kubectl get pods -l app.kubernetes.io/instance=milvus-standalone -n demo
 ```
 
-Example Output:
+Expected Output:
 ```bash
 NAME                         READY   STATUS    RESTARTS   AGE
 milvus-standalone-etcd-0     2/2     Running   0          4m31s

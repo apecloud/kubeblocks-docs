@@ -60,7 +60,7 @@ kubectl get backuppolicy -n demo -l app.kubernetes.io/instance=redis-replication
 kubectl get backupschedule -n demo -l app.kubernetes.io/instance=redis-replication
 ```
 
-Example Output:
+Expected Output:
 ```bash
 NAME                                    BACKUP-REPO   STATUS      AGE
 redis-replication-redis-backup-policy                 Available   17m
@@ -167,7 +167,7 @@ Track backup progress in real-time:
 kubectl get ops redis-replication-backup  -n demo -w
 ```
 
-Example Output:
+Expected Output:
 ```bash
 NAME                       TYPE     CLUSTER             STATUS    PROGRESS   AGE
 redis-replication-backup   Backup   redis-replication   Succeed   -/-        35s

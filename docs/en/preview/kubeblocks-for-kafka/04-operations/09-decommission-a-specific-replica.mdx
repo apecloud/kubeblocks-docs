@@ -67,7 +67,7 @@ Wait till all pods are running
 ```bash
 kubectl get pods -n demo -l app.kubernetes.io/instance=kafka-separated-cluster,apps.kubeblocks.io/component-name=kafka-broker
 ```
-Example Output:
+Expected Output:
 ```
 NAME                                     READY   STATUS    RESTARTS   AGE
 kafka-separated-cluster-kafka-broker-0   2/2     Running   0          18m

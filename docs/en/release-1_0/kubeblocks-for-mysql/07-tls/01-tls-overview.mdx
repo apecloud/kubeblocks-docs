@@ -76,7 +76,7 @@ Monitor the cluster status until it transitions to the Running state:
 kubectl get cluster -n demo
 ```
 
-Example Output:
+Expected Output:
 ```bash
 NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 example-mysql-cluster   mysql                Delete               Running   11m
@@ -91,7 +91,7 @@ KubeBlocks automatically creates a secret containing the MySQL root credentials.
 ```bash
 kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
 ```
-Example Output:
+Expected Output:
 ```bash
 root
 ```
@@ -100,7 +100,7 @@ root
 ```bash
 kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
 ```
-Example Output:
+Expected Output:
 ```bash
 43Rysk6w10
 ```

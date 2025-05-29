@@ -84,7 +84,7 @@ If the add-on isn't enabled, choose an installation method:
   # Install Add-on with your desired version (replace <VERSION> with your chosen version)
   kbcli addon install mongodb --version <VERSION>
   ```
-  **Sample Output:**
+  **Expected Output:**
   ```bash
   ADDON   VERSION         INDEX
   mongodb   0.9.0           kubeblocks
@@ -118,7 +118,7 @@ Always verify that the MongoDB Add-on version matches your KubeBlocks major vers
 kubectl get cmpv mongodb
 ```
 <details open>
-<summary>Sample Output</summary>
+<summary>Expected Output</summary>
 ```text
 NAME      VERSIONS                                                                                         STATUS      AGE
 mongodb   8.0.8,8.0.6,8.0.4,7.0.19,7.0.16,7.0.12,6.0.22,6.0.20,6.0.16,5.0.30,5.0.28,4.4.29,4.2.24,4.0.28   Available   26d
@@ -134,7 +134,7 @@ kubectl get cmpv mongodb -ojson | jq -r '.metadata.annotations."componentversion
 ```
 
 <details>
-<summary>Sample Output</summary>
+<summary>Expected Output</summary>
 ```text
 mongodb-1.0.0
 ```
@@ -149,7 +149,7 @@ kubectl get cmpv mongodb -o json | jq -r '.spec.compatibilityRules[] | select(.c
 This returns versions compatible with `ComponentDefinition` named `mongodb`:
 
 <details open>
-<summary>Sample Output</summary>
+<summary>Expected Output</summary>
 ```text
 8.0.8
 8.0.6

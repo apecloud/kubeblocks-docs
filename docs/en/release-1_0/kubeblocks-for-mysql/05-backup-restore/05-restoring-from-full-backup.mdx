@@ -32,7 +32,7 @@ Run the following command to check the backup status:
 kubectl get backup -n demo
 ```
 
-Example Output:
+Expected Output:
 ```bash
 NAME                           POLICY                                      METHOD       REPO      STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
 example-mysql-cluster-backup   example-mysql-cluster-mysql-backup-policy   xtrabackup   s3-repo   Completed   1633717      18s        Delete            2025-03-07T03:25:22Z   2025-03-07T03:25:40Z
@@ -48,7 +48,7 @@ Extract encrypted credentials for system accounts from the backup metadata:
 kubectl get backup -n demo example-mysql-cluster-backup -o jsonpath='{.metadata.annotations.kubeblocks\.io/encrypted-system-accounts}'
 ```
 
-Example Output:
+Expected Output:
 
 ```bash
 {"mysql":{"kbadmin":"+UbL/HmrnDShZCdoZxpAWxTHT48VKrJBhBqnNDjvwscW2YBBj8biYf1REDA=","kbdataprotection":"zycglr6K6oeRpZlZBeFeTUoxGm+eSIC7bNotnz4UmFCLH8O77JsGM9gf3js=","kbmonitoring":"qX66By8D2ZJdMh5Pe9u149Fev4wVyNchi+U9QkDqPsW6hoVrbew/srZUEmE=","kbprobe":"n2VKC65TGg4N1GVr9en6EOZ0MQEf/DyDdQ0qeK9TbMRO2QMaJvKlpW9Bm5w=","kbreplicator":"1BOeBExnprxNshSCAHVGmBQ8dk+72edxQb1P2/2L2hD4M39cRLhoB60nW9Y=","proxysql":"u6NRl02g7+do5z1SVjhLTUYFqNp860wMQ1pfkH1JpsB/RKxIU6Gds2wNu7I=","root":"0YQW649uCaf0QqgAVDMX8OtNbatKYNlZE1aNRD8C2J8a9xHqPi8="}}
@@ -151,7 +151,7 @@ Monitor the progress of the restoration operation:
 ```bash
 kubectl get ops example-mysql-cluster-restore -n demo -w
 ```
-Example Output:
+Expected Output:
 ```bash
 NAME                            TYPE      CLUSTER                         STATUS    PROGRESS   AGE
 example-mysql-cluster-restore   Restore   example-mysql-cluster-restored   Running   -/-        55s

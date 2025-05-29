@@ -47,7 +47,7 @@ Get encrypted system account credentials from backup metadata:
 kubectl get backup mongodb-backup-datafile -n demo -ojson | jq -r '.metadata.annotations | ."kubeblocks.io/encrypted-system-accounts" | fromjson .mongodb | tojson |gsub("\""; "\\\"")'
 ```
 
-Example Output:
+Expected Output:
 
 ```bash
 {\"root\":\"8hgNxq8BV8IPjQktnOlLX0nw8lyrO59mJbtbiFP5D19d10qvzCJBB2mQ0FU=\"}

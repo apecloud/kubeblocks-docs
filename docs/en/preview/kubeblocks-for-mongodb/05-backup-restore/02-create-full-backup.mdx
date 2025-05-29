@@ -60,7 +60,7 @@ kubectl get backuppolicy -n demo -l app.kubernetes.io/instance=mongo-cluster
 kubectl get backupschedule -n demo -l app.kubernetes.io/instance=mongo-cluster
 ```
 
-Example Output:
+Expected Output:
 ```bash
 NAME                                  BACKUP-REPO   STATUS      AGE
 mongo-cluster-mongodb-backup-policy                 Available   62m
@@ -174,7 +174,7 @@ Track backup progress in real-time:
 kubectl get ops mongo-cluster-backup  -n demo -w
 ```
 
-Example Output:
+Expected Output:
 ```bash
 NAME                   TYPE     CLUSTER         STATUS    PROGRESS   AGE
 mongo-cluster-backup   Backup   mongo-cluster   Running   -/-        5s
