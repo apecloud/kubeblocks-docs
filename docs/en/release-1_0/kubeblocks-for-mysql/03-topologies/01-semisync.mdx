@@ -1,0 +1,322 @@
+---
+title: Deploying a MySQL Semi-Synchronous Cluster with KubeBlocks
+description: Learn how to deploy a MySQL semi-synchronous replication cluster using KubeBlocks. This guide covers configuration, verification, failover testing, and timeout configuration.
+keywords: [KubeBlocks, MySQL, Semi-Synchronous Replication, Kubernetes, High Availability]
+sidebar_position: 1
+sidebar_label: MySQL Semi-Synchronous Cluster
+---
+
+# Deploying a MySQL Semi-Synchronous Cluster with KubeBlocks
+
+**Semi-synchronous replication** improves data consistency between the primary and replica nodes by requiring the primary node to wait for acknowledgment from at least one replica before committing transactions. This guide walks you through the process of setting up a MySQL semi-synchronous replication cluster using KubeBlocks.
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+  - A Kubernetes cluster is up and running.
+  - The kubectl CLI tool is configured to communicate with your cluster.
+  - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## Deploying the MySQL Semi-Synchronous Cluster
+
+KubeBlocks uses a declarative approach for managing MySQL clusters. Below is an example configuration for deploying a MySQL cluster with 2 nodes (1 primary, 1 replicas) in semi-synchronous mode.
+
+Apply the following YAML configuration:
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      env:
+        - name: SEMI_SYNC_TIMEOUT
+          value: "3000"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+**Key Configuration Details**:
+- `clusterDef: mysql`: Specifies the ClusterDefinition CR for the cluster. The ClusterDefinition 'mysql' contains multiple topologies, such as 'semisync', 'semisync-proxysql', 'mgr', 'mgr-proxysql', 'orc', 'orc-proxysql'.
+- `topology: semisync`: Configures the cluster to use semi-synchronous replication with primary and replica roles.
+- `componentSpecs`: Defines the components in the cluster:
+  - Component 'mysql':
+    - `serviceVersion: 8.0.35`: Specifies the version of the MySQL service to be deployed. This ensures that the cluster will use MySQL version 8.0.35.
+    - `replicas: 2`: Deploys 2 MySQL instances (1 primary, 1 replica).
+    - Environment Variable (`env`): Configures 'SEMI_SYNC_TIMEOUT' to 3000ms (3 seconds). This determines how long the primary waits for acknowledgment from a replica before falling back to asynchronous replication. The default is 10000ms (10 seconds).
+
+## Verifying the Deployment
+
+### Check the Cluster Status
+Once the cluster is deployed, check its status:
+```bash
+kubectl get cluster example-mysql-cluster  -n demo -w
+```
+Example Output:
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Creating   11s
+example-mysql-cluster   mysql                Delete               Running   35s
+```
+
+### Detailed Cluster Information
+To get detailed information about the cluster:
+```bash
+kbcli cluster describe example-mysql-cluster -n demo
+```
+Example Output:
+```bash
+Name: example-mysql-cluster	 Created Time: Dec 24,2024 09:06 UTC+0800
+NAMESPACE   CLUSTER-DEFINITION   VERSION   STATUS    TERMINATION-POLICY
+default                                    Running   Delete
+
+Endpoints:
+COMPONENT   MODE        INTERNAL                                                      EXTERNAL
+mysql       ReadWrite   example-mysql-cluster-mysql.default.svc.cluster.local:3306   <none>
+
+Topology:
+COMPONENT   INSTANCE                         ROLE        STATUS    AZ                NODE                                                       CREATED-TIME
+mysql       example-mysql-cluster-mysql-0   primary     Running   ap-southeast-1a   ip-10-0-1-93.ap-southeast-1.compute.internal/10.0.1.93     Dec 24,2024 09:09 UTC+0800
+mysql       example-mysql-cluster-mysql-1   secondary   Running   ap-southeast-1b   ip-10-0-2-253.ap-southeast-1.compute.internal/10.0.2.253   Dec 24,2024 09:09 UTC+0800
+
+Resources Allocation:
+COMPONENT   DEDICATED   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+mysql       false       500m / 500m          512Mi / 512Mi           data:20Gi      <none>
+
+Images:
+COMPONENT   TYPE   IMAGE
+mysql              docker.io/apecloud/mysql:8.0.35
+
+Data Protection:
+BACKUP-REPO   AUTO-BACKUP   BACKUP-SCHEDULE   BACKUP-METHOD   BACKUP-RETENTION   RECOVERABLE-TIME
+
+Show cluster events: kbcli cluster list-events -n default example-mysql-cluster
+```
+### Verify Component Status
+```bash
+kubectl get component example-mysql-cluster-mysql -n demo
+```
+Example Output:
+```bash
+NAME                          DEFINITION                SERVICE-VERSION   STATUS    AGE
+example-mysql-cluster-mysql   mysql-8.0-1.0.0           8.0.35            Running   2m28s
+```
+
+## Connecting to the MySQL Cluster
+
+KubeBlocks automatically creates a secret containing the MySQL root credentials. Retrieve the credentials with the following commands:
+
+```bash
+kubectl get secrets -n demo  example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
+root
+
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+z475N4c6ib
+```
+
+### Connect to the Primary Instance
+To connect to the cluster's primary node, use the MySQL client:
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pz475N4c6ib
+```
+
+## Testing Semi-Synchronous Replication
+
+In this section, we will test the semi-synchronous replication of the MySQL cluster by verifying the roles of the pods and checking their replication statuses.
+
+### 1. Verify Pod Roles
+Identify the primary and replica instances by checking the roles of the pods:
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+```
+Example Output:
+```bash
+example-mysql-cluster-mysql-0	primary
+example-mysql-cluster-mysql-1	secondary
+```
+
+### 2. Check Replication Status
+#### Primary Node
+Run the following command to check the semi-synchronous replication status on the primary node:
+
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-0.example-mysql-cluster-mysql-headless.demo.svc.cluster.local -uroot -pz475N4c6ib -e "show status like 'Rpl%_status';"
+```
+Expected Output:
+```sql
++------------------------------+-------+
+| Variable_name                | Value |
++------------------------------+-------+
+| Rpl_semi_sync_replica_status | OFF   |
+| Rpl_semi_sync_source_status  | ON    |
++------------------------------+-------+
+```
+Explanation:
+- "Rpl_semi_sync_source_status: ON": This indicates that the primary instance is configured for semi-synchronous replication as the source (or master).
+- "Rpl_semi_sync_replica_status: OFF": This indicates that the primary instance is not acting as a replica in the replication setup.
+
+#### Replica Node
+Check the semi-synchronous replication status on the replica node:
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-1.example-mysql-cluster-mysql-headless.demo.svc.cluster.local -uroot -pz475N4c6ib -e "show status like 'Rpl%_status';"
+```
+Expected Output:
+```sql
++------------------------------+-------+
+| Variable_name                | Value |
++------------------------------+-------+
+| Rpl_semi_sync_replica_status | ON    |
+| Rpl_semi_sync_source_status  | OFF   |
++------------------------------+-------+
+```
+Explanation:
+- "Rpl_semi_sync_replica_status: ON": This indicates that the secondary instance is acting as a semi-synchronous replica and is actively receiving and acknowledging changes from the primary instance.
+- "Rpl_semi_sync_source_status: OFF": This indicates that the secondary instance is not acting as a source (or master) in the replication setup.
+
+
+## Checking and Configuring Timeout
+
+Here’s an example command to check the current value of the 'rpl_semi_sync_source_timeout' variable.
+This value is typically set via the 'SEMI_SYNC_TIMEOUT' environment variable.
+If the 'SEMI_SYNC_TIMEOUT' environment variable is not explicitly set, the default value for 'rpl_semi_sync_source_timeout' is 10000 ms (10 seconds).
+
+### Check Current Timeout
+
+In the following example, you can see that the value has been configured to 3000 ms:
+
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pz475N4c6ib -e "show variables like 'rpl_semi_sync_source_timeout';"
+```
+Example Output:
+```sql
++------------------------------+-------+
+| Variable_name                | Value |
++------------------------------+-------+
+| rpl_semi_sync_source_timeout | 3000  |
++------------------------------+-------+
+```
+
+### Update Timeout
+To update the timeout, modify the cluster configuration and reapply the YAML file. For example:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      env:
+        - name: SEMI_SYNC_TIMEOUT
+          value: "1000"   # Set timeout to 1000 ms
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+Note: Reapplying the YAML file will restart the Pods, as this modification needs to update the container’s environment variables.
+
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pz475N4c6ib -e "show variables like 'rpl_semi_sync_source_timeout';"
+```
+Expected Output:
+```sql
++------------------------------+-------+
+| Variable_name                | Value |
++------------------------------+-------+
+| rpl_semi_sync_source_timeout | 1000  |
++------------------------------+-------+
+```
+
+## Failover Testing
+### Trigger a Failover
+To test failover, delete the primary pod:
+```bash
+kubectl delete pod example-mysql-cluster-mysql-0 -n demo
+pod "example-mysql-cluster-mysql-0" deleted
+```
+### Verify the Updated Roles
+This triggers a failover, promoting the replica node to primary. Verify the updated roles:
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+```
+Example Output:
+```
+example-mysql-cluster-mysql-0
+example-mysql-cluster-mysql-1	primary
+```
+Once the deleted pod is recreated, it rejoins as a replica.
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+example-mysql-cluster-mysql-0	secondary
+example-mysql-cluster-mysql-1	primary
+```
+
+## Cleanup
+To remove all resources created during this tutorial:
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete ns demo
+```
+
+## Summary
+
+In this guide, you learned how to:
+- Deploy a MySQL semi-synchronous replication cluster using KubeBlocks.
+- Verify the cluster's roles and replication status.
+- Configure timeout settings to optimize replication performance.
+- Simulate and verify failover scenarios.
+
+KubeBlocks simplifies the management of MySQL clusters in Kubernetes, providing enhanced data consistency and high availability with semi-synchronous replication.

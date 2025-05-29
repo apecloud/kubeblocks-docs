@@ -1,0 +1,226 @@
+---
+title: Horizontal Scaling of Kafka Clusters with KubeBlocks
+description: Learn how to perform horizontal scaling (scale-out and scale-in) on a Kafka cluster managed by KubeBlocks using OpsRequest and direct Cluster API updates.
+keywords: [KubeBlocks, Kafka, Horizontal Scaling, Scale-Out, Scale-In, Kubernetes]
+sidebar_position: 3
+sidebar_label: Horizontal Scaling
+---
+
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# Horizontal Scaling for Kafka Clusters with KubeBlocks
+
+This guide explains how to perform horizontal scaling (scale-out and scale-in) on a Kafka cluster managed by KubeBlocks. You'll learn how to use both **OpsRequest** and direct **Cluster API** updates to achieve this.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploy a Kafka  Cluster
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+## Verifying the Deployment
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+
+## Scale-out (Add Replicas)
+
+**Expected Workflow**:
+
+1. New pod is provisioned, and transitions from `Pending` to `Running`.
+2. Cluster status changes from `Updating` to `Running`
+
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  Option 1: Using Horizontal Scaling OpsRequest
+
+  Scale out the Kafka cluster by adding 1 replica to kafka component:
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: kafka-separated-cluster-scale-out-ops
+    namespace: demo
+  spec:
+    clusterName: kafka-separated-cluster
+    type: HorizontalScaling
+    horizontalScaling:
+    - componentName: kafka-broker
+      # Specifies the replica changes for scaling in components
+      scaleOut:
+        # Specifies the replica changes for the component.
+        # add one more replica to current component
+        replicaChanges: 1
+  ```
+
+  Monitor the progress of the scaling operation:
+
+  ```bash
+  kubectl get ops kafka-separated-cluster-scale-out-ops -n demo -w
+  ```
+
+  Expected Result:
+  ```bash
+  NAME                                    TYPE                CLUSTER                   STATUS    PROGRESS   AGE
+  kafka-separated-cluster-scale-out-ops   HorizontalScaling   kafka-separated-cluster   Running   0/1        9s
+  kafka-separated-cluster-scale-out-ops   HorizontalScaling   kafka-separated-cluster   Running   1/1        16s
+  kafka-separated-cluster-scale-out-ops   HorizontalScaling   kafka-separated-cluster   Succeed   1/1        16s
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  Option 2: Direct Cluster API Update
+
+  Alternatively, you can perform a direct update to the `replicas` field in the Cluster resource:
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: kafka-broker
+        replicas: 2 # increase replicas to scale-out
+  ...
+  ```
+
+  Or you can patch the cluster CR with command:
+
+  ```bash
+  kubectl patch cluster kafka-separated-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/1/replicas", "value": 2}]'
+  ```
+  </TabItem>
+</Tabs>
+
+### Verify Scale-Out
+
+After applying the operation, you will see a new pod created and the Kafka cluster status goes from `Updating` to `Running`, and the newly created pod has a new role `secondary`.
+
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=kafka-separated-cluster,apps.kubeblocks.io/component-name=kafka-broker
+```
+
+Expected Outputs:
+```bash
+NAME                                     READY   STATUS    RESTARTS   AGE
+kafka-separated-cluster-kafka-broker-0   2/2     Running   0          3m7s
+kafka-separated-cluster-kafka-broker-1   2/2     Running   0          28s
+```
+
+## Scale-in (Remove Replicas)
+
+**Expected Workflow**:
+
+1. Selected replica (the one with the largest ordinal) is removed
+3. Pod is terminated gracefully
+4. Cluster status changes from `Updating` to `Running`
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  Option 1: Using Horizontal Scaling OpsRequest
+
+  Scale in the Kafka cluster by removing ONE replica:
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: kafka-separated-cluster-scale-in-ops
+    namespace: demo
+  spec:
+    clusterName: kafka-separated-cluster
+    type: HorizontalScaling
+    horizontalScaling:
+    - componentName: kafka-broker
+      # Specifies the replica changes for scaling in components
+      scaleIn:
+        # Specifies the replica changes for the component.
+        # remove one replica from current component
+        replicaChanges: 1
+  ```
+
+  Monitor progress:
+  ```bash
+  kubectl get ops kafka-separated-cluster-scale-in-ops -n demo -w
+  ```
+
+  Expected Result:
+  ```bash
+  NAME                                   TYPE                 CLUSTER          STATUS    PROGRESS   AGE
+  kafka-separated-cluster-scale-in-ops   HorizontalScaling   kafka-separated-cluster   Running   0/1        8s
+  kafka-separated-cluster-scale-in-ops   HorizontalScaling   kafka-separated-cluster   Running   1/1        24s
+  kafka-separated-cluster-scale-in-ops   HorizontalScaling   kafka-separated-cluster   Succeed   1/1        24s
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  Option 2: Direct Cluster API Update
+
+  Alternatively, you can perform a direct update to the `replicas` field in the Cluster resource:
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: kafka-broker
+        replicas: 1 # decrease replicas to scale-in
+  ```
+
+  Or you can patch the cluster CR with command:
+
+  ```bash
+  kubectl patch cluster kafka-separated-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/1/replicas", "value": 1}]'
+  ```
+  </TabItem>
+
+</Tabs>
+
+### Verify Scale-In
+
+Expected Output (ONE Pod):
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=kafka-separated-cluster,apps.kubeblocks.io/component-name=kafka-broker
+NAME                                     READY   STATUS    RESTARTS   AGE
+kafka-separated-cluster-kafka-broker-0   2/2     Running   0          5m7s
+```
+
+## Best Practices
+
+When performing horizontal scaling:
+- Scale during low-traffic periods when possible
+- Monitor cluster health during scaling operations
+- Verify sufficient resources exist before scaling out
+- Consider storage requirements for new replicas
+
+## Cleanup
+To remove all created resources, delete the Kafka cluster along with its namespace:
+```bash
+kubectl delete cluster kafka-separated-cluster -n demo
+kubectl delete ns demo
+```
+
+## Summary
+In this guide you learned how to:
+- Perform scale-out operations to add replicas to a Kafka cluster.
+- Perform scale-in operations to remove replicas from a Kafka cluster.
+- Use both OpsRequest and direct Cluster API updates for horizontal scaling.
+KubeBlocks ensures seamless scaling with minimal disruption to your database operations.

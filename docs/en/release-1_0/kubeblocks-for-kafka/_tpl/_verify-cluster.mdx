@@ -1,0 +1,33 @@
+Monitor the cluster status until it transitions to the Running state:
+```bash
+kubectl get cluster kafka-separated-cluster -n demo -w
+```
+
+Example Output:
+
+```bash
+kubectl get cluster kafka-separated-cluster -n demo
+NAME                      CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+kafka-separated-cluster   kafka                Delete               Creating   13s
+kafka-separated-cluster   kafka                Delete               Running    63s
+```
+
+Check the pod status and roles:
+```bash
+kubectl get pods -l app.kubernetes.io/instance=kafka-separated-cluster -n demo
+```
+
+Example Output:
+```bash
+NAME                                         READY   STATUS    RESTARTS   AGE
+kafka-separated-cluster-kafka-broker-0       2/2     Running   0          13m
+kafka-separated-cluster-kafka-controller-0   2/2     Running   0          13m
+kafka-separated-cluster-kafka-exporter-0     1/1     Running   0          12m
+```
+
+Once the cluster status becomes Running, your Kafka cluster is ready for use.
+
+:::tip
+If you are creating the cluster for the very first time, it may take some time to pull images before running.
+
+:::

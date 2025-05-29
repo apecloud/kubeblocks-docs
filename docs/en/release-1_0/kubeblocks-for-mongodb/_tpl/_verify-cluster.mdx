@@ -1,0 +1,33 @@
+Monitor the cluster status until it transitions to the Running state:
+```bash
+kubectl get cluster mongo-cluster -n demo -w
+```
+
+Example Output:
+
+```bash
+kubectl get cluster mongo-cluster -n demo
+NAME            CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+mongo-cluster   mongodb              Delete               Creating   49s
+mongo-cluster   mongodb              Delete               Running    62s
+```
+
+Check the pod status and roles:
+```bash
+kubectl get pods -l app.kubernetes.io/instance=mongo-cluster -L  kubeblocks.io/role -n demo
+```
+
+Example Output:
+```bash
+NAME                      READY   STATUS    RESTARTS   AGE   ROLE
+mongo-cluster-mongodb-0   2/2     Running   0          78s   primary
+mongo-cluster-mongodb-1   2/2     Running   0          63s   secondary
+mongo-cluster-mongodb-2   2/2     Running   0          48s   secondary
+```
+
+Once the cluster status becomes Running, your MongoDB cluster is ready for use.
+
+:::tip
+If you are creating the cluster for the very first time, it may take some time to pull images before running.
+
+:::

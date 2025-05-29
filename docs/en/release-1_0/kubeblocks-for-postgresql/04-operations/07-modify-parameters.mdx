@@ -1,0 +1,258 @@
+---
+title: Modify PostgreSQL Parameters
+description: Learn how to modify dynamic and static PostgreSQL parameters in KubeBlocks using Reconfiguring OpsRequest to optimize database performance and availability.
+keywords: [PostgreSQL, KubeBlocks, OpsRequest, dynamic parameters, static parameters, database configuration]
+sidebar_position: 7
+sidebar_label: Modify PostgreSQL Parameters
+---
+
+# Modify PostgreSQL Parameters
+
+Database reconfiguration involves modifying parameters, settings, or configurations to optimize performance, security, or availability. Parameter changes fall into two categories:
+
+| Type | Restart Required | Scope | Example Parameters |
+|------|------------------|-------|--------------------|
+| **Dynamic** | No | Immediate effect | `max_connections` |
+| **Static** | Yes | After restart | `shared_buffers` |
+
+For static parameters, KubeBlocks minimizes downtime by:
+1. Modifying and restarting replica nodes first
+2. Performing a switchover to promote the updated replica as primary (typically completes in milliseconds)
+3. Restarting the original primary node
+
+This guide demonstrates how to modify both dynamic and static parameters of a PostgreSQL cluster managed by KubeBlocks using a Reconfiguring OpsRequest.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploy a PostgreSQL Cluster
+
+import CreatePGCluster from '../_tpl/_create-pg-replication-cluster.mdx'
+
+<CreatePGCluster />
+
+## Verifying the Deployment
+
+import VerifyPGCluster from '../_tpl/_verify-pg-replication-cluster.mdx'
+
+<VerifyPGCluster />
+
+## Check Parameter Values
+
+### Retrieve Credentials
+KubeBlocks automatically creates a secret containing the PostgreSQL postgres credentials. Retrieve the credentials with the following commands:
+```bash
+NAME=`kubectl get secrets -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.username}' | base64 -d`
+PASSWD=`kubectl get secrets -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.password}' | base64 -d`
+```
+
+### Access PostgreSQL Cluster
+To connect to the cluster's primary node, use the PostgreSQL client:
+```bash
+kubectl exec -it -n demo pg-cluster-postgresql-0 -c postgresql -- env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql
+```
+
+### Query Parameter Values
+
+Once connected, you can query the current value of 'max_connections' and 'shared_buffers':
+```sql
+postgres=# SHOW max_connections;
+ max_connections
+-----------------
+ 56
+(1 row)
+
+postgres=# show pgaudit.log;
+ pgaudit.log
+-------------
+ ddl,read,write
+(1 row)
+
+postgres=# show shared_buffers;
+ shared_buffers
+----------------
+ 128MB
+(1 row)
+```
+
+## Dynamic Parameter Example: Modifying max_connections and pgaudit.log
+
+Dynamic parameters like `max_connections` can be modified without restarting PostgreSQL. Changes take effect immediately, allowing you to:
+- Adjust connection limits on-the-fly
+- Modify audit logging levels
+- Tune performance parameters
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-reconfigure-dynamic
+  namespace: demo
+spec:
+  clusterName: pg-clusters
+  reconfigures:
+  - componentName: postgresql
+    parameters:
+      - key: max_connections
+        value: '100'
+      - key: pgaudit.log
+        value: ddl
+  type: Reconfiguring
+```
+
+This configuration:
+- Changes `pgaudit.log` from default `ddl,read,write` to `ddl` only
+- Increases `max_connections` from 56 to 100
+
+The `pgaudit.log` parameter controls audit logging granularity. Available options:
+
+| Value    | Description |
+|----------|-------------|
+| none     | No additional logging is performed by pgAudit. |
+| ddl      | Logs all Data Definition Language (DDL) statements|
+| dml      | Logs all Data Manipulation Language (DML) statements
+| role     | Logs all role-related commands |
+| read     | Logs all read operations|
+| write    | Logs all write operations|
+| function | Logs all function calls|
+| misc     | Logs miscellaneous commands|
+| all      | Logs everything|
+
+
+Wait for the OpsRequest to complete:
+```bash
+kubectl get ops pg-reconfigure-dynamic -n demo -w
+```
+
+Example output:
+```bash
+NAME                     TYPE            CLUSTER      STATUS    PROGRESS   AGE
+pg-reconfigure-dynamic   Reconfiguring   pg-cluster   Running   -/-        11s
+pg-reconfigure-dynamic   Reconfiguring   pg-cluster   Succeed   -/-        31s
+```
+
+**Verifying the Configuration Change**
+
+Log into the PostgreSQL instance and confirm that the `max_connections` and `pgaudit.log` parameter has been updated:
+
+```sql
+postgres=# show max_connections;
+ max_connections
+-----------------
+ 100
+(1 row)
+
+postgres=# show pgaudit.log;
+ pgaudit.log
+-------------
+ ddl
+(1 row)
+```
+
+The output verifies both parameters were updated:
+- `max_connections` increased to 100
+- `pgaudit.log` reduced to DDL-only logging
+
+## Static Parameter Example: Modifying shared_buffers
+
+Static parameters like `shared_buffers` require a restart. This example increases the buffer from 128MB to 256MB.
+
+Create a Reconfigure OpsRequest. Apply the following OpsRequest YAML to update the 'shared_buffers':
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: postgresql-reconfigure-static
+  namespace: demo
+spec:
+  clusterName: pg-cluster
+  force: false
+  reconfigures:
+  - componentName: postgresql
+    parameters:
+    - key: shared_buffers
+      value: '256MB'
+  preConditionDeadlineSeconds: 0
+  type: Reconfiguring
+```
+
+Check the status of the OpsRequest until it completes:
+
+```bash
+kubectl get ops postgresql-reconfigure-static -n demo -w
+```
+Example output:
+```bash
+postgresql-reconfigure-static   Reconfiguring   pg-cluster   Running   -/-        5s
+postgresql-reconfigure-static   Reconfiguring   pg-cluster   Succeed   -/-        31s
+```
+
+**Verify the Configuration Change**
+
+Log into the PostgreSQL instance and confirm that the `shared_buffers` parameter has been updated:
+
+```sql
+postgres=# show shared_buffers;
+ shared_buffers
+----------------
+ 256MB
+(1 row)
+```
+
+## Validity Checking on Reconfiguration
+
+KubeBlocks validates parameters before applying changes. For example, `max_connections` must obey rule:
+
+```cue
+max_connections?: int & >=6 & <=8388607
+```
+, which means `max_connections` must be an integer ranging from 6 to 8388607.
+
+And if you somehow set a string to this value like:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: postgresql-reconfigure-invalid
+  namespace: demo
+spec:
+  type: Reconfiguring
+  clusterName: pg-cluster
+  reconfigures:
+  - componentName: postgresql
+    parameters:
+    - key: max_connections
+      value: 'abc'
+```
+
+By checking the status of the OpsRequest
+```bash
+kubectl get ops postgresql-reconfigure-invalid -n demo
+```
+
+This OpsRequest fails fast. To checkout the details, you may describe the `Parameter` CR:
+
+```bash
+kubectl describe parameter postgresql-reconfigure-invalid -n demo
+```
+
+And you will find message `failed to validate updated config: [failed to parse field max_connections: [strconv.Atoi: parsing "STRING": invalid syntax]]`
+
+## Cleanup
+To remove all created resources, delete the PostgreSQL cluster along with its namespace:
+```bash
+kubectl delete cluster pg-cluster -n demo
+kubectl delete ns demo
+```
+
+## Summary
+This guide covered modifying PostgreSQL parameters through KubeBlocks:
+- Dynamic changes (e.g., `max_connections`) apply immediately
+- Static changes (e.g., `shared_buffers`) require restart but with minimal downtime
+- All changes are validated before application
+- Configuration follows declarative management principles
