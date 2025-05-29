@@ -1,0 +1,207 @@
+---
+title: Vertical Scaling in a MySQL Cluster
+description: Learn how to perform vertical scaling in a MySQL cluster managed by KubeBlocks to optimize resource utilization and improve performance.
+keywords: [KubeBlocks, MySQL, Vertical Scaling, Kubernetes, Resources]
+sidebar_position: 2
+sidebar_label: Vertical Scaling
+---
+
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# Vertical Scaling in a MySQL Cluster
+
+This guide explains how to perform **vertical scaling** in a MySQL cluster managed by KubeBlocks.
+Vertical scaling adjusts the resource limits and requests (such as CPU and memory) allocated to the cluster components, allowing for better performance or resource optimization.
+
+## What is Vertical Scaling?
+Vertical scaling involves increasing or decreasing the resources (e.g., CPU and memory) allocated to a running database cluster.
+Unlike horizontal scaling, which adjusts the number of replicas, vertical scaling focuses on scaling the capacity of individual Pods.
+
+Resources that can be scaled include:
+- CPU cores: Processing power for the database.
+- Memory (RAM): Memory available for database operations.
+
+KubeBlocks ensures seamless vertical scaling by carefully orchestrating Pod restarts to minimize downtime. For example:
+- Secondary Pods are recreated first.
+- Primary Pods are updated last to maintain cluster availability.
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## Deploy a MySQL Semi-Synchronous Cluster
+
+Deploy a 2-node semi-sync MySQL cluster (1 primary, 1 secondary):
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+## Verifying the Deployment
+Monitor the status of the MySQL cluster as it is created:
+```bash
+kubectl get cluster -n demo -w
+```
+Expected Output:
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster   mysql                Delete               Creating   66s
+example-mysql-cluster   mysql                Delete               Running    72s
+```
+    <Tabs>
+
+    <TabItem value="opsRequest" label="Use the OpsRequest API" default>
+Option 1: Using VerticalScaling OpsRequest
+
+Apply the following YAML to scale up the resources for the mysql component:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-cluster-vscale-ops
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  type: VerticalScaling
+  verticalScaling:
+  - componentName: mysql
+    requests:
+      cpu: '1'
+      memory: 1Gi
+    limits:
+      cpu: '1'
+      memory: 1Gi
+EOF
+```
+What Happens During Vertical Scaling?
+- Secondary Pods are recreated first to ensure the primary Pod remains available.
+- Once all secondary Pods are updated, the primary Pod is restarted with the new resource configuration.
+
+
+You can check the progress of the scaling operation with the following command:
+
+```bash
+kubectl describe ops example-mysql-cluster-vscale-ops -n demo
+```
+
+Expected Result:
+```bash
+Status:
+  Phase:            Succeed
+  Progress:         2/2
+  ...
+```
+    </TabItem>
+
+    <TabItem value="ClusterAPI" label="Use the Cluster API">
+Option 2: Direct Cluster API Update
+
+Alternatively, you may update `spec.componentSpecs.resources` field to the desired resources for vertical scale.
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        requests:
+          cpu: "1"       # Update the resources to your need.
+          memory: "1Gi"  # Update the resources to your need.
+        limits:
+          cpu: "1"       # Update the resources to your need.
+          memory: "1Gi"  # Update the resources to your need.
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+    </TabItem>
+
+    </Tabs>
+
+## Verification
+Verify the updated resources by inspecting the cluster configuration or Pod details:
+```bash
+kbcli cluster describe example-mysql-cluster -n demo
+```
+Example Output:
+```bash
+Resources Allocation:
+COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+mysql                           1 / 1                1Gi / 1Gi               data:20Gi      <none>
+```
+
+## Key Benefits of Vertical Scaling with KubeBlocks
+- Seamless Scaling: Pods are recreated in a specific order to ensure minimal disruption.
+- Dynamic Resource Adjustments: Easily scale CPU and memory based on workload requirements.
+- Flexibility: Choose between OpsRequest for dynamic scaling or direct API updates for precise control.
+- Improved Availability: The cluster remains operational during the scaling process, maintaining high availability.
+
+## Summary
+In this guide, you learned how to:
+1. Deploy a MySQL cluster managed by KubeBlocks.
+2. Perform vertical scaling by increasing or decreasing resources for the mysql component.
+3. Use both OpsRequest and direct Cluster API updates to adjust resource allocations.
+
+Vertical scaling is a powerful tool for optimizing resource utilization and adapting to changing workload demands, ensuring your MySQL cluster remains performant and resilient.

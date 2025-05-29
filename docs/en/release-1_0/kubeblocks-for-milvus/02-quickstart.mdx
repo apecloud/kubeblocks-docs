@@ -1,0 +1,436 @@
+---
+title: Milvus Quick Start
+description: Comprehensive guide to deploying and managing Milvus ReplicaSet  Clusters with KubeBlocks, including installation, configuration, and operational best practices.
+keywords: [Kubernetes, Milvus, KubeBlocks, Helm, Cluster Management, QuickStart]
+sidebar_position: 2
+sidebar_label: QuickStart
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Milvus Quick Start
+
+This guide provides a comprehensive walkabout for deploying and managing Milvus ReplicaSet  Clusters using the **KubeBlocks Milvus Add-on**, covering:
+- System prerequisites and add-on installation
+- Cluster creation and configuration
+- Operational management including start/stop procedures
+- Connection methods and cluster monitoring
+
+## Prerequisites
+
+### System Requirements
+
+Before proceeding, verify your environment meets these requirements:
+
+- A functional Kubernetes cluster (v1.21+ recommended)
+- `kubectl` v1.21+ installed and configured with cluster access
+- Helm installed ([installation guide](https://helm.sh/docs/intro/install/))
+- KubeBlocks installed ([installation guide](../user_docs/overview/install-kubeblocks))
+
+### Verify Milvus Add-on
+
+The Milvus Add-on is included with KubeBlocks by default. Check its status:
+
+```bash
+helm list -n kb-system | grep milvus
+```
+
+<details open>
+<summary>Expected Output:</summary>
+
+```bash
+NAME                  NAMESPACE   REVISION    UPDATED                     STATUS      CHART
+kb-addon-milvus       kb-system   1           2025-05-21                  deployed    milvus-1.0.0
+```
+</details>
+
+If the add-on isn't enabled, choose an installation method:
+
+<Tabs>
+
+  <TabItem value="helm" label="helm" default>
+  ```bash
+  # Add Helm repo
+  helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
+  # For users in Mainland China, if GitHub is inaccessible or slow, use this alternative repo:
+  #helm repo add kubeblocks-addons https://jihulab.com/api/v4/projects/150246/packages/helm/stable
+
+  # Update helm repo
+  helm repo update
+  # Search available Add-on versions
+  helm search repo kubeblocks/milvus --versions
+  # Install your desired version (replace <VERSION> with your chosen version)
+  helm upgrade -i kb-addon-milvus kubeblocks-addons/milvus --version <VERSION> -n kb-system
+  ```
+  </TabItem>
+
+  <TabItem value="kbcli" label="kbcli">
+
+  ```bash
+  # Add an index (kubeblocks is added by default)
+  kbcli addon index add kubeblocks https://github.com/apecloud/block-index.git
+  # Update the index
+  kbcli addon index update kubeblocks
+  # Update all indexes
+  kbcli addon index update --all
+  ```
+
+  To search and install an addon:
+
+  ```bash
+  # Search Add-on
+  kbcli addon search milvus
+  # Install Add-on with your desired version (replace <VERSION> with your chosen version)
+  kbcli addon install milvus --version <VERSION>
+  ```
+  **Sample Output:**
+  ```bash
+  ADDON   VERSION          INDEX
+  milvus   0.9.0           kubeblocks
+  milvus   0.9.1           kubeblocks
+  milvus   1.0.0           kubeblocks
+  ```
+  To enable or disable an addon:
+
+  ```bash
+  # Enable Add-on
+  kbcli addon enable milvus
+  # Disable Add-on
+  kbcli addon disable milvus
+  ```
+
+  </TabItem>
+</Tabs>
+
+:::note
+**Version Compatibility**
+
+Always verify that the Milvus Add-on version matches your KubeBlocks major version to avoid compatibility issues.
+
+:::
+
+### Verify Supported Milvus Versions
+
+**List available Milvus versions:**
+
+```bash
+kubectl get cmpv milvus
+```
+<details open>
+<summary>Sample Output</summary>
+```text
+NAME     VERSIONS   STATUS      AGE
+milvus   v2.3.2     Available   26d
+```
+</details>
+
+### Storage Configuration
+
+Milvus requires persistent storage. Verify available options:
+
+```bash
+kubectl get storageclass
+```
+
+Recommended storage characteristics:
+- Minimum 20Gi capacity
+- ReadWriteOnce access mode
+- Supports volume expansion
+- Appropriate performance for workload
+
+## Deploy a Milvus  Cluster
+
+Deploy a basic Milvus Cluster with default settings:
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/milvus/cluster-standalone.yaml
+```
+
+This creates:
+- A Milvus Cluster with 3 replicas, one for milvus, one for etcd and one for minio.
+- Default resource allocations (0.5 CPU, 0.5Gi memory)
+- 20Gi persistent storage
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: milvus-standalone
+  namespace: demo
+spec:
+  # Specifies the behavior when a Cluster is deleted.
+  # Valid options are: [DoNotTerminate, Delete, WipeOut] (`Halt` is deprecated since KB 0.9)
+  # - `DoNotTerminate`: Prevents deletion of the Cluster. This policy ensures that all resources remain intact.
+  # - `Delete`: Extends the `Halt` policy by also removing PVCs, leading to a thorough cleanup while removing all persistent data.
+  # - `WipeOut`: An aggressive policy that deletes all Cluster resources, including volume snapshots and backups in external storage. This results in complete data removal and should be used cautiously, primarily in non-production environments to avoid irreversible data loss.
+  terminationPolicy: Delete
+  # Specifies the name of the ClusterDefinition to use when creating a Cluster.
+  # Note: DO NOT UPDATE THIS FIELD
+  # The value must be `milvus` to create a Milvus Cluster
+  clusterDef: milvus
+  # Specifies the name of the ClusterTopology to be used when creating the
+  # Cluster.
+  # Valid options are: [standalone,cluster]
+  topology: standalone
+  # Specifies a list of ClusterComponentSpec objects used to define the
+  # individual Components that make up a Cluster.
+  # This field allows for detailed configuration of each Component within the Cluster
+  componentSpecs:
+    - name: etcd
+      replicas: 1
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+    - name: minio
+      replicas: 1
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+    - name: milvus
+      replicas: 1
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+For more API fields and descriptions, refer to the [API Reference](../user_docs/references/api-reference/cluster).
+
+## Verify Cluster Status
+
+When deploying a Milvus Cluster with 3 replicas:
+
+Confirm successful deployment by checking:
+
+1. Cluster phase is `Running`
+2. All pods are operational
+
+Check status using either method:
+
+<Tabs>
+  <TabItem value='kubectl' label='kubectl' default>
+```bash
+kubectl get cluster milvus-standalone -n demo -w
+NAME                CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+milvus-standalone   milvus               Delete               Creating   27s
+milvus-standalone   milvus               Delete               Running    64s
+
+kubectl get pods -l app.kubernetes.io/instance=milvus-standalone -n demo
+NAME                         READY   STATUS    RESTARTS   AGE
+milvus-standalone-etcd-0     2/2     Running   0          25m
+milvus-standalone-milvus-0   1/1     Running   0          24m
+milvus-standalone-minio-0    1/1     Running   0          25m
+```
+  </TabItem>
+
+  <TabItem value='kbcli' label='kbcli'>
+
+  With `kbcli` installed, you can view comprehensive cluster information:
+
+```bash
+kbcli cluster describe milvus-standalone -n demo
+
+Name: milvus-standalone	 Created Time: May 19,2025 11:03 UTC+0800
+NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY     STATUS    TERMINATION-POLICY
+demo        milvus               standalone   Running   Delete
+
+Endpoints:
+COMPONENT   INTERNAL   EXTERNAL
+
+Topology:
+COMPONENT   SERVICE-VERSION   INSTANCE                     ROLE     STATUS    AZ       NODE    CREATED-TIME
+etcd        3.5.15            milvus-standalone-etcd-0     leader   Running   zone-x   x.y.z   May 19,2025 11:03 UTC+0800
+milvus      v2.3.2            milvus-standalone-milvus-0   <none>   Running   zone-x   x.y.z   May 19,2025 11:04 UTC+0800
+minio       8.0.17            milvus-standalone-minio-0    <none>   Running   zone-x   x.y.z   May 19,2025 11:03 UTC+0800
+
+Resources Allocation:
+COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+etcd                            500m / 500m          512Mi / 512Mi           data:10Gi      <none>
+minio                           500m / 500m          512Mi / 512Mi           data:10Gi      <none>
+milvus                          500m / 500m          512Mi / 512Mi           data:10Gi      <none>
+
+Images:
+COMPONENT   COMPONENT-DEFINITION              IMAGE
+etcd        etcd-3-1.0.0                      quay.io/coreos/etcd:v3.5.15
+minio       milvus-minio-1.0.0                docker.io/minio/minio:RELEASE.2022-03-17T06-34-49Z
+milvus      milvus-standalone-1.0.0           docker.io/milvusdb/milvus:v2.3.2
+
+Data Protection:
+BACKUP-REPO   AUTO-BACKUP   BACKUP-SCHEDULE   BACKUP-METHOD   BACKUP-RETENTION   RECOVERABLE-TIME
+
+Show cluster events: kbcli cluster list-events -n demo milvus-standalone
+```
+
+  </TabItem>
+</Tabs>
+
+## Access Milvus
+
+To access the Milvus service, you can expose the service by creating a service:
+
+```bash
+kubectl port-forward pod/milvus-standalone-milvus-0 -n demo 19530:19530
+```
+
+And then you can access the Milvus service via `localhost:19530`.
+
+## Stop the Milvus Cluster
+
+Stopping a cluster temporarily suspends operations while preserving all data and configuration:
+
+**Key Effects:**
+- Compute resources (Pods) are released
+- Persistent storage (PVCs) remains intact
+- Service definitions are maintained
+- Cluster configuration is preserved
+- Operational costs are reduced
+
+<Tabs>
+  <TabItem value="OpsRequest" label="OpsRequest API" default>
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: milvus-stop
+    namespace: demo
+  spec:
+    clusterName: milvus-standalone
+    type: Stop
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+  Alternatively, stop by setting `spec.componentSpecs.stop` to true:
+
+  ```bash
+  kubectl patch cluster milvus-standalone -n demo --type='json' -p='[
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/0/stop",
+    "value": true
+  },
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/1/stop",
+    "value": true
+  },
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/2/stop",
+    "value": true
+  }
+  ]'
+  ```
+  </TabItem>
+</Tabs>
+
+## Start the Milvus Cluster
+
+Restarting a stopped cluster resumes operations with all data and configuration intact:
+
+**Key Effects:**
+- Compute resources (Pods) are recreated
+- Services become available again
+- Cluster returns to previous state
+
+<Tabs>
+  <TabItem value="OpsRequest" label="OpsRequest API" default>
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: milvus-start
+    namespace: demo
+  spec:
+    clusterName: milvus-standalone
+    type: Start
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+  Restart by setting `spec.componentSpecs.stop` to false:
+
+  ```bash
+  kubectl patch cluster milvus-standalone -n demo --type='json' -p='[
+  {
+    "op": "remove",
+    "path": "/spec/componentSpecs/0/stop"
+  },
+  {
+    "op": "remove",
+    "path": "/spec/componentSpecs/1/stop"
+  },
+  {
+    "op": "remove",
+    "path": "/spec/componentSpecs/2/stop"
+  }
+  ]'
+  ```
+  </TabItem>
+</Tabs>
+
+
+## Delete Milvus Cluster
+
+Choose carefully based on your data retention needs:
+
+| Policy          | Resources Removed | Data Removed | Recommended For |
+|-----------------|-------------------|--------------|-----------------|
+| DoNotTerminate  | None              | None         | Critical production clusters |
+| Delete          | All resources     | PVCs deleted | Non-critical environments |
+| WipeOut         | All resources     | Everything*  | Test environments only |
+
+*Includes snapshots and backups in external storage
+
+**Pre-Deletion Checklist:**
+1. Verify no applications are using the cluster
+2. Ensure required backups exist
+3. Confirm proper terminationPolicy is set
+4. Check for dependent resources
+
+For test environments, use this complete cleanup:
+
+```bash
+kubectl patch cluster milvus-standalone -p '{"spec":{"terminationPolicy":"WipeOut"}}' --type="merge" -n demo
+kubectl delete cluster milvus-standalone -n demo
+```

@@ -1,0 +1,309 @@
+---
+title: Kafka  Cluster Lifecycle Management (Stop, Start, Restart)
+description: Learn how to manage Kafka  Cluster states in KubeBlocks including stopping, starting, and restarting operations to optimize resources.
+keywords: [KubeBlocks, Kafka, Cluster Management, Stop, Start, Restart]
+sidebar_position: 1
+sidebar_label: Lifecycle Management
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Kafka  Cluster Lifecycle Management
+
+This guide demonstrates how to manage a Kafka  Cluster's operational state in **KubeBlocks**, including:
+
+- Stopping the cluster to conserve resources
+- Starting a stopped cluster
+- Restarting cluster components
+
+These operations help optimize resource usage and reduce operational costs in Kubernetes environments.
+
+Lifecycle management operations in KubeBlocks:
+
+| Operation | Effect | Use Case |
+|-----------|--------|----------|
+| Stop | Suspends cluster, retains storage | Cost savings, maintenance |
+| Start | Resumes cluster operation | Restore service after pause |
+| Restart | Recreates pods for component | Configuration changes, troubleshooting |
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploy a Kafka  Cluster
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+## Verifying the Deployment
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+## Cluster Lifecycle Operations
+
+### Stopping the Cluster
+
+Stopping a Kafka  Cluster in KubeBlocks will:
+
+1. Terminates all running pods
+2. Retains persistent storage (PVCs)
+3. Maintains cluster configuration
+
+This operation is ideal for:
+- Temporary cost savings
+- Maintenance windows
+- Development environment pauses
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  Option 1: OpsRequest API
+
+  Create a Stop operation request:
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: kafka-separated-cluster-stop-ops
+    namespace: demo
+  spec:
+    clusterName: kafka-separated-cluster
+    type: Stop
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  Option 2: Cluster API Patch
+
+  Modify the cluster spec directly by patching the stop field:
+
+  ```bash
+  kubectl patch cluster kafka-separated-cluster -n demo --type='json' -p='[
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/0/stop",
+    "value": true
+  },
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/1/stop",
+    "value": true
+  },
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/2/stop",
+    "value": true
+  }
+  ]'
+  ```
+
+  </TabItem>
+
+</Tabs>
+
+### Verifying Cluster Stop
+
+To confirm a successful stop operation:
+
+1. Check cluster status transition:
+  ```bash
+  kubectl get cluster kafka-separated-cluster -n demo -w
+  ```
+  Expected output:
+  ```bash
+  NAME                      CLUSTER-DEFINITION    TERMINATION-POLICY   STATUS     AGE
+  kafka-separated-cluster   kafka                 Delete               Stopping   16m3s
+  kafka-separated-cluster   kafka                 Delete               Stopped    16m55s
+  ```
+
+2. Verify no running pods:
+  ```bash
+  kubectl get pods -l app.kubernetes.io/instance=kafka-separated-cluster -n demo
+  ```
+  Expected output:
+  ```bash
+  No resources found in demo namespace.
+  ```
+
+3. Confirm persistent volumes remain:
+  ```bash
+  kubectl get pvc -l app.kubernetes.io/instance=kafka-separated-cluster -n demo
+  ```
+  Expected output:
+  ```bash
+  NAME                                                  STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+  data-kafka-separated-cluster-kafka-broker-0           Bound    pvc-ddd54e0f-414a-49ed-8e17-41e9f5082af1   20Gi       RWO            standard       <unset>                 14m
+  metadata-kafka-separated-cluster-kafka-broker-0       Bound    pvc-d63b7d80-cac5-41b9-b694-6a298921003b   1Gi        RWO            standard       <unset>                 14m
+  metadata-kafka-separated-cluster-kafka-controller-0   Bound    pvc-e6263eb1-405a-4090-b2bb-f92cca0ba36d   1Gi        RWO            standard       <unset>                 14m
+  ```
+
+### Starting the Cluster
+
+Starting a stopped Kafka Cluster:
+1. Recreates all pods
+2. Reattaches persistent storage
+3. Restores service endpoints
+
+Expected behavior:
+- Cluster returns to previous state
+- No data loss occurs
+- Services resume automatically
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  Initiate a Start operation request:
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: kafka-separated-cluster-start-ops
+    namespace: demo
+  spec:
+    # Specifies the name of the Cluster resource that this operation is targeting.
+    clusterName: kafka-separated-cluster
+    type: Start
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  Modify the cluster spec to resume operation:
+  1. Set stop: false, or
+  2. Remove the stop field entirely
+
+  ```bash
+  kubectl patch cluster kafka-separated-cluster -n demo --type='json' -p='[
+  {
+    "op": "remove",
+    "path": "/spec/componentSpecs/0/stop"
+  },
+  {
+    "op": "remove",
+    "path": "/spec/componentSpecs/1/stop"
+  },
+  {
+    "op": "remove",
+    "path": "/spec/componentSpecs/2/stop"
+  }
+  ]'
+  ```
+
+  </TabItem>
+
+</Tabs>
+
+### Verifying Cluster Start
+
+To confirm a successful start operation:
+
+1. Check cluster status transition:
+  ```bash
+  kubectl get cluster kafka-separated-cluster -n demo -w
+  ```
+  Expected output:
+  ```bash
+  NAME                      CLUSTER-DEFINITION     TERMINATION-POLICY   STATUS     AGE
+  kafka-separated-cluster   kafka                  Delete               Updating   24m
+  kafka-separated-cluster   kafka                  Delete               Running    24m
+  kafka-separated-cluster   kafka                  Delete               Running    24m
+  ```
+
+2. Verify pod recreation:
+  ```bash
+  kubectl get pods -n demo -l app.kubernetes.io/instance=kafka-separated-cluster
+  ```
+  Expected output:
+  ```bash
+  NAME                                         READY   STATUS    RESTARTS   AGE
+  kafka-separated-cluster-kafka-broker-0       2/2     Running   0          2m4s
+  kafka-separated-cluster-kafka-controller-0   2/2     Running   0          104s
+  kafka-separated-cluster-kafka-exporter-0     1/1     Running   0          84s
+  ```
+
+### Restarting Cluster
+
+Restart operations provide:
+- Pod recreation without full cluster stop
+- Component-level granularity
+- Minimal service disruption
+
+Use cases:
+- Configuration changes requiring restart
+- Resource refresh
+- Troubleshooting
+
+**Check Components**
+
+There are five components in Milvus Cluster. To get the list of components,
+```bash
+kubectl get cluster -n demo kafka-separated-cluster -oyaml | yq '.spec.componentSpecs[].name'
+```
+
+Example Output:
+```text
+kafka-controller
+kafka-broker
+kafka-exporter
+```
+
+
+**Restart Proxy via OpsRequest API**
+
+List specific components to be restarted:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: kafka-separated-cluster-restart-ops
+  namespace: demo
+spec:
+  clusterName: kafka-separated-cluster
+  type: Restart
+  restart:
+  - componentName: kafka-broker
+```
+
+**Verifying Restart Completion**
+
+To verify a successful component restart:
+
+1. Track OpsRequest progress:
+  ```bash
+  kubectl get opsrequest kafka-separated-cluster-restart-ops -n demo -w
+  ```
+  Expected output:
+  ```bash
+  NAME                                  TYPE      CLUSTER                   STATUS    PROGRESS   AGE
+  kafka-separated-cluster-restart-ops   Restart   kafka-separated-cluster   Running   0/1        8s
+  kafka-separated-cluster-restart-ops   Restart   kafka-separated-cluster   Running   1/1        22s
+  kafka-separated-cluster-restart-ops   Restart   kafka-separated-cluster   Running   1/1        23s
+  kafka-separated-cluster-restart-ops   Restart   kafka-separated-cluster   Succeed   1/1        23s
+  ```
+
+2. Check pod status:
+  ```bash
+  kubectl get pods -n demo -l app.kubernetes.io/instance=kafka-separated-cluster
+  ```
+  Note: Pods will show new creation timestamps after restart. Only pods belongs to component `kafka-broker` have been restarted.
+
+Once the operation is complete, the cluster will return to the Running state.
+
+## Summary
+In this guide, you learned how to:
+1. Stop a Kafka  Cluster to suspend operations while retaining persistent storage.
+2. Start a stopped cluster to bring it back online.
+3. Restart specific cluster components to recreate their Pods without stopping the entire cluster.
+By managing the lifecycle of your Kafka  Cluster, you can optimize resource utilization, reduce costs, and maintain flexibility in your Kubernetes environment. KubeBlocks provides a seamless way to perform these operations, ensuring high availability and minimal disruption.

@@ -1,0 +1,214 @@
+---
+title: Decommission a Specific Pod in KubeBlocks-Managed MySQL Clusters
+description: Learn how to decommission (take offline) a specific Pod in a MySQL cluster managed by KubeBlocks.
+keywords: [KubeBlocks, MySQL, Decommission Pod, Horizontal Scaling, Kubernetes]
+sidebar_position: 9
+sidebar_label: Decommission MySQL Replica
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+
+# Decommission a Specific Pod in a KubeBlocks-Managed MySQL Clusters
+
+This guide explains how to decommission (take offline) a specific Pod in a MySQL cluster managed by KubeBlocks. Decommissioning a Pod allows precise control over cluster resources without disrupting the cluster's overall functionality. This is particularly useful for workload rebalancing, node maintenance, or addressing specific failures.
+
+## Why Decommission Pods with KubeBlocks?
+
+In traditional StatefulSet-based deployments, Kubernetes lacks the ability to decommission specific Pods. StatefulSets ensure the order and identity of Pods, and scaling down always removes the Pod with the highest ordinal number (e.g., scaling down from 3 replicas removes `Pod-2` first). This limitation prevents precise control over which Pod to take offline, which can complicate maintenance, workload distribution, or failure handling.
+
+KubeBlocks overcomes this limitation by enabling administrators to decommission specific Pods directly. This fine-grained control ensures high availability and allows better resource management without disrupting the entire cluster.
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## Deploy a MySQL Semi-Synchronous Cluster
+
+Deploy a 3-node MySQL semi-synchronous cluster (1 primary, 2 replicas):
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+## Verifying the Deployment
+
+Monitor the cluster status until it transitions to the Running state:
+```bash
+kubectl get cluster example-mysql-cluster -n demo -w
+```
+Expected Output:
+```bash
+NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Creating   8s
+example-mysql-cluster   mysql                Delete               Running    2m41s
+```
+Once the cluster status becomes Running, your MySQL cluster is ready for use.
+
+
+List the Pods in the cluster to verify all three Pods are running:
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster
+```
+
+Expected Output (3 Pods):
+```bash
+NAME                           READY   STATUS    RESTARTS   AGE
+example-mysql-cluster-mysql-0   4/4     Running   0          4m30s
+example-mysql-cluster-mysql-1   4/4     Running   0          4m30s
+example-mysql-cluster-mysql-2   4/4     Running   0          49s
+```
+
+
+## Decommission a Specific Pod
+
+To decommission a specific Pod (e.g., 'example-mysql-cluster-mysql-1'), you can use one of the following methods:
+
+    <Tabs>
+
+    <TabItem value="opsRequest" label="Use the OpsRequest API" default>
+
+### Option 1.: Using OpsRequest
+Create an OpsRequest to mark the Pod as offline:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-cluster-decommission-ops
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  type: HorizontalScaling
+  horizontalScaling:
+  - componentName: mysql
+    scaleIn:
+      onlineInstancesToOffline:
+        - 'example-mysql-cluster-mysql-1'  # Specifies the instance names that need to be taken offline
+EOF
+```
+
+#### Monitor the Decommissioning Process
+Check the progress of the decommissioning operation:
+
+```bash
+kubectl describe ops example-mysql-cluster-decommission-ops -n demo
+```
+Expected Output:
+
+```bash
+Status:
+  Phase:              Succeed
+  Progress:           1/1
+  ...
+```
+
+    </TabItem>
+
+    <TabItem value="ClusterAPI" label="Use the Cluster API">
+
+### Option 2.: Using Cluster API
+Alternatively, update the Cluster resource directly to decommission the Pod:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2    # <----- Reduce replicas from 3 to 2
+      offlineInstances:
+        - example-mysql-cluster-mysql-1   # <----- Specify Pod to be decommissioned
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+    </TabItem>
+
+    </Tabs>
+
+### Verify the Decommissioning
+
+After applying the updated configuration, verify the remaining Pods in the cluster:
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster
+```
+
+Expected Output:
+```bash
+NAME                                READY   STATUS    RESTARTS   AGE
+example-mysql-cluster-mysql-0   4/4     Running   0          6m38s
+example-mysql-cluster-mysql-2   4/4     Running   0          6m38s
+```
+
+## Summary
+In this guide, you learned:
+- The limitations of traditional StatefulSet-based scaling in Kubernetes.
+- How KubeBlocks enables precise decommissioning of specific Pods.
+- Two methods to decommission a Pod: using OpsRequest or directly updating the Cluster API.
+By leveraging KubeBlocks, you can manage MySQL clusters with fine-grained control, ensuring high availability and flexibility for maintenance and workload distribution.

@@ -1,0 +1,214 @@
+---
+title: Upgrading the Minor Version of a MySQL Cluster in KubeBlocks
+description: Learn how to deploy and upgrade a MySQL cluster managed by KubeBlocks with minimal downtime.
+keywords: [KubeBlocks, MySQL, Upgrade, Rolling Upgrade, Kubernetes]
+sidebar_position: 6
+sidebar_label: Minor Version Upgrade
+---
+
+# Upgrading the Minor Version of a MySQL Cluster in KubeBlocks
+
+This guide walks you through the deployment and minor version upgrade of a MySQL cluster managed by KubeBlocks, ensuring minimal downtime during the process.
+
+To minimize the impact on database availability, the upgrade process starts with the replicas (secondary instances). Once the replicas are upgraded, a switchover operation promotes one of the upgraded replicas to primary. The switchover process is very fast, typically completing in a few hundred milliseconds. After the switchover, the original primary instance is upgraded, ensuring minimal disruption to the application.
+
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## Deploy a MySQL Semi-Synchronous Cluster
+
+Deploy a 2-node semi-sync MySQL cluster (1 primary, 1 secondary):
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+## Verifying the Deployment
+Monitor the cluster status until it transitions to the Running state:
+```bash
+kubectl get cluster example-mysql-cluster -n demo -w
+```
+Expected Output:
+```bash
+NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Creating   8s
+example-mysql-cluster   mysql                Delete               Running    2m41s
+```
+Once the cluster status becomes Running, your MySQL cluster is ready for use.
+
+## List All Available MySQL Versions
+
+Use the following command to display the MySQL versions supported by your KubeBlocks installation:
+```bash
+kubectl get cmpv mysql
+```
+Example Output:
+```bash
+NAME    VERSIONS                                                                                         STATUS      AGE
+mysql   8.4.2,8.4.1,8.4.0,8.0.39,8.0.38,8.0.37,8.0.36,8.0.35,8.0.34,8.0.33,8.0.32,8.0.31,8.0.30,5.7.44   Available   11d
+```
+Note: The list of supported versions may vary depending on your KubeBlocks version.
+
+## Upgrading the MySQL Version
+
+### Identify the Current Primary and Secondary Instances
+Run the following command to identify the roles of the cluster instances:
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+```
+Example Output:
+```bash
+example-mysql-cluster-mysql-0	primary
+example-mysql-cluster-mysql-1	secondary
+```
+
+### Apply the Upgrade
+To upgrade the MySQL version, modify the serviceVersion field in the Cluster resource. In this example, we will upgrade the MySQL version from 8.0.35 to 8.0.39:
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.39      # Update version from 8.0.35 to 8.0.39
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+### Monitor the Upgrade Process
+During the upgrade, observe the changes in the cluster's Pods:
+```bash
+kubectl get pods -n demo -w
+```
+Example Output:
+```bash
+NAME                            READY   STATUS    RESTARTS   AGE
+example-mysql-cluster-mysql-0   4/4     Running   0          97s
+example-mysql-cluster-mysql-1   4/4     Running   0          50s
+example-mysql-cluster-mysql-1   3/4     Running   2 (2s ago)   68s
+example-mysql-cluster-mysql-0   4/4     Running   2 (6s ago)   2m6s
+```
+**Key Observations:**
+- The replica ('example-mysql-cluster-mysql-1') is upgraded first.
+- A switchover operation occurs, making the replica the new primary.
+- Finally, the original primary ('example-mysql-cluster-mysql-0') is upgraded.
+
+After the upgrade is completed, roles are switched:
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+```
+Updated Roles:
+```bash
+example-mysql-cluster-mysql-0	secondary
+example-mysql-cluster-mysql-1	primary
+```
+
+## Verification
+
+### Check Cluster Status
+Ensure the cluster is in the Running state:
+```bash
+kubectl get cluster example-mysql-cluster -n demo -w
+```
+Example Output:
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Running   17m
+```
+
+### Verify the MySQL Version
+Retrieve the MySQL root credentials:
+```bash
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+```
+Example Output:
+```bash
+79vJW1Vg43
+```
+
+Connect to the upgraded instances and verify the MySQL version:
+```bash
+kubectl exec -ti -n demo example-mysql-cluster-mysql-1 -- mysql -uroot -p79vJW1Vg43 -e "SELECT VERSION();"
+```
+Expected Output:
+```sql
++-----------+
+| VERSION() |
++-----------+
+| 8.0.39    |
++-----------+
+```
+
+## Summary
+In this guide, you learned how to:
+- Deploy a MySQL semi-synchronous cluster using KubeBlocks.
+- Perform a rolling upgrade of the MySQL minor version with minimal downtime.
+- Verify that the upgrade was successful.
+This rolling upgrade strategy ensures high availability by upgrading the replicas first, performing a switchover, and then upgrading the original primary instance.
+
+

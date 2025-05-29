@@ -1,0 +1,270 @@
+---
+title: Horizontal Scaling of MongoDB Clusters with KubeBlocks
+description: Learn how to perform horizontal scaling (scale-out and scale-in) on a MongoDB cluster managed by KubeBlocks using OpsRequest and direct Cluster API updates.
+keywords: [KubeBlocks, MongoDB, Horizontal Scaling, Scale-Out, Scale-In, Kubernetes]
+sidebar_position: 3
+sidebar_label: Horizontal Scaling
+---
+
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# Horizontal Scaling for MongoDB Clusters with KubeBlocks
+
+This guide explains how to perform horizontal scaling (scale-out and scale-in) on a MongoDB cluster managed by KubeBlocks. You'll learn how to use both **OpsRequest** and direct **Cluster API** updates to achieve this.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploy a MongoDB ReplicationSet Cluster
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+## Verifying the Deployment
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+
+## Scale-out (Add Replicas)
+
+**Expected Workflow**:
+
+1. New pod is provisioned, and transitions from `Pending` to `Running` with `secondary` role.
+2. Data synced from primary to new replica
+3. Cluster status changes from `Updating` to `Running`
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  Option 1: Using Horizontal Scaling OpsRequest
+
+  Scale out the MongoDB cluster by adding 1 replica to mongodb component:
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: mongo-cluster-scale-out-ops
+    namespace: demo
+  spec:
+    clusterName: mongo-cluster
+    type: HorizontalScaling
+    horizontalScaling:
+    - componentName: mongodb
+      # Specifies the replica changes for scaling in components
+      scaleOut:
+        # Specifies the replica changes for the component.
+        # add one more replica to current component
+        replicaChanges: 1
+  ```
+
+  Monitor the progress of the scaling operation:
+
+  ```bash
+  kubectl get ops mongo-cluster-scale-out-ops -n demo -w
+  ```
+
+  Expected Result:
+  ```bash
+  NAME                          TYPE                CLUSTER         STATUS    PROGRESS   AGE
+  mongo-cluster-scale-out-ops   HorizontalScaling   mongo-cluster   Running   0/1        9s
+  mongo-cluster-scale-out-ops   HorizontalScaling   mongo-cluster   Running   1/1        20s
+  mongo-cluster-scale-out-ops   HorizontalScaling   mongo-cluster   Succeed   1/1        20s
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  Option 2: Direct Cluster API Update
+
+  Alternatively, you can perform a direct update to the `replicas` field in the Cluster resource:
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: mongodb
+        replicas: 4 # increase replicas to scale-out
+  ...
+  ```
+
+  Or you can patch the cluster CR with command:
+
+  ```bash
+  kubectl patch cluster mongo-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 4}]'
+  ```
+  </TabItem>
+</Tabs>
+
+### Verify Scale-Out
+
+After applying the operation, you will see a new pod created and the MongoDB cluster status goes from `Updating` to `Running`, and the newly created pod has a new role `secondary`.
+
+New replicas automatically join as secondary nodes.
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=mongo-cluster -L kubeblocks.io/role
+```
+
+Expected Outputs:
+```bash
+NAME                      READY   STATUS    RESTARTS   AGE     ROLE
+mongo-cluster-mongodb-0   2/2     Running   0          6m24s   primary
+mongo-cluster-mongodb-1   2/2     Running   0          7m19s   secondary
+mongo-cluster-mongodb-2   2/2     Running   0          5m57s   secondary
+mongo-cluster-mongodb-3   2/2     Running   0          3m54s   secondary
+```
+
+Verify mongodb internal status using:
+
+1. login in any mongodb replica
+```bash
+kubectl exec -it -n demo mongo-cluster-mongodb-0 -- /bin/bash
+mongosh "mongodb://${MONGODB_ROOT_USER}:${MONGODB_ROOT_PASSWORD}@127.0.0.1:27017/admin"
+```
+2. check mongodb `rs.status()`
+```bash
+# login to mongodb and query
+mongo-cluster-mongodb [direct: secondary] admin> rs.status()
+```
+
+## Scale-in (Remove Replicas)
+
+**Expected Workflow**:
+
+1. Selected replica (the one with the largest ordinal) is removed
+2. If removing a primary replica, automatic switchover occurs first
+3. Pod is terminated gracefully
+4. Cluster status changes from `Updating` to `Running`
+
+:::note
+If the replica being scaled-in happens to be a primary replica, KubeBlocks will trigger a SwitchOver actions. And this pod will not be terminated until this SwitchOver action succeeds.
+:::
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  Option 1: Using Horizontal Scaling OpsRequest
+
+  Scale in the MongoDB cluster by removing ONE replica:
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: mongo-cluster-scale-in-ops
+    namespace: demo
+  spec:
+    clusterName: mongo-cluster
+    type: HorizontalScaling
+    horizontalScaling:
+    - componentName: mongodb
+      # Specifies the replica changes for scaling in components
+      scaleIn:
+        # Specifies the replica changes for the component.
+        # remove one replica from current component
+        replicaChanges: 1
+  ```
+
+  Monitor progress:
+  ```bash
+  kubectl get ops mongo-cluster-scale-in-ops -n demo -w
+  ```
+
+  Expected Result:
+  ```bash
+  NAME                         TYPE                CLUSTER         STATUS    PROGRESS   AGE
+  mongo-cluster-scale-in-ops   HorizontalScaling   mongo-cluster   Running   0/1        8s
+  mongo-cluster-scale-in-ops   HorizontalScaling   mongo-cluster   Running   1/1        24s
+  mongo-cluster-scale-in-ops   HorizontalScaling   mongo-cluster   Succeed   1/1        24s
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  Option 2: Direct Cluster API Update
+
+  Alternatively, you can perform a direct update to the `replicas` field in the Cluster resource:
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: mongodb
+        replicas: 1 # decrease replicas to scale-out
+  ```
+
+  Or you can patch the cluster CR with command:
+
+  ```bash
+  kubectl patch cluster mongo-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 1}]'
+  ```
+  </TabItem>
+
+</Tabs>
+
+### Verify Scale-In
+
+Expected Output (ONE Pod):
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=mongo-cluster,apps.kubeblocks.io/component-name=mongodb
+NAME                        READY   STATUS   RESTARTS   AGE
+mongo-cluster-mongodb-0     2/2     Running  0          18m
+```
+
+## Troubleshooting
+If the scale-in operations gets stuck for quite a long time, please check these resources:
+
+```bash
+# Check agent logs on both current primary and candidate
+kubectl logs -n demo <primary-pod> -c kbagent
+kubectl logs -n demo <candidate-pod> -c kbagent
+
+# Check cluster events for errors
+kubectl get events -n demo --field-selector involvedObject.name=pg-cluster
+
+# Check kubeblocks logs
+kubectl -n kb-system logs deploy/kubeblocks
+```
+
+If you get errors like following from primary replica:
+```text:
+INFO	Action Executed	{"action": "switchover", "result": "exit code: 1: failed"}
+INFO	HTTP API Called	{"user-agent": "Go-http-client/1.1", "method": "POST", "path": "/v1.0/action", "status code": 200, "cost": 7}
+```
+
+It could be a switchover error, and please check KubeBlocks logs for more details.
+
+## Best Practices
+
+When performing horizontal scaling:
+- Scale during low-traffic periods when possible
+- Monitor cluster health during scaling operations
+- Verify sufficient resources exist before scaling out
+- Consider storage requirements for new replicas
+
+## Cleanup
+To remove all created resources, delete the MongoDB cluster along with its namespace:
+```bash
+kubectl delete cluster mongo-cluster -n demo
+kubectl delete ns demo
+```
+
+## Summary
+In this guide you learned how to:
+- Perform scale-out operations to add replicas to a MongoDB cluster.
+- Perform scale-in operations to remove replicas from a MongoDB cluster.
+- Use both OpsRequest and direct Cluster API updates for horizontal scaling.
+KubeBlocks ensures seamless scaling with minimal disruption to your database operations.

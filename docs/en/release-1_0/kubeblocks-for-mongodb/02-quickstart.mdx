@@ -1,0 +1,543 @@
+---
+title: MongoDB Quick Start
+description: Comprehensive guide to deploying and managing MongoDB ReplicaSet  Clusters with KubeBlocks, including installation, configuration, and operational best practices.
+keywords: [Kubernetes, MongoDB, KubeBlocks, Helm, Cluster Management, QuickStart]
+sidebar_position: 2
+sidebar_label: QuickStart
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# MongoDB Quick Start
+
+This guide provides a comprehensive walkabout for deploying and managing MongoDB ReplicaSet  Clusters using the **KubeBlocks MongoDB Add-on**, covering:
+- System prerequisites and add-on installation
+- Cluster creation and configuration
+- Operational management including start/stop procedures
+- Connection methods and cluster monitoring
+
+## Prerequisites
+
+### System Requirements
+
+Before proceeding, verify your environment meets these requirements:
+
+- A functional Kubernetes cluster (v1.21+ recommended)
+- `kubectl` v1.21+ installed and configured with cluster access
+- Helm installed ([installation guide](https://helm.sh/docs/intro/install/))
+- KubeBlocks installed ([installation guide](../user_docs/overview/install-kubeblocks))
+
+### Verify MongoDB Add-on
+
+The MongoDB Add-on is included with KubeBlocks by default. Check its status:
+
+```bash
+helm list -n kb-system | grep mongodb
+```
+
+<details open>
+<summary>Expected Output:</summary>
+
+```bash
+NAME               NAMESPACE   REVISION    UPDATED                     STATUS      CHART
+kb-addon-mongodb     kb-system   1           2025-05-21                  deployed    mongodb-1.0.0
+```
+</details>
+
+If the add-on isn't enabled, choose an installation method:
+
+<Tabs>
+
+  <TabItem value="helm" label="helm" default>
+  ```bash
+  # Add Helm repo
+  helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
+  # For users in Mainland China, if GitHub is inaccessible or slow, use this alternative repo:
+  #helm repo add kubeblocks-addons https://jihulab.com/api/v4/projects/150246/packages/helm/stable
+
+  # Update helm repo
+  helm repo update
+  # Search available Add-on versions
+  helm search repo kubeblocks/mongodb --versions
+  # Install your desired version (replace <VERSION> with your chosen version)
+  helm upgrade -i kb-addon-mongodb kubeblocks-addons/mongodb --version <VERSION> -n kb-system
+  ```
+  </TabItem>
+
+  <TabItem value="kbcli" label="kbcli">
+
+  ```bash
+  # Add an index (kubeblocks is added by default)
+  kbcli addon index add kubeblocks https://github.com/apecloud/block-index.git
+  # Update the index
+  kbcli addon index update kubeblocks
+  # Update all indexes
+  kbcli addon index update --all
+  ```
+
+  To search and install an addon:
+
+  ```bash
+  # Search Add-on
+  kbcli addon search mongodb
+  # Install Add-on with your desired version (replace <VERSION> with your chosen version)
+  kbcli addon install mongodb --version <VERSION>
+  ```
+  **Sample Output:**
+  ```bash
+  ADDON   VERSION         INDEX
+  mongodb   0.9.0           kubeblocks
+  mongodb   0.9.1           kubeblocks
+  mongodb   1.0.0           kubeblocks
+  ```
+  To enable or disable an addon:
+
+  ```bash
+  # Enable Add-on
+  kbcli addon enable mongodb
+  # Disable Add-on
+  kbcli addon disable mongodb
+  ```
+
+  </TabItem>
+</Tabs>
+
+:::note
+**Version Compatibility**
+
+Always verify that the MongoDB Add-on version matches your KubeBlocks major version to avoid compatibility issues.
+
+:::
+
+### Verify Supported MongoDB Versions
+
+**List available MongoDB versions:**
+
+```bash
+kubectl get cmpv mongodb
+```
+<details open>
+<summary>Sample Output</summary>
+```text
+NAME      VERSIONS                                                                                         STATUS      AGE
+mongodb   8.0.8,8.0.6,8.0.4,7.0.19,7.0.16,7.0.12,6.0.22,6.0.20,6.0.16,5.0.30,5.0.28,4.4.29,4.2.24,4.0.28   Available   26d
+```
+</details>
+
+**Check version compatibility for ComponentDefinitions**
+
+**Step 1.** Get the list of `ComponentDefinition` associated with a given `ComponentVersion`
+
+```bash
+kubectl get cmpv mongodb -ojson | jq -r '.metadata.annotations."componentversion.kubeblocks.io/compatible-definitions"' | tr ',' '\n'
+```
+
+<details>
+<summary>Sample Output</summary>
+```text
+mongodb-1.0.0
+```
+</details>
+
+**Step 2.** Get the list of ComponentDefinition associated with a given ComponentVersion
+
+```bash
+kubectl get cmpv mongodb -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("mongodb"))) | .releases[]'
+```
+
+This returns versions compatible with `ComponentDefinition` named `mongodb`:
+
+<details open>
+<summary>Sample Output</summary>
+```text
+8.0.8
+8.0.6
+8.0.4
+7.0.19
+7.0.16
+7.0.12
+6.0.22
+6.0.20
+6.0.16
+5.0.30
+5.0.28
+4.4.29
+4.2.24
+4.0.28
+```
+</details>
+
+### Storage Configuration
+
+MongoDB requires persistent storage. Verify available options:
+
+```bash
+kubectl get storageclass
+```
+
+Recommended storage characteristics:
+- Minimum 20Gi capacity
+- ReadWriteOnce access mode
+- Supports volume expansion
+- Appropriate performance for workload
+
+## Deploy a MongoDB Replication Cluster
+
+Deploy a basic MongoDB ReplicaSet Cluster with default settings:
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/mongodb/cluster.yaml
+```
+
+This creates:
+- A MongoDB ReplicaSet Cluster with two components, MongoDB(2 replicas) and MongoDB Sentinel(3 replicas).
+- Default resource allocations (0.5 CPU, 0.5Gi memory)
+- 20Gi persistent storage
+- Automatic primary-replica configuration
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: mongo-cluster
+  namespace: demo
+spec:
+  # Specifies the behavior when a Cluster is deleted.
+  # Valid options are: [DoNotTerminate, Delete, WipeOut] (`Halt` is deprecated since KB 0.9)
+  # - `DoNotTerminate`: Prevents deletion of the Cluster. This policy ensures that all resources remain intact.
+  # - `Delete`: Extends the `Halt` policy by also removing PVCs, leading to a thorough cleanup while removing all persistent data.
+  # - `WipeOut`: An aggressive policy that deletes all Cluster resources, including volume snapshots and backups in external storage. This results in complete data removal and should be used cautiously, primarily in non-production environments to avoid irreversible data loss.
+  terminationPolicy: Delete
+  # Specifies the name of the ClusterDefinition to use when creating a Cluster.
+  # Note: DO NOT UPDATE THIS FIELD
+  # The value must be `mongodb` to create a MongoDB Cluster
+  clusterDef: mongodb
+  # Specifies the name of the ClusterTopology to be used when creating the
+  # Cluster.
+  # Valid options are [replicaset]
+  topology: replicaset
+  # Specifies a list of ClusterComponentSpec objects used to define the
+  # individual Components that make up a Cluster.
+  # This field allows for detailed configuration of each Component within the Cluster
+  componentSpecs:
+    - name: mongodb
+      # ServiceVersion specifies the version of the Service expected to be
+      # provisioned by this Component.
+      # Valid options are: [4.0.28,4.2.24,4.4.29,5.0.28,6.0.16,7.0.1]
+      serviceVersion: "6.0.16"
+      # Specifies the desired number of replicas in the Component
+      replicas: 3
+      # Specifies the resources required by the Component.
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      # Specifies a list of PersistentVolumeClaim templates that define the storage
+      # requirements for the Component.
+      volumeClaimTemplates:
+        # Refers to the name of a volumeMount defined in
+        # `componentDefinition.spec.runtime.containers[*].volumeMounts
+        - name: data
+          spec:
+            # The name of the StorageClass required by the claim.
+            # If not specified, the StorageClass annotated with
+            # `storageclass.kubernetes.io/is-default-class=true` will be used by default
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                # Set the storage size as needed
+                storage: 20Gi
+```
+
+For more API fields and descriptions, refer to the [API Reference](../user_docs/references/api-reference/cluster).
+
+### Create a Version-Specific MongoDB ReplicaSet Cluster
+
+To create a cluster with a specific version, configure `spec.componentSpecs.serviceVersion` (major.minor version) fields before applying:
+
+<Tabs>
+  <TabItem value="mongodb4" label="MongoDB 4">
+  ```yaml
+    componentSpecs:
+      - name: mongodb
+        serviceVersion: 4.0.28    # Valid options: [4.0.28,4.2.24,4.4.29]
+  ```
+  </TabItem>
+  <TabItem value="mongodb5" label="MongoDB 5">
+  ```yaml
+    componentSpecs:
+      - name: mongodb
+        serviceVersion: 5.0.28   # Valid options: [5.0.28]
+  ```
+  </TabItem>
+  <TabItem value="mongodb6" label="MongoDB 6" default>
+  ```yaml
+    componentSpecs:
+      - name: mongodb
+        serviceVersion: 6.0.22    # Valid options: [6.0.22,6.0.20,6.0.16 ]
+  ```
+  </TabItem>
+  <TabItem value="mongodb7" label="MongoDB 7">
+  ```yaml
+    componentSpecs:
+      - name: mongodb
+        serviceVersion: 7.0.19    # Valid options: [7.0.19,7.0.16,7.0.12]
+  ```
+  </TabItem>
+  <TabItem value="mongodb8" label="MongoDB 8">
+  ```yaml
+    componentSpecs:
+      - name: mongodb
+        serviceVersion: 8.0.8    # Valid options: [8.0.8,8.0.6,8.0.4]
+  ```
+  </TabItem>
+
+</Tabs>
+
+## Verify Cluster Status
+
+When deploying a MongoDB ReplicaSet Cluster with 1 primary replica and 2 secondary replicas:
+
+Confirm successful deployment by checking:
+
+1. Cluster phase is `Running`
+2. All pods are operational
+3. Replicas have correct roles
+
+Check status using either method:
+
+<Tabs>
+  <TabItem value='kubectl' label='kubectl' default>
+```bash
+kubectl get cluster mongo-cluster -n demo -w
+NAME            CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+mongo-cluster   mongodb              Delete               Creating   49s
+mongo-cluster   mongodb              Delete               Running    62s
+
+kubectl get pods -l app.kubernetes.io/instance=mongo-cluster -L  kubeblocks.io/role -n demo
+NAME                      READY   STATUS    RESTARTS   AGE   ROLE
+mongo-cluster-mongodb-0   2/2     Running   0          78s   primary
+mongo-cluster-mongodb-1   2/2     Running   0          63s   secondary
+mongo-cluster-mongodb-2   2/2     Running   0          48s   secondary
+```
+  </TabItem>
+
+  <TabItem value='kbcli' label='kbcli'>
+
+  With `kbcli` installed, you can view comprehensive cluster information:
+
+```bash
+kbcli cluster describe mongo-cluster -n demo
+
+Name: mongo-cluster	 Created Time: May 18,2025 21:16 UTC+0800
+NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY     STATUS    TERMINATION-POLICY
+demo        mongodb              replicaset   Running   Delete
+
+Endpoints:
+COMPONENT   INTERNAL                                                        EXTERNAL
+mongodb     mongo-cluster-mongodb.demo.svc.cluster.local:27017              <none>
+            mongo-cluster-mongodb-mongodb.demo.svc.cluster.local:27017
+            mongo-cluster-mongodb-mongodb-ro.demo.svc.cluster.local:27017
+
+Topology:
+COMPONENT   SERVICE-VERSION   INSTANCE                  ROLE        STATUS    AZ       NODE    CREATED-TIME
+mongodb     6.0.16            mongo-cluster-mongodb-0   primary     Running   zone-x   x.y.z   May 18,2025 21:16 UTC+0800
+mongodb     6.0.16            mongo-cluster-mongodb-1   secondary   Running   zone-x   x.y.z   May 18,2025 21:16 UTC+0800
+mongodb     6.0.16            mongo-cluster-mongodb-2   secondary   Running   zone-x   x.y.z   May 18,2025 21:17 UTC+0800
+
+Resources Allocation:
+COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+mongodb                         500m / 500m          512Mi / 512Mi           data:20Gi      <none>
+
+Images:
+COMPONENT   COMPONENT-DEFINITION    IMAGE
+mongodb     mongodb-1.0.0           docker.io/library/mongo:6.0.16
+                                    apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.0-beta.47
+
+Data Protection:
+BACKUP-REPO   AUTO-BACKUP   BACKUP-SCHEDULE   BACKUP-METHOD   BACKUP-RETENTION   RECOVERABLE-TIME
+
+Show cluster events: kbcli cluster list-events -n demo mongo-cluster
+```
+
+  </TabItem>
+</Tabs>
+
+## Access the MongoDB ReplicaSet Cluster
+
+KubeBlocks automatically provisions:
+1. Credentials stored in Secret `mongo-cluster-mongodb-account-root`
+2. ClusterIP Service `mongo-cluster-mongodb-mongodb` for read-write (Primary) replica
+3. ClusterIP Service `mongo-cluster-mongodb-mongodb-ro` for read-only (Secondary) replicas
+
+### Retrieve Credentials
+```bash
+# Get username
+NAME=$(kubectl get secret -n demo mongo-cluster-mongodb-account-root -o jsonpath='{.data.username}' | base64 --decode)
+# Get password
+PASSWD=$(kubectl get secret -n demo mongo-cluster-mongodb-account-root -o jsonpath='{.data.password}' | base64 --decode)
+```
+
+### Connection Methods
+
+<Tabs>
+  <TabItem value="Direct Pod Access" label="Direct Pod Access" default>
+
+  Connect directly to a pod:
+  ```bash
+  kubectl exec -ti -n demo mongo-cluster-mongodb-0 -- \
+    mongosh "mongodb://${NAME}:${PASSWD}@mongo-cluster-mongodb-mongodb:27017/admin"
+  ```
+  </TabItem>
+
+  <TabItem value="Local Port Forwarding" label="Local Port Forwarding">
+
+  1. Forward service port:
+
+  ```bash
+  kubectl port-forward svc/mongo-cluster-mongodb-mongodb 27017:27017 -n demo
+  ```
+
+
+  2. Connect via localhost:
+  ```bash
+  mongosh "mongodb://${NAME}:${PASSWD}@127.0.0.1:27017/admin"
+  ```
+  </TabItem>
+</Tabs>
+
+:::note
+**Production Considerations**
+For production environments, avoid using `kubectl exec` and `port-forward`. Instead implement:
+- LoadBalancer or NodePort Services for external access
+- Network policies to restrict access
+- TLS encryption for secure connections
+- Connection pooling for better performance
+:::
+
+## Stop the MongoDB ReplicaSet Cluster
+
+Stopping a cluster temporarily suspends operations while preserving all data and configuration:
+
+**Key Effects:**
+- Compute resources (Pods) are released
+- Persistent storage (PVCs) remains intact
+- Service definitions are maintained
+- Cluster configuration is preserved
+- Operational costs are reduced
+
+
+<Tabs>
+  <TabItem value="OpsRequest" label="OpsRequest API" default>
+  ```bash
+  kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/mongodb/stop.yaml
+  ```
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: mongodb-stop
+    namespace: demo
+  spec:
+    clusterName: mongo-cluster
+    type: Stop
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+  Alternatively, stop by setting `spec.componentSpecs.stop` to true:
+
+```bash
+kubectl patch cluster mongo-cluster -n demo --type='json' -p='[
+{
+  "op": "add",
+  "path": "/spec/componentSpecs/0/stop",
+  "value": true
+}
+]'
+```
+
+  ```yaml
+  spec:
+    componentSpecs:
+      - name: mongodb
+        stop: true  # Set to stop component
+        replicas: 2
+  ```
+  </TabItem>
+</Tabs>
+
+## Start the MongoDB ReplicaSet Cluster
+
+Restarting a stopped cluster resumes operations with all data and configuration intact:
+
+**Key Effects:**
+- Compute resources (Pods) are recreated
+- Services become available again
+- Cluster returns to previous state
+
+<Tabs>
+  <TabItem value="OpsRequest" label="OpsRequest API" default>
+  ```bash
+  kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/mongodb/start.yaml
+  ```
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: mongodb-start
+    namespace: demo
+  spec:
+    clusterName: mongo-cluster
+    type: Start
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+  Restart by setting `spec.componentSpecs.stop` to false:
+
+```bash
+kubectl patch cluster mongo-cluster -n demo --type='json' -p='[
+{
+  "op": "remove",
+  "path": "/spec/componentSpecs/0/stop"
+}
+]'
+```
+
+  </TabItem>
+</Tabs>
+
+
+## Delete MongoDB ReplicaSet Cluster
+
+Choose carefully based on your data retention needs:
+
+| Policy          | Resources Removed | Data Removed | Recommended For |
+|-----------------|-------------------|--------------|-----------------|
+| DoNotTerminate  | None              | None         | Critical production clusters |
+| Delete          | All resources     | PVCs deleted | Non-critical environments |
+| WipeOut         | All resources     | Everything*  | Test environments only |
+
+*Includes snapshots and backups in external storage
+
+**Pre-Deletion Checklist:**
+1. Verify no applications are using the cluster
+2. Ensure required backups exist
+3. Confirm proper terminationPolicy is set
+4. Check for dependent resources
+
+For test environments, use this complete cleanup:
+
+```bash
+kubectl patch cluster mongo-cluster -p '{"spec":{"terminationPolicy":"WipeOut"}}' --type="merge" -n demo
+kubectl delete cluster mongo-cluster -n demo
+```

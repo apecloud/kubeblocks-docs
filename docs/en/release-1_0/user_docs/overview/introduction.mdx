@@ -21,7 +21,7 @@ In contrast, KubeBlocks is designed to be a **general-purpose database operator*
 
 ![Design of KubeBlocks, a general purpose database operator](/img/docs/en/kubeblocks_general_purpose_arch.png)
 
-In above diagram, Cluster, Component, and InstanceSet are all CRDs provided by KubeBlocks. If you'd like to learn more about them, please refer to [concepts](concept.md).
+In above diagram, Cluster, Component, and InstanceSet are all CRDs provided by KubeBlocks. If you'd like to learn more about them, please refer to [concepts](../concepts/concept).
 
 KubeBlocks offers an Addon API to support the integration of various databases. For instance, we currently have the following KubeBlocks Addons for mainstream open-source database engines:
 - MySQL
@@ -45,35 +45,38 @@ The unified API makes KubeBlocks an excellent choice if you need to run multiple
 
 ## How unified APIs reduce your learning curve
 
-Here is an example of how to use KubeBlocks' Cluster API to write a YAML file and create a MySQL Cluster with three replicas.
+Here is an example of how to use KubeBlocks' Cluster API to write a YAML file and create a MySQL Cluster with two replicas.
 
 ```yaml
-apiVersion: apps.kubeblocks.io/v1alpha1
+apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
 metadata:
   name: test-mysql
-  namespace: default
+  namespace: demo
 spec:
   terminationPolicy: Delete
   componentSpecs:
-  - name: mysql
-    componentDef: apecloud-mysql
-    replicas: 3
-    resources:
-      limits:
-        cpu: '0.5'
-        memory: 0.5Gi
-      requests:
-        cpu: '0.5'
-        memory: 0.5Gi
-    volumeClaimTemplates:
-    - name: data
-      spec:
-        accessModes:
-        - ReadWriteOnce
-        resources:
-          requests:
-            storage: 10Gi
+    - name: mysql
+      componentDef: "mysql-8.0"
+      serviceVersion: 8.0.35
+      disableExporter: false
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
 ```
 Then, here comes the magic: with just a few modifications to some fields, you can create a PostgreSQL Cluster with two replicas! The same applies to MongoDB and Redis (the Redis example is slightly longer because it creates two components: redis-server and sentinel), and this approach works with a long list of engines.
 
@@ -81,64 +84,72 @@ Then, here comes the magic: with just a few modifications to some fields, you ca
 <TabItem value="PostgreSQL" label="PostgreSQL" default>
 
 ```yaml
-apiVersion: apps.kubeblocks.io/v1alpha1
+apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
 metadata:
-  name: test-postgresql
-  namespace: default
+  name: test-pg
+  namespace: demo
 spec:
   terminationPolicy: Delete
+  clusterDef: postgresql
+  topology: replication
   componentSpecs:
-  - name: postgresql
-    componentDef: postgresql
-    replicas: 2
-    resources:
-      limits:
-        cpu: '0.5'
-        memory: 0.5Gi
-      requests:
-        cpu: '0.5'
-        memory: 0.5Gi
-    volumeClaimTemplates:
-    - name: data
-      spec:
-        accessModes:
-        - ReadWriteOnce
-        resources:
-          requests:
-            storage: 10Gi
+    - name: postgresql
+      serviceVersion: 16.4.0
+      labels:
+        apps.kubeblocks.postgres.patroni/scope: test-pg-postgresql
+      disableExporter: true
+      replicas: 2
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
 ```
 
 </TabItem>
 <TabItem value="MongoDB" label="MongoDB">
 
 ```yaml
-apiVersion: apps.kubeblocks.io/v1alpha1
+apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
 metadata:
-  name: test-mongodb
-  namespace: default
+  name: test-mongo
+  namespace: demo
 spec:
   terminationPolicy: Delete
+  clusterDef: mongodb
+  topology: replicaset
   componentSpecs:
-  - name: mongodb
-    componentDef: mongodb
-    replicas: 3
-    resources:
-      limits:
-        cpu: '0.5'
-        memory: 0.5Gi
-      requests:
-        cpu: '0.5'
-        memory: 0.5Gi
-    volumeClaimTemplates:
-    - name: data
-      spec:
-        accessModes:
-        - ReadWriteOnce
-        resources:
-          requests:
-            storage: 10Gi
+    - name: mongodb
+      serviceVersion: "6.0.16"
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
 ```
 
 </TabItem>
@@ -149,7 +160,7 @@ apiVersion: apps.kubeblocks.io/v1alpha1
 kind: Cluster
 metadata:
   name: test-redis
-  namespace: default
+  namespace: demo
 spec:
   terminationPolicy: Delete
   componentSpecs:
@@ -208,12 +219,12 @@ This means that managing multiple databases on Kubernetes becomes simple, effici
   - Some databases support access through a so-called Smart Client, which redirects requests to other nodes or handles read-write separation based on the node addresses returned by the server. Databases that with the Smart Client access mode include Redis, MongoDB, and Kafka. Additionally, some databases, such as etcd, have clients that implement automatic failover between replicas. For these databases, KubeBlocks supports assigning a service address to each Pod (Pod Service).
 - Supports a Wide Range of Day-2 Operations:
   - Horizontal scaling (increasing and decreasing the number of replicas)
-  - Vertical scaling (adjusting CPU and memory resources for each replica) 
+  - Vertical scaling (adjusting CPU and memory resources for each replica)
   - PVC Volume capacity expansion
   - Backup and restore capabilities
   - Configuration changes (and hot reload, if possible)
   - Parameter modification
-  - Switchover 
+  - Switchover
   - Rolling upgrades
   - Decommission a specific replica
   - Minor version upgrades

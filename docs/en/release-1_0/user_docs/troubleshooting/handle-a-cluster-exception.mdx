@@ -1,0 +1,103 @@
+---
+title: FAQs
+description: How to handle an exception in a cluster
+keywords: [cluster exception]
+sidebar_position: 1
+sidebar_label: FAQs
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# FAQs
+
+### List of K8s Resources created by KubeBlocks when creating a Cluster
+
+To get the full list of associated resources created by KubeBlocks for given cluster:
+
+```bash
+kubectl get cmp,its,po -l app.kubernetes.io/instance=<CLUSTER_NAME> -n demo # cluster and worload
+kubectl get backuppolicy,backupschedule,backup -l app.kubernetes.io/instance=<CLUSTER_NAME> -n demo # data protection resources
+kubectl get componentparameter,parameter -l app.kubernetes.io/instance=<CLUSTER_NAME> -n demo # configuration resources
+kubectl get opsrequest -l app.kubernetes.io/instance=<CLUSTER_NAME> -n demo # opsrequest resources
+kubectl get svc,secret,cm,pvc -l app.kubernetes.io/instance=<CLUSTER_NAME> -n demo # k8s native resources
+```
+
+For troubleshooting,
+
+1. describe resource such as Cluster, Component, e.g.
+```bash
+kubectl describe TYPE NAME
+```
+
+2. check database instance logs
+```bash
+kubectl logs <podName> -c <containerName>
+```
+
+3. check KubeBlocks logs
+```bash
+kubectl -n kb-system logs deployments/kubeblocks -f
+```
+
+### How to get the detail of each backup method
+
+Details of each backup method are defined in `ActionSet` in KubeBlocks.
+
+For example, To get the `ActionSet` which defines the behavior of backup method named `wal-g-archive` in PostgreSQL, for instance:
+
+```bash
+kubectl -n demo get bp pg-cluster-postgresql-backup-policy -oyaml | yq '.spec.backupMethods[] | select(.name=="wal-g-archive") | .actionSetName'
+```
+
+ActionSet defined:
+
+- backup type
+- both backup and restore procedures
+- environment variables used in procedures
+
+And you may check details of each ActionsSet to find out how backup and restore will be performed.
+
+
+### How to Check Compatible versions
+
+Versions and it compatibility rules are embedded in `ComponentVersion` CR in KubeBlocks.
+To the the list of compatible versions:
+
+```bash
+kubectl get cmpv postgresql -ojson | jq '.spec.compatibilityRules'
+```
+
+<details open>
+
+<summary>Expected output</summary>
+
+```json
+[
+  {
+    "compDefs": [
+      "postgresql-12-"
+    ],
+    "releases": [
+      "12.14.0",
+      "12.14.1",
+      "12.15.0"
+    ]
+  },
+  {
+    "compDefs": [
+      "postgresql-14-"
+    ],
+    "releases": [
+      "14.7.2",
+      "14.8.0"
+    ]
+  }
+]
+```
+
+</details>
+
+Releases are grouped by component definitions, and each group has a list of compatible releases.
+In this example, it shows you can upgrade from version `12.14.0` to `12.14.1` or `12.15.0`, and upgrade from `14.7.2` to `14.8.0`.
+But cannot upgrade from `12.14.0` to `14.8.0`.

@@ -1,0 +1,172 @@
+---
+title: Planned Switchover in a MySQL Cluster
+description: Learn how to perform a planned switchover in a MySQL cluster using KubeBlocks to ensure minimal downtime and seamless role transitions.
+keywords: [KubeBlocks, MySQL, Switchover, High Availability, Kubernetes]
+sidebar_position: 8
+sidebar_label: Planned Switchover in MySQL
+---
+
+# Planned Switchover in a MySQL Cluster
+
+A **switchover** is a planned operation where the primary instance in a MySQL cluster proactively transfers its role to a secondary instance. Unlike an unplanned failover, which occurs during unexpected failures, a switchover ensures a controlled and predictable role transition with minimal service disruption.
+
+## **Benefits of Switchover**
+1. **Minimal Downtime**: The primary instance actively transfers its role to the secondary instance, resulting in very short service downtime (typically a few hundred milliseconds).
+2. **Controlled Transition**: Ensures a seamless and predictable role change compared to failover, which involves detecting and recovering from a failure, often causing longer delays (several seconds or more).
+3. **Maintenance-Friendly**: Ideal for planned maintenance tasks, such as node upgrades or decommissioning, while ensuring uninterrupted service.
+
+## **Switchover vs. Failover**
+
+| **Aspect**                  | **Switchover**                            | **Failover**                         |
+|-----------------------------|-------------------------------------------|---------------------------------------|
+| **Initiation**              | Planned and manually triggered            | Unplanned and automatically triggered|
+| **Downtime**                | Few hundred milliseconds                  | Several seconds or more               |
+| **Primary Role Transition** | Proactively transferred                   | Reactively promoted                   |
+| **Use Case**                | Planned maintenance (e.g., upgrades)      | Handling unexpected failures          |
+
+Using a switchover ensures smooth transitions and minimal service disruption, making it the preferred choice for planned maintenance activities.
+
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+  - A Kubernetes cluster is up and running.
+  - The kubectl CLI tool is configured to communicate with your cluster.
+  - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## Deploy a MySQL Semi-Synchronous Cluster
+
+Deploy a 2-node semi-sync MySQL cluster (1 primary, 1 secondary):
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+## Verifying the Deployment
+
+Monitor the status of the MySQL cluster as it is created:
+```bash
+kubectl get cluster -n demo -w
+```
+Expected Output:
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster   mysql                Delete               Creating   4s
+example-mysql-cluster   mysql                Delete               Running    62s
+```
+
+## Check Roles
+List the Pods and their roles (primary or secondary):
+
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+```
+Example Outputs:
+```
+example-mysql-cluster-mysql-0	primary
+example-mysql-cluster-mysql-1	secondary
+```
+
+
+## Performing a Planned Switchover
+
+To initiate a planned switchover, create an OpsRequest resource as shown below:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-switchover-ops
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  type: Switchover
+  switchover:
+  - componentName: mysql
+    instanceName: example-mysql-cluster-mysql-0
+EOF
+```
+Key Parameters:
+- `instanceName`: Specifies the instance (Pod) that is primary or leader before a switchover operation.
+
+## Monitoring the Switchover
+
+You can check the progress of the scaling operation with the following command:
+
+```bash
+kubectl describe ops example-mysql-switchover-ops -n demo
+```
+
+Expected Result:
+```bash
+Status:
+  Phase:            Succeed
+  Progress:         1/1
+  ...
+```
+## Verify the Switchover
+
+After the switchover is executed, the specified instance ('example-semisync-mysql-mysql-0') will be promoted to the primary role, while the previously primary instance ('example-semisync-mysql-mysql-1') will take on the secondary role.
+
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+example-mysql-cluster-mysql-0	secondary
+example-mysql-cluster-mysql-1	primary
+```
+
+In this example:
+- Pod 'example-mysql-cluster-mysql-1' has been promoted to the primary role.
+- Pod 'example-mysql-cluster-mysql-0' has transitioned to the secondary role.
+
+
+
+## Summary
+Key Benefits of Planned Switchover:
+1. Minimal Downtime: The operation completes within a few hundred milliseconds, ensuring service continuity.
+2. Controlled Transition: Switchover ensures a predictable and seamless role change, unlike failovers, which are reactive and take longer.
+3. Ideal for Maintenance: Enables tasks like upgrades, node decommissioning, or rebalancing without impacting application availability.
+
+In this guide, you learned how to:
+- Deploy a MySQL cluster managed by KubeBlocks.
+- Perform a planned switchover to transfer the primary role from one instance to another.
+- Verify the success of the switchover operation and the updated roles of the Pods.
+Planned switchover is a critical operation for maintaining high availability during maintenance tasks, ensuring minimal service disruption and predictable transitions in highly available systems.
+

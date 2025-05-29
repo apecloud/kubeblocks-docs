@@ -1,0 +1,135 @@
+---
+title: Deploying a Milvus Standalone Cluster with KubeBlocks
+description: Learn how to deploy a Milvus Standalone Cluster using KubeBlocks. This guide covers configuration, verification, failover testing, and timeout configuration.
+keywords: [KubeBlocks, Redis, Kubernetes, High Availability]
+sidebar_position: 1
+sidebar_label: Milvus Standalone Cluster
+---
+
+# Deploying a Milvus Standalone Cluster with KubeBlocks
+
+Standalone is a lightweight deployment suitable for development and testing with following components:
+
+- **Milvus Core**: Provides vector search and database functionality
+- **Metadata Storage (ETCD)**: Stores cluster metadata and configuration
+- **Object Storage (MinIO/S3)**: Persists vector data and indexes
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploying the Milvus Standalone Cluster
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: milvus-standalone
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  # The value must be `milvus` to create a Milvus Cluster
+  clusterDef: milvus
+  # Valid options are: [standalone,cluster]
+  topology: standalone
+  componentSpecs:
+    - name: etcd
+      replicas: 1
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 10Gi
+    - name: minio
+      replicas: 1
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 10Gi
+    - name: milvus
+      replicas: 1
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 10Gi
+```
+
+**Key Configuration Details**:
+- `clusterDef: milvus`: Specifies the ClusterDefinition CR for the cluster.
+- `topology: standalone`: Configures the cluster to use standalone topology.
+- `componentSpecs`: Defines the components in the cluster
+
+
+## Verifying the Deployment
+
+### Check the Cluster Status
+Once the cluster is deployed, check its status:
+```bash
+kubectl get cluster milvus-standalone  -n demo -w
+```
+Example Output:
+```bash
+NAME                CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+milvus-standalone   milvus               Delete               Creating   40s
+milvus-standalone   milvus               Delete               Creating   71s
+milvus-standalone   milvus               Delete               Creating   71s
+milvus-standalone   milvus               Delete               Updating   71s
+milvus-standalone   milvus               Delete               Running    2m55s
+```
+
+### Verify Component Status
+```bash
+kubectl get component -n demo -l app.kubernetes.io/instance=milvus-standalone
+```
+Example Output:
+```bash
+NAME                       DEFINITION                        SERVICE-VERSION   STATUS    AGE
+milvus-standalone-etcd     etcd-3-1.0.0                      3.5.15            Running   3m5s
+milvus-standalone-milvus   milvus-standalone-1.0.0           v2.3.2            Running   114s
+milvus-standalone-minio    milvus-minio-1.0.0                8.0.17            Running   3m5s
+```
+
+## Cleanup
+To remove all resources created during this tutorial:
+
+```bash
+kubectl delete cluster milvus-standalone -n demo
+kubectl delete ns demo
+```
