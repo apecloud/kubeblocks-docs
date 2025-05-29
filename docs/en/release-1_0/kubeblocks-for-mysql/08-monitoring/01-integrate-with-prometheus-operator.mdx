@@ -102,7 +102,7 @@ Monitor the cluster status until it transitions to Running:
 kubectl get cluster example-mysql-cluster -n demo -w
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 example-mysql-cluster   mysql                Delete               Creating   34s
@@ -122,7 +122,7 @@ To find the metrics endpoint of the MySQL exporter, run the following command:
 kubectl get po example-mysql-cluster-mysql-0 -n demo -oyaml | yq '.spec.containers[] | select(.name=="mysql-exporter") | .ports '
 ```
 
-Expected Output:
+Example Output:
 ```yaml
 - containerPort: 9104
   name: http-metrics  # <-- Port name for PodMonitor
@@ -193,7 +193,7 @@ Run the following query to confirm that metrics are being scraped:
 curl -sG "http://localhost:9090/api/v1/query" --data-urlencode 'query=mysql_up' | jq
 ```
 
-Expected Outputs:
+Example Output:
 ```json
 {
   "status": "success",

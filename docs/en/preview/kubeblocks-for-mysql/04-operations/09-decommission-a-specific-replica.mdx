@@ -79,7 +79,7 @@ Monitor the cluster status until it transitions to the Running state:
 ```bash
 kubectl get cluster example-mysql-cluster -n demo -w
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 example-mysql-cluster   mysql                Delete               Creating   8s
@@ -93,7 +93,7 @@ List the Pods in the cluster to verify all three Pods are running:
 kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster
 ```
 
-Expected Output (3 Pods):
+Example Output (3 Pods):
 ```bash
 NAME                           READY   STATUS    RESTARTS   AGE
 example-mysql-cluster-mysql-0   4/4     Running   0          4m30s
@@ -137,7 +137,7 @@ Check the progress of the decommissioning operation:
 ```bash
 kubectl describe ops example-mysql-cluster-decommission-ops -n demo
 ```
-Expected Output:
+Example Output:
 
 ```bash
 Status:
@@ -199,7 +199,7 @@ After applying the updated configuration, verify the remaining Pods in the clust
 kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                                READY   STATUS    RESTARTS   AGE
 example-mysql-cluster-mysql-0   4/4     Running   0          6m38s
@@ -211,4 +211,5 @@ In this guide, you learned:
 - The limitations of traditional StatefulSet-based scaling in Kubernetes.
 - How KubeBlocks enables precise decommissioning of specific Pods.
 - Two methods to decommission a Pod: using OpsRequest or directly updating the Cluster API.
+
 By leveraging KubeBlocks, you can manage MySQL clusters with fine-grained control, ensuring high availability and flexibility for maintenance and workload distribution.

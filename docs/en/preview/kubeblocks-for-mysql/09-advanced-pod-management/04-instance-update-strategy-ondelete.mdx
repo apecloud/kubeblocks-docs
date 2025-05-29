@@ -75,7 +75,7 @@ Monitor the cluster status until it transitions to the Running state:
 ```bash
 kubectl get cluster example-mysql-cluster -n demo -w
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 example-mysql-cluster   mysql                Delete               Creating   6s
@@ -119,7 +119,7 @@ Check the cluster status after applying the patch:
 ```bash
 kubectl get cluster example-mysql-cluster -n demo
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
 example-mysql-cluster   mysql                Delete               Updating   5m57s
@@ -130,7 +130,7 @@ Verify that the pods are still running:
 ```bash
 kubectl get pods -n demo
 ```
-Expected Output:
+Example Output:
 ```
 NAME                            READY   STATUS    RESTARTS   AGE
 example-mysql-cluster-mysql-0   4/4     Running   0          6m18s
@@ -150,7 +150,7 @@ Monitor the pods as they are recreated:
 ```bash
 kubectl get pods -n demo  -w
 ```
-Expected Output:
+Example Output:
 ```
 NAME                            READY   STATUS    RESTARTS   AGE
 example-mysql-cluster-mysql-0   4/4     Running   0          2m21s
@@ -161,7 +161,7 @@ Once all Pods are running, the cluster status will update to 'Running':
 ```bash
 kubectl get cluster example-mysql-cluster -n demo -w
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 example-mysql-cluster   mysql                Delete               Running   24m

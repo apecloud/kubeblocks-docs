@@ -196,7 +196,7 @@ Monitor the cluster status until it transitions to the Running state:
 ```bash
 kubectl get cluster -n demo
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 example-mysql-cluster   mysql                Delete               Running   2m32s
@@ -208,7 +208,7 @@ To get detailed information about the MySQL cluster:
 ```bash
 kbcli cluster describe example-mysql-cluster -n demo
 ```
-Expected Output:
+Example Output:
 ```bash
 Name: example-mysql-cluster	 Created Time: Mar 10,2025 16:43 UTC+0800
 NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY   STATUS    TERMINATION-POLICY
@@ -243,7 +243,7 @@ To get detailed information about the Orchestrator cluster:
 ```bash
 kbcli cluster describe example-orc-cluster -n demo
 ```
-Expected Output:
+Example Output:
 ```bash
 Name: example-orc-cluster	 Created Time: Mar 10,2025 16:43 UTC+0800
 NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY   STATUS    TERMINATION-POLICY
@@ -295,7 +295,7 @@ First, list all the pods in the cluster, along with their roles, to identify the
 ```bash
 kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
-Expected Output:
+Example Output:
 ```
 example-mysql-cluster-mysql-0	primary
 example-mysql-cluster-mysql-1	secondary

@@ -16,7 +16,7 @@ A **switchover** is a planned operation that transfers the primary role from one
 - Minimal downtime (typically a few hundred milliseconds).
 - Predictable maintenance windows
 
-SwitchOver are ideal for:
+Switchover is ideal for:
 - Node maintenance/upgrades
 - Workload rebalancing
 - Testing high availability
@@ -47,7 +47,7 @@ List the Pods and their roles (primary or secondary):
 kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster -L kubeblocks.io/role
 ```
 
-Example Outputs:
+Example Output:
 
 ```text
 NAME                      READY   STATUS    RESTARTS   AGE     ROLE
@@ -105,7 +105,7 @@ To initiate a planned switchover, create an OpsRequest resource as shown below:
 
   **Key Parameters:**
   - `instanceName`: Specifies the instance (Pod) that is primary or leader before a switchover operation.
-  - `candidateName`: If Candidate Name is specified, the role will be transferred to this instance.
+  - `candidateName`: If candidate name is specified, the role will be transferred to this instance.
   </TabItem>
 </Tabs>
 
@@ -163,11 +163,11 @@ kubectl -n kb-system logs deploy/kubeblocks
 
 This guide demonstrated how to:
 1. Deploy a PostgreSQL HA cluster
-2. Perform both automatic and targeted SwitchOver
+2. Perform both automatic and targeted Switchover
 3. Verify role transitions
 
 **Key takeaways:**
-- SwitchOver enable controlled maintenance with minimal downtime (~100-500ms)
+- Switchover enables controlled maintenance with minimal downtime (~100-500ms)
 - KubeBlocks provides declarative operations for reliable role transitions
 - Always verify:
   - Cluster status immediately after switchover

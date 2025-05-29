@@ -19,7 +19,7 @@ This guide demonstrates how to perform Point-In-Time Recovery (PITR) for MongoDB
    - Cluster Annotation (declarative approach)
    - OpsRequest API (operational control)
 
-PITR enables recovery to any moment within the timeRange the backup for.
+PITR enables recovery to any moment within the `timeRange` specified.
 
 ## Prerequisites
 
@@ -35,7 +35,7 @@ To perform a PITR restoration, both a full backup and continuous backup are requ
 - Backup repository accessible
 - Sufficient resources for new cluster
 
-To identify the list of full and continuous backups, you may follow steps:
+To identify the list of full and continuous backups, you may follow the steps:
 
 ### 1. Verify Continuous Backup
 Confirm you have an continuous WAL backup, either running or completed:
@@ -70,7 +70,7 @@ kubectl get backup -n demo -l dataprotection.kubeblocks.io/backup-type=Full,app.
 
 :::tip
 KubeBlocks automatically selects the most recent qualifying full backup as the base.
-Make sure there is a full backup meets the condition: its stopTime/completionTimestamp must **AFTER** Continuous backup's startTime, otherwise PITR restoration will fail.
+Make sure there is a full backup meets the condition: its `stopTime`/`completionTimestamp` must **AFTER** Continuous backup's `startTime`, otherwise PITR restoration will fail.
 :::
 
 ## Option 1: Cluster Annotation Restoration
@@ -87,7 +87,7 @@ kubectl get backup <continuous-backup-name> -n demo -o json | \
 Configure PITR parameters in cluster annotation:
 
 Key parameters:
-- `encryptedSystemAccounts`: From previous step
+- `encryptedSystemAccounts`: From the previous steps
 - `name`: Continuous backup name
 - `restoreTime`: Target recovery time (within backup `timeRange`)
 

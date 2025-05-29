@@ -144,7 +144,7 @@ kubectl port-forward svc/pg-cluster-postgresql-postgresql 5432:5432 -n demo
 psql "host=127.0.0.1 dbname=postgres user=${NAME} password=${PASSWD} sslmode=require"
 ```
 
-Sample Output:
+Example Output:
 ```bash
 SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, compression: off, ALPN: none)
 Type "help" for help.
@@ -166,7 +166,7 @@ kubectl get -n demo secrets pg-cluster-postgresql-tls-certs -oyaml | yq '.data."
 psql "host=127.0.0.1 dbname=postgres user=${NAME} password=${PASSWD} sslmode=verify-full sslrootcert=/tmp/ca.crt"
 ```
 
-Sample Output:
+Example Output:
 ```bash
 SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, compression: off, ALPN: none)
 Type "help" for help.

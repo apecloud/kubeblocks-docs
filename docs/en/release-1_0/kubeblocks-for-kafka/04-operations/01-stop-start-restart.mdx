@@ -118,7 +118,7 @@ To confirm a successful stop operation:
   ```bash
   kubectl get cluster kafka-separated-cluster -n demo -w
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME                      CLUSTER-DEFINITION    TERMINATION-POLICY   STATUS     AGE
   kafka-separated-cluster   kafka                 Delete               Stopping   16m3s
@@ -129,7 +129,7 @@ To confirm a successful stop operation:
   ```bash
   kubectl get pods -l app.kubernetes.io/instance=kafka-separated-cluster -n demo
   ```
-  Expected output:
+  Example Output:
   ```bash
   No resources found in demo namespace.
   ```
@@ -138,7 +138,7 @@ To confirm a successful stop operation:
   ```bash
   kubectl get pvc -l app.kubernetes.io/instance=kafka-separated-cluster -n demo
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME                                                  STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
   data-kafka-separated-cluster-kafka-broker-0           Bound    pvc-ddd54e0f-414a-49ed-8e17-41e9f5082af1   20Gi       RWO            standard       <unset>                 14m
@@ -212,7 +212,7 @@ To confirm a successful start operation:
   ```bash
   kubectl get cluster kafka-separated-cluster -n demo -w
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME                      CLUSTER-DEFINITION     TERMINATION-POLICY   STATUS     AGE
   kafka-separated-cluster   kafka                  Delete               Updating   24m
@@ -224,7 +224,7 @@ To confirm a successful start operation:
   ```bash
   kubectl get pods -n demo -l app.kubernetes.io/instance=kafka-separated-cluster
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME                                         READY   STATUS    RESTARTS   AGE
   kafka-separated-cluster-kafka-broker-0       2/2     Running   0          2m4s
@@ -284,7 +284,7 @@ To verify a successful component restart:
   ```bash
   kubectl get opsrequest kafka-separated-cluster-restart-ops -n demo -w
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME                                  TYPE      CLUSTER                   STATUS    PROGRESS   AGE
   kafka-separated-cluster-restart-ops   Restart   kafka-separated-cluster   Running   0/1        8s

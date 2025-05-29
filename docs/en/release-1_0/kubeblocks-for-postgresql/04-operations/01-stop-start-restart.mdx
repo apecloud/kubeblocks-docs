@@ -108,7 +108,7 @@ To confirm a successful stop operation:
    ```bash
    kubectl get cluster pg-cluster -n demo -w
    ```
-   Expected output:
+   Example Output:
    ```bash
    NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
    pg-cluster   postgresql           Delete               Stopping   6m3s
@@ -119,7 +119,7 @@ To confirm a successful stop operation:
    ```bash
    kubectl get pods -n demo
    ```
-   Expected output:
+   Example Output:
    ```bash
    No resources found in demo namespace.
    ```
@@ -128,7 +128,7 @@ To confirm a successful stop operation:
    ```bash
    kubectl get pvc -n demo
    ```
-   Expected output:
+   Example Output:
    ```bash
    NAME                           STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
    data-pg-cluster-postgresql-0   Bound    pvc-dcfb1ebc-2773-4edd-9898-e11da76062c4   20Gi       RWO            standard       19m
@@ -192,7 +192,7 @@ To confirm a successful start operation:
    ```bash
    kubectl get cluster pg-cluster -n demo -w
    ```
-   Expected output:
+   Example Output:
    ```bash
    NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
    pg-cluster   postgresql           Delete               Updating   22m
@@ -203,7 +203,7 @@ To confirm a successful start operation:
    ```bash
    kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster
    ```
-   Expected output:
+   Example Output:
    ```bash
    NAME                     READY   STATUS    RESTARTS   AGE
    pg-cluster-postgresql-0   1/1     Running   0          2m
@@ -252,7 +252,7 @@ To verify a successful component restart:
    ```bash
    kubectl get opsrequest pg-cluster-restart-ops -n demo -w
    ```
-   Expected output:
+   Example Output:
    ```bash
    NAME                     TYPE      CLUSTER      STATUS    PROGRESS   AGE
    pg-cluster-restart-ops   Restart   pg-cluster   Running   0/2        10s

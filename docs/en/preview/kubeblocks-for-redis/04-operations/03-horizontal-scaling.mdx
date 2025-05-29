@@ -117,7 +117,7 @@ After applying the operation, you will see a new pod created and the Redis clust
 kubectl get pods -n demo -l app.kubernetes.io/instance=redis-replication
 ```
 
-Expected Output (3 Pods):
+Example Output (3 Pods):
 ```bash
 NAME                                 READY   STATUS    RESTARTS   AGE
 redis-replication-redis-0            3/3     Running   0          9m47s
@@ -133,7 +133,7 @@ New replicas automatically join as secondary nodes.
 kubectl get pods -n demo -l app.kubernetes.io/instance=redis-replication -L kubeblocks.io/role
 ```
 
-Expected Outputs:
+Example Output:
 ```bash
 NAME                                 READY   STATUS    RESTARTS   AGE     ROLE
 redis-replication-redis-0            3/3     Running   0          10m     secondary
@@ -154,7 +154,7 @@ redis-replication-redis-sentinel-2   2/2     Running   0          17m
 4. Cluster status changes from `Updating` to `Running`
 
 :::note
-If the replica being scaled-in happens to be a primary replica, KubeBlocks will trigger a SwitchOver actions. And this pod will not be terminated until this SwitchOver action succeeds.
+If the replica being scaled-in happens to be a primary replica, KubeBlocks will trigger a Switchover actions. And this pod will not be terminated until this Switchover action succeeds.
 :::
 
 <Tabs>
@@ -225,7 +225,7 @@ If the replica being scaled-in happens to be a primary replica, KubeBlocks will 
 
 ### Verify Scale-In
 
-Expected Output (ONE Pod):
+Example Output (ONE Pod):
 ```bash
 kubectl get pods -n demo -l app.kubernetes.io/instance=redis-replication,apps.kubeblocks.io/component-name=redis
 NAME                        READY   STATUS    RESTARTS   AGE

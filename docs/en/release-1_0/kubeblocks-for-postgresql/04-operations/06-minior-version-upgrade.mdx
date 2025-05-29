@@ -74,7 +74,7 @@ Monitor the cluster status until it transitions to the Running state:
 kubectl get cluster pg-cluster -n demo -w
 ```
 
-Example Output::
+Example Output:
 
 ```bash
 NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
@@ -127,7 +127,7 @@ kubectl get cmpv postgresql -ojson | jq -r '.metadata.annotations."componentvers
 ```
 
 <details>
-<summary>Sample Output</summary>
+<summary>Example Output</summary>
 ```text
 postgresql-12-1.0.0
 postgresql-14-1.0.0
@@ -145,7 +145,7 @@ kubectl get cmpv postgresql -o json | jq -r '.spec.compatibilityRules[] | select
 This returns versions compatible with `ComponentDefinition` named `postgresql-14`:
 
 <details open>
-<summary>Sample Output</summary>
+<summary>Example Output</summary>
 ```text
 14.7.2
 14.8.0

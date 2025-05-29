@@ -115,7 +115,7 @@ Track progress until status shows "Completed":
 kubectl get backup redis-backup-datafile  -n demo -w
 ```
 
-Expected Output:
+Example Output:
 
 ```bash
 NAME                    POLICY                                  METHOD     REPO            STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
@@ -183,7 +183,7 @@ Check the final backup status:
 kubectl get backup -n demo -l operations.kubeblocks.io/ops-name=redis-replication-backup
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                                           POLICY                                  METHOD     REPO            STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
 backup-demo-redis-replication-20250517092706   redis-replication-redis-backup-policy   datafile   <BACKUP_REPO>   Completed   3458         10s        Delete            2025-05-17T09:27:06Z   2025-05-17T09:27:16Z   2025-06-16T09:27:16Z

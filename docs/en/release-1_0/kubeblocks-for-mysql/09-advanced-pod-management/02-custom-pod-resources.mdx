@@ -137,7 +137,7 @@ Monitor the cluster status until it returns to Running:
 ```bash
 kubectl get cluster -n demo -w
 ```
-Example output:
+Example Output:
 ```bash
 NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
 example-mysql-cluster   mysql                Delete               Updating   79s
@@ -239,7 +239,7 @@ Check the Cluster status:
 ```bash
 kubectl get cluster -n demo -w
 ```
-Example output:
+Example Output:
 ```bash
 NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
 example-mysql-cluster   mysql                Delete               Updating   16m
@@ -249,7 +249,7 @@ Then list the Services:
 ```bash
 kubectl get svc -n demo
 ```
-Example output:
+Example Output:
 ```bash
 NAME                                   TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                                                 AGE
 example-mysql-cluster-custom-pod       ClusterIP   172.20.202.249   <none>        3306/TCP                                                12m

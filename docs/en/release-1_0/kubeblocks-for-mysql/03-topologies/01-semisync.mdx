@@ -171,7 +171,7 @@ Run the following command to check the semi-synchronous replication status on th
 ```bash
 kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-0.example-mysql-cluster-mysql-headless.demo.svc.cluster.local -uroot -pz475N4c6ib -e "show status like 'Rpl%_status';"
 ```
-Expected Output:
+Example Output:
 ```sql
 +------------------------------+-------+
 | Variable_name                | Value |
@@ -189,7 +189,7 @@ Check the semi-synchronous replication status on the replica node:
 ```bash
 kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-1.example-mysql-cluster-mysql-headless.demo.svc.cluster.local -uroot -pz475N4c6ib -e "show status like 'Rpl%_status';"
 ```
-Expected Output:
+Example Output:
 ```sql
 +------------------------------+-------+
 | Variable_name                | Value |
@@ -270,7 +270,7 @@ Note: Reapplying the YAML file will restart the Pods, as this modification needs
 ```bash
 kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pz475N4c6ib -e "show variables like 'rpl_semi_sync_source_timeout';"
 ```
-Expected Output:
+Example Output:
 ```sql
 +------------------------------+-------+
 | Variable_name                | Value |

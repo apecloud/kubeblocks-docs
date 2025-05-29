@@ -122,7 +122,7 @@ After applying the operation, you will see a new pod created and the Qdrant clus
 kubectl get pods -n demo -l app.kubernetes.io/instance=qdrant-cluster
 ```
 
-Expected Outputs:
+Example Output:
 ```bash
 NAME                      READY   STATUS    RESTARTS   AGE
 qdrant-cluster-qdrant-0   2/2     Running   0          6m24s
@@ -213,7 +213,7 @@ It is handled by Qdrant `MemberLeave` operation, and Pods won't be deleted until
 
 ### Verify Scale-In
 
-Expected Output (ONE Pod):
+Example Output (ONE Pod):
 ```bash
 kubectl get pods -n demo -l app.kubernetes.io/instance=qdrant-cluster
 NAME                        READY   STATUS   RESTARTS   AGE

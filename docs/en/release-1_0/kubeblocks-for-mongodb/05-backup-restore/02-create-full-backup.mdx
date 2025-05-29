@@ -120,7 +120,7 @@ Track progress until status shows "Completed":
 kubectl get backup mongodb-backup-datafile  -n demo -w
 ```
 
-Expected Output:
+Example Output:
 
 ```bash
 NAME                      POLICY                                METHOD     REPO            STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME   EXPIRATION-TIME
@@ -191,7 +191,7 @@ Check the final backup status:
 kubectl get backup -n demo -l operations.kubeblocks.io/ops-name=mongo-cluster-backup
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                                       POLICY                                METHOD     REPO     STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
 backup-demo-mongo-cluster-20250518142234   mongo-cluster-mongodb-backup-policy   datafile   kb-oss   Completed   1149575      11s        Delete            2025-05-18T14:22:34Z   2025-05-18T14:22:44Z   2025-06-17T14:22:44Z

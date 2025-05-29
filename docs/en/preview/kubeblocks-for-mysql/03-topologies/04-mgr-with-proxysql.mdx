@@ -93,7 +93,7 @@ Monitor the status of the MySQL cluster as it is created:
 ```bash
 kubectl get cluster -n demo -w
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
 example-mysql-cluster   mysql                Delete               Creating   9s
@@ -105,7 +105,7 @@ To get detailed information about the deployed cluster, use the following comman
 ```bash
 kbcli cluster describe example-mysql-cluster -n demo
 ```
-Expected Output:
+Example Output:
 ```bash
 Name: example-mysql-cluster	 Created Time: Feb 11,2025 11:58 UTC+0800
 NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY       STATUS    TERMINATION-POLICY
@@ -148,7 +148,7 @@ To verify the roles of MySQL instances (e.g., primary and secondary), run:
 ```bash
 kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
-Expected Output:
+Example Output:
 ```bash
 example-mysql-cluster-mysql-0	primary
 example-mysql-cluster-mysql-1	secondary
@@ -183,7 +183,7 @@ To check the status of the Group Replication cluster, run the following query:
 ```sql
 mysql> SELECT * FROM performance_schema.replication_group_members;
 ```
-Expected Output:
+Example Output:
 ```sql
 +---------------------------+--------------------------------------+--------------------------------------------------------------------+-------------+--------------+-------------+----------------+----------------------------+
 | CHANNEL_NAME              | MEMBER_ID                            | MEMBER_HOST                                                        | MEMBER_PORT | MEMBER_STATE | MEMBER_ROLE | MEMBER_VERSION | MEMBER_COMMUNICATION_STACK |
@@ -210,7 +210,7 @@ Run the following command to check the updated roles:
 ```bash
 kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
-Expected Output:
+Example Output:
 ```bash
 example-mysql-cluster-mysql-0
 example-mysql-cluster-mysql-1	secondary

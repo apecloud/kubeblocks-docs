@@ -108,7 +108,7 @@ To confirm a successful stop operation:
   ```bash
   kubectl get cluster rabbitmq-cluster -n demo -w
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME               CLUSTER-DEFINITION    TERMINATION-POLICY   STATUS     AGE
   rabbitmq-cluster   rabbitmq              Delete               Stopping   6m3s
@@ -119,7 +119,7 @@ To confirm a successful stop operation:
    ```bash
    kubectl get pods -l app.kubernetes.io/instance=rabbitmq-cluster -n demo
    ```
-   Expected output:
+   Example Output:
    ```bash
    No resources found in demo namespace.
    ```
@@ -128,7 +128,7 @@ To confirm a successful stop operation:
   ```bash
   kubectl get pvc -l app.kubernetes.io/instance=rabbitmq-cluster -n demo
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME                               STATUS   VOLUME     CAPACITY   ACCESS MODES   STORAGECLASS         VOLUMEATTRIBUTESCLASS   AGE
   data-rabbitmq-cluster-rabbitmq-0   Bound    pvc-uuid   20Gi       RWO            <STORAGECLASS>       <unset>                 22m
@@ -194,7 +194,7 @@ To confirm a successful start operation:
   ```bash
   kubectl get cluster rabbitmq-cluster -n demo -w
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME               CLUSTER-DEFINITION     TERMINATION-POLICY   STATUS     AGE
   rabbitmq-cluster   rabbitmq               Delete               Updating   24m
@@ -206,7 +206,7 @@ To confirm a successful start operation:
   ```bash
   kubectl get pods -n demo -l app.kubernetes.io/instance=rabbitmq-cluster
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME                          READY   STATUS    RESTARTS   AGE
   rabbitmq-cluster-rabbitmq-0   2/2     Running   0          55s
@@ -251,7 +251,7 @@ To verify a successful component restart:
   ```bash
   kubectl get opsrequest rabbitmq-cluster-restart-ops -n demo -w
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME                           TYPE      CLUSTER            STATUS    PROGRESS   AGE
   rabbitmq-cluster-restart-ops   Restart   rabbitmq-cluster   Running   0/3        4s

@@ -125,7 +125,7 @@ Monitor the cluster status until it transitions to the Running state:
 kubectl get cluster pg-cluster -n demo -w
 ```
 
-Example Output::
+Example Output:
 
 ```bash
 NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
@@ -152,7 +152,7 @@ KubeBlocks automatically creates a `BackupSchedule` resource. Inspect the config
 kubectl get backupschedule pg-cluster-postgresql-backup-schedule  -n demo -oyaml
 ```
 
-Expected Output:
+Example Output:
 ```yaml
 apiVersion: dataprotection.kubeblocks.io/v1alpha1
 kind: BackupSchedule

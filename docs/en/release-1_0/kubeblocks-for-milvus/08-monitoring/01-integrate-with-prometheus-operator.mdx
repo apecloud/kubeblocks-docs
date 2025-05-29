@@ -146,7 +146,7 @@ Verify metrics are being scraped:
 curl -sG "http://localhost:9090/api/v1/query" --data-urlencode 'query=milvus_num_node{app_kubernetes_io_name="milvus"}' | jq
 ```
 
-Expected Outputs:
+Example Output:
 ```json
 {
   "status": "success",

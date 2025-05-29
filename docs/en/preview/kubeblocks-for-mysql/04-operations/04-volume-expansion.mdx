@@ -72,7 +72,7 @@ Monitor the status of the MySQL cluster as it is created:
 ```bash
 kubectl get cluster -n demo -w
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
 example-mysql-cluster   mysql                Delete               Creating   32s
@@ -94,7 +94,7 @@ List all available storage classes and verify if volume expansion is supported b
 ```bash
 kubectl get storageclass
 ```
-Example Outputs:
+Example Output:
 ```bash
 NAME                PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
 gp2                 kubernetes.io/aws-ebs   Delete          WaitForFirstConsumer   false                  4d10h

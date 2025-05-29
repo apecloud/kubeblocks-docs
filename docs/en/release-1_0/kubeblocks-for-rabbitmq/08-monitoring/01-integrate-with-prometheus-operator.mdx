@@ -142,7 +142,7 @@ Verify metrics are being scraped:
 curl -sG "http://localhost:9090/api/v1/query" --data-urlencode 'query=up{app_kubernetes_io_instance="rabbitmq-cluster"}' | jq
 ```
 
-Expected Outputs:
+Example Output:
 ```json
 {
   "status": "success",
