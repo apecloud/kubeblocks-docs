@@ -84,7 +84,7 @@ Use the following command to display the MySQL versions supported by your KubeBl
 ```bash
 kubectl get cmpv mysql
 ```
-Example Output:
+Expected Output:
 ```bash
 NAME    VERSIONS                                                                                         STATUS      AGE
 mysql   8.4.2,8.4.1,8.4.0,8.0.39,8.0.38,8.0.37,8.0.36,8.0.35,8.0.34,8.0.33,8.0.32,8.0.31,8.0.30,5.7.44   Available   11d
@@ -98,7 +98,7 @@ Run the following command to identify the roles of the cluster instances:
 ```bash
 kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
-Example Output:
+Expected Output:
 ```bash
 example-mysql-cluster-mysql-0	primary
 example-mysql-cluster-mysql-1	secondary
@@ -145,7 +145,7 @@ During the upgrade, observe the changes in the cluster's Pods:
 ```bash
 kubectl get pods -n demo -w
 ```
-Example Output:
+Expected Output:
 ```bash
 NAME                            READY   STATUS    RESTARTS   AGE
 example-mysql-cluster-mysql-0   4/4     Running   0          97s
@@ -175,7 +175,7 @@ Ensure the cluster is in the Running state:
 ```bash
 kubectl get cluster example-mysql-cluster -n demo -w
 ```
-Example Output:
+Expected Output:
 ```bash
 NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 example-mysql-cluster   mysql                Delete               Running   17m
@@ -186,7 +186,7 @@ Retrieve the MySQL root credentials:
 ```bash
 kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
 ```
-Example Output:
+Expected Output:
 ```bash
 79vJW1Vg43
 ```

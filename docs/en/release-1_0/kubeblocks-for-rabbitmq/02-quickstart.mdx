@@ -84,7 +84,7 @@ If the add-on isn't enabled, choose an installation method:
   # Install Add-on with your desired version (replace <VERSION> with your chosen version)
   kbcli addon install rabbitmq --version <VERSION>
   ```
-  **Sample Output:**
+  **Expected Output:**
   ```bash
   ADDON   VERSION         INDEX
   rabbitmq   0.9.0           kubeblocks
@@ -118,7 +118,7 @@ Always verify that the RabbitMQ Add-on version matches your KubeBlocks major ver
 kubectl get cmpv rabbitmq
 ```
 <details open>
-<summary>Sample Output</summary>
+<summary>Expected Output</summary>
 ```text
 NAME       VERSIONS                                                    STATUS      AGE
 rabbitmq   4.0.9,3.13.7,3.13.2,3.12.14,3.11.28,3.10.25,3.9.29,3.8.14   Available   26d
@@ -134,7 +134,7 @@ kubectl get cmpv rabbitmq -ojson | jq -r '.metadata.annotations."componentversio
 ```
 
 <details>
-<summary>Sample Output</summary>
+<summary>Expected Output</summary>
 ```text
 rabbitmq-1.0.0
 ```
@@ -149,7 +149,7 @@ kubectl get cmpv rabbitmq -o json | jq -r '.spec.compatibilityRules[] | select(.
 This returns versions compatible with `ComponentDefinition` named `rabbitmq`:
 
 <details open>
-<summary>Sample Output</summary>
+<summary>Expected Output</summary>
 ```text
 4.0.9
 3.13.7

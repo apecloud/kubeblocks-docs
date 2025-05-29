@@ -146,7 +146,7 @@ There is no Pods running in the cluster, but the persistent storage is retained.
 ```bash
 kubectl get pods -n demo
 ```
-Example Output:
+Expected Output:
 ```bash
 No resources found in demo namespace.
 ```
@@ -251,7 +251,7 @@ Monitor the cluster's status to ensure the restart is completed successfully:
 ```bash
 kubectl get opsrequest example-mysql-cluster-restart-ops -n demo -w
 ```
-Example Output:
+Expected Output:
 ```bash
 NAME                                TYPE      CLUSTER                 STATUS    PROGRESS   AGE
 example-mysql-cluster-restart-ops   Restart   example-mysql-cluster   Succeed   2/2        3m16s

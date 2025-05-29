@@ -473,7 +473,7 @@ Once the cluster is deployed, check its status:
 ```bash
 kubectl get cluster milvus-cluster  -n demo -w
 ```
-Example Output:
+Expected Output:
 ```bash
 NAME             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 milvus-cluster   milvus               Delete               Running   4m38s
@@ -483,7 +483,7 @@ milvus-cluster   milvus               Delete               Running   4m38s
 ```bash
 kubectl get component -l app.kubernetes.io/instance=milvus-cluster -n demo
 ```
-Example Output:
+Expected Output:
 ```bash
 NAME                       DEFINITION                       SERVICE-VERSION   STATUS    AGE
 milvus-cluster-datanode    milvus-datanode-1.0.0            v2.3.2            Running   5m8s
@@ -499,7 +499,7 @@ Check pods:
 kubectl get pods -l app.kubernetes.io/instance=milvus-cluster -n demo
 ```
 
-Example Output:
+Expected Output:
 ```bash
 NAME                         READY   STATUS    RESTARTS   AGE
 milvus-cluster-datanode-0    1/1     Running   0          5m30s

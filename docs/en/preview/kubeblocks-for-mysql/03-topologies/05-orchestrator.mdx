@@ -48,7 +48,7 @@ helm install kb-addon-orc kubeblocks/orchestrator --namespace kb-system --create
 ```bash
 helm list -A
 ```
-Example Output:
+Expected Output:
 ```bash
 orchestrator           	kb-system  	1       	2025-02-14 11:12:32.286516 +0800 CST   deployed	orchestrator-1.0.0          	3.2.6
 ```
@@ -348,7 +348,7 @@ After a while, the killed pod will be recreated and will take the secondary role
 ```bash
 kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
-Example Output:
+Expected Output:
 ```bash
 example-semisync-mysql-mysql-0	secondary
 example-semisync-mysql-mysql-1	primary

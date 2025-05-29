@@ -58,7 +58,7 @@ Verify that the server certificate is valid and signed by the CA:
 # Verify the server certificate
 openssl verify -CAfile ca.pem server-cert.pem
 ```
-Example Output:
+Expected Output:
 ```bash
 server-cert.pem: OK
 ```
@@ -130,7 +130,7 @@ Monitor the cluster status until it transitions to the Running state:
 ```bash
 kubectl get cluster -n demo -w
 ```
-Example Output:
+Expected Output:
 ```bash
 NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 example-mysql-cluster   mysql                Delete               Running   11m
@@ -144,7 +144,7 @@ KubeBlocks automatically creates a secret containing the MySQL root credentials.
 ```bash
 kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
 ```
-Example Output:
+Expected Output:
 ```bash
 root
 ```
@@ -153,7 +153,7 @@ root
 ```bash
 kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
 ```
-Example Output:
+Expected Output:
 ```bash
 D0o5P43S8G
 ```

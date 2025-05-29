@@ -84,7 +84,7 @@ If the add-on isn't enabled, choose an installation method:
   # Install Add-on with your desired version (replace <VERSION> with your chosen version)
   kbcli addon install kafka --version <VERSION>
   ```
-  **Sample Output:**
+  **Expected Output:**
   ```bash
   ADDON   VERSION         INDEX
   kafka   0.9.0           kubeblocks
@@ -294,7 +294,7 @@ Show cluster events: kbcli cluster list-events -n demo kafka-separated-cluster
 kubectl get svc -l app.kubernetes.io/instance=kafka-separated-cluster  -n demo
 ```
 
-Example Output:
+Expected Output:
 ```
 NAME                                                         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
 kafka-separated-cluster-kafka-broker-advertised-listener-0   ClusterIP   10.96.131.175   <none>        9092/TCP   5m8s

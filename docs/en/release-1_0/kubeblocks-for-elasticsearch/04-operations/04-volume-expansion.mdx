@@ -210,7 +210,7 @@ Verify the updated cluster configuration:
 ```bash
 kbcli cluster describe es-multinode -n demo
 ```
-Example Output:
+Expected Output:
 ```bash
 Resources Allocation:
 COMPONENT         INSTANCE-TEMPLATE     CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
@@ -222,7 +222,7 @@ Confirm PVC resizing completion:
 ```bash
 kubectl get pvc -l app.kubernetes.io/instance=es-multinode,apps.kubeblocks.io/component-name=dit -n demo
 ```
-Example Output:
+Expected Output:
 ```bash
 NAME                      STATUS   VOLUME     CAPACITY   ACCESS MODES   STORAGECLASS
 data-es-multinode-dit-0   Bound    pvc-uuid   30Gi       RWO            <STORAGE_CLASS_NAME>

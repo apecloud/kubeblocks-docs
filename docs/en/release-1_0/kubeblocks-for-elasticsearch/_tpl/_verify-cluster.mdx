@@ -3,7 +3,7 @@ Monitor the cluster status until it transitions to the Running state:
 kubectl get cluster es-multinode -n demo -w
 ```
 
-Example Output:
+Expected Output:
 
 ```bash
 NAME           CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
@@ -17,7 +17,7 @@ Check the pod status and roles:
 kubectl get pods -l app.kubernetes.io/instance=es-multinode -n demo
 ```
 
-Example Output:
+Expected Output:
 ```bash
 NAME                    READY   STATUS    RESTARTS   AGE
 es-multinode-dit-0      3/3     Running   0          6m21s

@@ -89,7 +89,7 @@ Once the cluster is deployed, check its status:
 ```bash
 kubectl get cluster redis-replication  -n demo -w
 ```
-Example Output:
+Expected Output:
 ```bash
 NAME                CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 redis-replication   redis                Delete               Running   66s
@@ -99,7 +99,7 @@ redis-replication   redis                Delete               Running   66s
 ```bash
 kubectl get component redis-replication-redis -n demo
 ```
-Example Output:
+Expected Output:
 ```bash
 NAME                      DEFINITION              SERVICE-VERSION   STATUS    AGE
 redis-replication-redis   redis-7-1.0.0           7.2.4             Running   90s
@@ -111,7 +111,7 @@ Check pods and their roles
 kubectl get pods -l app.kubernetes.io/instance=redis-replication -L  kubeblocks.io/role -n demo
 ```
 
-Example Output:
+Expected Output:
 ```bash
 NAME                                 READY   STATUS    RESTARTS   AGE     ROLE
 redis-replication-redis-0            3/3     Running   0          3m38s   primary

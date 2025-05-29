@@ -97,7 +97,7 @@ Once the cluster is deployed, check its status:
 ```bash
 kubectl get cluster -n demo -w
 ```
-Example Output:
+Expected Output:
 ```
 NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 example-mysql-cluster   mysql                Delete               Creating   8s
@@ -108,7 +108,7 @@ To get detailed information about the cluster:
 ```bash
 kbcli cluster describe example-mysql-cluster -n demo
 ```
-Example Output:
+Expected Output:
 ```
 Name: example-mysql-cluster	 Created Time: Feb 10,2025 08:32 UTC+0800
 NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY            STATUS    TERMINATION-POLICY
@@ -178,7 +178,7 @@ List all pods in the cluster and check their roles:
 ```bash
 kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
-Example Output:
+Expected Output:
 ```bash
 example-mysql-cluster-mysql-0	secondary
 example-mysql-cluster-mysql-1	primary
@@ -192,7 +192,7 @@ Run the following command on the primary node:
 ```bash
 kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-0.example-mysql-cluster-mysql-headless.demo.svc.cluster.local -uroot -p22mue70Hx6 -e "show status like 'Rpl%_status';"
 ```
-Example Output:
+Expected Output:
 ```sql
 +------------------------------+-------+
 | Variable_name                | Value |
@@ -210,7 +210,7 @@ Run the following command on the replica node:
 ```bash
 kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-1.example-mysql-cluster-mysql-headless.demo.svc.cluster.local -uroot -p22mue70Hx6 -e "show status like 'Rpl%_status';"
 ```
-Example Output:
+Expected Output:
 ```sql
 +------------------------------+-------+
 | Variable_name                | Value |
@@ -234,7 +234,7 @@ This will trigger a failover, and the secondary instance will be promoted to the
 ```bash
 kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
-Example Output:
+Expected Output:
 ```bash
 example-mysql-cluster-mysql-0	primary
 example-mysql-cluster-mysql-1

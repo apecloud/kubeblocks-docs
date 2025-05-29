@@ -198,7 +198,7 @@ Use the following command to inspect the updated cluster configuration:
 ```bash
 kbcli cluster describe example-mysql-cluster -n demo
 ```
-Example Output:
+Expected Output:
 ```bash
 Resources Allocation:
 COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
@@ -210,7 +210,7 @@ Check the status of the PVCs in the cluster to confirm that the resize operation
 ```bash
 kubectl get pvc -l app.kubernetes.io/instance=example-mysql-cluster -n demo
 ```
-Example Output:
+Expected Output:
 ```bash
 NAME                                           STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
 example-mysql-cluster-mysql-data-0             Bound    pvc-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   30Gi       RWO            kb-default-sc  10m

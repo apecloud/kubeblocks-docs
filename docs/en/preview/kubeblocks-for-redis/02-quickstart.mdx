@@ -84,7 +84,7 @@ If the add-on isn't enabled, choose an installation method:
   # Install Add-on with your desired version (replace <VERSION> with your chosen version)
   kbcli addon install redis --version <VERSION>
   ```
-  **Sample Output:**
+  **Expected Output:**
   ```bash
   ADDON   VERSION         INDEX
   redis   0.9.0           kubeblocks
@@ -118,7 +118,7 @@ Always verify that the Redis Add-on version matches your KubeBlocks major versio
 kubectl get cmpv redis
 ```
 <details open>
-<summary>Sample Output</summary>
+<summary>Expected Output</summary>
 ```text
 NAME    VERSIONS            STATUS      AGE
 redis   7.2.7,7.2.4,7.0.6   Available   33d
@@ -134,7 +134,7 @@ kubectl get cmpv redis -ojson | jq -r '.metadata.annotations."componentversion.k
 ```
 
 <details>
-<summary>Sample Output</summary>
+<summary>Expected Output</summary>
 ```text
 redis-7-1.0.0
 ```
@@ -149,7 +149,7 @@ kubectl get cmpv redis -o json | jq -r '.spec.compatibilityRules[] | select(.com
 This returns versions compatible with `ComponentDefinition` named `redis-14`:
 
 <details open>
-<summary>Sample Output</summary>
+<summary>Expected Output</summary>
 ```text
 7.2.7
 7.2.4

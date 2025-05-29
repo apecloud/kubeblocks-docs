@@ -34,7 +34,7 @@ List available backups with the following command:
 kubectl get backup -n demo
 ```
 
-Example Output:
+Expected Output:
 ```bash
 NAME                                               POLICY                                      METHOD           REPO      STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
 77a788fa-example-mysql-cluster-archive-binlog      example-mysql-cluster-mysql-backup-policy   archive-binlog   s3-repo   Running     2110030                 Delete            2025-03-04T02:28:55Z                          2025-04-03T02:28:55Z
@@ -50,7 +50,7 @@ Extract encrypted credentials for system accounts from the metadata of the full 
 kubectl get backup -n demo example-mysql-cluster-xtrabackup-20250305000008 -o jsonpath='{.metadata.annotations.kubeblocks\.io/encrypted-system-accounts}'
 ```
 
-Example Output:
+Expected Output:
 ```bash
 {"mysql":{"kbadmin":"FnMHT00SgXOa1jW5Btn4QFaQFqQZLeskB5tX2BPAHHiMeyzMpo+7nKcSS9w=","kbdataprotection":"Ks7GPfiIhSer82V148uTBnx6EJnZXWm0L0uPY1xHGTbuCrmLOpbGZJtVnSU=","kbmonitoring":"rozLsobWpyoM7vcAEs+KzscWl8JIo5vAmn/Q3RZXBddnXTfC0QHKcE5Ag0g=","kbprobe":"Ty+9FrhwoL29iWQzqSBbRZrt7Kqupe9qkAXyIpaeAZpCLXAJ1rjYTETpdpg=","kbreplicator":"PNBvw1HHWMf1xNkmaoR5pXuhCuADVrKqnV2+UsAvCR0xfopDU/SmGgmSPSg=","proxysql":"XntOn+6PzLC9eDXZFe4RI8kkWQLwXh4pSuRZ7hfasVn/o4ih82JJC6i1yIc=","root":"V3euqbJR8ARzgXhGTFPk4t+Rp8NTyjagb/IETEpYTOL2FScakRM="}}
 ```

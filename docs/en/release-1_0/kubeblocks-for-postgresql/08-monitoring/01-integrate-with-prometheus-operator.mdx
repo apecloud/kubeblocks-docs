@@ -41,7 +41,7 @@ Check all components are running:
 kubectl get pods -n monitoring
 ```
 
-Example Output:
+Expected Output:
 ```bash
 NAME                                                     READY   STATUS    RESTARTS   AGE
 alertmanager-prometheus-kube-prometheus-alertmanager-0   2/2     Running   0          114s
@@ -73,7 +73,7 @@ Monitor the cluster status until it transitions to the Running state:
 kubectl get cluster pg-cluster -n demo -w
 ```
 
-Example Output::
+Expected Output:
 
 ```bash
 NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE

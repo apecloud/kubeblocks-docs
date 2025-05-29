@@ -60,7 +60,7 @@ kubectl get backuppolicy -n demo -l app.kubernetes.io/instance=pg-cluster
 kubectl get backupschedule -n demo -l app.kubernetes.io/instance=pg-cluster
 ```
 
-Example Output:
+Expected Output:
 ```bash
 NAME                                            BACKUP-REPO   STATUS      AGE
 pg-cluster-postgresql-backup-policy                           Available   58m
@@ -169,7 +169,7 @@ Track backup progress in real-time:
 kubectl get ops pg-cluster-backup  -n demo -w
 ```
 
-Example Output:
+Expected Output:
 ```bash
 NAME                TYPE     CLUSTER      STATUS    PROGRESS   AGE
 pg-cluster-backup   Backup   pg-cluster   Succeed   -/-        35s

@@ -81,7 +81,7 @@ Once the cluster is deployed, check its status:
 ```bash
 kubectl get cluster example-mysql-cluster  -n demo -w
 ```
-Example Output:
+Expected Output:
 ```bash
 NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 example-mysql-cluster   mysql                Delete               Creating   11s
@@ -93,7 +93,7 @@ To get detailed information about the cluster:
 ```bash
 kbcli cluster describe example-mysql-cluster -n demo
 ```
-Example Output:
+Expected Output:
 ```bash
 Name: example-mysql-cluster	 Created Time: Dec 24,2024 09:06 UTC+0800
 NAMESPACE   CLUSTER-DEFINITION   VERSION   STATUS    TERMINATION-POLICY
@@ -125,7 +125,7 @@ Show cluster events: kbcli cluster list-events -n default example-mysql-cluster
 ```bash
 kubectl get component example-mysql-cluster-mysql -n demo
 ```
-Example Output:
+Expected Output:
 ```bash
 NAME                          DEFINITION                SERVICE-VERSION   STATUS    AGE
 example-mysql-cluster-mysql   mysql-8.0-1.0.0           8.0.35            Running   2m28s
@@ -158,7 +158,7 @@ Identify the primary and replica instances by checking the roles of the pods:
 ```bash
 kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
-Example Output:
+Expected Output:
 ```bash
 example-mysql-cluster-mysql-0	primary
 example-mysql-cluster-mysql-1	secondary
@@ -216,7 +216,7 @@ In the following example, you can see that the value has been configured to 3000
 ```bash
 kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pz475N4c6ib -e "show variables like 'rpl_semi_sync_source_timeout';"
 ```
-Example Output:
+Expected Output:
 ```sql
 +------------------------------+-------+
 | Variable_name                | Value |
@@ -291,7 +291,7 @@ This triggers a failover, promoting the replica node to primary. Verify the upda
 ```bash
 kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
-Example Output:
+Expected Output:
 ```
 example-mysql-cluster-mysql-0
 example-mysql-cluster-mysql-1	primary

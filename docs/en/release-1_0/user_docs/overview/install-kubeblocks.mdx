@@ -87,7 +87,7 @@ kubectl get pods -n kb-system | grep snapshot-controller
 
 <details open>
 
-<summary>Example Output</summary>
+<summary>Expected Output</summary>
 
 ```bash
 snapshot-controller-xxxx-yyyy   1/1   Running   0   30s
@@ -122,7 +122,7 @@ Before you start, please get KubeBlocks releases and locate the version you want
   curl -s https://api.github.com/repos/apecloud/kubeblocks/releases/latest | jq -r '.tag_name'
   ```
 
-  Example Output:
+  Expected Output:
   ```text
   v1.0.0
   ```
@@ -131,7 +131,7 @@ Before you start, please get KubeBlocks releases and locate the version you want
   ```bash
   curl -s https://api.github.com/repos/apecloud/kubeblocks/tags | jq -r '.[0].name'
   ```
-  Example Output:
+  Expected Output:
   ```text
   v1.0.0-beta.48
   ```
@@ -179,7 +179,7 @@ Before you start, please get KubeBlocks releases and locate the version you want
   curl -s https://api.github.com/repos/apecloud/kubeblocks/releases/latest | jq -r '.tag_name'
   ```
 
-  Example Output:
+  Expected Output:
   ```text
   v1.0.0
   ```
@@ -188,7 +188,7 @@ Before you start, please get KubeBlocks releases and locate the version you want
   ```bash
   curl -s https://api.github.com/repos/apecloud/kubeblocks/tags | jq -r '.[0].name'
   ```
-  Example Output:
+  Expected Output:
   ```text
   v1.0.0-beta.48
   ```
@@ -269,7 +269,7 @@ kubectl -n kb-system get pods
 ```
 
 <details open>
-<summary> Example Output:</summary>
+<summary> Expected Output:</summary>
 
 If the KubeBlocks Workloads are all ready, KubeBlocks has been installed successfully.
 
@@ -289,7 +289,7 @@ kbcli kubeblocks status
 ```
 
 <details open>
-<summary> Example Output:</summary>
+<summary> Expected Output:</summary>
 
 If the KubeBlocks Workloads are all ready, KubeBlocks has been installed successfully.
 

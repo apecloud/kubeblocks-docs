@@ -72,7 +72,7 @@ Monitor the cluster status and wait until the STATUS changes to Running:
 ```bash
 kubectl get cluster example-mysql-cluster -n demo -w
 ```
-Example Output:
+Expected Output:
 ```bash
 NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 example-mysql-cluster   mysql                Delete               Creating   17s
@@ -137,7 +137,7 @@ Monitor the cluster status until it returns to Running:
 ```bash
 kubectl get cluster -n demo -w
 ```
-Example output:
+Expected Output:
 ```bash
 NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
 example-mysql-cluster   mysql                Delete               Updating   79s
@@ -147,7 +147,7 @@ List all the Pods in the cluster:
 ```bash
 kubectl get pods -n demo
 ```
-Example Output:
+Expected Output:
 ```bash
 NAME                                   READY   STATUS    RESTARTS   AGE
 example-mysql-cluster-mysql-0          4/4     Running   0          2m49s
@@ -161,7 +161,7 @@ Use the KubeBlocks CLI to check the cluster and verify the resource configuratio
 ```bash
 kbcli cluster describe example-mysql-cluster -n demo
 ```
-Example Output:
+Expected Output:
 ```bash
 Resources Allocation:
 COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
@@ -239,7 +239,7 @@ Check the Cluster status:
 ```bash
 kubectl get cluster -n demo -w
 ```
-Example output:
+Expected Output:
 ```bash
 NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
 example-mysql-cluster   mysql                Delete               Updating   16m
@@ -249,7 +249,7 @@ Then list the Services:
 ```bash
 kubectl get svc -n demo
 ```
-Example output:
+Expected Output:
 ```bash
 NAME                                   TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                                                 AGE
 example-mysql-cluster-custom-pod       ClusterIP   172.20.202.249   <none>        3306/TCP                                                12m
@@ -264,7 +264,7 @@ kubectl get secrets -n demo  example-semisync-mysql-mysql-account-root -o jsonpa
 
 kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
 ```
-Example Output:
+Expected Output:
 ```bash
 root
 
