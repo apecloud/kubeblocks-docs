@@ -98,7 +98,7 @@ To confirm a successful stop operation:
   ```bash
   kubectl get cluster milvus-cluster -n demo -w
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME             CLUSTER-DEFINITION  TERMINATION-POLICY   STATUS     AGE
   milvus-cluster   milvus              Delete               Stopping   6m33s
@@ -109,7 +109,7 @@ To confirm a successful stop operation:
    ```bash
    kubectl get pods -l app.kubernetes.io/instance=milvus-cluster -n demo
    ```
-   Expected output:
+   Example Output:
    ```bash
    No resources found in demo namespace.
    ```
@@ -152,7 +152,7 @@ To confirm a successful start operation:
   ```bash
   kubectl get cluster milvus-cluster -n demo -w
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
   milvus-cluster   milvus               Delete               Updating   30m
@@ -166,7 +166,7 @@ To confirm a successful start operation:
   ```bash
   kubectl get pods -n demo -l app.kubernetes.io/instance=milvus-cluster
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME                         READY   STATUS    RESTARTS   AGE
   milvus-cluster-datanode-0    1/1     Running   0          5m24s
@@ -231,7 +231,7 @@ To verify a successful component restart:
   ```bash
   kubectl get opsrequest milvus-cluster-restart-ops -n demo -w
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME                         TYPE      CLUSTER          STATUS    PROGRESS   AGE
   milvus-cluster-restart-ops   Restart   milvus-cluster   Running   0/1        4s

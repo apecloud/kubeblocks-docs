@@ -88,7 +88,7 @@ Monitor the cluster status until it transitions to Running:
 kubectl get cluster example-mysql-cluster -n demo
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 example-mysql-cluster   mysql                Delete               Running   38s
@@ -103,7 +103,7 @@ KubeBlocks automatically creates a BackupSchedule resource when scheduled backup
 kubectl get backupschedule example-mysql-cluster-mysql-backup-schedule  -n demo -oyaml
 ```
 
-Expected Output:
+Example Output:
 ```yaml
 apiVersion: dataprotection.kubeblocks.io/v1alpha1
 kind: BackupSchedule
@@ -129,7 +129,7 @@ After the scheduled backup task has been executed, verify the backup files in th
 TZ=":UTC" aws s3 ls s3://kubeblocks-backup-repo/ --recursive
 ```
 
-Expected Output:
+Example Output:
 ```bash
 2025-02-06 00:00:52    3087203 demo/example-mysql-cluster-5f46be4f-c9ac-414e-9d66-2dfe0a281b83/mysql/example-mysql-cluster-xtrabackup-20250206000001/example-mysql-cluster-xtrabackup-20250206000001.xbstream.zst
 2025-02-06 00:01:03       5348 demo/example-mysql-cluster-5f46be4f-c9ac-414e-9d66-2dfe0a281b83/mysql/example-mysql-cluster-xtrabackup-20250206000001/kubeblocks-backup.json

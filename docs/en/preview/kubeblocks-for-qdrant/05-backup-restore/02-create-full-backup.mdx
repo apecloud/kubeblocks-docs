@@ -116,7 +116,7 @@ Track progress until status shows "Completed":
 kubectl get backup qdrant-backup-datafile  -n demo -w
 ```
 
-Expected Output:
+Example Output:
 
 ```bash
 NAME                     POLICY                                METHOD     REPO            STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
@@ -185,7 +185,7 @@ Check the final backup status:
 kubectl get backup -n demo -l operations.kubeblocks.io/ops-name=qdrant-cluster-backup
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                                        POLICY                                METHOD     REPO            STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
 backup-demo-qdrant-cluster-20250518154515   qdrant-cluster-qdrant-backup-policy   datafile   <BACKUP_REPO>   Completed   0            10s        Delete            2025-05-18T15:45:15Z   2025-05-18T15:45:25Z   2025-06-17T15:45:25Z

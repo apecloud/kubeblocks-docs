@@ -115,7 +115,7 @@ After applying the operation, you will see a new pod created and the Elasticsear
 kubectl get pods -n demo -l app.kubernetes.io/instance=es-multinode,apps.kubeblocks.io/component-name=dit
 ```
 
-Expected Outputs:
+Example Output:
 ```bash
 NAME                 READY   STATUS    RESTARTS   AGE
 es-multinode-dit-0   3/3     Running   0          4m28s
@@ -202,7 +202,7 @@ es-multinode-dit-3   3/3     Running   0          1m25s
 kubectl get pods -n demo -l app.kubernetes.io/instance=es-multinode,apps.kubeblocks.io/component-name=dit
 ```
 
-Expected Output (three Pod):
+Example Output (three Pod):
 ```bash
 NAME                 READY   STATUS    RESTARTS   AGE
 es-multinode-dit-0   3/3     Running   0          8m20s

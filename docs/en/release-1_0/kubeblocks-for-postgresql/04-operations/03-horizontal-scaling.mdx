@@ -140,7 +140,7 @@ After applying the operation, you will see a new pod created and the PostgreSQL 
 kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster
 ```
 
-Expected Output (3 Pods):
+Example Output (3 Pods):
 ```bash
 NAME                      READY   STATUS    RESTARTS   AGE
 pg-cluster-postgresql-0   4/4     Running   0          13m
@@ -153,7 +153,7 @@ New replicas automatically join as secondary nodes.
 kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster -L kubeblocks.io/role
 ```
 
-Expected Outputs:
+Example Output:
 ```bash
 NAME                      READY   STATUS    RESTARTS   AGE     ROLE
 pg-cluster-postgresql-0   4/4     Running   0          13m     primary
@@ -171,7 +171,7 @@ pg-cluster-postgresql-2   4/4     Running   0          5m54s   secondary
 4. Cluster status changes from `Updating` to `Running`
 
 :::note
-If the replica being scaled-in happens to be a primary replica, KubeBlocks will trigger a SwitchOver actions. And this pod will not be terminated until this SwitchOver action succeeds.
+If the replica being scaled-in happens to be a primary replica, KubeBlocks will trigger a Switchover actions. And this pod will not be terminated until this Switchover action succeeds.
 :::
 
 <Tabs>
@@ -266,7 +266,7 @@ If the replica being scaled-in happens to be a primary replica, KubeBlocks will 
 
 ### Verify Scale-In
 
-Expected Output (ONE Pod):
+Example Output (ONE Pod):
 ```bash
 kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster
 NAME                      READY   STATUS    RESTARTS   AGE

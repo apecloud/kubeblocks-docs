@@ -85,7 +85,7 @@ Monitor the status of the MySQL cluster as it is created:
 ```bash
 kubectl get cluster -n demo -w
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
 example-mysql-cluster   mysql                Delete               Creating   4s
@@ -98,7 +98,7 @@ List the Pods and their roles (primary or secondary):
 ```bash
 kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
-Example Outputs:
+Example Output:
 ```
 example-mysql-cluster-mysql-0	primary
 example-mysql-cluster-mysql-1	secondary

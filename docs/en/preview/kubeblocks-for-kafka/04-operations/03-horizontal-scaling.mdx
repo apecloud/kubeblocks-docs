@@ -115,7 +115,7 @@ After applying the operation, you will see a new pod created and the Kafka clust
 kubectl get pods -n demo -l app.kubernetes.io/instance=kafka-separated-cluster,apps.kubeblocks.io/component-name=kafka-broker
 ```
 
-Expected Outputs:
+Example Output:
 ```bash
 NAME                                     READY   STATUS    RESTARTS   AGE
 kafka-separated-cluster-kafka-broker-0   2/2     Running   0          3m7s
@@ -196,7 +196,7 @@ kafka-separated-cluster-kafka-broker-1   2/2     Running   0          28s
 
 ### Verify Scale-In
 
-Expected Output (ONE Pod):
+Example Output (ONE Pod):
 ```bash
 kubectl get pods -n demo -l app.kubernetes.io/instance=kafka-separated-cluster,apps.kubeblocks.io/component-name=kafka-broker
 NAME                                     READY   STATUS    RESTARTS   AGE

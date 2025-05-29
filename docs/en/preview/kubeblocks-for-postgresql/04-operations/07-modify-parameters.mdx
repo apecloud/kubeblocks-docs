@@ -127,7 +127,7 @@ Wait for the OpsRequest to complete:
 kubectl get ops pg-reconfigure-dynamic -n demo -w
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                     TYPE            CLUSTER      STATUS    PROGRESS   AGE
 pg-reconfigure-dynamic   Reconfiguring   pg-cluster   Running   -/-        11s
@@ -136,7 +136,7 @@ pg-reconfigure-dynamic   Reconfiguring   pg-cluster   Succeed   -/-        31s
 
 **Verifying the Configuration Change**
 
-Log into the PostgreSQL instance and confirm that the `max_connections` and `pgaudit.log` parameter has been updated:
+Log into the PostgreSQL instance and confirm that the `max_connections` and `pgaudit.log` parameters have been updated:
 
 ```sql
 postgres=# show max_connections;
@@ -185,7 +185,7 @@ Check the status of the OpsRequest until it completes:
 ```bash
 kubectl get ops postgresql-reconfigure-static -n demo -w
 ```
-Expected Output:
+Example Output:
 ```bash
 postgresql-reconfigure-static   Reconfiguring   pg-cluster   Running   -/-        5s
 postgresql-reconfigure-static   Reconfiguring   pg-cluster   Succeed   -/-        31s
@@ -205,12 +205,12 @@ postgres=# show shared_buffers;
 
 ## Validity Checking on Reconfiguration
 
-KubeBlocks validates parameters before applying changes. For example, `max_connections` must obey rule:
+KubeBlocks validates parameters before applying changes. For example, `max_connections` follow rules:
 
 ```cue
 max_connections?: int & >=6 & <=8388607
 ```
-, which means `max_connections` must be an integer ranging from 6 to 8388607.
+It means `max_connections` must be an integer ranging from 6 to 8388607.
 
 And if you somehow set a string to this value like:
 

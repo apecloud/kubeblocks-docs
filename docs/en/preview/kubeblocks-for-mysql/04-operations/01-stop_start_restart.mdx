@@ -74,7 +74,7 @@ Monitor the cluster status until it transitions to the Running state:
 ```bash
 kubectl get cluster example-mysql-cluster -n demo -w
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 example-mysql-cluster   mysql                Delete               Creating   7s
@@ -135,7 +135,7 @@ Monitor the cluster's status to ensure it transitions to the Stopped state:
 ```bash
 kubectl get cluster -n demo -w
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                       CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
 example-mysql-cluster   mysql                Delete               Stopping   93s
@@ -215,7 +215,7 @@ Monitor the cluster's status to ensure it transitions back to the Running state:
 kubectl get cluster -n demo -w
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                       CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
 example-mysql-cluster   mysql                Delete               Updating   5m54s

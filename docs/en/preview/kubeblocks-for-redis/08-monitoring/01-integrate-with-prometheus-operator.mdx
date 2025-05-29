@@ -73,7 +73,7 @@ Monitor the cluster status until it transitions to the Running state:
 kubectl get cluster redis-replication -n demo -w
 ```
 
-Expected Output:
+Example Output:
 
 ```bash
 NAME                CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
@@ -92,7 +92,7 @@ kubectl get po redis-replication-redis-0 -n demo -oyaml | \
   yq '.spec.containers[] | select(.name=="metrics") | .ports'
 ```
 
-Expected Output:
+Example Output:
 ```yaml
 - containerPort: 9121
   name: http-metrics  # Used in PodMonitor
@@ -170,7 +170,7 @@ Verify metrics are being scraped:
 curl -sG "http://localhost:9090/api/v1/query" --data-urlencode 'query=redis_up{app_kubernetes_io_instance="redis-replication"}' | jq
 ```
 
-Expected Outputs:
+Example Output:
 ```json
 {
   "status": "success",

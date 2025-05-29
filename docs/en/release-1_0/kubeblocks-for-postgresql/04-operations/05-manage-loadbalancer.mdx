@@ -105,7 +105,7 @@ External service addresses enable public internet access to PostgreSQL, while in
   kubectl get ops pg-cluster-expose-enable-ops -n demo
   ```
 
-  Expected Output:
+  Example Output:
   ```bash
   NAME                           TYPE     CLUSTER      STATUS    PROGRESS   AGE
   pg-cluster-expose-enable-ops   Expose   pg-cluster   Succeed   1/1        31s
@@ -115,7 +115,7 @@ External service addresses enable public internet access to PostgreSQL, while in
 
   <TabItem value="ClusterAPI" label="Cluster API">
 
-  Option 1: Using Cluster API
+  Option 2: Using Cluster API
 
   Alternatively, update the `spec.services` section in the Cluster resource to include a LoadBalancer service:
   ```yaml
@@ -232,7 +232,7 @@ Check the service details to confirm the LoadBalancer service is created:
 kubectl get service -l app.kubernetes.io/instance=pg-cluster -n demo
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                               TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)             AGE
 pg-cluster-postgresql-postgresql   ClusterIP      10.96.19.237   <none>        5432/TCP,6432/TCP   33m
@@ -296,7 +296,7 @@ psql -h <EXTERNAL_IP> -U${NAME} -W
   ```bash
   kubectl get ops pg-cluster-expose-disable-ops -n demo
   ```
-  Expected Output:
+  Example Output:
   ```bash
   NAME                            TYPE     CLUSTER      STATUS    PROGRESS   AGE
   pg-cluster-expose-disable-ops   Expose   pg-cluster   Succeed   1/1        12s
@@ -306,7 +306,7 @@ psql -h <EXTERNAL_IP> -U${NAME} -W
 
   <TabItem value="ClusterAPI" label="Cluster API">
 
-  Option 1: Using Cluster API
+  Option 2: Using Cluster API
 
   Alternatively, remove the `spec.services` field from the Cluster resource:
   ```bash

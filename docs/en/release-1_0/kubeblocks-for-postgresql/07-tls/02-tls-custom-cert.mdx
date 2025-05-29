@@ -56,7 +56,7 @@ The Common Name (CN) must match your PostgreSQL server address (e.g., service na
 3. **Verify Certificates**
 ```bash
 openssl verify -CAfile ca.pem server-cert.pem
-# Expected output: server-cert.pem: OK
+# Example Output: server-cert.pem: OK
 ```
 
 ## Create Kubernetes Secret
@@ -184,7 +184,7 @@ psql "host=127.0.0.1 dbname=postgres user=${NAME} password=${PASSWD} sslmode=req
 ```bash
 kubectl exec -it -n demo pg-cluster-postgresql-0 -c postgresql -- \
   env PGUSER=${NAME} PGPASSWORD=${PASSWD} \
-  psql 'host=pg-cluster-postgresql-postgresql sslmode=require sslrootcert=/etc/pki/tls/ca.pem'
+  psql 'host=pg-cluster-postgresql-postgresql sslmode=verify-full sslrootcert=/etc/pki/tls/ca.pem'
 # Output shows SSL connection details
 ```
 

@@ -82,7 +82,7 @@ Monitor the cluster status until it transitions to Running:
 kubectl get cluster example-mysql-cluster -n demo
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 example-mysql-cluster   mysql                Delete               Running   36m
@@ -156,7 +156,7 @@ Check the backup status until it shows 'Completed':
 kubectl get backup example-mysql-cluster-backup  -n demo -w
 ```
 
-Expected Output:
+Example Output:
 
 ```bash
 NAME                           POLICY                                      METHOD       REPO      STATUS    TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME   EXPIRATION-TIME
@@ -172,7 +172,7 @@ Verify the backup files in the configured S3 bucket:
 aws s3 ls s3://kubeblocks-backup-repo/ --recursive
 ```
 
-Expected Output:
+Example Output:
 ```bash
 2025-03-07 09:39:10    1524515 demo/example-mysql-cluster-cb1b0f47-e310-4f63-9537-dacb6cbac499/mysql/example-mysql-cluster-backup/example-mysql-cluster-backup.xbstream.zst
 2025-03-07 09:39:20       5642 demo/example-mysql-cluster-cb1b0f47-e310-4f63-9537-dacb6cbac499/mysql/example-mysql-cluster-backup/kubeblocks-backup.json
@@ -227,7 +227,7 @@ Check the final backup status with:
 kubectl get backup  -n demo -w
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                                               POLICY                                      METHOD           REPO      STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
 backup-demo-example-mysql-cluster-20250307013939   example-mysql-cluster-mysql-backup-policy   xtrabackup   s3-repo   Completed   1549449      18s        Delete            2025-03-07T01:39:39Z   2025-03-07T01:39:57Z   2025-04-06T01:39:57Z
@@ -242,7 +242,7 @@ Verify the backup files in the configured S3 bucket:
 aws s3 ls s3://kubeblocks-backup-repo/ --recursive
 ```
 
-Expected Output:
+Example Output:
 ```bash
 2025-03-07 09:39:44    1549449 demo/example-mysql-cluster-cb1b0f47-e310-4f63-9537-dacb6cbac499/mysql/backup-demo-example-mysql-cluster-20250307013939/backup-demo-example-mysql-cluster-20250307013939.xbstream.zst
 2025-03-07 09:39:54       5529 demo/example-mysql-cluster-cb1b0f47-e310-4f63-9537-dacb6cbac499/mysql/backup-demo-example-mysql-cluster-20250307013939/kubeblocks-backup.json

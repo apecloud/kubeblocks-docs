@@ -108,7 +108,7 @@ To confirm a successful stop operation:
   ```bash
   kubectl get cluster qdrant-cluster -n demo -w
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME             CLUSTER-DEFINITION  TERMINATION-POLICY   STATUS     AGE
   qdrant-cluster   qdrant              Delete               Stopping   6m3s
@@ -119,7 +119,7 @@ To confirm a successful stop operation:
    ```bash
    kubectl get pods -l app.kubernetes.io/instance=qdrant-cluster -n demo
    ```
-   Expected output:
+   Example Output:
    ```bash
    No resources found in demo namespace.
    ```
@@ -128,7 +128,7 @@ To confirm a successful stop operation:
   ```bash
   kubectl get pvc -l app.kubernetes.io/instance=qdrant-cluster -n demo
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME                           STATUS   VOLUME     CAPACITY   ACCESS MODES   STORAGECLASS         VOLUMEATTRIBUTESCLASS   AGE
   data-qdrant-cluster-qdrant-0   Bound    pvc-uuid   20Gi       RWO            <STORAGECLASS>       <unset>                 22m
@@ -195,7 +195,7 @@ To confirm a successful start operation:
   ```bash
   kubectl get cluster qdrant-cluster -n demo -w
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
   qdrant-cluster   qdrant               Delete               Updating   24m
@@ -207,7 +207,7 @@ To confirm a successful start operation:
   ```bash
   kubectl get pods -n demo -l app.kubernetes.io/instance=qdrant-cluster
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME                      READY   STATUS    RESTARTS   AGE
   qdrant-cluster-qdrant-0   2/2     Running   0          55s
@@ -252,7 +252,7 @@ To verify a successful component restart:
   ```bash
   kubectl get opsrequest qdrant-cluster-restart-ops -n demo -w
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME                         TYPE      CLUSTER          STATUS    PROGRESS   AGE
   qdrant-cluster-restart-ops   Restart   qdrant-cluster   Running   0/3        4s

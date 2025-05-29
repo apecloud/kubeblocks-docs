@@ -70,7 +70,7 @@ Monitor the cluster status until it transitions to the Running state:
 ```bash
 kubectl get cluster example-mysql-cluster -n demo -w
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 example-mysql-cluster   mysql                Delete               Creating   8s
@@ -195,7 +195,7 @@ Connect to the upgraded instances and verify the MySQL version:
 ```bash
 kubectl exec -ti -n demo example-mysql-cluster-mysql-1 -- mysql -uroot -p79vJW1Vg43 -e "SELECT VERSION();"
 ```
-Expected Output:
+Example Output:
 ```sql
 +-----------+
 | VERSION() |

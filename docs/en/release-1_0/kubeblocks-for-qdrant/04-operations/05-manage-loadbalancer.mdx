@@ -95,7 +95,7 @@ External service addresses enable public internet access to Qdrant, while intern
   kubectl get ops qdrant-cluster-expose-enable-ops -n demo
   ```
 
-  Expected Output:
+  Example Output:
   ```bash
   NAME                               TYPE     CLUSTER          STATUS    PROGRESS   AGE
   qdrant-cluster-expose-enable-ops   Expose   qdrant-cluster   Succeed   1/1        31s
@@ -105,7 +105,7 @@ External service addresses enable public internet access to Qdrant, while intern
 
   <TabItem value="ClusterAPI" label="Cluster API">
 
-  Option 1: Using Cluster API
+  Option 2: Using Cluster API
 
   Alternatively, update the `spec.services` section in the Cluster resource to include a LoadBalancer service:
   ```yaml
@@ -200,7 +200,7 @@ Check the service details to confirm the LoadBalancer service is created:
 kubectl get service -l app.kubernetes.io/instance=qdrant-cluster -n demo
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                             TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)              AGE
 qdrant-cluster-qdrant-internet   LoadBalancer   172.20.60.24   <EXTERNAL-IP> 6333:31243/TCP      1m
@@ -237,7 +237,7 @@ qdrant-cluster-qdrant-internet   LoadBalancer   172.20.60.24   <EXTERNAL-IP> 633
   ```bash
   kubectl get ops qdrant-cluster-expose-disable-ops -n demo
   ```
-  Expected Output:
+  Example Output:
   ```bash
   NAME                                TYPE     CLUSTER          STATUS    PROGRESS   AGE
   qdrant-cluster-expose-disable-ops   Expose   qdrant-cluster   Succeed   1/1        24s
@@ -247,7 +247,7 @@ qdrant-cluster-qdrant-internet   LoadBalancer   172.20.60.24   <EXTERNAL-IP> 633
 
   <TabItem value="ClusterAPI" label="Cluster API">
 
-  Option 1: Using Cluster API
+  Option 2: Using Cluster API
 
   Alternatively, remove the `spec.services` field from the Cluster resource:
   ```bash

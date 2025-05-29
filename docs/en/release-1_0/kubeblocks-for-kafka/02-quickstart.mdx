@@ -1,5 +1,5 @@
 ---
-title: Kafka Quick Start
+title: Kafka Quickstart
 description: Comprehensive guide to deploying and managing Kafka ReplicaSet  Clusters with KubeBlocks, including installation, configuration, and operational best practices.
 keywords: [Kubernetes, Kafka, KubeBlocks, Helm, Cluster Management, QuickStart]
 sidebar_position: 2
@@ -9,7 +9,7 @@ sidebar_label: QuickStart
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# Kafka Quick Start
+# Kafka Quickstart
 
 This guide provides a comprehensive walkabout for deploying and managing Kafka ReplicaSet  Clusters using the **KubeBlocks Kafka Add-on**, covering:
 - System prerequisites and add-on installation
@@ -37,7 +37,7 @@ helm list -n kb-system | grep kafka
 ```
 
 <details open>
-<summary>Expected Output:</summary>
+<summary>Example Output:</summary>
 
 ```bash
 NAME               NAMESPACE   REVISION    UPDATED                     STATUS      CHART
@@ -84,7 +84,7 @@ If the add-on isn't enabled, choose an installation method:
   # Install Add-on with your desired version (replace <VERSION> with your chosen version)
   kbcli addon install kafka --version <VERSION>
   ```
-  **Expected Output:**
+  **Example Output:**
   ```bash
   ADDON   VERSION         INDEX
   kafka   0.9.0           kubeblocks

@@ -72,7 +72,7 @@ Monitor the cluster status until it transitions to the Running state:
 ```bash
 kubectl get cluster example-mysql-cluster -n demo -w
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 example-mysql-cluster   mysql                Delete               Creating   8s
@@ -152,7 +152,7 @@ After applying the operation, you will see a new pod created and the MySQL clust
 kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster
 ```
 
-Expected Output (3 Pods):
+Example Output (3 Pods):
 ```bash
 NAME                           READY   STATUS    RESTARTS   AGE
 example-mysql-cluster-mysql-0   4/4     Running   0          4m30s
@@ -164,7 +164,7 @@ New replicas automatically join as secondary nodes.
 ```bash
 kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
-Expected Outputs:
+Example Output:
 ```bash
 example-mysql-cluster-mysql-0	primary
 example-mysql-cluster-mysql-1	secondary
@@ -209,7 +209,7 @@ Monitor progress:
 kubectl describe ops example-mysql-cluster-scale-in-ops -n demo
 ```
 
-Expected Outputs:
+Example Output:
 ```bash
 Status:
   Phase:            Succeed
@@ -234,7 +234,7 @@ kubectl patch cluster example-mysql-cluster -n demo --type=json -p='[{"op": "rep
 
 ### Verify Scale-In
 
-Expected Output (2 Pods):
+Example Output (2 Pods):
 ```bash
 kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster
 NAME                           READY   STATUS    RESTARTS   AGE

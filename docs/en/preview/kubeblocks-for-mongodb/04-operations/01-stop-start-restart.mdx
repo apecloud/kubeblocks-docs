@@ -108,7 +108,7 @@ To confirm a successful stop operation:
   ```bash
   kubectl get cluster mongo-cluster -n demo -w
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME            CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
   mongo-cluster   mongodb              Delete               Stopping   6m3s
@@ -120,7 +120,7 @@ To confirm a successful stop operation:
    ```bash
    kubectl get pods -l app.kubernetes.io/instance=mongo-cluster -n demo
    ```
-   Expected output:
+   Example Output:
    ```bash
    No resources found in demo namespace.
    ```
@@ -129,7 +129,7 @@ To confirm a successful stop operation:
   ```bash
   kubectl get pvc -l app.kubernetes.io/instance=mongo-cluster -n demo
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME                           STATUS   VOLUME     CAPACITY   ACCESS MODES   STORAGECLASS         VOLUMEATTRIBUTESCLASS   AGE
   data-mongo-cluster-mongodb-0   Bound    pvc-uuid   20Gi       RWO            <STORAGECLASS>       <unset>                 22m
@@ -195,7 +195,7 @@ To confirm a successful start operation:
   ```bash
   kubectl get cluster mongo-cluster -n demo -w
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME            CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
   mongo-cluster   mongodb              Delete               Updating   24m
@@ -207,7 +207,7 @@ To confirm a successful start operation:
   ```bash
   kubectl get pods -n demo -l app.kubernetes.io/instance=mongo-cluster -L kubeblocks.io/role
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME                      READY   STATUS    RESTARTS   AGE   ROLE
   mongo-cluster-mongodb-0   2/2     Running   0          55s   primary
@@ -252,7 +252,7 @@ To verify a successful component restart:
   ```bash
   kubectl get opsrequest mongo-cluster-restart-ops -n demo -w
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME                        TYPE      CLUSTER         STATUS    PROGRESS   AGE
   mongo-cluster-restart-ops   Restart   mongo-cluster   Running   0/3        4s
