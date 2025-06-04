@@ -22,7 +22,7 @@ For static parameters, KubeBlocks minimizes downtime by:
 
 :::note
 
-KubeBlocks Redis Addons does not implement any dynamic reload action for `Dynamic Parameters`, thus changes on any parameters will cause a restart.
+KubeBlocks Redis Addon does not implement any dynamic reload action for `Dynamic Parameters`, thus changes on any parameters will cause a restart.
 
 :::
 
@@ -121,7 +121,6 @@ kubectl delete ns demo
 
 ## Summary
 This guide covered modifying Redis parameters through KubeBlocks:
-- Dynamic changes (e.g., `max_connections`) apply immediately
-- Static changes (e.g., `shared_buffers`) require restart but with minimal downtime
+- Static changes require restart but with minimal downtime
 - All changes are validated before application
 - Configuration follows declarative management principles

@@ -3,7 +3,7 @@ title: MongoDB Quickstart
 description: Comprehensive guide to deploying and managing MongoDB ReplicaSet  Clusters with KubeBlocks, including installation, configuration, and operational best practices.
 keywords: [Kubernetes, MongoDB, KubeBlocks, Helm, Cluster Management, QuickStart]
 sidebar_position: 2
-sidebar_label: QuickStart
+sidebar_label: Quickstart
 ---
 
 import Tabs from '@theme/Tabs';
@@ -140,7 +140,7 @@ mongodb-1.0.0
 ```
 </details>
 
-**Step 2.** Get the list of ComponentDefinition associated with a given ComponentVersion
+**Step 2.** Get the list of `ComponentDefinition` associated with a given `ComponentVersion`
 
 ```bash
 kubectl get cmpv mongodb -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("mongodb"))) | .releases[]'
@@ -259,7 +259,7 @@ For more API fields and descriptions, refer to the [API Reference](../user_docs/
 
 ### Create a Version-Specific MongoDB ReplicaSet Cluster
 
-To create a cluster with a specific version, configure `spec.componentSpecs.serviceVersion` (major.minor version) fields before applying:
+To create a cluster with a specific version, configure `spec.componentSpecs.serviceVersion` (major.minor version) fields before applying it:
 
 <Tabs>
   <TabItem value="mongodb4" label="MongoDB 4">
@@ -414,6 +414,7 @@ PASSWD=$(kubectl get secret -n demo mongo-cluster-mongodb-account-root -o jsonpa
 
 :::note
 **Production Considerations**
+
 For production environments, avoid using `kubectl exec` and `port-forward`. Instead implement:
 - LoadBalancer or NodePort Services for external access
 - Network policies to restrict access
@@ -476,7 +477,7 @@ kubectl patch cluster mongo-cluster -n demo --type='json' -p='[
 
 ## Start the MongoDB ReplicaSet Cluster
 
-Restarting a stopped cluster resumes operations with all data and configuration intact:
+Restarting a stopped cluster resumes operations with all data and configuration intact.
 
 **Key Effects:**
 - Compute resources (Pods) are recreated

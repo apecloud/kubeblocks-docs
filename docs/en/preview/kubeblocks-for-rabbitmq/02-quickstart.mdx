@@ -3,7 +3,7 @@ title: RabbitMQ Quickstart
 description: Comprehensive guide to deploying and managing RabbitMQ ReplicaSet  Clusters with KubeBlocks, including installation, configuration, and operational best practices.
 keywords: [Kubernetes, RabbitMQ, KubeBlocks, Helm, Cluster Management, QuickStart]
 sidebar_position: 2
-sidebar_label: QuickStart
+sidebar_label: Quickstart
 ---
 
 import Tabs from '@theme/Tabs';
@@ -140,7 +140,7 @@ rabbitmq-1.0.0
 ```
 </details>
 
-**Step 2.** Get the list of ComponentDefinition associated with a given ComponentVersion
+**Step 2.** Get the list of `ComponentDefinition` associated with a given `ComponentVersion`
 
 ```bash
 kubectl get cmpv rabbitmq -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("rabbitmq"))) | .releases[]'
@@ -250,7 +250,7 @@ For more API fields and descriptions, refer to the [API Reference](../user_docs/
 
 ### Create a Version-Specific RabbitMQ Cluster
 
-To create a cluster with a specific version, configure `spec.componentSpecs.serviceVersion` (major.minor version) fields before applying:
+To create a cluster with a specific version, configure `spec.componentSpecs.serviceVersion` (major.minor version) fields before applying it:
 
 <Tabs>
   <TabItem value="rabbitmq4" label="RabbitMQ 4.x" default>
@@ -418,7 +418,7 @@ Stopping a cluster temporarily suspends operations while preserving all data and
 
 ## Start the RabbitMQ Cluster
 
-Restarting a stopped cluster resumes operations with all data and configuration intact:
+Restarting a stopped cluster resumes operations with all data and configuration intact.
 
 **Key Effects:**
 - Compute resources (Pods) are recreated
