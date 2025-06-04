@@ -113,7 +113,7 @@ To confirm a successful stop operation:
    ```bash
    kubectl get cluster redis-replication -n demo -w
    ```
-   Expected output:
+   Example Output:
    ```bash
    NAME                CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
    redis-replication   redis                Delete               Stopping   6m3s
@@ -124,7 +124,7 @@ To confirm a successful stop operation:
    ```bash
    kubectl get pods -n demo
    ```
-   Expected output:
+   Example Output:
    ```bash
    No resources found in demo namespace.
    ```
@@ -133,7 +133,7 @@ To confirm a successful stop operation:
    ```bash
    kubectl get pvc -n demo
    ```
-   Expected output:
+   Example Output:
    ```bash
     NAME                                      STATUS   VOLUME     CAPACITY   ACCESS MODES
     data-redis-replication-redis-0            Bound    pvc-uuid   20Gi       RWO
@@ -205,7 +205,7 @@ To confirm a successful start operation:
    ```bash
    kubectl get cluster redis-replication -n demo -w
    ```
-   Expected output:
+   Example Output:
    ```bash
    NAME                CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
    redis-replication   redis                Delete               Updating   22m
@@ -216,7 +216,7 @@ To confirm a successful start operation:
    ```bash
    kubectl get pods -n demo -l app.kubernetes.io/instance=redis-replication
    ```
-   Expected output:
+   Example Output:
    ```bash
    NAME                       READY   STATUS    RESTARTS   AGE
    redis-replication-redis-0   1/1     Running   0          2m
@@ -266,7 +266,7 @@ To verify a successful component restart:
    ```bash
    kubectl get opsrequest redis-replication-restart-ops -n demo -w
    ```
-   Expected output:
+   Example Output:
    ```bash
    NAME                     TYPE      CLUSTER      STATUS    PROGRESS   AGE
    redis-replication-restart-ops   Restart   redis-replication   Running   0/2        10s

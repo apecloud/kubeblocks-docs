@@ -103,7 +103,7 @@ External service addresses enable public internet access to MongoDB, while inter
   kubectl get ops mongo-cluster-expose-enable-ops -n demo
   ```
 
-  Expected Output:
+  Example Output:
   ```bash
   NAME                              TYPE     CLUSTER         STATUS    PROGRESS   AGE
   mongo-cluster-expose-enable-ops   Expose   mongo-cluster   Succeed   1/1        31s
@@ -113,7 +113,7 @@ External service addresses enable public internet access to MongoDB, while inter
 
   <TabItem value="ClusterAPI" label="Cluster API">
 
-  Option 1: Using Cluster API
+  Option 2: Using Cluster API
 
   Alternatively, update the `spec.services` section in the Cluster resource to include a LoadBalancer service:
   ```yaml
@@ -210,7 +210,7 @@ Check the service details to confirm the LoadBalancer service is created:
 kubectl get service -l app.kubernetes.io/instance=mongo-cluster -n demo
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                             TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)              AGE
 mongo-cluster-mongodb-internet   LoadBalancer   172.20.60.24   <EXTERNAL-IP> 27017:31243/TCP      1m
@@ -273,7 +273,7 @@ mongosh "mongodb://<$NAME>:<$PASSWD>@<external-ip>:27017/admin"
   ```bash
   kubectl get ops mongo-cluster-expose-disable-ops -n demo
   ```
-  Expected Output:
+  Example Output:
   ```bash
   NAME                               TYPE     CLUSTER         STATUS    PROGRESS   AGE
   mongo-cluster-expose-disable-ops   Expose   mongo-cluster   Succeed   1/1        24s
@@ -283,7 +283,7 @@ mongosh "mongodb://<$NAME>:<$PASSWD>@<external-ip>:27017/admin"
 
   <TabItem value="ClusterAPI" label="Cluster API">
 
-  Option 1: Using Cluster API
+  Option 2: Using Cluster API
 
   Alternatively, remove the `spec.services` field from the Cluster resource:
   ```bash

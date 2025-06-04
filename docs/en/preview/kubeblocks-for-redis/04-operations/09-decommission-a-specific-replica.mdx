@@ -17,7 +17,7 @@ This guide explains how to decommission (take offline) specific Pods in Redis cl
 
 ## Why Decommission Pods with KubeBlocks?
 
-In traditional StatefulSet-based deployments, Kubernetes lacks the ability to decommission specific Pods. StatefulSets ensure the order and identity of Pods, and scaling down always removes the Pod with the highest ordinal number (e.g., scaling down from 3 replicas removes Pod `-2` first). This limitation prevents precise control over which Pod to take offline, which can complicate maintenance, workload distribution, or failure handling.
+In traditional StatefulSet-based deployments, Kubernetes lacks the ability to decommission specific Pods. StatefulSets ensure the order and identity of Pods, and scaling down always removes the Pod with the highest ordinal number (e.g., scaling down from 3 replicas removes `Pod-2` first). This limitation prevents precise control over which Pod to take offline, which can complicate maintenance, workload distribution, or failure handling.
 
 KubeBlocks overcomes this limitation by enabling administrators to decommission specific Pods directly. This fine-grained control ensures high availability and allows better resource management without disrupting the entire cluster.
 
@@ -79,7 +79,7 @@ To decommission a specific Pod (e.g., 'redis-replication-redis-1'), you can use 
   ```bash
   kubectl get ops redis-replication-decommission-ops -n demo -w
   ```
-  Expected Output:
+  Example Output:
 
   ```bash
   NAME                                 TYPE                CLUSTER             STATUS    PROGRESS   AGE
@@ -90,7 +90,7 @@ To decommission a specific Pod (e.g., 'redis-replication-redis-1'), you can use 
 
   <TabItem value="ClusterAPI" label="Cluster API">
 
-  Option 1: Using Cluster API
+  Option 2: Using Cluster API
 
   Alternatively, update the Cluster resource directly to decommission the Pod:
 
@@ -116,7 +116,7 @@ After applying the updated configuration, verify the remaining Pods in the clust
 kubectl get pods -n demo -l app.kubernetes.io/instance=redis-replication
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                      READY   STATUS    RESTARTS   AGE
 redis-replication-redis-0 3/3     Running   0          33m33s
@@ -127,4 +127,5 @@ Key takeaways:
 - Traditional StatefulSets lack precise Pod removal control
 - KubeBlocks enables targeted Pod decommissioning
 - Two implementation methods: OpsRequest or Cluster API
+
 This provides granular cluster management while maintaining availability.

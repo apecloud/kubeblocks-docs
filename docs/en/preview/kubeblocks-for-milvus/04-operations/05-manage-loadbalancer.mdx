@@ -93,7 +93,7 @@ External service addresses enable public internet access to Milvus, while intern
   kubectl get ops milvus-cluster-expose-enable-ops -n demo
   ```
 
-  Expected Output:
+  Example Output:
   ```bash
   NAME                                 TYPE     CLUSTER          STATUS    PROGRESS   AGE
   milvus-cluster-expose-enable-ops     Expose   milvus-cluster   Succeed   1/1        31s
@@ -103,7 +103,7 @@ External service addresses enable public internet access to Milvus, while intern
 
   <TabItem value="ClusterAPI" label="Cluster API">
 
-  Option 1: Using Cluster API
+  Option 2: Using Cluster API
 
   Alternatively, update the `spec.services` section in the Cluster resource to include a LoadBalancer service:
   ```yaml
@@ -198,7 +198,7 @@ Check the service details to confirm the LoadBalancer service is created:
 kubectl get service -l app.kubernetes.io/instance=milvus-cluster -n demo
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                                 TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)              AGE
 milvus-cluster-milvus-internet       LoadBalancer   172.20.60.24   <EXTERNAL-IP> 19530:31243/TCP      1m
@@ -235,7 +235,7 @@ milvus-cluster-milvus-internet       LoadBalancer   172.20.60.24   <EXTERNAL-IP>
   ```bash
   kubectl get ops milvus-cluster-expose-disable-ops -n demo
   ```
-  Expected Output:
+  Example Output:
   ```bash
   NAME                                TYPE     CLUSTER          STATUS    PROGRESS   AGE
   milvus-cluster-expose-disable-ops   Expose   milvus-cluster   Succeed   1/1        24s
@@ -245,7 +245,7 @@ milvus-cluster-milvus-internet       LoadBalancer   172.20.60.24   <EXTERNAL-IP>
 
   <TabItem value="ClusterAPI" label="Cluster API">
 
-  Option 1: Using Cluster API
+  Option 2: Using Cluster API
 
   Alternatively, remove the `spec.services` field from the Cluster resource:
   ```bash

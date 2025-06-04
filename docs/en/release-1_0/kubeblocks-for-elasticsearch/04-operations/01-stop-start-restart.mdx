@@ -113,7 +113,7 @@ To confirm a successful stop operation:
   ```bash
   kubectl get cluster es-multinode -n demo -w
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME           CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
   es-multinode                        Delete               Stopping   8m6s
@@ -124,7 +124,7 @@ To confirm a successful stop operation:
   ```bash
   kubectl get pods -l app.kubernetes.io/instance=es-multinode -n demo
   ```
-  Expected output:
+  Example Output:
   ```bash
   No resources found in demo namespace.
   ```
@@ -133,7 +133,7 @@ To confirm a successful stop operation:
   ```bash
   kubectl get pvc -l app.kubernetes.io/instance=es-multinode -n demo
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME                         STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
   data-es-multinode-dit-0      Bound    pvc-aa8136e5-a69a-4117-bb4c-8978978bb77f   20Gi       RWO            standard       <unset>                 8m25s
@@ -205,7 +205,7 @@ To confirm a successful start operation:
   ```bash
   kubectl get cluster es-multinode -n demo -w
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME           CLUSTER-DEFINITION     TERMINATION-POLICY   STATUS     AGE
   es-multinode                          Delete               Updating   24m
@@ -217,7 +217,7 @@ To confirm a successful start operation:
   ```bash
   kubectl get pods -n demo -l app.kubernetes.io/instance=es-multinode
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME                    READY   STATUS    RESTARTS   AGE
   es-multinode-dit-0      3/3     Running   0          24m
@@ -279,7 +279,7 @@ To verify a successful component restart:
   ```bash
   kubectl get opsrequest es-multinode-restart-ops -n demo -w
   ```
-  Expected output:
+  Example Output:
   ```bash
   NAME                       TYPE      CLUSTER        STATUS    PROGRESS   AGE
   es-multinode-restart-ops   Restart   es-multinode   Running   0/3        8s

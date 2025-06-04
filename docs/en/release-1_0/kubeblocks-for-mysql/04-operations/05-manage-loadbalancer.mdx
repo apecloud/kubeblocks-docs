@@ -76,7 +76,7 @@ Monitor the cluster status until it transitions to the Running state:
 kubectl get cluster example-mysql-cluster -n demo -w
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 example-mysql-cluster   mysql                Delete               Creating   9s
@@ -151,7 +151,7 @@ Wait for the OpsRequest to complete:
 ```bash
 kubectl get ops example-mysql-cluster-expose-enable-ops -n demo
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                                      TYPE     CLUSTER                 STATUS    PROGRESS   AGE
 example-mysql-cluster-expose-enable-ops   Expose   example-mysql-cluster   Succeed   1/1        31s
@@ -279,7 +279,7 @@ Check the service details to confirm the LoadBalancer service is created:
 kubectl get services -n demo
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                                    TYPE           CLUSTER-IP       EXTERNAL-IP                                                                          PORT(S)                                                 AGE
 example-mysql-cluster-mysql            ClusterIP      172.20.129.84    <none>                                                                               3306/TCP                                                4h39m
@@ -295,7 +295,7 @@ The LoadBalancer DNS name may take 2-5 minutes to become resolvable. Verify the 
 nslookup a1d37733683d244e0bebad8559cbf24d-3728431cad3e24b5.elb.ap-southeast-1.amazonaws.com
 ```
 
-Example Outputs:
+Example Output:
 ```bash
 Server:		192.168.101.1
 Address:	192.168.101.1#53
@@ -356,7 +356,7 @@ Wait for the OpsRequest to complete:
 ```bash
 kubectl get ops example-mysql-cluster-expose-disable-ops -n demo
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                                       TYPE     CLUSTER                 STATUS    PROGRESS   AGE
 example-mysql-cluster-expose-disable-ops   Expose   example-mysql-cluster   Succeed   1/1        12s

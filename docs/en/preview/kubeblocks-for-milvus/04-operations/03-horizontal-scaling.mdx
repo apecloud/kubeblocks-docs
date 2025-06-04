@@ -112,7 +112,7 @@ After applying the operation, you will see a new pod created and the Milvus clus
 kubectl get pods -n demo -l app.kubernetes.io/instance=milvus-cluster,apps.kubeblocks.io/component-name=querynode
 ```
 
-Expected Outputs:
+Example Output:
 ```bash
 NAME                         READY   STATUS    RESTARTS   AGE
 milvus-cluster-querynode-0   1/1     Running   0          85m
@@ -201,7 +201,7 @@ kubectl patch cluster milvus-cluster -n demo --type='json' -p='[
 
 ### Verify Scale-In
 
-Expected Output (Two Pod):
+Example Output (Two Pod):
 ```bash
 kubectl get pods -n demo -l app.kubernetes.io/instance=milvus-cluster
 NAME                         READY   STATUS    RESTARTS   AGE

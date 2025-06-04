@@ -101,7 +101,7 @@ External service addresses enable public internet access to Elasticsearch, while
   kubectl get ops es-multinode-expose-enable-ops -n demo
   ```
 
-  Expected Output:
+  Example Output:
   ```bash
   NAME                             TYPE     CLUSTER        STATUS    PROGRESS   AGE
   es-multinode-expose-enable-ops   Expose   es-multinode   Succeed   1/1        31s
@@ -111,7 +111,7 @@ External service addresses enable public internet access to Elasticsearch, while
 
   <TabItem value="ClusterAPI" label="Cluster API">
 
-  Option 1: Using Cluster API
+  Option 2: Using Cluster API
 
   Alternatively, update the `spec.services` section in the Cluster resource to include a LoadBalancer service:
   ```yaml
@@ -207,7 +207,7 @@ Check the service details to confirm the LoadBalancer service is created:
 kubectl get service -l app.kubernetes.io/instance=es-multinode -n demo
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                           TYPE            CLUSTER-IP     EXTERNAL-IP   PORT(S)          AGE
 es-multinode-dit-http          ClusterIP       10.96.224.72   <none>        9200/TCP         59m
@@ -246,7 +246,7 @@ es-multinode-master-internet   LoadBalancer    10.96.38.72    <EXTERNAL_IP> 9200
   ```bash
   kubectl get ops es-multinode-expose-disable-ops -n demo
   ```
-  Expected Output:
+  Example Output:
   ```bash
   NAME                              TYPE     CLUSTER        STATUS    PROGRESS   AGE
   es-multinode-expose-disable-ops   Expose   es-multinode   Succeed   1/1        16s
@@ -256,7 +256,7 @@ es-multinode-master-internet   LoadBalancer    10.96.38.72    <EXTERNAL_IP> 9200
 
   <TabItem value="ClusterAPI" label="Cluster API">
 
-  Option 1: Using Cluster API
+  Option 2: Using Cluster API
 
   Alternatively, remove the `spec.services` field from the Cluster resource:
   ```bash

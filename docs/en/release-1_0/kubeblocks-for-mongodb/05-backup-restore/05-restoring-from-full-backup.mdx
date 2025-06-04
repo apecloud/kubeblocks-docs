@@ -23,7 +23,7 @@ import Prerequisites from '../_tpl/_prerequisites.mdx'
 <Prerequisites />
 
 ## Preparing for Restoration: Locate one Full Backup
-Before restoring, ensure that there is a full backup is available. The restoration process will use this backup to create a new MongoDB cluster.
+Before restoring, ensure that there is a full backup available. The restoration process will use this backup to create a new MongoDB cluster.
 
 - Backup repository accessible from new cluster
 - Valid full backup in `Completed` state
@@ -58,8 +58,8 @@ Create a new cluster with restore configuration:
 
 Key parameters:
 - `kubeblocks.io/restore-from-backup` annotation
-- `encryptedSystemAccounts` from previous steps
-- Backup name and namespace located from previous steps
+- `encryptedSystemAccounts` from the previous steps
+- Backup name and namespace located from the previous steps
 
 
 ```yaml
@@ -145,7 +145,7 @@ Confirm successful restoration:
 ```bash
 kubectl get cluster mongo-cluster-restored -n demo
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 mongo-cluster-restored  mongodb              Delete               Running   3m3s

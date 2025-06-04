@@ -117,7 +117,7 @@ Track progress until status shows "Completed":
 kubectl get backup pg-cluster-pg-basebackup  -n demo -w
 ```
 
-Expected Output:
+Example Output:
 
 ```bash
 NAME                       POLICY                                METHOD          REPO            STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
@@ -185,7 +185,7 @@ Check the final backup status:
 kubectl get backup -n demo -l operations.kubeblocks.io/ops-name=pg-cluster-backup
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                                    POLICY                                METHOD          REPO           STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
 backup-demo-pg-cluster-20250516025810   pg-cluster-postgresql-backup-policy   pg-basebackup   <BACKUP_REPO>  Completed   4725590      10s        Delete            2025-05-16T02:58:10Z   2025-05-16T02:58:20Z   2025-06-15T02:58:20Z

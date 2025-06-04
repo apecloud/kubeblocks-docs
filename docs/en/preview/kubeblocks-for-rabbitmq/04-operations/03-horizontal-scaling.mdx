@@ -122,7 +122,7 @@ After applying the operation, you will see a new pod created and the RabbitMQ cl
 kubectl get pods -n demo -l app.kubernetes.io/instance=rabbitmq-cluster
 ```
 
-Expected Outputs:
+Example Output:
 ```bash
 NAME                          READY   STATUS    RESTARTS   AGE
 rabbitmq-cluster-rabbitmq-0   2/2     Running   0          6m24s
@@ -205,7 +205,7 @@ rabbitmq-cluster-rabbitmq-3   2/2     Running   0          3m54s
 
 ### Verify Scale-In
 
-Expected Output (ONE Pod):
+Example Output (ONE Pod):
 ```bash
 kubectl get pods -n demo -l app.kubernetes.io/instance=rabbitmq-cluster
 NAME                            READY   STATUS   RESTARTS   AGE

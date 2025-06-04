@@ -71,7 +71,7 @@ Monitor the cluster status until it transitions to the Running state:
 kubectl get cluster qdrant-cluster -n demo -w
 ```
 
-Expected Output:
+Example Output:
 
 ```bash
 NAME             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
@@ -110,7 +110,7 @@ kubectl get cmpv qdrant -ojson | jq -r '.metadata.annotations."componentversion.
 ```
 
 <details>
-<summary>Expected Output</summary>
+<summary>Example Output</summary>
 ```text
 qdrant-1.0.0
 ```
@@ -125,7 +125,7 @@ kubectl get cmpv qdrant -o json | jq -r '.spec.compatibilityRules[] | select(.co
 This returns versions compatible with `ComponentDefinition` named `qdrant`:
 
 <details open>
-<summary>Expected Output</summary>
+<summary>Example Output</summary>
 ```text
 1.5.0
 1.7.3
@@ -215,7 +215,7 @@ Check OpsRequest progress:
 kubectl get ops -n demo qdrant-upgrade -w
 ```
 
-Expected Output:
+Example Output:
 ```
 NAME             TYPE      CLUSTER          STATUS    PROGRESS   AGE
 qdrant-upgrade   Upgrade   qdrant-cluster   Succeed   3/3        8m13s

@@ -77,7 +77,7 @@ kubectl get po -n demo kafka-separated-cluster-kafka-broker-0 -oyaml | yq '.spec
 ```
 
 <details open>
-<summary>Expected Output:</summary>
+<summary>Example Output:</summary>
 
 ```text
 - containerPort: 5556
@@ -92,7 +92,7 @@ kubectl get po -n demo kafka-separated-cluster-kafka-broker-0 -oyaml | yq '.spec
 ```
 
 <details open>
-<summary>Expected Output:</summary>
+<summary>Example Output:</summary>
 
 ```text
 - containerPort: 9308
@@ -180,7 +180,7 @@ Verify metrics are being scraped:
 curl -sG "http://localhost:9090/api/v1/query" --data-urlencode 'query=up{app_kubernetes_io_instance="kafka-separated-cluster"}' | jq
 ```
 
-Expected Outputs:
+Example Output:
 ```json
 {
   "status": "success",
