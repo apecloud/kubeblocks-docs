@@ -105,7 +105,7 @@ export type BlogMetadata = {
   }
 }
 
-export const getBlogs = async (locale: string): Promise<BlogMetadata[]> => {
+export const getBlogs = async (locale: (string | undefined) = 'en'): Promise<BlogMetadata[]> => {
   let blogsDir = path.join(BLOGS_DIR, locale);
   if (!fs.existsSync(blogsDir)) {
     blogsDir = path.join(BLOGS_DIR, "en");
