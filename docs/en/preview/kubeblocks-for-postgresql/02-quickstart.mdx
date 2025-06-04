@@ -3,7 +3,7 @@ title: PostgreSQL Quickstart
 description: Comprehensive guide to deploying and managing PostgreSQL clusters with KubeBlocks, including installation, configuration, and operational best practices.
 keywords: [Kubernetes, PostgreSQL, KubeBlocks, Helm, Cluster Management, QuickStart]
 sidebar_position: 2
-sidebar_label: QuickStart
+sidebar_label: Quickstart
 ---
 
 import Tabs from '@theme/Tabs';
@@ -144,7 +144,7 @@ postgresql-16-1.0.0
 ```
 </details>
 
-**Step 2.** Get the list of ComponentDefinition associated with a given ComponentVersion
+**Step 2.** Get the list of `ComponentDefinition` associated with a given `ComponentVersion`
 
 ```bash
 kubectl get cmpv postgresql -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("postgresql-14"))) | .releases[]'
@@ -271,7 +271,7 @@ For more API fields and descriptions, refer to the [API Reference](../user_docs/
 
 ### Create a Version-Specific PostgreSQL Cluster
 
-To create a cluster with a specific version, configure `spec.componentSpecs.serviceVersion` (major.minor version) fields before applying:
+To create a cluster with a specific version, configure `spec.componentSpecs.serviceVersion` (major.minor version) fields before applying it:
 
 <Tabs>
   <TabItem value="PostgreSQL 12" label="PostgreSQL 12">
@@ -446,6 +446,7 @@ PASSWD=$(kubectl get secret -n demo pg-cluster-postgresql-account-postgres -o js
 
 :::note
 **Production Considerations**
+
 For production environments, avoid using `kubectl exec` and `port-forward`. Instead implement:
 - LoadBalancer or NodePort Services for external access
 - Network policies to restrict access
@@ -508,7 +509,7 @@ Stopping a cluster temporarily suspends operations while preserving all data and
 
 ## Start the PostgreSQL Cluster
 
-Restarting a stopped cluster resumes operations with all data and configuration intact:
+Restarting a stopped cluster resumes operations with all data and configuration intact.
 
 **Key Effects:**
 - Compute resources (Pods) are recreated

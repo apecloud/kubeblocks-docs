@@ -116,7 +116,7 @@ qdrant-1.0.0
 ```
 </details>
 
-**Step 2.** Get the list of ComponentDefinition associated with a given ComponentVersion
+**Step 2.** Get the list of `ComponentDefinition` associated with a given `ComponentVersion`
 
 ```bash
 kubectl get cmpv qdrant -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("^qdrant"))) | .releases[]'

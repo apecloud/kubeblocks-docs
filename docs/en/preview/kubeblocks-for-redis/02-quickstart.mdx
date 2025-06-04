@@ -3,7 +3,7 @@ title: Redis Quickstart
 description: Comprehensive guide to deploying and managing Redis Replication Clusters with KubeBlocks, including installation, configuration, and operational best practices.
 keywords: [Kubernetes, Redis, KubeBlocks, Helm, Cluster Management, QuickStart]
 sidebar_position: 2
-sidebar_label: QuickStart
+sidebar_label: Quickstart
 ---
 
 import Tabs from '@theme/Tabs';
@@ -140,7 +140,7 @@ redis-7-1.0.0
 ```
 </details>
 
-**Step 2.** Get the list of ComponentDefinition associated with a given ComponentVersion
+**Step 2.** Get the list of `ComponentDefinition` associated with a given `ComponentVersion`
 
 ```bash
 kubectl get cmpv redis -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("^redis-7"))) | .releases[]'
@@ -259,7 +259,7 @@ For more API fields and descriptions, refer to the [API Reference](../user_docs/
 
 ### Create a Version-Specific Redis Replication Cluster
 
-To create a cluster with a specific version, configure `spec.componentSpecs.serviceVersion` (major.minor version) fields before applying:
+To create a cluster with a specific version, configure `spec.componentSpecs.serviceVersion` (major.minor version) fields before applying it:
 
 <Tabs>
   <TabItem value="Redis77" label="Redis 7">
@@ -274,7 +274,7 @@ To create a cluster with a specific version, configure `spec.componentSpecs.serv
 ## Verify Cluster Status
 
 When deploying a Redis Replication Cluster with 5 replicas, 2 for redis and 3 for redis sentinel:
-- Redis running with one Primary replica (read/write operations and one Secondary replica (read-only operations)
+- Redis runs with one Primary replica (read/write operations) and one Secondary replica (read-only operations)
 
 Confirm successful deployment by checking:
 
@@ -388,6 +388,7 @@ PASSWD=$(kubectl get secret -n demo redis-replication-redis-account-default -o j
 
 :::note
 **Production Considerations**
+
 For production environments, avoid using `kubectl exec` and `port-forward`. Instead implement:
 - LoadBalancer or NodePort Services for external access
 - Network policies to restrict access
@@ -455,7 +456,7 @@ Stopping a cluster temporarily suspends operations while preserving all data and
 
 ## Start the Redis Replication Cluster
 
-Restarting a stopped cluster resumes operations with all data and configuration intact:
+Restarting a stopped cluster resumes operations with all data and configuration intact.
 
 **Key Effects:**
 - Compute resources (Pods) are recreated

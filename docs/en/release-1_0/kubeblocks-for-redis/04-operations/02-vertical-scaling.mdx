@@ -15,7 +15,7 @@ import TabItem from '@theme/TabItem';
 
 This guide demonstrates how to vertically scale a Redis Replication Cluster managed by KubeBlocks by adjusting compute resources (CPU and memory) while maintaining the same number of replicas.
 
-Vertical scaling modifies compute resources (CPU/memory) for Redis instances while maintaining replica count. Key characteristics:
+Vertical scaling modifies compute resources (CPU and memory) for Redis instances while maintaining replica count. Key characteristics:
 
 - **Non-disruptive**: When properly configured, maintains availability during scaling
 - **Granular**: Adjust CPU, memory, or both independently
@@ -81,7 +81,7 @@ import VerifyCluster from '../_tpl/_verify-redis-replication-cluster.mdx'
   - Once all secondary Pods are updated, the primary Pod is restarted with the new resource configuration.
 
 
-  You can check the progress of the scaling operation with following command:
+  You can check the progress of the scaling operation with the following command:
 
   ```bash
   kubectl -n demo get ops redis-replication-vscale-ops -w
@@ -133,7 +133,7 @@ import VerifyCluster from '../_tpl/_verify-redis-replication-cluster.mdx'
 - Check for any ongoing operations before starting
 
 **Execution:**
-- Maintain balanced CPU:Memory ratios
+- Maintain balanced CPU-to-Memory ratios
 - Set identical requests/limits for guaranteed QoS
 
 **Post-Scaling:**
@@ -154,7 +154,7 @@ redis                                1 / 1                1Gi / 1Gi             
 redis-sentinel                       500m / 500m          512Mi / 512Mi           data:20Gi      <none>
 ```
 
-Only resources for Redis component has been updated, but those for redis-sentinel remains the same.
+Only resources for Redis component have been updated, but those for redis-sentinel remain the same.
 
 ## Key Benefits of Vertical Scaling with KubeBlocks
 - Seamless Scaling: Pods are recreated in a specific order to ensure minimal disruption.
