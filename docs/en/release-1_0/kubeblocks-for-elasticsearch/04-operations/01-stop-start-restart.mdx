@@ -62,46 +62,46 @@ This operation is ideal for:
 
 <Tabs>
 
-  <TabItem value="opsRequest" label="OpsRequest API" default>
+<TabItem value="opsRequest" label="OpsRequest API" default>
 
-  Option 1: OpsRequest API
+Option 1: OpsRequest API
 
-  Create a Stop operation request:
+Create a Stop operation request:
 
-  ```yaml
-  apiVersion: operations.kubeblocks.io/v1alpha1
-  kind: OpsRequest
-  metadata:
-    name: es-multinode-stop-ops
-    namespace: demo
-  spec:
-    clusterName: es-multinode
-    type: Stop
-  ```
-  </TabItem>
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: es-multinode-stop-ops
+  namespace: demo
+spec:
+  clusterName: es-multinode
+  type: Stop
+```
+</TabItem>
 
-  <TabItem value="ClusterAPI" label="Cluster API">
+<TabItem value="ClusterAPI" label="Cluster API">
 
-  Option 2: Cluster API Patch
+Option 2: Cluster API Patch
 
-  Modify the cluster spec directly by patching the stop field:
+Modify the cluster spec directly by patching the stop field:
 
-  ```bash
-  kubectl patch cluster es-multinode -n demo --type='json' -p='[
-  {
-    "op": "add",
-    "path": "/spec/componentSpecs/0/stop",
-    "value": true
-  },
-  {
-    "op": "add",
-    "path": "/spec/componentSpecs/1/stop",
-    "value": true
-  }
-  ]'
-  ```
+```bash
+kubectl patch cluster es-multinode -n demo --type='json' -p='[
+{
+  "op": "add",
+  "path": "/spec/componentSpecs/0/stop",
+  "value": true
+},
+{
+  "op": "add",
+  "path": "/spec/componentSpecs/1/stop",
+  "value": true
+}
+]'
+```
 
-  </TabItem>
+</TabItem>
 
 </Tabs>
 
@@ -110,39 +110,39 @@ This operation is ideal for:
 To confirm a successful stop operation:
 
 1. Check cluster status transition:
-  ```bash
-  kubectl get cluster es-multinode -n demo -w
-  ```
-  Example Output:
-  ```bash
-  NAME           CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
-  es-multinode                        Delete               Stopping   8m6s
-  es-multinode                        Delete               Stopped    9m41s
-  ```
+    ```bash
+    kubectl get cluster es-multinode -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME           CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+    es-multinode                        Delete               Stopping   8m6s
+    es-multinode                        Delete               Stopped    9m41s
+    ```
 
 2. Verify no running pods:
-  ```bash
-  kubectl get pods -l app.kubernetes.io/instance=es-multinode -n demo
-  ```
-  Example Output:
-  ```bash
-  No resources found in demo namespace.
-  ```
+    ```bash
+    kubectl get pods -l app.kubernetes.io/instance=es-multinode -n demo
+    ```
+    Example Output:
+    ```bash
+    No resources found in demo namespace.
+    ```
 
 3. Confirm persistent volumes remain:
-  ```bash
-  kubectl get pvc -l app.kubernetes.io/instance=es-multinode -n demo
-  ```
-  Example Output:
-  ```bash
-  NAME                         STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
-  data-es-multinode-dit-0      Bound    pvc-aa8136e5-a69a-4117-bb4c-8978978bb77f   20Gi       RWO            standard       <unset>                 8m25s
-  data-es-multinode-dit-1      Bound    pvc-408fe4d5-b3a9-4984-b6e5-48ec133307eb   20Gi       RWO            standard       <unset>                 8m25s
-  data-es-multinode-dit-2      Bound    pvc-cf6c3c7c-bb5f-4fa6-8dff-33e0862f8ef9   20Gi       RWO            standard       <unset>                 8m25s
-  data-es-multinode-master-0   Bound    pvc-5793e794-8c91-4bba-b6e8-52c414ec0ade   20Gi       RWO            standard       <unset>                 8m25s
-  data-es-multinode-master-1   Bound    pvc-044dae8d-82ee-41f3-867d-c8f27ec08fbe   20Gi       RWO            standard       <unset>                 8m25s
-  data-es-multinode-master-2   Bound    pvc-2af7cedb-2f5f-4846-be43-ff6da8109880   20Gi       RWO            standard       <unset>                 8m25s
-  ```
+    ```bash
+    kubectl get pvc -l app.kubernetes.io/instance=es-multinode -n demo
+    ```
+    Example Output:
+    ```bash
+    NAME                         STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+    data-es-multinode-dit-0      Bound    pvc-aa8136e5-a69a-4117-bb4c-8978978bb77f   20Gi       RWO            standard       <unset>                 8m25s
+    data-es-multinode-dit-1      Bound    pvc-408fe4d5-b3a9-4984-b6e5-48ec133307eb   20Gi       RWO            standard       <unset>                 8m25s
+    data-es-multinode-dit-2      Bound    pvc-cf6c3c7c-bb5f-4fa6-8dff-33e0862f8ef9   20Gi       RWO            standard       <unset>                 8m25s
+    data-es-multinode-master-0   Bound    pvc-5793e794-8c91-4bba-b6e8-52c414ec0ade   20Gi       RWO            standard       <unset>                 8m25s
+    data-es-multinode-master-1   Bound    pvc-044dae8d-82ee-41f3-867d-c8f27ec08fbe   20Gi       RWO            standard       <unset>                 8m25s
+    data-es-multinode-master-2   Bound    pvc-2af7cedb-2f5f-4846-be43-ff6da8109880   20Gi       RWO            standard       <unset>                 8m25s
+    ```
 ### Starting the Cluster
 
 Starting a stopped Elasticsearch Cluster:
@@ -156,44 +156,44 @@ Expected behavior:
 - Services resume automatically
 <Tabs>
 
-  <TabItem value="opsRequest" label="OpsRequest API" default>
+<TabItem value="opsRequest" label="OpsRequest API" default>
 
-  Initiate a Start operation request:
+Initiate a Start operation request:
 
-  ```yaml
-  apiVersion: operations.kubeblocks.io/v1alpha1
-  kind: OpsRequest
-  metadata:
-    name: es-multinode-start-ops
-    namespace: demo
-  spec:
-    # Specifies the name of the Cluster resource that this operation is targeting.
-    clusterName: es-multinode
-    type: Start
-  ```
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: es-multinode-start-ops
+  namespace: demo
+spec:
+  # Specifies the name of the Cluster resource that this operation is targeting.
+  clusterName: es-multinode
+  type: Start
+```
 
-  </TabItem>
+</TabItem>
 
-  <TabItem value="ClusterAPI" label="Cluster API">
+<TabItem value="ClusterAPI" label="Cluster API">
 
-  Modify the cluster spec to resume operation:
-  1. Set stop: false, or
-  2. Remove the stop field entirely
+Modify the cluster spec to resume operation:
+1. Set stop: false, or
+2. Remove the stop field entirely
 
-  ```bash
-  kubectl patch cluster es-multinode -n demo --type='json' -p='[
-  {
-    "op": "remove",
-    "path": "/spec/componentSpecs/0/stop"
-  },
-  {
-    "op": "remove",
-    "path": "/spec/componentSpecs/1/stop"
-  }
-  ]'
-  ```
+    ```bash
+    kubectl patch cluster es-multinode -n demo --type='json' -p='[
+    {
+      "op": "remove",
+      "path": "/spec/componentSpecs/0/stop"
+    },
+    {
+      "op": "remove",
+      "path": "/spec/componentSpecs/1/stop"
+    }
+    ]'
+    ```
 
-  </TabItem>
+</TabItem>
 
 </Tabs>
 
@@ -202,31 +202,31 @@ Expected behavior:
 To confirm a successful start operation:
 
 1. Check cluster status transition:
-  ```bash
-  kubectl get cluster es-multinode -n demo -w
-  ```
-  Example Output:
-  ```bash
-  NAME           CLUSTER-DEFINITION     TERMINATION-POLICY   STATUS     AGE
-  es-multinode                          Delete               Updating   24m
-  es-multinode                          Delete               Running    24m
-  es-multinode                          Delete               Running    24m
-  ```
+    ```bash
+    kubectl get cluster es-multinode -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME           CLUSTER-DEFINITION     TERMINATION-POLICY   STATUS     AGE
+    es-multinode                          Delete               Updating   24m
+    es-multinode                          Delete               Running    24m
+    es-multinode                          Delete               Running    24m
+    ```
 
 2. Verify pod recreation:
-  ```bash
-  kubectl get pods -n demo -l app.kubernetes.io/instance=es-multinode
-  ```
-  Example Output:
-  ```bash
-  NAME                    READY   STATUS    RESTARTS   AGE
-  es-multinode-dit-0      3/3     Running   0          24m
-  es-multinode-dit-1      3/3     Running   0          24m
-  es-multinode-dit-2      3/3     Running   0          24m
-  es-multinode-master-0   3/3     Running   0          24m
-  es-multinode-master-1   3/3     Running   0          24m
-  es-multinode-master-2   3/3     Running   0          24m
-  ```
+    ```bash
+    kubectl get pods -n demo -l app.kubernetes.io/instance=es-multinode
+    ```
+    Example Output:
+    ```bash
+    NAME                    READY   STATUS    RESTARTS   AGE
+    es-multinode-dit-0      3/3     Running   0          24m
+    es-multinode-dit-1      3/3     Running   0          24m
+    es-multinode-dit-2      3/3     Running   0          24m
+    es-multinode-master-0   3/3     Running   0          24m
+    es-multinode-master-1   3/3     Running   0          24m
+    es-multinode-master-2   3/3     Running   0          24m
+    ```
 
 ### Restarting Cluster
 
@@ -276,25 +276,25 @@ spec:
 To verify a successful component restart:
 
 1. Track OpsRequest progress:
-  ```bash
-  kubectl get opsrequest es-multinode-restart-ops -n demo -w
-  ```
-  Example Output:
-  ```bash
-  NAME                       TYPE      CLUSTER        STATUS    PROGRESS   AGE
-  es-multinode-restart-ops   Restart   es-multinode   Running   0/3        8s
-  es-multinode-restart-ops   Restart   es-multinode   Running   1/3        59s
-  es-multinode-restart-ops   Restart   es-multinode   Running   2/3        117s
-  es-multinode-restart-ops   Restart   es-multinode   Running   3/3        2m55s
-  es-multinode-restart-ops   Restart   es-multinode   Running   3/3        2m55s
-  es-multinode-restart-ops   Restart   es-multinode   Succeed   3/3        2m55s
-  ```
+    ```bash
+    kubectl get opsrequest es-multinode-restart-ops -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME                       TYPE      CLUSTER        STATUS    PROGRESS   AGE
+    es-multinode-restart-ops   Restart   es-multinode   Running   0/3        8s
+    es-multinode-restart-ops   Restart   es-multinode   Running   1/3        59s
+    es-multinode-restart-ops   Restart   es-multinode   Running   2/3        117s
+    es-multinode-restart-ops   Restart   es-multinode   Running   3/3        2m55s
+    es-multinode-restart-ops   Restart   es-multinode   Running   3/3        2m55s
+    es-multinode-restart-ops   Restart   es-multinode   Succeed   3/3        2m55s
+    ```
 
 2. Check pod status:
-  ```bash
-  kubectl get pods -n demo -l app.kubernetes.io/instance=es-multinode
-  ```
-  Note: Pods will show new creation timestamps after restart. Only pods belongs to component `dit` have been restarted.
+    ```bash
+    kubectl get pods -n demo -l app.kubernetes.io/instance=es-multinode
+    ```
+    Note: Pods will show new creation timestamps after restart. Only pods belongs to component `dit` have been restarted.
 
 Once the operation is complete, the cluster will return to the Running state.
 
@@ -303,4 +303,5 @@ In this guide, you learned how to:
 1. Stop a Elasticsearch  Cluster to suspend operations while retaining persistent storage.
 2. Start a stopped cluster to bring it back online.
 3. Restart specific cluster components to recreate their Pods without stopping the entire cluster.
+
 By managing the lifecycle of your Elasticsearch  Cluster, you can optimize resource utilization, reduce costs, and maintain flexibility in your Kubernetes environment. KubeBlocks provides a seamless way to perform these operations, ensuring high availability and minimal disruption.

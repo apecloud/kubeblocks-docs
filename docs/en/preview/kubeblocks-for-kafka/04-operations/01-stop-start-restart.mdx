@@ -115,36 +115,36 @@ This operation is ideal for:
 To confirm a successful stop operation:
 
 1. Check cluster status transition:
-  ```bash
-  kubectl get cluster kafka-separated-cluster -n demo -w
-  ```
-  Example Output:
-  ```bash
-  NAME                      CLUSTER-DEFINITION    TERMINATION-POLICY   STATUS     AGE
-  kafka-separated-cluster   kafka                 Delete               Stopping   16m3s
-  kafka-separated-cluster   kafka                 Delete               Stopped    16m55s
-  ```
+    ```bash
+    kubectl get cluster kafka-separated-cluster -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME                      CLUSTER-DEFINITION    TERMINATION-POLICY   STATUS     AGE
+    kafka-separated-cluster   kafka                 Delete               Stopping   16m3s
+    kafka-separated-cluster   kafka                 Delete               Stopped    16m55s
+    ```
 
 2. Verify no running pods:
-  ```bash
-  kubectl get pods -l app.kubernetes.io/instance=kafka-separated-cluster -n demo
-  ```
-  Example Output:
-  ```bash
-  No resources found in demo namespace.
-  ```
+    ```bash
+    kubectl get pods -l app.kubernetes.io/instance=kafka-separated-cluster -n demo
+    ```
+    Example Output:
+    ```bash
+    No resources found in demo namespace.
+    ```
 
 3. Confirm persistent volumes remain:
-  ```bash
-  kubectl get pvc -l app.kubernetes.io/instance=kafka-separated-cluster -n demo
-  ```
-  Example Output:
-  ```bash
-  NAME                                                  STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
-  data-kafka-separated-cluster-kafka-broker-0           Bound    pvc-ddd54e0f-414a-49ed-8e17-41e9f5082af1   20Gi       RWO            standard       <unset>                 14m
-  metadata-kafka-separated-cluster-kafka-broker-0       Bound    pvc-d63b7d80-cac5-41b9-b694-6a298921003b   1Gi        RWO            standard       <unset>                 14m
-  metadata-kafka-separated-cluster-kafka-controller-0   Bound    pvc-e6263eb1-405a-4090-b2bb-f92cca0ba36d   1Gi        RWO            standard       <unset>                 14m
-  ```
+    ```bash
+    kubectl get pvc -l app.kubernetes.io/instance=kafka-separated-cluster -n demo
+    ```
+    Example Output:
+    ```bash
+    NAME                                                  STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+    data-kafka-separated-cluster-kafka-broker-0           Bound    pvc-ddd54e0f-414a-49ed-8e17-41e9f5082af1   20Gi       RWO            standard       <unset>                 14m
+    metadata-kafka-separated-cluster-kafka-broker-0       Bound    pvc-d63b7d80-cac5-41b9-b694-6a298921003b   1Gi        RWO            standard       <unset>                 14m
+    metadata-kafka-separated-cluster-kafka-controller-0   Bound    pvc-e6263eb1-405a-4090-b2bb-f92cca0ba36d   1Gi        RWO            standard       <unset>                 14m
+    ```
 
 ### Starting the Cluster
 
@@ -183,22 +183,22 @@ Expected behavior:
   1. Set stop: false, or
   2. Remove the stop field entirely
 
-  ```bash
-  kubectl patch cluster kafka-separated-cluster -n demo --type='json' -p='[
-  {
-    "op": "remove",
-    "path": "/spec/componentSpecs/0/stop"
-  },
-  {
-    "op": "remove",
-    "path": "/spec/componentSpecs/1/stop"
-  },
-  {
-    "op": "remove",
-    "path": "/spec/componentSpecs/2/stop"
-  }
-  ]'
-  ```
+    ```bash
+    kubectl patch cluster kafka-separated-cluster -n demo --type='json' -p='[
+    {
+      "op": "remove",
+      "path": "/spec/componentSpecs/0/stop"
+    },
+    {
+      "op": "remove",
+      "path": "/spec/componentSpecs/1/stop"
+    },
+    {
+      "op": "remove",
+      "path": "/spec/componentSpecs/2/stop"
+    }
+    ]'
+    ```
 
   </TabItem>
 
@@ -209,28 +209,28 @@ Expected behavior:
 To confirm a successful start operation:
 
 1. Check cluster status transition:
-  ```bash
-  kubectl get cluster kafka-separated-cluster -n demo -w
-  ```
-  Example Output:
-  ```bash
-  NAME                      CLUSTER-DEFINITION     TERMINATION-POLICY   STATUS     AGE
-  kafka-separated-cluster   kafka                  Delete               Updating   24m
-  kafka-separated-cluster   kafka                  Delete               Running    24m
-  kafka-separated-cluster   kafka                  Delete               Running    24m
-  ```
+    ```bash
+    kubectl get cluster kafka-separated-cluster -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME                      CLUSTER-DEFINITION     TERMINATION-POLICY   STATUS     AGE
+    kafka-separated-cluster   kafka                  Delete               Updating   24m
+    kafka-separated-cluster   kafka                  Delete               Running    24m
+    kafka-separated-cluster   kafka                  Delete               Running    24m
+    ```
 
 2. Verify pod recreation:
-  ```bash
-  kubectl get pods -n demo -l app.kubernetes.io/instance=kafka-separated-cluster
-  ```
-  Example Output:
-  ```bash
-  NAME                                         READY   STATUS    RESTARTS   AGE
-  kafka-separated-cluster-kafka-broker-0       2/2     Running   0          2m4s
-  kafka-separated-cluster-kafka-controller-0   2/2     Running   0          104s
-  kafka-separated-cluster-kafka-exporter-0     1/1     Running   0          84s
-  ```
+    ```bash
+    kubectl get pods -n demo -l app.kubernetes.io/instance=kafka-separated-cluster
+    ```
+    Example Output:
+    ```bash
+    NAME                                         READY   STATUS    RESTARTS   AGE
+    kafka-separated-cluster-kafka-broker-0       2/2     Running   0          2m4s
+    kafka-separated-cluster-kafka-controller-0   2/2     Running   0          104s
+    kafka-separated-cluster-kafka-exporter-0     1/1     Running   0          84s
+    ```
 
 ### Restarting Cluster
 
@@ -281,23 +281,23 @@ spec:
 To verify a successful component restart:
 
 1. Track OpsRequest progress:
-  ```bash
-  kubectl get opsrequest kafka-separated-cluster-restart-ops -n demo -w
-  ```
-  Example Output:
-  ```bash
-  NAME                                  TYPE      CLUSTER                   STATUS    PROGRESS   AGE
-  kafka-separated-cluster-restart-ops   Restart   kafka-separated-cluster   Running   0/1        8s
-  kafka-separated-cluster-restart-ops   Restart   kafka-separated-cluster   Running   1/1        22s
-  kafka-separated-cluster-restart-ops   Restart   kafka-separated-cluster   Running   1/1        23s
-  kafka-separated-cluster-restart-ops   Restart   kafka-separated-cluster   Succeed   1/1        23s
-  ```
+    ```bash
+    kubectl get opsrequest kafka-separated-cluster-restart-ops -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME                                  TYPE      CLUSTER                   STATUS    PROGRESS   AGE
+    kafka-separated-cluster-restart-ops   Restart   kafka-separated-cluster   Running   0/1        8s
+    kafka-separated-cluster-restart-ops   Restart   kafka-separated-cluster   Running   1/1        22s
+    kafka-separated-cluster-restart-ops   Restart   kafka-separated-cluster   Running   1/1        23s
+    kafka-separated-cluster-restart-ops   Restart   kafka-separated-cluster   Succeed   1/1        23s
+    ```
 
 2. Check pod status:
-  ```bash
-  kubectl get pods -n demo -l app.kubernetes.io/instance=kafka-separated-cluster
-  ```
-  Note: Pods will show new creation timestamps after restart. Only pods belongs to component `kafka-broker` have been restarted.
+    ```bash
+    kubectl get pods -n demo -l app.kubernetes.io/instance=kafka-separated-cluster
+    ```
+    Note: Pods will show new creation timestamps after restart. Only pods belongs to component `kafka-broker` have been restarted.
 
 Once the operation is complete, the cluster will return to the Running state.
 
@@ -306,4 +306,5 @@ In this guide, you learned how to:
 1. Stop a Kafka  Cluster to suspend operations while retaining persistent storage.
 2. Start a stopped cluster to bring it back online.
 3. Restart specific cluster components to recreate their Pods without stopping the entire cluster.
+
 By managing the lifecycle of your Kafka  Cluster, you can optimize resource utilization, reduce costs, and maintain flexibility in your Kubernetes environment. KubeBlocks provides a seamless way to perform these operations, ensuring high availability and minimal disruption.

@@ -21,7 +21,7 @@ import Prerequisites from '../_tpl/_prerequisites.mdx'
 
 <Prerequisites />
 
-## Deploy a MongoDB ReplicationSet Cluster
+## Deploy a MongoDB ReplicaSet Cluster
 
 import CreateCluster from '../_tpl/_create-cluster.mdx'
 
@@ -225,7 +225,7 @@ mongo-cluster-mongodb-0     2/2     Running  0          18m
 ```
 
 ## Troubleshooting
-If the scale-in operations gets stuck for quite a long time, please check these resources:
+If the scale-in operation gets stuck for quite a long time, please check these resources:
 
 ```bash
 # Check agent logs on both current primary and candidate
@@ -239,7 +239,7 @@ kubectl get events -n demo --field-selector involvedObject.name=pg-cluster
 kubectl -n kb-system logs deploy/kubeblocks
 ```
 
-If you get errors like following from primary replica:
+If you get errors like the following from the primary replica:
 ```text:
 INFO	Action Executed	{"action": "switchover", "result": "exit code: 1: failed"}
 INFO	HTTP API Called	{"user-agent": "Go-http-client/1.1", "method": "POST", "path": "/v1.0/action", "status code": 200, "cost": 7}

@@ -106,7 +106,7 @@ Ensure the storage class you are using has ALLOWVOLUMEEXPANSION set to true. If 
 You can expand the volume in one of two ways:
     <Tabs>
 
-    <TabItem value="opsRequest" label="Use the OpsRequest API" default>
+    <TabItem value="opsRequest" label="OPSREQUEST API" default>
 
 Option 1: Using VolumeExpansion OpsRequest
 
@@ -147,7 +147,7 @@ Once completed, the PVC size will be updated.
 
     </TabItem>
 
-    <TabItem value="ClusterAPI" label="Use the Cluster API">
+    <TabItem value="ClusterAPI" label="CLUSTER API">
 
 Option 2: Direct Cluster API Update
 
@@ -218,7 +218,7 @@ example-mysql-cluster-mysql-data-1             Bound    pvc-xxxxxxxx-xxxx-xxxx-x
 ```
 
 ## Key Considerations
-1. Ensure the storage class supports volume expansion (check ALLOWVOLUMEEXPANSION).
+1. Ensure the storage class supports volume expansion (check `ALLOWVOLUMEEXPANSION`).
 2. The new size must be larger than the current size.
 3. Volume expansion may require additional configurations depending on the storage provider.
 

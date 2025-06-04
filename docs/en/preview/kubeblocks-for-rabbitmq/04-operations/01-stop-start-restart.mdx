@@ -62,41 +62,41 @@ This operation is ideal for:
 
 <Tabs>
 
-  <TabItem value="opsRequest" label="OpsRequest API" default>
+<TabItem value="opsRequest" label="OpsRequest API" default>
 
-  Option 1: OpsRequest API
+Option 1: OpsRequest API
 
-  Create a Stop operation request:
+Create a Stop operation request:
 
-  ```yaml
-  apiVersion: operations.kubeblocks.io/v1alpha1
-  kind: OpsRequest
-  metadata:
-    name: rabbitmq-cluster-stop-ops
-    namespace: demo
-  spec:
-    clusterName: rabbitmq-cluster
-    type: Stop
-  ```
-  </TabItem>
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: rabbitmq-cluster-stop-ops
+  namespace: demo
+spec:
+  clusterName: rabbitmq-cluster
+  type: Stop
+```
+</TabItem>
 
-  <TabItem value="ClusterAPI" label="Cluster API">
+<TabItem value="ClusterAPI" label="Cluster API">
 
-  Option 2: Cluster API Patch
+Option 2: Cluster API Patch
 
-  Modify the cluster spec directly by patching the stop field:
+Modify the cluster spec directly by patching the stop field:
 
-  ```bash
-  kubectl patch cluster rabbitmq-cluster -n demo --type='json' -p='[
-  {
-    "op": "add",
-    "path": "/spec/componentSpecs/0/stop",
-    "value": true
-  }
-  ]'
-  ```
+```bash
+kubectl patch cluster rabbitmq-cluster -n demo --type='json' -p='[
+{
+  "op": "add",
+  "path": "/spec/componentSpecs/0/stop",
+  "value": true
+}
+]'
+```
 
-  </TabItem>
+</TabItem>
 
 </Tabs>
 
@@ -105,36 +105,36 @@ This operation is ideal for:
 To confirm a successful stop operation:
 
 1. Check cluster status transition:
-  ```bash
-  kubectl get cluster rabbitmq-cluster -n demo -w
-  ```
-  Example Output:
-  ```bash
-  NAME               CLUSTER-DEFINITION    TERMINATION-POLICY   STATUS     AGE
-  rabbitmq-cluster   rabbitmq              Delete               Stopping   6m3s
-  rabbitmq-cluster   rabbitmq              Delete               Stopped    6m55s
-  ```
+    ```bash
+    kubectl get cluster rabbitmq-cluster -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME               CLUSTER-DEFINITION    TERMINATION-POLICY   STATUS     AGE
+    rabbitmq-cluster   rabbitmq              Delete               Stopping   6m3s
+    rabbitmq-cluster   rabbitmq              Delete               Stopped    6m55s
+    ```
 
 2. Verify no running pods:
-   ```bash
-   kubectl get pods -l app.kubernetes.io/instance=rabbitmq-cluster -n demo
-   ```
-   Example Output:
-   ```bash
-   No resources found in demo namespace.
-   ```
+    ```bash
+    kubectl get pods -l app.kubernetes.io/instance=rabbitmq-cluster -n demo
+    ```
+    Example Output:
+    ```bash
+    No resources found in demo namespace.
+    ```
 
 3. Confirm persistent volumes remain:
-  ```bash
-  kubectl get pvc -l app.kubernetes.io/instance=rabbitmq-cluster -n demo
-  ```
-  Example Output:
-  ```bash
-  NAME                               STATUS   VOLUME     CAPACITY   ACCESS MODES   STORAGECLASS         VOLUMEATTRIBUTESCLASS   AGE
-  data-rabbitmq-cluster-rabbitmq-0   Bound    pvc-uuid   20Gi       RWO            <STORAGECLASS>       <unset>                 22m
-  data-rabbitmq-cluster-rabbitmq-1   Bound    pvc-uuid   20Gi       RWO            <STORAGECLASS>       <unset>                 21m
-  data-rabbitmq-cluster-rabbitmq-2   Bound    pvc-uuid   20Gi       RWO            <STORAGECLASS>       <unset>                 21m
-   ```
+    ```bash
+    kubectl get pvc -l app.kubernetes.io/instance=rabbitmq-cluster -n demo
+    ```
+    Example Output:
+    ```bash
+    NAME                               STATUS   VOLUME     CAPACITY   ACCESS MODES   STORAGECLASS         VOLUMEATTRIBUTESCLASS   AGE
+    data-rabbitmq-cluster-rabbitmq-0   Bound    pvc-uuid   20Gi       RWO            <STORAGECLASS>       <unset>                 22m
+    data-rabbitmq-cluster-rabbitmq-1   Bound    pvc-uuid   20Gi       RWO            <STORAGECLASS>       <unset>                 21m
+    data-rabbitmq-cluster-rabbitmq-2   Bound    pvc-uuid   20Gi       RWO            <STORAGECLASS>       <unset>                 21m
+    ```
 
 ### Starting the Cluster
 
@@ -149,40 +149,39 @@ Expected behavior:
 - Services resume automatically
 <Tabs>
 
-  <TabItem value="opsRequest" label="OpsRequest API" default>
+<TabItem value="opsRequest" label="OpsRequest API" default>
 
-  Initiate a Start operation request:
+Initiate a Start operation request:
 
-  ```yaml
-  apiVersion: operations.kubeblocks.io/v1alpha1
-  kind: OpsRequest
-  metadata:
-    name: rabbitmq-cluster-start-ops
-    namespace: demo
-  spec:
-    # Specifies the name of the Cluster resource that this operation is targeting.
-    clusterName: rabbitmq-cluster
-    type: Start
-  ```
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: rabbitmq-cluster-start-ops
+  namespace: demo
+spec:
+  # Specifies the name of the Cluster resource that this operation is targeting.
+  clusterName: rabbitmq-cluster
+  type: Start
+```
 
-  </TabItem>
+</TabItem>
 
-  <TabItem value="ClusterAPI" label="Cluster API">
+<TabItem value="ClusterAPI" label="Cluster API">
 
-  Modify the cluster spec to resume operation:
-  1. Set stop: false, or
-  2. Remove the stop field entirely
+Modify the cluster spec to resume operation:
+1. Set stop: false, or
+2. Remove the stop field entirely
+    ```bash
+    kubectl patch cluster rabbitmq-cluster -n demo --type='json' -p='[
+    {
+      "op": "remove",
+      "path": "/spec/componentSpecs/0/stop"
+    }
+    ]'
+    ```
 
-  ```bash
-  kubectl patch cluster rabbitmq-cluster -n demo --type='json' -p='[
-  {
-    "op": "remove",
-    "path": "/spec/componentSpecs/0/stop"
-  }
-  ]'
-  ```
-
-  </TabItem>
+</TabItem>
 
 </Tabs>
 
@@ -191,28 +190,28 @@ Expected behavior:
 To confirm a successful start operation:
 
 1. Check cluster status transition:
-  ```bash
-  kubectl get cluster rabbitmq-cluster -n demo -w
-  ```
-  Example Output:
-  ```bash
-  NAME               CLUSTER-DEFINITION     TERMINATION-POLICY   STATUS     AGE
-  rabbitmq-cluster   rabbitmq               Delete               Updating   24m
-  rabbitmq-cluster   rabbitmq               Delete               Running    24m
-  rabbitmq-cluster   rabbitmq               Delete               Running    24m
-  ```
+    ```bash
+    kubectl get cluster rabbitmq-cluster -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME               CLUSTER-DEFINITION     TERMINATION-POLICY   STATUS     AGE
+    rabbitmq-cluster   rabbitmq               Delete               Updating   24m
+    rabbitmq-cluster   rabbitmq               Delete               Running    24m
+    rabbitmq-cluster   rabbitmq               Delete               Running    24m
+    ```
 
 2. Verify pod recreation:
-  ```bash
-  kubectl get pods -n demo -l app.kubernetes.io/instance=rabbitmq-cluster
-  ```
-  Example Output:
-  ```bash
-  NAME                          READY   STATUS    RESTARTS   AGE
-  rabbitmq-cluster-rabbitmq-0   2/2     Running   0          55s
-  rabbitmq-cluster-rabbitmq-1   2/2     Running   0          44s
-  rabbitmq-cluster-rabbitmq-2   2/2     Running   0          33s
-  ```
+    ```bash
+    kubectl get pods -n demo -l app.kubernetes.io/instance=rabbitmq-cluster
+    ```
+    Example Output:
+    ```bash
+    NAME                          READY   STATUS    RESTARTS   AGE
+    rabbitmq-cluster-rabbitmq-0   2/2     Running   0          55s
+    rabbitmq-cluster-rabbitmq-1   2/2     Running   0          44s
+    rabbitmq-cluster-rabbitmq-2   2/2     Running   0          33s
+    ```
 
 ### Restarting Cluster
 
@@ -248,28 +247,28 @@ spec:
 To verify a successful component restart:
 
 1. Track OpsRequest progress:
-  ```bash
-  kubectl get opsrequest rabbitmq-cluster-restart-ops -n demo -w
-  ```
-  Example Output:
-  ```bash
-  NAME                           TYPE      CLUSTER            STATUS    PROGRESS   AGE
-  rabbitmq-cluster-restart-ops   Restart   rabbitmq-cluster   Running   0/3        4s
-  rabbitmq-cluster-restart-ops   Restart   rabbitmq-cluster   Running   1/3        28s
-  rabbitmq-cluster-restart-ops   Restart   rabbitmq-cluster   Running   2/3        56s
-  rabbitmq-cluster-restart-ops   Restart   rabbitmq-cluster   Running   2/3        109s
-  ```
+    ```bash
+    kubectl get opsrequest rabbitmq-cluster-restart-ops -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME                           TYPE      CLUSTER            STATUS    PROGRESS   AGE
+    rabbitmq-cluster-restart-ops   Restart   rabbitmq-cluster   Running   0/3        4s
+    rabbitmq-cluster-restart-ops   Restart   rabbitmq-cluster   Running   1/3        28s
+    rabbitmq-cluster-restart-ops   Restart   rabbitmq-cluster   Running   2/3        56s
+    rabbitmq-cluster-restart-ops   Restart   rabbitmq-cluster   Running   2/3        109s
+    ```
 
 2. Check pod status:
-  ```bash
-  kubectl get pods -n demo -l app.kubernetes.io/instance=rabbitmq-cluster
-  ```
-  Note: Pods will show new creation timestamps after restart
+    ```bash
+    kubectl get pods -n demo -l app.kubernetes.io/instance=rabbitmq-cluster
+    ```
+    Note: Pods will show new creation timestamps after restart
 
 3. Verify component health:
-  ```bash
-  kbcli cluster describe rabbitmq-cluster -n demo
-  ```
+    ```bash
+    kbcli cluster describe rabbitmq-cluster -n demo
+    ```
 
 Once the operation is complete, the cluster will return to the Running state.
 
@@ -278,4 +277,5 @@ In this guide, you learned how to:
 1. Stop a RabbitMQ  Cluster to suspend operations while retaining persistent storage.
 2. Start a stopped cluster to bring it back online.
 3. Restart specific cluster components to recreate their Pods without stopping the entire cluster.
+
 By managing the lifecycle of your RabbitMQ  Cluster, you can optimize resource utilization, reduce costs, and maintain flexibility in your Kubernetes environment. KubeBlocks provides a seamless way to perform these operations, ensuring high availability and minimal disruption.

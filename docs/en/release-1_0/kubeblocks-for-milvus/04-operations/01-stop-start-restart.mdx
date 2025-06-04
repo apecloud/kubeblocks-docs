@@ -53,41 +53,41 @@ This operation is ideal for:
 
 <Tabs>
 
-  <TabItem value="opsRequest" label="OpsRequest API" default>
+<TabItem value="opsRequest" label="OpsRequest API" default>
 
-  Option 1: OpsRequest API
+Option 1: OpsRequest API
 
-  Create a Stop operation request:
+Create a Stop operation request:
 
-  ```yaml
-  apiVersion: operations.kubeblocks.io/v1alpha1
-  kind: OpsRequest
-  metadata:
-    name: milvus-cluster-stop-ops
-    namespace: demo
-  spec:
-    clusterName: milvus-cluster
-    type: Stop
-  ```
-  </TabItem>
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: milvus-cluster-stop-ops
+  namespace: demo
+spec:
+  clusterName: milvus-cluster
+  type: Stop
+```
+</TabItem>
 
-  <TabItem value="ClusterAPI" label="Cluster API">
+<TabItem value="ClusterAPI" label="Cluster API">
 
-  Option 2: Cluster API
+Option 2: Cluster API
 
-  Create a Stop operation request:
+Create a Stop operation request:
 
-  ```yaml
-  apiVersion: operations.kubeblocks.io/v1alpha1
-  kind: OpsRequest
-  metadata:
-    name: milvus-cluster-stop-ops
-    namespace: demo
-  spec:
-    clusterName: milvus-cluster
-    type: Stop
-  ```
-  </TabItem>
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: milvus-cluster-stop-ops
+  namespace: demo
+spec:
+  clusterName: milvus-cluster
+  type: Stop
+```
+</TabItem>
 </Tabs>
 
 ### Verifying Cluster Stop
@@ -95,24 +95,24 @@ This operation is ideal for:
 To confirm a successful stop operation:
 
 1. Check cluster status transition:
-  ```bash
-  kubectl get cluster milvus-cluster -n demo -w
-  ```
-  Example Output:
-  ```bash
-  NAME             CLUSTER-DEFINITION  TERMINATION-POLICY   STATUS     AGE
-  milvus-cluster   milvus              Delete               Stopping   6m33s
-  milvus-cluster   milvus              Delete               Stopped    6m55s
-  ```
+    ```bash
+    kubectl get cluster milvus-cluster -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME             CLUSTER-DEFINITION  TERMINATION-POLICY   STATUS     AGE
+    milvus-cluster   milvus              Delete               Stopping   6m33s
+    milvus-cluster   milvus              Delete               Stopped    6m55s
+    ```
 
 2. Verify no running pods:
-   ```bash
-   kubectl get pods -l app.kubernetes.io/instance=milvus-cluster -n demo
-   ```
-   Example Output:
-   ```bash
-   No resources found in demo namespace.
-   ```
+    ```bash
+    kubectl get pods -l app.kubernetes.io/instance=milvus-cluster -n demo
+    ```
+    Example Output:
+    ```bash
+    No resources found in demo namespace.
+    ```
 
 ### Starting the Cluster
 
@@ -126,22 +126,22 @@ Expected behavior:
 - Services resume automatically
 <Tabs>
 
-  <TabItem value="opsRequest" label="OpsRequest API" default>
+<TabItem value="opsRequest" label="OpsRequest API" default>
 
-  Initiate a Start operation request:
+Initiate a Start operation request:
 
-  ```yaml
-  apiVersion: operations.kubeblocks.io/v1alpha1
-  kind: OpsRequest
-  metadata:
-    name: milvus-cluster-start-ops
-    namespace: demo
-  spec:
-    # Specifies the name of the Cluster resource that this operation is targeting.
-    clusterName: milvus-cluster
-    type: Start
-  ```
-  </TabItem>
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: milvus-cluster-start-ops
+  namespace: demo
+spec:
+  # Specifies the name of the Cluster resource that this operation is targeting.
+  clusterName: milvus-cluster
+  type: Start
+```
+</TabItem>
 </Tabs>
 
 ### Verifying Cluster Start
@@ -149,33 +149,33 @@ Expected behavior:
 To confirm a successful start operation:
 
 1. Check cluster status transition:
-  ```bash
-  kubectl get cluster milvus-cluster -n demo -w
-  ```
-  Example Output:
-  ```bash
-  NAME             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
-  milvus-cluster   milvus               Delete               Updating   30m
-  milvus-cluster   milvus               Delete               Updating   32m
-  milvus-cluster   milvus               Delete               Updating   32m
-  milvus-cluster   milvus               Delete               Running    33m
-  milvus-cluster   milvus               Delete               Running    33m
-  ```
+    ```bash
+    kubectl get cluster milvus-cluster -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+    milvus-cluster   milvus               Delete               Updating   30m
+    milvus-cluster   milvus               Delete               Updating   32m
+    milvus-cluster   milvus               Delete               Updating   32m
+    milvus-cluster   milvus               Delete               Running    33m
+    milvus-cluster   milvus               Delete               Running    33m
+    ```
 
 2. Verify pod recreation:
-  ```bash
-  kubectl get pods -n demo -l app.kubernetes.io/instance=milvus-cluster
-  ```
-  Example Output:
-  ```bash
-  NAME                         READY   STATUS    RESTARTS   AGE
-  milvus-cluster-datanode-0    1/1     Running   0          5m24s
-  milvus-cluster-indexnode-0   1/1     Running   0          5m24s
-  milvus-cluster-mixcoord-0    1/1     Running   0          5m24s
-  milvus-cluster-proxy-0       1/1     Running   0          5m24s
-  milvus-cluster-querynode-0   1/1     Running   0          5m24s
-  milvus-cluster-querynode-1   1/1     Running   0          3m43s
-  ```
+    ```bash
+    kubectl get pods -n demo -l app.kubernetes.io/instance=milvus-cluster
+    ```
+    Example Output:
+    ```bash
+    NAME                         READY   STATUS    RESTARTS   AGE
+    milvus-cluster-datanode-0    1/1     Running   0          5m24s
+    milvus-cluster-indexnode-0   1/1     Running   0          5m24s
+    milvus-cluster-mixcoord-0    1/1     Running   0          5m24s
+    milvus-cluster-proxy-0       1/1     Running   0          5m24s
+    milvus-cluster-querynode-0   1/1     Running   0          5m24s
+    milvus-cluster-querynode-1   1/1     Running   0          3m43s
+    ```
 
 ### Restarting Cluster
 
@@ -228,23 +228,23 @@ spec:
 To verify a successful component restart:
 
 1. Track OpsRequest progress:
-  ```bash
-  kubectl get opsrequest milvus-cluster-restart-ops -n demo -w
-  ```
-  Example Output:
-  ```bash
-  NAME                         TYPE      CLUSTER          STATUS    PROGRESS   AGE
-  milvus-cluster-restart-ops   Restart   milvus-cluster   Running   0/1        4s
-  milvus-cluster-restart-ops   Restart   milvus-cluster   Running   1/1        2m12s
-  milvus-cluster-restart-ops   Restart   milvus-cluster   Running   1/1        2m12s
-  milvus-cluster-restart-ops   Restart   milvus-cluster   Succeed   1/1        2m12s
-  ```
+    ```bash
+    kubectl get opsrequest milvus-cluster-restart-ops -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME                         TYPE      CLUSTER          STATUS    PROGRESS   AGE
+    milvus-cluster-restart-ops   Restart   milvus-cluster   Running   0/1        4s
+    milvus-cluster-restart-ops   Restart   milvus-cluster   Running   1/1        2m12s
+    milvus-cluster-restart-ops   Restart   milvus-cluster   Running   1/1        2m12s
+    milvus-cluster-restart-ops   Restart   milvus-cluster   Succeed   1/1        2m12s
+    ```
 
 2. Check pod status:
-  ```bash
-  kubectl get pods -n demo -l app.kubernetes.io/instance=milvus-cluster
-  ```
-  Note: Pods will show new creation timestamps after restart. Only pods belongs to component `proxy` have been restarted.
+    ```bash
+    kubectl get pods -n demo -l app.kubernetes.io/instance=milvus-cluster
+    ```
+    Note: Pods will show new creation timestamps after restart. Only pods belongs to component `proxy` have been restarted.
 
 Once the operation is complete, the cluster will return to the Running state.
 
@@ -253,4 +253,5 @@ In this guide, you learned how to:
 1. Stop a Milvus Cluster to suspend operations while retaining persistent storage.
 2. Start a stopped cluster to bring it back online.
 3. Restart specific cluster components to recreate their Pods without stopping the entire cluster.
+
 By managing the lifecycle of your Milvus Cluster, you can optimize resource utilization, reduce costs, and maintain flexibility in your Kubernetes environment. KubeBlocks provides a seamless way to perform these operations, ensuring high availability and minimal disruption.
