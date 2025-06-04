@@ -62,46 +62,46 @@ This operation is ideal for:
 
 <Tabs>
 
-  <TabItem value="opsRequest" label="OpsRequest API" default>
+<TabItem value="opsRequest" label="OpsRequest API" default>
 
-  Option 1: OpsRequest API
+Option 1: OpsRequest API
 
-  Create a Stop operation request:
+Create a Stop operation request:
 
-  ```yaml
-  apiVersion: operations.kubeblocks.io/v1alpha1
-  kind: OpsRequest
-  metadata:
-    name: redis-replication-stop-ops
-    namespace: demo
-  spec:
-    clusterName: redis-replication
-    type: Stop
-  ```
-  </TabItem>
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: redis-replication-stop-ops
+  namespace: demo
+spec:
+  clusterName: redis-replication
+  type: Stop
+```
+</TabItem>
 
-  <TabItem value="ClusterAPI" label="Cluster API">
+<TabItem value="ClusterAPI" label="Cluster API">
 
-  Option 2: Cluster API Patch
+Option 2: Cluster API Patch
 
-  Modify the cluster spec directly by patching the stop field:
+Modify the cluster spec directly by patching the stop field:
 
-  ```bash
-  kubectl patch cluster redis-replication -n demo --type='json' -p='[
-  {
-    "op": "add",
-    "path": "/spec/componentSpecs/0/stop",
-    "value": true
-  },
-  {
-    "op": "add",
-    "path": "/spec/componentSpecs/1/stop",
-    "value": true
-  }
-  ]'
-  ```
+```bash
+kubectl patch cluster redis-replication -n demo --type='json' -p='[
+{
+  "op": "add",
+  "path": "/spec/componentSpecs/0/stop",
+  "value": true
+},
+{
+  "op": "add",
+  "path": "/spec/componentSpecs/1/stop",
+  "value": true
+}
+]'
+```
 
-  </TabItem>
+</TabItem>
 
 </Tabs>
 
@@ -110,38 +110,38 @@ This operation is ideal for:
 To confirm a successful stop operation:
 
 1. Check cluster status transition:
-   ```bash
-   kubectl get cluster redis-replication -n demo -w
-   ```
-   Example Output:
-   ```bash
-   NAME                CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
-   redis-replication   redis                Delete               Stopping   6m3s
-   redis-replication   redis                Delete               Stopped    6m55s
-   ```
+    ```bash
+    kubectl get cluster redis-replication -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME                CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+    redis-replication   redis                Delete               Stopping   6m3s
+    redis-replication   redis                Delete               Stopped    6m55s
+    ```
 
 2. Verify no running pods:
-   ```bash
-   kubectl get pods -n demo
-   ```
-   Example Output:
-   ```bash
-   No resources found in demo namespace.
-   ```
+    ```bash
+    kubectl get pods -n demo
+    ```
+    Example Output:
+    ```bash
+    No resources found in demo namespace.
+    ```
 
 3. Confirm persistent volumes remain:
-   ```bash
-   kubectl get pvc -n demo
-   ```
-   Example Output:
-   ```bash
+    ```bash
+    kubectl get pvc -n demo
+    ```
+    Example Output:
+    ```bash
     NAME                                      STATUS   VOLUME     CAPACITY   ACCESS MODES
     data-redis-replication-redis-0            Bound    pvc-uuid   20Gi       RWO
     data-redis-replication-redis-1            Bound    pvc-uuid   20Gi       RWO
     data-redis-replication-redis-sentinel-0   Bound    pvc-uuid   20Gi       RWO
     data-redis-replication-redis-sentinel-1   Bound    pvc-uuid   20Gi       RWO
     data-redis-replication-redis-sentinel-2   Bound    pvc-uuid   20Gi       RWO
-   ```
+    ```
 
 ### Starting the Cluster
 
@@ -156,44 +156,44 @@ Expected behavior:
 - Services resume automatically
 <Tabs>
 
-  <TabItem value="opsRequest" label="OpsRequest API" default>
+<TabItem value="opsRequest" label="OpsRequest API" default>
 
-  Initiate a Start operation request:
+Initiate a Start operation request:
 
-  ```yaml
-  apiVersion: operations.kubeblocks.io/v1alpha1
-  kind: OpsRequest
-  metadata:
-    name: redis-replication-start-ops
-    namespace: demo
-  spec:
-    # Specifies the name of the Cluster resource that this operation is targeting.
-    clusterName: redis-replication
-    type: Start
-  ```
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: redis-replication-start-ops
+  namespace: demo
+spec:
+  # Specifies the name of the Cluster resource that this operation is targeting.
+  clusterName: redis-replication
+  type: Start
+```
 
-  </TabItem>
+</TabItem>
 
-  <TabItem value="ClusterAPI" label="Cluster API">
+<TabItem value="ClusterAPI" label="Cluster API">
 
-  Modify the cluster spec to resume operation:
-  1. Set stop: false, or
-  2. Remove the stop field entirely
+Modify the cluster spec to resume operation:
+1. Set stop: false, or
+2. Remove the stop field entirely
 
-  ```bash
-  kubectl patch cluster redis-replication -n demo --type='json' -p='[
-  {
-    "op": "remove",
-    "path": "/spec/componentSpecs/0/stop"
-  },
-  {
-    "op": "remove",
-    "path": "/spec/componentSpecs/1/stop"
-  }
-  ]'
-  ```
+    ```bash
+    kubectl patch cluster redis-replication -n demo --type='json' -p='[
+    {
+      "op": "remove",
+      "path": "/spec/componentSpecs/0/stop"
+    },
+    {
+      "op": "remove",
+      "path": "/spec/componentSpecs/1/stop"
+    }
+    ]'
+    ```
 
-  </TabItem>
+</TabItem>
 
 </Tabs>
 
@@ -202,31 +202,31 @@ Expected behavior:
 To confirm a successful start operation:
 
 1. Check cluster status transition:
-   ```bash
-   kubectl get cluster redis-replication -n demo -w
-   ```
-   Example Output:
-   ```bash
-   NAME                CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
-   redis-replication   redis                Delete               Updating   22m
-   redis-replication   redis                Delete               Running    22m
-   ```
+    ```bash
+    kubectl get cluster redis-replication -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME                CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+    redis-replication   redis                Delete               Updating   22m
+    redis-replication   redis                Delete               Running    22m
+    ```
 
 2. Verify pod recreation:
-   ```bash
-   kubectl get pods -n demo -l app.kubernetes.io/instance=redis-replication
-   ```
-   Example Output:
-   ```bash
-   NAME                       READY   STATUS    RESTARTS   AGE
-   redis-replication-redis-0   1/1     Running   0          2m
-   redis-replication-redis-1   1/1     Running   0          1m
-   ```
+    ```bash
+    kubectl get pods -n demo -l app.kubernetes.io/instance=redis-replication
+    ```
+    Example Output:
+    ```bash
+    NAME                       READY   STATUS    RESTARTS   AGE
+    redis-replication-redis-0   1/1     Running   0          2m
+    redis-replication-redis-1   1/1     Running   0          1m
+    ```
 
 3. Check service endpoints:
-   ```bash
-   kubectl get endpoints redis-replication-redis-redis -n demo
-   ```
+    ```bash
+    kubectl get endpoints redis-replication-redis-redis -n demo
+    ```
 
 ### Restarting Cluster
 
@@ -263,28 +263,28 @@ spec:
 To verify a successful component restart:
 
 1. Track OpsRequest progress:
-   ```bash
-   kubectl get opsrequest redis-replication-restart-ops -n demo -w
-   ```
-   Example Output:
-   ```bash
-   NAME                     TYPE      CLUSTER      STATUS    PROGRESS   AGE
-   redis-replication-restart-ops   Restart   redis-replication   Running   0/2        10s
-   redis-replication-restart-ops   Restart   redis-replication   Running   1/2        65s
-   redis-replication-restart-ops   Restart   redis-replication   Running   2/2        2m5s
-   redis-replication-restart-ops   Restart   redis-replication   Succeed   2/2        2m5s
-   ```
+    ```bash
+    kubectl get opsrequest redis-replication-restart-ops -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME                     TYPE      CLUSTER      STATUS    PROGRESS   AGE
+    redis-replication-restart-ops   Restart   redis-replication   Running   0/2        10s
+    redis-replication-restart-ops   Restart   redis-replication   Running   1/2        65s
+    redis-replication-restart-ops   Restart   redis-replication   Running   2/2        2m5s
+    redis-replication-restart-ops   Restart   redis-replication   Succeed   2/2        2m5s
+    ```
 
 2. Check pod status:
-   ```bash
-   kubectl get pods -n demo -l app.kubernetes.io/instance=redis-replication
-   ```
-   Note: Pods will show new creation timestamps after restart
+    ```bash
+    kubectl get pods -n demo -l app.kubernetes.io/instance=redis-replication
+    ```
+    Note: Pods will show new creation timestamps after restart
 
 3. Verify component health:
-   ```bash
-   kbcli cluster describe redis-replication -n demo
-   ```
+    ```bash
+    kbcli cluster describe redis-replication -n demo
+    ```
 
 Once the operation is complete, the cluster will return to the Running state.
 

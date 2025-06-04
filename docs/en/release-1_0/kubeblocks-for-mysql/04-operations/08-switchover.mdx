@@ -11,7 +11,7 @@ sidebar_label: Planned Switchover in MySQL
 A **switchover** is a planned operation where the primary instance in a MySQL cluster proactively transfers its role to a secondary instance. Unlike an unplanned failover, which occurs during unexpected failures, a switchover ensures a controlled and predictable role transition with minimal service disruption.
 
 ## **Benefits of Switchover**
-1. **Minimal Downtime**: The primary instance actively transfers its role to the secondary instance, resulting in very short service downtime (typically a few hundred milliseconds).
+1. **Minimal Downtime**: The primary instance actively transfers its role to the secondary instance, resulting in very short service downtime (typically a few hundred milliseconds)
 2. **Controlled Transition**: Ensures a seamless and predictable role change compared to failover, which involves detecting and recovering from a failure, often causing longer delays (several seconds or more).
 3. **Maintenance-Friendly**: Ideal for planned maintenance tasks, such as node upgrades or decommissioning, while ensuring uninterrupted service.
 
@@ -168,5 +168,6 @@ In this guide, you learned how to:
 - Deploy a MySQL cluster managed by KubeBlocks.
 - Perform a planned switchover to transfer the primary role from one instance to another.
 - Verify the success of the switchover operation and the updated roles of the Pods.
+
 Planned switchover is a critical operation for maintaining high availability during maintenance tasks, ensuring minimal service disruption and predictable transitions in highly available systems.
 

@@ -233,7 +233,7 @@ redis-replication-redis-0   3/3     Running   0          16m
 ```
 
 ## Troubleshooting
-If the scale-in operations gets stucked for quite a long time, please check these resources:
+If the scale-in operation gets stucked for quite a long time, please check these resources:
 
 ```bash
 # Check agent logs on both current primary and candidate
@@ -247,7 +247,7 @@ kubectl get events -n demo --field-selector involvedObject.name=pg-cluster
 kubectl -n kb-system logs deploy/kubeblocks
 ```
 
-If you get errors like following from primary replica:
+If you get errors like the following from the primary replica:
 ```text:
 INFO	Action Executed	{"action": "switchover", "result": "exit code: 1: failed"}
 INFO	HTTP API Called	{"user-agent": "Go-http-client/1.1", "method": "POST", "path": "/v1.0/action", "status code": 200, "cost": 7}

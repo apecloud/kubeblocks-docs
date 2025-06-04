@@ -111,7 +111,7 @@ External addresses allow public internet access to the MySQL service, while inte
 
     <Tabs>
 
-    <TabItem value="opsRequest" label="Use the OpsRequest API" default>
+    <TabItem value="opsRequest" label="OPSREQUEST API" default>
 
 ### Option 1.: Using OpsRequest
 
@@ -159,7 +159,7 @@ example-mysql-cluster-expose-enable-ops   Expose   example-mysql-cluster   Succe
 
     </TabItem>
 
-    <TabItem value="ClusterAPI" label="Use the Cluster API">
+    <TabItem value="ClusterAPI" label="CLUSTER API">
 
 ### Option 2.: Using Cluster API
 
@@ -327,7 +327,7 @@ mysql -h a1d37733683d244e0bebad8559cbf24d-3728431cad3e24b5.elb.ap-southeast-1.am
 
     <Tabs>
 
-    <TabItem value="opsRequest" label="Use the OpsRequest API" default>
+    <TabItem value="opsRequest" label="OPSREQUEST API" default>
 
 ### Option 1.: Using OpsRequest
 To disable external access, create an OpsRequest:
@@ -364,7 +364,7 @@ example-mysql-cluster-expose-disable-ops   Expose   example-mysql-cluster   Succ
 
     </TabItem>
 
-    <TabItem value="ClusterAPI" label="Use the Cluster API">
+    <TabItem value="ClusterAPI" label="CLUSTER API">
 
 ### Option 2.: Using Cluster API
 
@@ -407,4 +407,5 @@ This guide demonstrated how to:
 - Expose a MySQL service externally or internally using KubeBlocks.
 - Configure LoadBalancer services with cloud provider-specific annotations.
 - Manage external access by enabling or disabling services via OpsRequest or direct updates to the Cluster API.
+
 KubeBlocks provides flexibility and simplicity for managing MySQL services in Kubernetes environments.

@@ -1,6 +1,6 @@
 ---
-title: MongoDB ReplicationSet Cluster Lifecycle Management (Stop, Start, Restart)
-description: Learn how to manage MongoDB ReplicationSet Cluster states in KubeBlocks including stopping, starting, and restarting operations to optimize resources.
+title: MongoDB ReplicaSet Cluster Lifecycle Management (Stop, Start, Restart)
+description: Learn how to manage MongoDB ReplicaSet Cluster states in KubeBlocks including stopping, starting, and restarting operations to optimize resources.
 keywords: [KubeBlocks, MongoDB, Cluster Management, Stop, Start, Restart]
 sidebar_position: 1
 sidebar_label: Lifecycle Management
@@ -9,9 +9,9 @@ sidebar_label: Lifecycle Management
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# MongoDB ReplicationSet Cluster Lifecycle Management
+# MongoDB ReplicaSet Cluster Lifecycle Management
 
-This guide demonstrates how to manage a MongoDB ReplicationSet Cluster's operational state in **KubeBlocks**, including:
+This guide demonstrates how to manage a MongoDB ReplicaSet Cluster's operational state in **KubeBlocks**, including:
 
 - Stopping the cluster to conserve resources
 - Starting a stopped cluster
@@ -33,7 +33,7 @@ import Prerequisites from '../_tpl/_prerequisites.mdx'
 
 <Prerequisites />
 
-## Deploy a MongoDB ReplicationSet Cluster
+## Deploy a MongoDB ReplicaSet Cluster
 
 import CreateCluster from '../_tpl/_create-cluster.mdx'
 
@@ -49,7 +49,7 @@ import VerifyCluster from '../_tpl/_verify-cluster.mdx'
 
 ### Stopping the Cluster
 
-Stopping a MongoDB ReplicationSet Cluster in KubeBlocks will:
+Stopping a MongoDB ReplicaSet Cluster in KubeBlocks will:
 
 1. Terminates all running pods
 2. Retains persistent storage (PVCs)
@@ -62,41 +62,41 @@ This operation is ideal for:
 
 <Tabs>
 
-  <TabItem value="opsRequest" label="OpsRequest API" default>
+<TabItem value="opsRequest" label="OpsRequest API" default>
 
-  Option 1: OpsRequest API
+Option 1: OpsRequest API
 
-  Create a Stop operation request:
+Create a Stop operation request:
 
-  ```yaml
-  apiVersion: operations.kubeblocks.io/v1alpha1
-  kind: OpsRequest
-  metadata:
-    name: mongo-cluster-stop-ops
-    namespace: demo
-  spec:
-    clusterName: mongo-cluster
-    type: Stop
-  ```
-  </TabItem>
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: mongo-cluster-stop-ops
+  namespace: demo
+spec:
+  clusterName: mongo-cluster
+  type: Stop
+```
+</TabItem>
 
-  <TabItem value="ClusterAPI" label="Cluster API">
+<TabItem value="ClusterAPI" label="Cluster API">
 
-  Option 2: Cluster API Patch
+Option 2: Cluster API Patch
 
-  Modify the cluster spec directly by patching the stop field:
+Modify the cluster spec directly by patching the stop field:
 
-  ```bash
-  kubectl patch cluster mongo-cluster -n demo --type='json' -p='[
-  {
-    "op": "add",
-    "path": "/spec/componentSpecs/0/stop",
-    "value": true
-  }
-  ]'
+```bash
+kubectl patch cluster mongo-cluster -n demo --type='json' -p='[
+{
+  "op": "add",
+  "path": "/spec/componentSpecs/0/stop",
+  "value": true
+}
+]'
 ```
 
-  </TabItem>
+</TabItem>
 
 </Tabs>
 
@@ -105,41 +105,41 @@ This operation is ideal for:
 To confirm a successful stop operation:
 
 1. Check cluster status transition:
-  ```bash
-  kubectl get cluster mongo-cluster -n demo -w
-  ```
-  Example Output:
-  ```bash
-  NAME            CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
-  mongo-cluster   mongodb              Delete               Stopping   6m3s
-  mongo-cluster   mongodb              Delete               Stopped    6m55s
+    ```bash
+    kubectl get cluster mongo-cluster -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME            CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+    mongo-cluster   mongodb              Delete               Stopping   6m3s
+    mongo-cluster   mongodb              Delete               Stopped    6m55s
 
-  ```
+    ```
 
 2. Verify no running pods:
-   ```bash
-   kubectl get pods -l app.kubernetes.io/instance=mongo-cluster -n demo
-   ```
-   Example Output:
-   ```bash
-   No resources found in demo namespace.
-   ```
+    ```bash
+    kubectl get pods -l app.kubernetes.io/instance=mongo-cluster -n demo
+    ```
+    Example Output:
+    ```bash
+    No resources found in demo namespace.
+    ```
 
 3. Confirm persistent volumes remain:
-  ```bash
-  kubectl get pvc -l app.kubernetes.io/instance=mongo-cluster -n demo
-  ```
-  Example Output:
-  ```bash
-  NAME                           STATUS   VOLUME     CAPACITY   ACCESS MODES   STORAGECLASS         VOLUMEATTRIBUTESCLASS   AGE
-  data-mongo-cluster-mongodb-0   Bound    pvc-uuid   20Gi       RWO            <STORAGECLASS>       <unset>                 22m
-  data-mongo-cluster-mongodb-1   Bound    pvc-uuid   20Gi       RWO            <STORAGECLASS>       <unset>                 21m
-  data-mongo-cluster-mongodb-2   Bound    pvc-uuid   20Gi       RWO            <STORAGECLASS>       <unset>                 21m
-   ```
+    ```bash
+    kubectl get pvc -l app.kubernetes.io/instance=mongo-cluster -n demo
+    ```
+    Example Output:
+    ```bash
+    NAME                           STATUS   VOLUME     CAPACITY   ACCESS MODES   STORAGECLASS         VOLUMEATTRIBUTESCLASS   AGE
+    data-mongo-cluster-mongodb-0   Bound    pvc-uuid   20Gi       RWO            <STORAGECLASS>       <unset>                 22m
+    data-mongo-cluster-mongodb-1   Bound    pvc-uuid   20Gi       RWO            <STORAGECLASS>       <unset>                 21m
+    data-mongo-cluster-mongodb-2   Bound    pvc-uuid   20Gi       RWO            <STORAGECLASS>       <unset>                 21m
+    ```
 
 ### Starting the Cluster
 
-Starting a stopped MongoDB ReplicationSet Cluster:
+Starting a stopped MongoDB ReplicaSet Cluster:
 1. Recreates all pods
 2. Reattaches persistent storage
 3. Restores service endpoints
@@ -150,40 +150,40 @@ Expected behavior:
 - Services resume automatically
 <Tabs>
 
-  <TabItem value="opsRequest" label="OpsRequest API" default>
+<TabItem value="opsRequest" label="OpsRequest API" default>
 
-  Initiate a Start operation request:
+Initiate a Start operation request:
 
-  ```yaml
-  apiVersion: operations.kubeblocks.io/v1alpha1
-  kind: OpsRequest
-  metadata:
-    name: mongo-cluster-start-ops
-    namespace: demo
-  spec:
-    # Specifies the name of the Cluster resource that this operation is targeting.
-    clusterName: mongo-cluster
-    type: Start
-  ```
-
-  </TabItem>
-
-  <TabItem value="ClusterAPI" label="Cluster API">
-
-  Modify the cluster spec to resume operation:
-  1. Set stop: false, or
-  2. Remove the stop field entirely
-
-  ```bash
-  kubectl patch cluster mongo-cluster -n demo --type='json' -p='[
-  {
-    "op": "remove",
-    "path": "/spec/componentSpecs/0/stop"
-  }
-  ]'
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: mongo-cluster-start-ops
+  namespace: demo
+spec:
+  # Specifies the name of the Cluster resource that this operation is targeting.
+  clusterName: mongo-cluster
+  type: Start
 ```
 
-  </TabItem>
+</TabItem>
+
+<TabItem value="ClusterAPI" label="Cluster API">
+
+Modify the cluster spec to resume operation:
+1. Set stop: false, or
+2. Remove the stop field entirely
+
+```bash
+kubectl patch cluster mongo-cluster -n demo --type='json' -p='[
+{
+  "op": "remove",
+  "path": "/spec/componentSpecs/0/stop"
+}
+]'
+```
+
+</TabItem>
 
 </Tabs>
 
@@ -192,28 +192,28 @@ Expected behavior:
 To confirm a successful start operation:
 
 1. Check cluster status transition:
-  ```bash
-  kubectl get cluster mongo-cluster -n demo -w
-  ```
-  Example Output:
-  ```bash
-  NAME            CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
-  mongo-cluster   mongodb              Delete               Updating   24m
-  mongo-cluster   mongodb              Delete               Running    24m
-  mongo-cluster   mongodb              Delete               Running    24m
-  ```
+    ```bash
+    kubectl get cluster mongo-cluster -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME            CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+    mongo-cluster   mongodb              Delete               Updating   24m
+    mongo-cluster   mongodb              Delete               Running    24m
+    mongo-cluster   mongodb              Delete               Running    24m
+    ```
 
 2. Verify pod recreation:
-  ```bash
-  kubectl get pods -n demo -l app.kubernetes.io/instance=mongo-cluster -L kubeblocks.io/role
-  ```
-  Example Output:
-  ```bash
-  NAME                      READY   STATUS    RESTARTS   AGE   ROLE
-  mongo-cluster-mongodb-0   2/2     Running   0          55s   primary
-  mongo-cluster-mongodb-1   2/2     Running   0          44s   secondary
-  mongo-cluster-mongodb-2   2/2     Running   0          33s   secondary
-  ```
+    ```bash
+    kubectl get pods -n demo -l app.kubernetes.io/instance=mongo-cluster -L kubeblocks.io/role
+    ```
+    Example Output:
+    ```bash
+    NAME                      READY   STATUS    RESTARTS   AGE   ROLE
+    mongo-cluster-mongodb-0   2/2     Running   0          55s   primary
+    mongo-cluster-mongodb-1   2/2     Running   0          44s   secondary
+    mongo-cluster-mongodb-2   2/2     Running   0          33s   secondary
+    ```
 
 ### Restarting Cluster
 
@@ -249,34 +249,35 @@ spec:
 To verify a successful component restart:
 
 1. Track OpsRequest progress:
-  ```bash
-  kubectl get opsrequest mongo-cluster-restart-ops -n demo -w
-  ```
-  Example Output:
-  ```bash
-  NAME                        TYPE      CLUSTER         STATUS    PROGRESS   AGE
-  mongo-cluster-restart-ops   Restart   mongo-cluster   Running   0/3        4s
-  mongo-cluster-restart-ops   Restart   mongo-cluster   Running   1/3        28s
-  mongo-cluster-restart-ops   Restart   mongo-cluster   Running   2/3        56s
-  mongo-cluster-restart-ops   Restart   mongo-cluster   Running   2/3        109s
-  ```
+    ```bash
+    kubectl get opsrequest mongo-cluster-restart-ops -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME                        TYPE      CLUSTER         STATUS    PROGRESS   AGE
+    mongo-cluster-restart-ops   Restart   mongo-cluster   Running   0/3        4s
+    mongo-cluster-restart-ops   Restart   mongo-cluster   Running   1/3        28s
+    mongo-cluster-restart-ops   Restart   mongo-cluster   Running   2/3        56s
+    mongo-cluster-restart-ops   Restart   mongo-cluster   Running   2/3        109s
+    ```
 
 2. Check pod status:
-  ```bash
-  kubectl get pods -n demo -l app.kubernetes.io/instance=mongo-cluster
-  ```
+    ```bash
+    kubectl get pods -n demo -l app.kubernetes.io/instance=mongo-cluster
+    ```
   Note: Pods will show new creation timestamps after restart
 
 3. Verify component health:
-  ```bash
-  kbcli cluster describe mongo-cluster -n demo
-  ```
+    ```bash
+    kbcli cluster describe mongo-cluster -n demo
+    ```
 
 Once the operation is complete, the cluster will return to the Running state.
 
 ## Summary
 In this guide, you learned how to:
-1. Stop a MongoDB ReplicationSet Cluster to suspend operations while retaining persistent storage.
+1. Stop a MongoDB ReplicaSet Cluster to suspend operations while retaining persistent storage.
 2. Start a stopped cluster to bring it back online.
 3. Restart specific cluster components to recreate their Pods without stopping the entire cluster.
-By managing the lifecycle of your MongoDB ReplicationSet Cluster, you can optimize resource utilization, reduce costs, and maintain flexibility in your Kubernetes environment. KubeBlocks provides a seamless way to perform these operations, ensuring high availability and minimal disruption.
+
+By managing the lifecycle of your MongoDB ReplicaSet Cluster, you can optimize resource utilization, reduce costs, and maintain flexibility in your Kubernetes environment. KubeBlocks provides a seamless way to perform these operations, ensuring high availability and minimal disruption.

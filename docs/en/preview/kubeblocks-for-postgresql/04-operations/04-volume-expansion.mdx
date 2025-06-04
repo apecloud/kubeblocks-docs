@@ -81,12 +81,12 @@ spec:
                 storage: 20Gi
 ```
 **Explanation of Key Fields**
-- `storageClassName`: specify StorageClass name that supports volume expansion. If not set, the StorageClass annotated `default` will be used.
+- `storageClassName`: Specifies `StorageClass` name that supports volume expansion. If not set, the StorageClass annotated `default` will be used.
 
 :::note
 **ALLOWVOLUMEEXPANSION**
 
-Ensure the storage class supports volume expansion (check ALLOWVOLUMEEXPANSION) when creating cluster.
+Ensure the storage class supports volume expansion (check `ALLOWVOLUMEEXPANSION`) when creating cluster.
 
 :::
 
@@ -100,7 +100,7 @@ import VerifyPGCluster from '../_tpl/_verify-pg-replication-cluster.mdx'
 ## Expand volume
 
 :::note
-1. Ensure the storage class supports volume expansion (check ALLOWVOLUMEEXPANSION).
+1. Ensure the storage class supports volume expansion (check `ALLOWVOLUMEEXPANSION`).
 2. The new size must be larger than the current size.
 3. Volume expansion may require additional configurations depending on the storage provider.
 :::

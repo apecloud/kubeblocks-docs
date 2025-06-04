@@ -1,6 +1,6 @@
 ---
-title: Vertical Scaling in a MongoDB ReplicationSet Cluster
-description: Learn how to perform vertical scaling in a MongoDB ReplicationSet Cluster managed by KubeBlocks to optimize resource utilization and improve performance.
+title: Vertical Scaling in a MongoDB ReplicaSet Cluster
+description: Learn how to perform vertical scaling in a MongoDB ReplicaSet Cluster managed by KubeBlocks to optimize resource utilization and improve performance.
 keywords: [KubeBlocks, MongoDB, Vertical Scaling, Kubernetes, Resources]
 sidebar_position: 2
 sidebar_label: Vertical Scaling
@@ -13,7 +13,7 @@ import TabItem from '@theme/TabItem';
 
 # Vertical Scaling for MongoDB Replication Clusters with KubeBlocks
 
-This guide demonstrates how to vertically scale a MongoDB ReplicationSet Cluster managed by KubeBlocks by adjusting compute resources (CPU and memory) while maintaining the same number of replicas.
+This guide demonstrates how to vertically scale a MongoDB ReplicaSet Cluster managed by KubeBlocks by adjusting compute resources (CPU and memory) while maintaining the same number of replicas.
 
 Vertical scaling modifies compute resources (CPU and memory) for MongoDB instances while maintaining replica count. Key characteristics:
 
@@ -32,7 +32,7 @@ import Prerequisites from '../_tpl/_prerequisites.mdx'
 
 <Prerequisites />
 
-## Deploy a MongoDB ReplicationSet Cluster
+## Deploy a MongoDB ReplicaSet Cluster
 
 import CreateCluster from '../_tpl/_create-cluster.mdx'
 
@@ -159,7 +159,7 @@ mongodb                         1 / 1                1Gi / 1Gi               dat
 - Improved Availability: The cluster remains operational during the scaling process, maintaining high availability.
 
 ## Cleanup
-To remove all created resources, delete the MongoDB ReplicationSet Cluster along with its namespace:
+To remove all created resources, delete the MongoDB ReplicaSet Cluster along with its namespace:
 ```bash
 kubectl delete cluster mongo-cluster -n demo
 kubectl delete ns demo
@@ -167,8 +167,8 @@ kubectl delete ns demo
 
 ## Summary
 In this guide, you learned how to:
-1. Deploy a MongoDB ReplicationSet Cluster managed by KubeBlocks.
+1. Deploy a MongoDB ReplicaSet Cluster managed by KubeBlocks.
 2. Perform vertical scaling by increasing or decreasing resources for the mongodb component.
 3. Use both OpsRequest and direct Cluster API updates to adjust resource allocations.
 
-Vertical scaling is a powerful tool for optimizing resource utilization and adapting to changing workload demands, ensuring your MongoDB ReplicationSet Cluster remains performant and resilient.
+Vertical scaling is a powerful tool for optimizing resource utilization and adapting to changing workload demands, ensuring your MongoDB ReplicaSet Cluster remains performant and resilient.
