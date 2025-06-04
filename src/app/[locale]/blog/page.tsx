@@ -1,11 +1,11 @@
 import { getBlogs } from "@/utils/markdown";
 import {
   Avatar,
+  Box,
   Card,
   CardActionArea,
   CardActions,
   CardContent,
-  CardMedia,
   Container,
   Divider,
   Grid2 as Grid,
@@ -15,6 +15,7 @@ import {
 } from "@mui/material";
 import { Link } from "@/components/Link";
 import { getStaticParams } from "@/locales/server";
+import Image from "next/image";
 
 export function generateStaticParams() {
   return getStaticParams();
@@ -29,7 +30,9 @@ export default async function BlogsPage({
   const blogs = await getBlogs(locale);
 
   return (
-    <Container sx={{ minHeight: "var(--container-min-height)", paddingBlock: 3 }}>
+    <Container
+      sx={{ minHeight: "var(--container-min-height)", paddingBlock: 3 }}
+    >
       <Grid container spacing={4}>
         {blogs.map((blog, index) => {
           return (
@@ -51,7 +54,11 @@ export default async function BlogsPage({
                     href={`/blog/${blog.name}`}
                     underline="none"
                   >
-                    <CardMedia sx={{ height: 200 }} image={blog.image} />
+                    <Box
+                      sx={{ height: 200, width: "100%", position: "relative" }}
+                    >
+                      <Image fill src={blog.image} alt={blog.title} />
+                    </Box>
                     <CardContent sx={{ height: 160 }}>
                       <Typography
                         gutterBottom

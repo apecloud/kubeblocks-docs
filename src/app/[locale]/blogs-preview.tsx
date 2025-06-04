@@ -5,7 +5,6 @@ import {
   Card,
   CardActionArea,
   CardContent,
-  CardMedia,
   Container,
   Tooltip,
   Typography,
@@ -18,6 +17,7 @@ import "slick-carousel/slick/slick-theme.css";
 import { Link } from "@/components/Link";
 import { KeyboardArrowLeft, KeyboardArrowRight } from "@mui/icons-material";
 import { BlogMetadata } from "@/utils/markdown";
+import Image from "next/image";
 
 const NextArrow = (props: BoxProps) => (
   <Box
@@ -79,7 +79,12 @@ export default function BlogsPreview({ blogs }: { blogs: BlogMetadata[] }) {
     ],
   };
   return (
-    <Box sx={{ paddingBlock: 10, background: alpha(theme.palette.background.paper, 0.2), }}>
+    <Box
+      sx={{
+        paddingBlock: 10,
+        background: alpha(theme.palette.background.paper, 0.2),
+      }}
+    >
       <Container>
         <Box textAlign="center" mb={4}>
           <Typography variant="h4">Explore KubeBlocks Insights</Typography>
@@ -102,12 +107,9 @@ export default function BlogsPreview({ blogs }: { blogs: BlogMetadata[] }) {
                       underline="none"
                       target="_blank"
                     >
-                      <CardMedia
-                        component="img"
-                        height="140"
-                        image={blog.image}
-                        alt={blog.title}
-                      />
+                      <Box sx={{ height: 140, width: "100%", position: 'relative' }}>
+                        <Image fill src={blog.image} alt={blog.title} />
+                      </Box>
                       <CardContent>
                         <Typography
                           gutterBottom
