@@ -32,7 +32,7 @@ Before installing kbcli, ensure your system meets these requirements:
 
 ## Install kbcli
 
-## Supported Platforms
+**Supported Platforms**
 
 kbcli is available for:
 - **macOS** (Intel and Apple Silicon)
@@ -64,9 +64,10 @@ To install a specific version:
    curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash -s <VERSION>
    ```
 
+:::note
 
-:::important
 **Version Compatibility**
+
 - Always match kbcli version with your KubeBlocks deployment
 - Latest stable is recommended for new installations
 - Existing deployments require version matching:
@@ -105,7 +106,7 @@ If installation fails:
    brew search kbcli
 
    # Specify a version
-   brew install kbcli@x.y.z
+   brew install kbcli@<VERSION>
    ```
 
 3. Verify that kbcli is successfully installed.
@@ -170,7 +171,7 @@ Install using `curl`:
    To install a specified version of kbcli, use `-s` after the command and describe the version you want to install.
 
    ```bash
-   curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash -s x.y.z
+   curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash -s <VERSION>
    ```
 
 2. Run `kbcli version` to check the version of kbcli and ensure that it is successfully installed.
