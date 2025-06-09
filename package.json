@@ -6,6 +6,7 @@
     "dev": "yarn install && next dev",
     "build": "yarn install && next build",
     "build:html": "export OUTPUT_TYPE=export && yarn install && next build",
+    "build:pdf": "yarn install && node ./scripts/pdf-generator",
     "start": "next start",
     "lint": "next lint",
     "format-md-to-mdx": "node ./scripts/format-md-to-mdx.js",
@@ -68,6 +69,7 @@
     "@types/react-stickynode": "^4.0.3",
     "eslint": "^9",
     "eslint-config-next": "15.1.7",
+    "puppeteer": "^24.10.0",
     "typescript": "^5"
   }
 }
