@@ -8,6 +8,9 @@ sidebar_label: Install KubeBlocks
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import { VersionProvider, Version } from '@/components/VersionContext';
+
+<VersionProvider>
 
 # Install KubeBlocks
 
@@ -68,7 +71,7 @@ Use Helm and follow the steps below to install KubeBlocks.
 1. Create dependent CRDs. Specify the version you want to install.
 
    ```bash
-   kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/vx.y.z/kubeblocks_crds.yaml
+   kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/{{VERSION}}/kubeblocks_crds.yaml
    ```
 
    You can view all versions of kubeblocks, including alpha and beta releases, on the [kubeblocks releases list](https://github.com/apecloud/kubeblocks/releases).
@@ -124,7 +127,7 @@ Like any other resource in Kubernetes, KubeBlocks can be installed through a YAM
 1. Create dependent CRDs. Specify the version you want to install.
 
    ```bash
-   kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/vx.y.z/kubeblocks_crds.yaml
+   kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/{{VERSION}}/kubeblocks_crds.yaml
    ```
 
    You can view all versions of kubeblocks, including alpha and beta releases, on the [kubeblocks releases list](https://github.com/apecloud/kubeblocks/releases).
@@ -240,3 +243,5 @@ kb-system   Deployment   kubeblocks-dataprotection      1/1          N/A        
 </TabItem>
 
 </Tabs>
+
+</VersionProvider>

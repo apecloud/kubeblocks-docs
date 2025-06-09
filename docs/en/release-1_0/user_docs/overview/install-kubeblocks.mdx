@@ -8,6 +8,9 @@ sidebar_label: Installation
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import { VersionProvider, Version } from '@/components/VersionContext';
+
+<VersionProvider>
 
 # KubeBlocks
 
@@ -47,138 +50,55 @@ Before installation, verify your environment meets these requirements:
 
 <TabItem value="Helm" label="Install with Helm" default>
 
-**Step 1: Choose Version**
-
-1. Get Latest Release (Recommended for Stable Versions)
-    ```bash
-    curl -s https://api.github.com/repos/apecloud/kubeblocks/releases/latest | jq -r '.tag_name'
-    ```
-
-    Expected Output:
-    ```text
-    v1.0.0
-    ```
-
-2. Get Latest Tag (Includes Pre-Releases)
-    ```bash
-    curl -s https://api.github.com/repos/apecloud/kubeblocks/tags | jq -r '.[0].name'
-    ```
-    Expected Output:
-    ```text
-    v1.0.0-beta.48
-    ```
-
-Alternatively, browse all releases on [KubeBlocks Releases](https://github.com/apecloud/kubeblocks/releases/).
-
-**Step 2: Install CRDs**
-
 ```bash
-# Replace <VERSION> with your selected version
-kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/<VERSION>/kubeblocks_crds.yaml
-```
+# Step 1: Install CRDs
+kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/{{VERSION}}/kubeblocks_crds.yaml
 
-For Example: If the version is `v1.0.0`
-```bash
-kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/v1.0.0/kubeblocks_crds.yaml
-```
-
-**Step 3: Configure Helm Repository**
-
-```bash
+# Step 2: Configure Helm Repository
 helm repo add kubeblocks https://apecloud.github.io/helm-charts
 helm repo update
+
+# Step 3: Deploy KubeBlocks
+helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace --version={{VERSION}}
 ```
 
-**Step 4: Deploy KubeBlocks**
+**Need a different version?**
+
+For other versions, you can find available releases on [KubeBlocks Releases](https://github.com/apecloud/kubeblocks/releases/) or query using:
 
 ```bash
-helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace --version=<VERSION>
+# Get latest stable release
+curl -s https://api.github.com/repos/apecloud/kubeblocks/releases/latest | jq -r '.tag_name'
+
+# Get all releases (including pre-releases)
+curl -s https://api.github.com/repos/apecloud/kubeblocks/tags | jq -r '.[0].name'
 ```
 
 </TabItem>
 
-{/* <TabItem value="kubectl" label="Install with kubectl">
-
-Like any other resource in Kubernetes, KubeBlocks can be installed through a YAML manifest applied via `kubectl`.
-
-Before you start, please get KubeBlocks releases and locate the version you want to deploy.
-
-**Step 1. Get the KubeBlocks version**
-
-* Option A - Visit [KubeBlocks Releases](https://github.com/apecloud/kubeblocks/releases).
-
-* Option B - Query versions using GitHub API
-  1. Get Latest Release (Recommended for Stable Versions)
-  ```bash
-  curl -s https://api.github.com/repos/apecloud/kubeblocks/releases/latest | jq -r '.tag_name'
-  ```
-
-  Expected Output:
-  ```text
-  v1.0.0
-  ```
-
-   2. Get Latest Tag (Includes Pre-Releases)
-  ```bash
-  curl -s https://api.github.com/repos/apecloud/kubeblocks/tags | jq -r '.[0].name'
-  ```
-  Expected Output:
-  ```text
-  v1.0.0-beta.48
-  ```
-
-**Step 2: Create the required CRDs using your selected version:**
-
-```bash
-# Replace <VERSION> with your selected version
-kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/<VERSION>/kubeblocks_crds.yaml
-
-# Example: If the version is v1.0.0
-kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/v1.0.0/kubeblocks_crds.yaml
-```
-
-**Step 3: Install KubeBlocks**
-
-```bash
-# Replace <VERSION> with the same version used in step 2
-kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/<VERSION>/kubeblocks.yaml
-
-# Example: If the version is v1.0.0
-kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/v1.0.0/kubeblocks.yaml
-```
-
-</TabItem> */}
-
 <TabItem value="kbcli" label="Install with kbcli">
-
 
 **Before You Begin**:
 - Install [KubeBlocks CLI](../../user_docs/references/install-kbcli)
 - Ensure kubectl is configured with cluster access
 
-**Step 1: Version Selection**
-
-Run the following command to list stable releases:
-
 ```bash
-kbcli kubeblocks list-versions
+kbcli kubeblocks install --version={{VERSION}} --create-namespace
 ```
 
-For pre-release versions (alpha/beta), add the `--devel` flag:
+**Need a different version?**
+
+List available versions or find other releases:
 
 ```bash
+# List stable releases
+kbcli kubeblocks list-versions
+
+# List all releases (including pre-releases)
 kbcli kb list-versions --devel --limit=100
 ```
 
-Alternatively, browse all releases on [KubeBlocks Releases](https://github.com/apecloud/kubeblocks/releases/).
-
-**Step 2: Installation**
-
-Install your chosen version using:
-
-```bash
-kbcli kubeblocks install --version=<VERSION> --create-namespace
-```
+Or browse all releases on [KubeBlocks Releases](https://github.com/apecloud/kubeblocks/releases/).
 
 :::note
 
@@ -195,8 +115,10 @@ Mismatched major versions may cause unexpected behavior or errors.
 By default, KubeBlocks installs in the `kb-system` namespace. To specify a different namespace:
 
 ```bash
-kbcli kubeblocks install --version=<VERSION> --create-namespace --namespace <NAMESPACE>
+kbcli kubeblocks install --version={{VERSION}} --create-namespace --namespace my-namespace
 ```
+
+💡 *Remember to replace `my-namespace` with your desired namespace name.*
 
 </TabItem>
 
@@ -240,7 +162,7 @@ kbcli kubeblocks status
 If the KubeBlocks Workloads are all ready, KubeBlocks has been installed successfully.
 
 ```bash
-KubeBlocks is deployed in namespace: kb-system,version: <VERSION>
+KubeBlocks is deployed in namespace: kb-system,version: <Version />
 
 Kubernetes Cluster:
 VERSION   PROVIDER   REGION   AVAILABLE ZONES
@@ -275,7 +197,7 @@ Specify image repository by specifying the following parameters.
 
 ```bash
 helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace \
---version <VERSION> \
+--version {{VERSION}} \
 --set image.registry=docker.io \
 --set dataProtection.image.registry=docker.io \
 --set addonChartsImage.registry=docker.io
@@ -286,7 +208,7 @@ helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-nam
 <TabItem value="kbcli" label="kbcli">
 
 ```bash
-kbcli kubeblocks upgrade --version <VERSION> \
+kbcli kubeblocks upgrade --version {{VERSION}} \
 --set image.registry=docker.io \
 --set dataProtection.image.registry=docker.io \
 --set addonChartsImage.registry=docker.io
@@ -316,7 +238,7 @@ If you want to install KubeBlocks with custom tolerations, you can use the follo
 
 ```bash
 helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace \
---version <VERSION> \
+--version {{VERSION}} \
 --set-json 'tolerations=[ { "key": "control-plane-taint", "operator": "Equal", "effect": "NoSchedule", "value": "true" } ]' \
 --set-json 'dataPlane.tolerations=[{ "key": "data-plane-taint", "operator": "Equal", "effect": "NoSchedule", "value": "true"}]'
 ```
@@ -326,7 +248,7 @@ helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-nam
 <TabItem value="kbcli" label="kbcli">
 
 ```bash
-kbcli kubeblocks install --version <VERSION> --create-namespace \
+kbcli kubeblocks install --version {{VERSION}} --create-namespace \
 --set image.registry=docker.io \
 --set dataProtection.image.registry=docker.io \
 --set addonChartsImage.registry=docker.io
@@ -340,7 +262,7 @@ kbcli kubeblocks install --version <VERSION> --create-namespace \
 
 ```bash
 helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace \
---version <VERSION> \
+--version {{VERSION}} \
 --set autoInstalledAddons="{}"
 ```
 
@@ -360,7 +282,7 @@ featureGates.inPlacePodVerticalScaling.enabled=true
 helm install kubeblocks kubeblocks/kubeblocks \
   --namespace kb-system \
   --create-namespace \
-  --version <VERSION> \
+  --version {{VERSION}} \
   --set featureGates.inPlacePodVerticalScaling.enabled=true
 ```
 
@@ -368,7 +290,7 @@ helm install kubeblocks kubeblocks/kubeblocks \
 ```bash
 helm upgrade kubeblocks kubeblocks/kubeblocks \
   --namespace kb-system \
-  --version <VERSION> \
+  --version {{VERSION}} \
   --set featureGates.inPlacePodVerticalScaling.enabled=true
 ```
 
@@ -379,7 +301,7 @@ helm upgrade kubeblocks kubeblocks/kubeblocks \
 1. Installation
 ```bash
 kbcli kubeblocks install \
-  --version=<VERSION> \
+  --version={{VERSION}} \
   --create-namespace \
   --set featureGates.inPlacePodVerticalScaling.enabled=true
 ```
@@ -387,7 +309,7 @@ kbcli kubeblocks install \
 1. Upgrade
 ```bash
 kbcli kubeblocks upgrade \
-  --version=<VERSION> \
+  --version={{VERSION}} \
   --set featureGates.inPlacePodVerticalScaling.enabled=true
 ```
 
@@ -592,6 +514,9 @@ check there is no ConfigMap leftover:
 ```bash
 kubectl get configmap -n kb-system
 ```
+
 </TabItem>
 
 </Tabs>
+
+</VersionProvider>
