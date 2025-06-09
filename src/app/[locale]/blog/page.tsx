@@ -16,6 +16,7 @@ import {
 import { Link } from "@/components/Link";
 import Image from "next/image";
 import { getStaticParams } from "@/locales/server";
+import _ from "lodash";
 
 export async function generateStaticParams() {
   return getStaticParams();
@@ -28,6 +29,8 @@ export default async function BlogsPage({
 }) {
   const { locale } = await params;
   const blogs = await getBlogs(locale);
+
+  // const tags = _.uniq(_.flattenDeep(blogs.map(blog => blog.tags)));
 
   return (
     <Container

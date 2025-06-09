@@ -99,6 +99,7 @@ export type BlogMetadata = {
   date: string,
   image: string,
   datetime: string,
+  tags: string[],
   authors?: {
     image_url: string,
     name: string,
