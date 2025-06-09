@@ -286,7 +286,7 @@ helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-nam
 <TabItem value="kbcli" label="kbcli">
 
 ```bash
-kbcli kb upgrade --version <VERSION> \
+kbcli kubeblocks upgrade --version <VERSION> \
 --set image.registry=docker.io \
 --set dataProtection.image.registry=docker.io \
 --set addonChartsImage.registry=docker.io
@@ -310,6 +310,10 @@ If you cannot access `docker.io` please use following registry and namespace:
 
 If you want to install KubeBlocks with custom tolerations, you can use the following command:
 
+<Tabs>
+
+<TabItem value="Helm" label="Helm" default>
+
 ```bash
 helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace \
 --version <VERSION> \
@@ -317,6 +321,20 @@ helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-nam
 --set-json 'dataPlane.tolerations=[{ "key": "data-plane-taint", "operator": "Equal", "effect": "NoSchedule", "value": "true"}]'
 ```
 
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+```bash
+kbcli kubeblocks install --version <VERSION> --create-namespace \
+--set image.registry=docker.io \
+--set dataProtection.image.registry=docker.io \
+--set addonChartsImage.registry=docker.io
+```
+
+</TabItem>
+
+</Tabs>
 
 ### Skip Addon Auto Installation
 
@@ -326,12 +344,71 @@ helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-nam
 --set autoInstalledAddons="{}"
 ```
 
-### Feature Gate: Enable In-place Vertical-Scaling
+### Enable In-place Vertical Scaling
+
+To enable in-place vertical scaling for KubeBlocks, set the feature gate parameter during installation or upgrade:
 
 ```bash
-helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace \
---version <VERSION> \
---set featureGates.inPlacePodVerticalScaling.enabled=true
+featureGates.inPlacePodVerticalScaling.enabled=true
+```
+
+<Tabs>
+<TabItem value="Helm" label="Helm" default>
+
+1. Installation
+```bash
+helm install kubeblocks kubeblocks/kubeblocks \
+  --namespace kb-system \
+  --create-namespace \
+  --version <VERSION> \
+  --set featureGates.inPlacePodVerticalScaling.enabled=true
+```
+
+1. Upgrade
+```bash
+helm upgrade kubeblocks kubeblocks/kubeblocks \
+  --namespace kb-system \
+  --version <VERSION> \
+  --set featureGates.inPlacePodVerticalScaling.enabled=true
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+1. Installation
+```bash
+kbcli kubeblocks install \
+  --version=<VERSION> \
+  --create-namespace \
+  --set featureGates.inPlacePodVerticalScaling.enabled=true
+```
+
+1. Upgrade
+```bash
+kbcli kubeblocks upgrade \
+  --version=<VERSION> \
+  --set featureGates.inPlacePodVerticalScaling.enabled=true
+```
+
+</TabItem>
+</Tabs>
+
+
+**Verification**
+
+After installation or upgrade, verify the feature gate is enabled:
+
+```bash
+kubectl -n kb-system get deployments.apps kubeblocks -oyaml | \
+  yq '.spec' | \
+  grep IN_PLACE_POD_VERTICAL_SCALING -A 1
+```
+
+The output should show:
+```text
+- name: IN_PLACE_POD_VERTICAL_SCALING
+  value: "true"
 ```
 
 ## Uninstall KubeBlocks
@@ -387,7 +464,6 @@ kubectl get parametersdefinitions.parameters.kubeblocks.io
 kubectl get configmap -n kb-system | grep configuration
 kubectl get configmap -n kb-system | grep template
 ```
-
 
 For example
 ```bash
