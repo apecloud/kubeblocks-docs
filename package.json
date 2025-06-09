@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "yarn install && next dev",
     "build": "yarn install && next build",
+    "build:html": "export OUTPUT_TYPE=export && yarn install && next build",
     "start": "next start",
     "lint": "next lint",
     "format-md-to-mdx": "node ./scripts/format-md-to-mdx.js",

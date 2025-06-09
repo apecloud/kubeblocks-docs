@@ -4,14 +4,38 @@ import * as cheerio from "cheerio";
 import { Box, Divider, Stack, Typography, Button } from "@mui/material";
 import { Link } from "@/components/Link";
 import { ArrowBack } from "@mui/icons-material";
-import { getI18n } from "@/locales/server";
+import { getI18n, getStaticParams } from "@/locales/server";
+import { setStaticParamsLocale } from "next-international/server";
+
+type ParamsType = { name: string; version: string; locale: string };
+
+export async function generateStaticParams() {
+  const data: ParamsType[] = [];
+  getStaticParams().forEach((item) => {
+    const dir = path.join(process.cwd(), "reports", "kubeblocks", item.locale);
+    fs.readdirSync(dir).forEach((version) => {
+      fs.readdirSync(path.join(dir, version)).forEach((html) => {
+        data.push({
+          locale: item.locale,
+          version,
+          name: html.replace(/\.html/, ""),
+        });
+      });
+    });
+  });
+
+  return data;
+}
+
 export default async function ReportDetail({
   params,
 }: {
-  params: Promise<{ name: string; version: string; locale: string }>;
+  params: Promise<ParamsType>;
 }) {
-  const t = await getI18n();
   const { name, version, locale } = await params;
+  setStaticParamsLocale(locale);
+
+  const t = await getI18n();
   const filename =
     path.join(process.cwd(), "reports", "kubeblocks", locale, version, name) +
     ".html";

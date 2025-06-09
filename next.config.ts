@@ -27,7 +27,7 @@ const nextConfig: NextConfig = {
     return config;
   },
   basePath: '',
-  output: 'standalone',
+  output: process.env.OUTPUT_TYPE === 'export' ? 'export' : 'standalone',
 };
 
 const withMDX = createMDX({

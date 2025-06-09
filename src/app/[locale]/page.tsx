@@ -6,10 +6,10 @@ import Features from "./features";
 import Contact from "./contact";
 import BlogsPreview from "./blogs-preview";
 import { getBlogs } from "@/utils/markdown";
-import { getStaticParams } from "@/locales/server";
 import Customers from "./customers";
+import { getStaticParams } from "@/locales/server";
 
-export function generateStaticParams() {
+export async function generateStaticParams() {
   return getStaticParams();
 }
 

@@ -10,6 +10,56 @@ import {
 } from "@/utils/markdown";
 import _ from "lodash";
 import { SidebarMenuItem } from "@/components/SidebarMenu";
+import { getStaticParams } from "@/locales/server";
+
+export async function generateStaticParams() {
+  const data: MarkdownPageParams[] = [];
+  const docsDir = path.join(process.cwd(), "docs");
+
+  const getPaths = (dir: string, initData: string[] = []): string[] => {
+    fs.readdirSync(dir).forEach((f) => {
+      const d = path.join(dir, f);
+      const stat = fs.statSync(d);
+      if (stat.isDirectory()) {
+        getPaths(d, initData);
+      }
+      if (stat.isFile() && f.endsWith(".mdx")) {
+        initData.push(d);
+      }
+    });
+    return initData;
+  };
+
+  getStaticParams().forEach((item) => {
+    // locals
+    const localeDir = path.join(docsDir, item.locale);
+
+    fs.readdirSync(localeDir).forEach((version) => {
+      // versions
+      const versionDir = path.join(localeDir, version);
+      fs.readdirSync(versionDir).forEach((category) => {
+        // categories
+        const cateDir = path.join(versionDir, category);
+        const paths: string[] = getPaths(cateDir).map((item) =>
+          item.replace(cateDir+"/", "").replace(".mdx", "")
+        );
+
+        paths.forEach(p => {
+          const items = p.split('/');
+          data.push({
+            locale: item.locale,
+            version,
+            category,
+            paths: items,
+          });
+        })
+
+
+      });
+    });
+  });
+  return data;
+}
 
 export default async function MarkdownPage({
   params,

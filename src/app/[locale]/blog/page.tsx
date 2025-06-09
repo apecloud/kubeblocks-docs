@@ -14,10 +14,10 @@ import {
   Typography,
 } from "@mui/material";
 import { Link } from "@/components/Link";
-import { getStaticParams } from "@/locales/server";
 import Image from "next/image";
+import { getStaticParams } from "@/locales/server";
 
-export function generateStaticParams() {
+export async function generateStaticParams() {
   return getStaticParams();
 }
 

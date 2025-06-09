@@ -13,6 +13,11 @@ import {
 import * as cheerio from "cheerio";
 import { Link } from "@/components/Link";
 import Banner from "./banner";
+import { getStaticParams } from "@/locales/server";
+
+export async function generateStaticParams() {
+  return getStaticParams();
+}
 
 export default async function ReportsList({
   params,
