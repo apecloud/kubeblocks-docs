@@ -36,10 +36,10 @@ function replaceVersionInElement(element: React.ReactNode, version: string): Rea
   
   if (React.isValidElement(element)) {
     const props = element.props || {};
-    const { children, ...otherProps } = props as { children?: React.ReactNode; [key: string]: any };
+    const { children, ...otherProps } = props as { children?: React.ReactNode; [key: string]: unknown };
     
     // 替换 props 中的字符串值
-    const newProps: { [key: string]: any } = { ...otherProps };
+    const newProps: { [key: string]: unknown } = { ...otherProps };
     Object.keys(newProps).forEach(key => {
       if (typeof newProps[key] === 'string') {
         newProps[key] = (newProps[key] as string).replace(/\{\{VERSION\}\}/g, version);
