@@ -102,6 +102,7 @@ If you do not configure the BackupRepo information when installing KubeBlocks, y
      credential:
        name: s3-credential-for-backuprepo
        namespace: kb-system
+     pathPrefix: /
    EOF
    ```
 
@@ -137,6 +138,7 @@ If you do not configure the BackupRepo information when installing KubeBlocks, y
      credential:
        name: oss-credential-for-backuprepo
        namespace: kb-system
+     pathPrefix: /
    EOF
    ```
 
@@ -172,6 +174,7 @@ If you do not configure the BackupRepo information when installing KubeBlocks, y
      credential:
        name: obs-credential-for-backuprepo
        namespace: kb-system
+     pathPrefix: /
    EOF
    ```
 
@@ -207,6 +210,7 @@ If you do not configure the BackupRepo information when installing KubeBlocks, y
      credential:
        name: cos-credential-for-backuprepo
        namespace: kb-system
+     pathPrefix: /
    EOF
    ```
 
@@ -242,6 +246,7 @@ If you do not configure the BackupRepo information when installing KubeBlocks, y
      credential:
        name: gcs-credential-for-backuprepo
        namespace: kb-system
+     pathPrefix: /
    EOF
    ```
 
@@ -276,6 +281,7 @@ If you do not configure the BackupRepo information when installing KubeBlocks, y
      credential:
        name: minio-credential-for-backuprepo
        namespace: kb-system
+     pathPrefix: /
    EOF
    ```
 
@@ -310,6 +316,7 @@ If you do not configure the BackupRepo information when installing KubeBlocks, y
      credential:
        name: s3-comp-credential-for-backuprepo
        namespace: kb-system
+     pathPrefix: /
    EOF
    ```
 
@@ -627,7 +634,7 @@ If you don't have an object storage service from a cloud provider, you can deplo
    Create a bucket named `test-minio` for the test.
 
    ![backup-and-restore-backup-repo-2](/img/docs/en/backup-and-restore-backup-repo-2.png)
-   ![backup-and-restore-backup-repo3](/img/docs/en/backup-and-restore-backup-repo-3.png)
+   ![backup-and-restore-backup-repo-3](/img/docs/en/backup-and-restore-backup-repo-3.png)
 
   :::note
 
