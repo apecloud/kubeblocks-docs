@@ -1,0 +1,27 @@
+---
+title: Known Issues
+description: Known issues in KubeBlocks
+keywords: [KubeBlocks, Known Issues]
+sidebar_position: 2
+sidebar_label: Known Issues
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Known Issues
+
+
+### Kubeblocks 1.0.0 creates enoromous number of secrets
+
+If you are running KubeBlocks on K8s \<\= 1.24, KubeBlocks keeps creating enoromous number of secrets for each cluster and never end.
+
+And you can see the following information in KubeBlocks logs:
+
+```bash
+INFO reconcile object *v1.ServiceAccount with action UPDATE OK
+```
+
+This is because before version 1.24, Kubernetes automatically generated Secret-based tokens for ServiceAccounts, as documented in [Kubernetes Service Account Tokens](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/).
+
+To fix this, upgrade KubeBlocks to` v1.0.0-beta.3` or later.
