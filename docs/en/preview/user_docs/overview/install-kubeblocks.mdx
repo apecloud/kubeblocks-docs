@@ -62,6 +62,22 @@ helm repo update
 helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace --version={{VERSION}}
 ```
 
+
+:::note
+
+If you are using K8s \<\= 1.23, you may encounter the following error when installing CRDs:
+
+```bash
+unknown field "x-kubernetes-validations".... if you choose to ignore these errors, turn validation off with --validate\=false
+```
+
+You can fix this by running the following command:
+```bash
+kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/{{VERSION}}/kubeblocks_crds.yaml --validate\=false
+```
+:::
+
+
 **Need a different version?**
 
 For other versions, you can find available releases on [KubeBlocks Releases](https://github.com/apecloud/kubeblocks/releases/) or query using:
