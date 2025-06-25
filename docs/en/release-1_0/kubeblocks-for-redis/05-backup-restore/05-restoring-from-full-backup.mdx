@@ -52,10 +52,9 @@ Key parameters:
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
 metadata:
-  name: pg-restored
+  name: redis-replication-restore
   namespace: demo
   annotations:
-    # NOTE: replcae <FULL_BACKUP_NAME> with the backup name
     kubeblocks.io/restore-from-backup: '{"redis":{"name":"<FULL_BACKUP_NAME>","namespace":"demo","volumeRestorePolicy":"Parallel"}}'
 spec:
   terminationPolicy: Delete
@@ -63,18 +62,34 @@ spec:
   topology: replication
   componentSpecs:
     - name: redis
-      serviceVersion: 16.4.0
-      disableExporter: true
-      labels:
-        apps.kubeblocks.postgres.patroni/scope: pg-restored-redis
+      serviceVersion: "7.2.4"
+      disableExporter: false
       replicas: 2
       resources:
         limits:
-          cpu: "0.5"
-          memory: "0.5Gi"
+          cpu: '0.5'
+          memory: 0.5Gi
         requests:
-          cpu: "0.5"
-          memory: "0.5Gi"
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+    - name: redis-sentinel
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
       volumeClaimTemplates:
         - name: data
           spec:
