@@ -43,23 +43,10 @@ example-mysql-cluster-xtrabackup-20250305000008    example-mysql-cluster-mysql-b
 - '77a788fa-example-mysql-cluster-archive-binlog': Continuous backup (binlog archive).
 - 'example-mysql-cluster-xtrabackup-20250305000008': Full backup.
 
-## Retrieve Encrypted System Accounts
-Extract encrypted credentials for system accounts from the metadata of the full backup:
-
-```bash
-kubectl get backup -n demo example-mysql-cluster-xtrabackup-20250305000008 -o jsonpath='{.metadata.annotations.kubeblocks\.io/encrypted-system-accounts}'
-```
-
-Expected Output:
-```bash
-{"mysql":{"kbadmin":"FnMHT00SgXOa1jW5Btn4QFaQFqQZLeskB5tX2BPAHHiMeyzMpo+7nKcSS9w=","kbdataprotection":"Ks7GPfiIhSer82V148uTBnx6EJnZXWm0L0uPY1xHGTbuCrmLOpbGZJtVnSU=","kbmonitoring":"rozLsobWpyoM7vcAEs+KzscWl8JIo5vAmn/Q3RZXBddnXTfC0QHKcE5Ag0g=","kbprobe":"Ty+9FrhwoL29iWQzqSBbRZrt7Kqupe9qkAXyIpaeAZpCLXAJ1rjYTETpdpg=","kbreplicator":"PNBvw1HHWMf1xNkmaoR5pXuhCuADVrKqnV2+UsAvCR0xfopDU/SmGgmSPSg=","proxysql":"XntOn+6PzLC9eDXZFe4RI8kkWQLwXh4pSuRZ7hfasVn/o4ih82JJC6i1yIc=","root":"V3euqbJR8ARzgXhGTFPk4t+Rp8NTyjagb/IETEpYTOL2FScakRM="}}
-```
 
 ## Create Restored Cluster
 
-Create a new cluster with restoration configuration referencing the backup, set `encryptedSystemAccounts` with the encrypted system account credentials got from last step.
-
-Note: Use \" to escape double quotes in the JSON string.
+Create a new cluster with restoration configuration referencing the backup.
 
 Apply the following YAML configuration:
 ```yaml
@@ -70,8 +57,7 @@ metadata:
   name: example-mysql-cluster-restored
   namespace: demo
   annotations:
-    kubeblocks.io/restore-from-backup: '{"mysql":{"encryptedSystemAccounts":"{\"kbadmin\":\"FnMHT00SgXOa1jW5Btn4QFaQFqQZLeskB5tX2BPAHHiMeyzMpo+7nKcSS9w=\",\"kbdataprotection\":\"Ks7GPfiIhSer82V148uTBnx6EJnZXWm0L0uPY1xHGTbuCrmLOpbGZJtVnSU=\",\"kbmonitoring\":\"rozLsobWpyoM7vcAEs+KzscWl8JIo5vAmn/Q3RZXBddnXTfC0QHKcE5Ag0g=\",\"kbprobe\":\"Ty+9FrhwoL29iWQzqSBbRZrt7Kqupe9qkAXyIpaeAZpCLXAJ1rjYTETpdpg=\",\"kbreplicator\":\"PNBvw1HHWMf1xNkmaoR5pXuhCuADVrKqnV2+UsAvCR0xfopDU/SmGgmSPSg=\",\"proxysql\":\"XntOn+6PzLC9eDXZFe4RI8kkWQLwXh4pSuRZ7hfasVn/o4ih82JJC6i1yIc=\",\"root\":\"V3euqbJR8ARzgXhGTFPk4t+Rp8NTyjagb/IETEpYTOL2FScakRM=\"}"
-,"name":"example-mysql-cluster-xtrabackup-20250305000008","namespace":"demo","volumeRestorePolicy":"Parallel",
+    kubeblocks.io/restore-from-backup: '{"mysql":{"name":"example-mysql-cluster-xtrabackup-20250305000008","namespace":"demo","volumeRestorePolicy":"Parallel",
 "restoreTime":"2025-03-05T02:00:00Z"}}'
 spec:
   terminationPolicy: Delete

@@ -40,25 +40,9 @@ example-mysql-cluster-backup   example-mysql-cluster-mysql-backup-policy   xtrab
 
 ## Restore the Backup Using Cluster Annotation
 
-### Retrieve Encrypted System Accounts
-
-Extract encrypted credentials for system accounts from the backup metadata:
-
-```bash
-kubectl get backup -n demo example-mysql-cluster-backup -o jsonpath='{.metadata.annotations.kubeblocks\.io/encrypted-system-accounts}'
-```
-
-Expected Output:
-
-```bash
-{"mysql":{"kbadmin":"+UbL/HmrnDShZCdoZxpAWxTHT48VKrJBhBqnNDjvwscW2YBBj8biYf1REDA=","kbdataprotection":"zycglr6K6oeRpZlZBeFeTUoxGm+eSIC7bNotnz4UmFCLH8O77JsGM9gf3js=","kbmonitoring":"qX66By8D2ZJdMh5Pe9u149Fev4wVyNchi+U9QkDqPsW6hoVrbew/srZUEmE=","kbprobe":"n2VKC65TGg4N1GVr9en6EOZ0MQEf/DyDdQ0qeK9TbMRO2QMaJvKlpW9Bm5w=","kbreplicator":"1BOeBExnprxNshSCAHVGmBQ8dk+72edxQb1P2/2L2hD4M39cRLhoB60nW9Y=","proxysql":"u6NRl02g7+do5z1SVjhLTUYFqNp860wMQ1pfkH1JpsB/RKxIU6Gds2wNu7I=","root":"0YQW649uCaf0QqgAVDMX8OtNbatKYNlZE1aNRD8C2J8a9xHqPi8="}}
-```
-
 ### Create Restored Cluster
 
-Create a new cluster with restoration configuration referencing the backup, set `encryptedSystemAccounts` with the encrypted system account credentials got from last step.
-
-Note: Use \" to escape double quotes in the JSON string.
+Create a new cluster with restoration configuration referencing the backup.
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -68,8 +52,7 @@ metadata:
   name: example-mysql-cluster-restored
   namespace: demo
   annotations:
-    kubeblocks.io/restore-from-backup: '{"mysql":{"encryptedSystemAccounts":"{\"kbadmin\":\"+UbL/HmrnDShZCdoZxpAWxTHT48VKrJBhBqnNDjvwscW2YBBj8biYf1REDA=\",\"kbdataprotection\":\"zycglr6K6oeRpZlZBeFeTUoxGm+eSIC7bNotnz4UmFCLH8O77JsGM9gf3js=\",\"kbmonitoring\":\"qX66By8D2ZJdMh5Pe9u149Fev4wVyNchi+U9QkDqPsW6hoVrbew/srZUEmE=\",\"kbprobe\":\"n2VKC65TGg4N1GVr9en6EOZ0MQEf/DyDdQ0qeK9TbMRO2QMaJvKlpW9Bm5w=\",\"kbreplicator\":\"1BOeBExnprxNshSCAHVGmBQ8dk+72edxQb1P2/2L2hD4M39cRLhoB60nW9Y=\",\"proxysql\":\"u6NRl02g7+do5z1SVjhLTUYFqNp860wMQ1pfkH1JpsB/RKxIU6Gds2wNu7I=\",\"root\":\"0YQW649uCaf0QqgAVDMX8OtNbatKYNlZE1aNRD8C2J8a9xHqPi8=\"}"
-,"name":"example-mysql-cluster-backup","namespace":"demo","volumeRestorePolicy":"Parallel"}}'
+    kubeblocks.io/restore-from-backup: '{"mysql":{"name":"example-mysql-cluster-backup","namespace":"demo","volumeRestorePolicy":"Parallel"}}'
 spec:
   terminationPolicy: WipeOut
   componentSpecs:

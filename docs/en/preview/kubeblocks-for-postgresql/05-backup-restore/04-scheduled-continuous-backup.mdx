@@ -54,8 +54,9 @@ KubeBlocks PostgreSQL supports these backup methods:
 |-------------------|-----------------|-------------|
 | Full Backup       | pg-basebackup   | Uses `pg_basebackup`, a PostgreSQL utility to create a base backup |
 | Full Backup       | wal-g  | Uses `wal-g` to create a full backup (requires WAL-G configuration) |
-| Continuous Backup | postgresql-pitr | Uploads PostgreSQL Write-Ahead Logging (WAL) files periodically to the backup repository, usually paired with `pg-basebackup`|
-| Continuous Backup | wal-g-archive | Uploads PostgreSQL Write-Ahead Logging (WAL) files periodically to the backup repository, usually paired with `wal-g`|
+| Continuous Backup | postgresql-pitr | Uploads PostgreSQL Write-Ahead Logging (WAL) files periodically to the backup repository|
+| Continuous Backup | wal-g-archive | Uploads PostgreSQL Write-Ahead Logging (WAL) files periodically to the backup repository |
+
 
 ## Deploy a PostgreSQL Cluster with Backup APIs
 
@@ -100,9 +101,27 @@ spec:
     enabled: true
     cronExpression: 0 18 * * * # full backup scheuler
     # for continuous backup
-    continuousMethod: wal-g-archive # continuous backup method, paired with method wal-g
+    continuousMethod: archive-wal # continuous backup method
     pitrEnabled: true # enable continous method or not
     repoName: s3-repo # specify backuprepo, if not specified, the BackupRepo annotated as `default` will be used.
+```
+
+Or you can patch an existing cluster to enable scheduled continuous backup:
+```bash
+kubectl patch cluster pg-cluster -n demo --type='merge' -p='
+{
+  "spec": {
+    "backup": {
+      "retentionPeriod": "7d",
+      "method": "pg-basebackup",
+      "enabled": true,
+      "cronExpression": "0 18 * * *",
+      "continuousMethod": "archive-wal",
+      "pitrEnabled": true,
+      "repoName": "s3-repo"
+    }
+  }
+}'
 ```
 
 **Key Configuration Fields Explained**
@@ -140,6 +159,8 @@ Verify continuous backup operation with these commands:
 ```bash
 # get continuous backup
 kubectl get backup -l app.kubernetes.io/instance=pg-cluster,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
+# get stateful set working for continuous backup
+kubectl get sts -l app.kubernetes.io/instance=pg-cluster,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
 # get pod working for continuous backup
 kubectl get pod -l app.kubernetes.io/instance=pg-cluster,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
 ```
@@ -164,10 +185,11 @@ spec:
     cronExpression: 0 18 * * *
     enabled: true #
     retentionPeriod: 7d
-  - backupMethod: wal-g-archive
+  - backupMethod: archive-wal
     cronExpression: '*/5 * * * *'
-    enabled: true  # set to `true` to enable continuous backup
-    retentionPeriod: 8d # set the retention period to your need
+    enabled: true
+    name: archive-wal
+    retentionPeriod: 7d
 ```
 
 1. **Full Backups** (pg-basebackup):
@@ -179,6 +201,35 @@ spec:
    - Archives WAL logs every 5 minutes
    - Enables recovery to any point in time
    - Requires full backup as starting point
+
+
+## Config WAL-G for Full Backup and Continuous Backup
+
+:::note
+
+If you want to use any backup methods powered by wal-g, such as wal-g-archive for continuous backup and wal-g for full backup, you need to configure wal-g in the cluster.
+
+To configure wal-g, you need to trigger a `config-wal-g` backup ahead of time.
+:::
+
+To configure wal-g, you need to create a `Backup` resource with `config-wal-g` backup method. It is a special backup method that will create a wal-g configuration file for each replica in the cluster.
+
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: Backup
+metadata:
+  name: pg-cluster-config-wal-g
+  namespace: demo
+spec:
+  backupMethod: config-wal-g
+  backupPolicyName: pg-cluster-postgresql-backup-policy
+  deletionPolicy: Delete
+```
+
+If you forget to configure wal-g ahead, you will see that Backups are `Failed` with the following error on backup pods:
+```bash
+fatal: unable to switch to directory: /home/postgres/pgdata/wal-g/env: file does not exist
+```
 
 ## Summary
 

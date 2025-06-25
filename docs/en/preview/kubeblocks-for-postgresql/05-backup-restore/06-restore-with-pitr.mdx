@@ -75,19 +75,10 @@ Make sure there is a full backup meets the condition: its `stopTime`/`completion
 
 ## Option 1: Cluster Annotation Restoration
 
-### Step 1: Retrieve System Credentials
-Get encrypted account credentials from backup:
-
-```bash
-kubectl get backup <continuous-backup-name> -n demo -o json | \
-  jq -r '.metadata.annotations | ."kubeblocks.io/encrypted-system-accounts" | fromjson .postgresql | tojson | gsub("\""; "\\\"")'
-```
-
-### Step 2: Create Restored Cluster
+### Step 1: Create Restored Cluster
 Configure PITR parameters in cluster annotation:
 
 Key parameters:
-- `encryptedSystemAccounts`: From the previous steps
 - `name`: Continuous backup name
 - `restoreTime`: Target recovery time (within backup `timeRange`)
 
@@ -99,10 +90,9 @@ metadata:
   name: pg-restore-pitr
   namespace: demo
   annotations:
-    # NOTE: replace <ENCRYPTED-SYSTEM-ACCOUNTS> with the accounts info from you backup
     # NOTE: replace <CONTINUOUS_BACKUP_NAME> with the continuouse backup name
     # NOTE: replace <RESTORE_POINT_TIME>  with a valid time within the backup timeRange.
-    kubeblocks.io/restore-from-backup: '{"postgresql":{"encryptedSystemAccounts":"<ENCRYPTED-SYSTEM-ACCOUNTS>","name":"<CONTINUOUS_BACKUP_NAME>","namespace":"demo","restoreTime":"<RESTORE_POINT_TIME>","volumeRestorePolicy":"Parallel"}}'
+    kubeblocks.io/restore-from-backup: '{"postgresql":{"name":"<CONTINUOUS_BACKUP_NAME>","namespace":"demo","restoreTime":"<RESTORE_POINT_TIME>","volumeRestorePolicy":"Parallel"}}'
 spec:
   terminationPolicy: Delete
   clusterDef: postgresql
@@ -133,7 +123,7 @@ spec:
                 storage: 20Gi
 ```
 
-### Step 3: Monitor Restoration
+### Step 2: Monitor Restoration
 Track restore progress with:
 
 ```bash
@@ -144,36 +134,12 @@ kubectl get restore -n demo -w
 kubectl get cluster -n demo -w
 ```
 
-## Option 2: OpsRequest API Restoration
+:::note
+Restore PostgreSQL cluster through `kbcli` or `OpsRequest` is not supported for now.
 
-For operational control and monitoring, use the OpsRequest API:
+You can restore PostgreSQL cluster through `kubectl` as the steps above.
 
-```yaml
-apiVersion: operations.kubeblocks.io/v1alpha1
-kind: OpsRequest
-metadata:
-  name: pg-cluster-restore
-  namespace: demo
-spec:
-  clusterName: pg-cluster-restore
-  force: false
-  restore:
-    backupName: <CONTINUOUS_BACKUP_NAME>
-    backupNamespace: demo
-    restorePointInTime: <RESTORE_POINT_TIME>
-  type: Restore
-```
-
-### Monitor Restoration
-Track progress with:
-
-```bash
-# Watch restore operation
-kubectl get restore -n demo -w
-
-# Verify cluster status
-kubectl get cluster -n demo -w
-```
+:::
 
 ## Cleanup
 To remove all created resources, delete the PostgreSQL cluster along with its namespace:

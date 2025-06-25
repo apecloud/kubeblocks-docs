@@ -40,25 +40,11 @@ Pick ONE of the Backups whose status is `Completed`.
 
 ## Option 1: Cluster Annotation Restoration
 
-### Step 1: Retrieve System Credentials
-Get encrypted system account credentials from backup metadata:
-
-```bash
-kubectl get backup <BACKUP_NAME> -n demo -ojson | jq -r '.metadata.annotations | ."kubeblocks.io/encrypted-system-accounts" | fromjson .redis | tojson |gsub("\""; "\\\"")'
-```
-
-Expected Output:
-
-```bash
-{\"kbadmin\":\"Surpe3nrr4FFe82M34nCY2bThlztdifAVmrO8qHd3DYG5vRR33Y=\",\"kbdataprotection\":\"0gddL2+mEQ6DBeLYlijk5pd3YwuDWChSmvwlPWTS9QSfbY/kLFE=\",\"kbmonitoring\":\"ajWxjW2xMuysUq/UmP66+zCEltD1zVmO5Ec7sELSPvGEzaPzsHY=\",\"kbprobe\":\"qRoPyT8cUAVEaUjd/HIdmrVV6sJ6nO03G9MExVJryEEcs5LciCI=\",\"kbreplicator\":\"8xLt6zAIU5b2t9KmVy0LOaJsugQ8wNULyS+6LpRjRCfg05VnATk=\",\"postgres\":\"MNlRXK7nctiUyQSmTbbJUGeb6PsxDULm52abMYa2oBhyW+lWSFs=\"}
-```
-
-### Step 2: Create Restored Cluster
+### Step 1: Create Restored Cluster
 Create a new cluster with restore configuration:
 
 Key parameters:
 - `kubeblocks.io/restore-from-backup` annotation
-- `encryptedSystemAccounts` from the previous steps
 - Backup name and namespace located from the previous steps
 
 
@@ -66,30 +52,44 @@ Key parameters:
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
 metadata:
-  name: pg-restored
+  name: redis-replication-restore
   namespace: demo
   annotations:
-    # NOTE: replace <ENCRYPTED-SYSTEM-ACCOUNTS> with the accounts info from you backup
-    # NOTE: replcae <FULL_BACKUP_NAME> with the backup name
-    kubeblocks.io/restore-from-backup: '{"redis":{"encryptedSystemAccounts":"<ENCRYPTED-SYSTEM-ACCOUNTS>","name":"<FULL_BACKUP_NAME>","namespace":"demo","volumeRestorePolicy":"Parallel"}}'
+    kubeblocks.io/restore-from-backup: '{"redis":{"name":"<FULL_BACKUP_NAME>","namespace":"demo","volumeRestorePolicy":"Parallel"}}'
 spec:
   terminationPolicy: Delete
   clusterDef: redis
   topology: replication
   componentSpecs:
     - name: redis
-      serviceVersion: 16.4.0
-      disableExporter: true
-      labels:
-        apps.kubeblocks.postgres.patroni/scope: pg-restored-redis
+      serviceVersion: "7.2.4"
+      disableExporter: false
       replicas: 2
       resources:
         limits:
-          cpu: "0.5"
-          memory: "0.5Gi"
+          cpu: '0.5'
+          memory: 0.5Gi
         requests:
-          cpu: "0.5"
-          memory: "0.5Gi"
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+    - name: redis-sentinel
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
       volumeClaimTemplates:
         - name: data
           spec:
@@ -101,7 +101,7 @@ spec:
                 storage: 20Gi
 ```
 
-### Step 3: Monitor Restoration
+### Step 2: Monitor Restoration
 Track restore progress with:
 
 ```bash
