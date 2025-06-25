@@ -75,19 +75,10 @@ Make sure there is a full backup meets the condition: its `stopTime`/`completion
 
 ## Option 1: Cluster Annotation Restoration
 
-### Step 1: Retrieve System Credentials
-Get encrypted account credentials from backup:
-
-```bash
-kubectl get backup <continuous-backup-name> -n demo -o json | \
-  jq -m '.metadata.annotations | ."kubeblocks.io/encrypted-system-accounts" | fromjson .mongodb | tojson | gsub("\""; "\\\"")'
-```
-
-### Step 2: Create Restored Cluster
+### Step 1: Create Restored Cluster
 Configure PITR parameters in cluster annotation:
 
 Key parameters:
-- `encryptedSystemAccounts`: From the previous steps
 - `name`: Continuous backup name
 - `restoreTime`: Target recovery time (within backup `timeRange`)
 
@@ -99,10 +90,9 @@ metadata:
   name: mongo-cluster-restore-pitr
   namespace: demo
   annotations:
-    # NOTE: replace <ENCRYPTED-SYSTEM-ACCOUNTS> with the accounts info from you backup
     # NOTE: replace <CONTINUOUS_BACKUP_NAME> with the continuouse backup name
     # NOTE: replace <RESTORE_POINT_TIME>  with a valid time within the backup timeRange.
-    kubeblocks.io/restore-from-backup: '{"mongodb":{"encryptedSystemAccounts":"<ENCRYPTED-SYSTEM-ACCOUNTS>","name":"<CONTINUOUS_BACKUP_NAME>","namespace":"demo","restoreTime":"<RESTORE_POINT_TIME>","volumeRestorePolicy":"Parallel"}}'
+    kubeblocks.io/restore-from-backup: '{"mongodb":{"name":"<CONTINUOUS_BACKUP_NAME>","namespace":"demo","restoreTime":"<RESTORE_POINT_TIME>","volumeRestorePolicy":"Parallel"}}'
 spec:
   terminationPolicy: Delete
   clusterDef: mongodb
@@ -129,7 +119,7 @@ spec:
                 storage: 20Gi
 ```
 
-### Step 3: Monitor Restoration
+### Step 2: Monitor Restoration
 Track restore progress with:
 
 ```bash

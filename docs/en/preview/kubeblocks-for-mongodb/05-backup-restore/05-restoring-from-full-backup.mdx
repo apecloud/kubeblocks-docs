@@ -40,25 +40,11 @@ Pick ONE of the Backups whose status is `Completed`.
 
 ## Option 1: Cluster Annotation Restoration
 
-### Step 1: Retrieve System Credentials
-Get encrypted system account credentials from backup metadata:
-
-```bash
-kubectl get backup mongodb-backup-datafile -n demo -ojson | jq -r '.metadata.annotations | ."kubeblocks.io/encrypted-system-accounts" | fromjson .mongodb | tojson |gsub("\""; "\\\"")'
-```
-
-Expected Output:
-
-```bash
-{\"root\":\"8hgNxq8BV8IPjQktnOlLX0nw8lyrO59mJbtbiFP5D19d10qvzCJBB2mQ0FU=\"}
-```
-
-### Step 2: Create Restored Cluster
+### Step 1: Create Restored Cluster
 Create a new cluster with restore configuration:
 
 Key parameters:
 - `kubeblocks.io/restore-from-backup` annotation
-- `encryptedSystemAccounts` from the previous steps
 - Backup name and namespace located from the previous steps
 
 
@@ -69,9 +55,8 @@ metadata:
   name: mongo-cluster-restored
   namespace: demo
   annotations:
-    # NOTE: replace <ENCRYPTED-SYSTEM-ACCOUNTS> with the accounts info from you backup
     # NOTE: replace <FULL_BACKUP_NAME> with your backup
-    kubeblocks.io/restore-from-backup: '{"mongodb":{"encryptedSystemAccounts":"<ENCRYPTED-SYSTEM-ACCOUNTS>","name":"<FULL_BACKUP_NAME>","namespace":"demo","volumeRestorePolicy":"Parallel"}}'
+    kubeblocks.io/restore-from-backup: '{"mongodb":{"name":"<FULL_BACKUP_NAME>","namespace":"demo","volumeRestorePolicy":"Parallel"}}'
 spec:
   terminationPolicy: Delete
   clusterDef: mongodb
@@ -98,7 +83,7 @@ spec:
                 storage: 20Gi
 ```
 
-### Step 3: Monitor Restoration
+### Step 2: Monitor Restoration
 Track restore progress with:
 
 ```bash

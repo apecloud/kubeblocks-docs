@@ -74,6 +74,17 @@ View supported backup methods in the BackupPolicy CR 'pg-cluster-postgresql-back
 ```bash
 kubectl get backuppolicy pg-cluster-postgresql-backup-policy -n demo -oyaml | yq '.spec.backupMethods[].name'
 ```
+
+Example Output:
+```bash
+pg-basebackup
+wal-g
+wal-g-incremental
+archive-wal
+wal-g-archive
+```
+
+
 **List of Backup methods**
 
 KubeBlocks PostgreSQL supports these backup methods:
@@ -203,6 +214,28 @@ The `Backup` resource records details including:
 - Storage path
 - Time range
 - Other metadata
+
+## Troubleshooting
+
+When encountering backup issues, such as Backup status is `Failed`  or stucks in `Running`for quite a long time, follow these steps to diagnose and resolve the problem:
+
+1. Inspect the Backup resource for any error events or status updates:
+  ```bash
+  kubectl describe backup <BACKUP_NAME> -n demo
+  ```
+
+2. Verify the backup job status and examine its logs:
+  ```bash
+  kubectl -n demo get job -l app.kubernetes.io/instance=pg-cluster,app.kubernetes.io/managed-by=kubeblocks-dataprotection
+  ```
+  And check pod logs:
+  ```bash
+  kubectl -n demo logs <POD_NAME>
+  ```
+3. Review KubeBlocks controller logs for detailed error information:
+  ```bash
+  kubectl -n kb-system logs deploy/kubeblocks -f
+  ```
 
 ## Summary
 

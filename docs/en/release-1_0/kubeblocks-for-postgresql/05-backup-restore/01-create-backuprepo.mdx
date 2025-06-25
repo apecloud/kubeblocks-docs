@@ -103,6 +103,12 @@ spec:
     namespace: kb-system
 ```
 
+:::note
+
+The `dataprotection.kubeblocks.io/is-default-repo: 'true'` annotation marks this BackupRepo as the default one. When creating backups, if no specific BackupRepo is specified, KubeBlocks will use the one marked as default.
+
+:::
+
 ## Step 4: Verify Backup Repository Status
 
 Check the status of the BackupRepo to ensure it is correctly initialized:
@@ -118,8 +124,40 @@ s3-repo   PreChecking   s3                Tool           true      5s
 s3-repo   Ready         s3                Tool           true      35s
 ```
 
-Troubleshooting:
- - If status becomes Failed:
-   - Verify bucket name and region match your S3 configuration.
-   - Confirm AWS credentials in the Secret are correct.
-   - Check network connectivity between KubeBlocks and AWS S3.
+**Troubleshooting**
+
+When creating a new BackupRepo, KubeBlocks runs a precheck job to test the connection and read/write capabilities. If the BackupRepo status shows `Failed`, follow these troubleshooting steps:
+
+1. Check the BackupRepo status and error details:
+   ```bash
+   kubectl describe backuprepo <BACKUP_REPO_NAME>
+   ```
+
+2. Verify your configuration:
+   - Confirm the bucket name and region match your S3 settings
+   - Double-check that the AWS credentials in the Secret are valid
+   - Ensure there is network connectivity between KubeBlocks and AWS S3
+
+The precheck job must complete successfully for the BackupRepo to become `Ready` for use.
+
+
+## How to configure a BackupRepo for other storage providers
+
+KubeBlocks supports the following storage providers as backup repositories:
+
+| Storage Provider | Description |
+|-----------------|-------------|
+| OSS | Alibaba Cloud Object Storage Service |
+| S3 | Amazon Simple Storage Service |
+| COS | Tencent Cloud Object Storage |
+| GCS | Google Cloud Storage |
+| OBS | Huawei Cloud Object Storage |
+| MinIO | Self-hosted Object Storage |
+| S3-compatible | Other S3-compatible storage services |
+
+To get the full list of `StorageProvider`s installed:
+```bash
+kubectl get storageproviders.dataprotection.kubeblocks.io
+```
+
+For detailed instructions on configuring a BackupRepo for other storage providers, please refer to the [BackupRepo Introduction](../../user_docs/backup-restore/backuprepo).
