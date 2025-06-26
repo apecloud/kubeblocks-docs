@@ -11,17 +11,48 @@ import TabItem from '@theme/TabItem';
 
 # Known Issues
 
+## Issue 1: KubeBlocks creates enormous number of secrets
 
-### Kubeblocks 1.0.0 creates enoromous number of secrets
-
-If you are running KubeBlocks on K8s \<\= 1.24, KubeBlocks keeps creating enoromous number of secrets for each cluster and never end.
-
-And you can see the following information in KubeBlocks logs:
+### Problem Description
+KubeBlocks keeps creating an enormous number of secrets for each cluster and never stops. You may see the following information in **KubeBlocks** logs:
 
 ```bash
 INFO reconcile object *v1.ServiceAccount with action UPDATE OK
 ```
 
-This is because before version 1.24, Kubernetes automatically generated Secret-based tokens for ServiceAccounts, as documented in [Kubernetes Service Account Tokens](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/).
+### Affected Version
+- KubeBlocks v1.0.0
+- Kubernetes versions \≤ 1.24
 
-To fix this, upgrade KubeBlocks to` v1.0.0-beta.3` or later.
+### Root Cause
+Before Kubernetes version 1.24, Kubernetes automatically generated Secret-based tokens for ServiceAccounts, as documented in [Kubernetes Service Account Tokens](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/).
+
+### Solution
+Upgrade KubeBlocks to `v1.0.0-beta.3` or later.
+
+---
+
+## Issue 2: PostgreSQL fails to start with special characters in password
+
+### Problem Description
+PostgreSQL may fail to start when the password contains certain special characters. By checking POD logs:
+```bash
+File "/usr/lib/python3/dist-packages/yaml/scanner.py", line 116, in check_token
+    self.fetch_more_tokens()
+  File "/usr/lib/python3/dist-packages/yaml/scanner.py", line 231, in fetch_more_tokens
+    return self.fetch_anchor()
+  File "/usr/lib/python3/dist-packages/yaml/scanner.py", line 621, in fetch_anchor
+    self.tokens.append(self.scan_anchor(AnchorToken))
+  File "/usr/lib/python3/dist-packages/yaml/scanner.py", line 929, in scan_anchor
+    raise ScannerError("while scanning an %s" % name, start_mark,
+yaml.scanner.ScannerError: while scanning an anchor
+  in "<unicode string>", line 45, column 17:
+          password: &amp;JgE#F5x&amp;eNwis*2dW!7&amp ...
+                    ^
+```
+
+### Affected Version
+- All KubeBlocks versions with PostgreSQL clusters
+
+### Solution
+Use passwords that do not contain special characters that may cause parsing issues in PostgreSQL configuration files.
