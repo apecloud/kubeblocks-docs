@@ -13,7 +13,7 @@ import TabItem from '@theme/TabItem';
 
 ## 概述
 
-BackupRepo 是备份数据的存储仓库，支持配置 OSS（阿里云对象存储），S3（亚马逊对象存储），COS（腾讯云对象存储），GCS（谷歌云对象存储），OBS（华为云对象存储），MinIO 等兼容 S3 协议的对象存储作为备份仓库，同时支持 K8s 原生的 PVC 作为备份仓库。
+BackupRepo 是备份数据的存储仓库，支持配置 OSS（阿里云对象存储），S3（亚马逊对象存储），COS（腾讯云对象存储），GCS（谷歌云对象存储），OBS（华为云对象存储），Azure Blob Storage，MinIO 等兼容 S3 协议的对象存储作为备份仓库，同时支持 K8s 原生的 PVC 作为备份仓库。
 
 用户可以创建多个 BackupRepo 以适应不同的场景。例如，根据不同的业务需求，可以把业务 A 的数据存储在 A 仓库，把业务 B 的数据存储在 B 仓库，或者可以按地区配置多个仓库以实现异地容灾。在创建备份时，你需要指定备份仓库。你也可以创建一个默认的备份仓库，如果在创建备份时未指定具体的仓库，KubeBlocks 将使用此默认仓库来存储备份数据。
 
@@ -76,7 +76,7 @@ BackupRepo 是备份数据的存储仓库，支持配置 OSS（阿里云对象�
 
 * 安装 KubeBlocks 时自动配置 BackupRepo；
 * 按需手动配置 BackupRepo。
-  
+
 ### 访问 BackupRepo
 
 备份和恢复任务在运行时，有两种访问远端对象存储的方式：
@@ -85,7 +85,7 @@ BackupRepo 是备份数据的存储仓库，支持配置 OSS（阿里云对象�
 * 通过 CSI Driver 将远端存储映射到本地，工作进程可以像访问本地文件一样访问远端存储。
 
 我们将这两种访问方式分别命名为 “Tool” 和 “Mount” 。用户在创建 BackupRepo 时可以通过 `accessMethod` 字段指定其访问方式，创建之后不能修改。
-  
+
 一般来说，推荐使用 “Tool”，因为相比 “Mount”，它不必安装额外的 CSI Driver，减少了一层依赖。
 
 不过，由于备份和恢复任务需要运行在数据库集群所在的 namespace 下，在 “Tool” 方式下，我们会自动将访问远端存储所需的密钥以 secret 资源的形式同步到这些 namespace 中，以供我们的数据传输工具使用。在多租户隔离的情况下，如果你认为这种同步 secret 的做法会带来安全隐患，可以选择使用 “Mount”。
@@ -118,7 +118,7 @@ BackupRepo 是备份数据的存储仓库，支持配置 OSS（阿里云对象�
 
 :::note
 
-* 在 KubeBlocks v0.8.0 中，`storageProvider` 目前可选 `s3`、`cos`、`gcs-s3comp`、`obs`、`oss`、`minio`、`pvc`、`ftp`、`nfs`。
+* 在 KubeBlocks v0.8.0 中，`storageProvider` 目前可选 `s3`、`cos`、`gcs-s3comp`、`obs`、`oss`、`minio`、`azureblob`、`pvc`、`ftp`、`nfs`。
 * 不同 `storageProvider` 所需的配置信息并不统一，上面展示的 `config` 和 `secrets` 适用于 S3。
 * 执行 `kubectl get storageproviders.dataprotection.kubeblocks.io` 命令可以查看支持的 `storageProvider`。
 
@@ -178,7 +178,7 @@ BackupRepo 是备份数据的存储仓库，支持配置 OSS（阿里云对象�
       --tolerations '[{"key":"taintkey","operator":"Equal","effect":"NoSchedule","value":"true"}]' \
       --tolerations 'daemonset:[{"key":"taintkey","operator":"Equal","effect":"NoSchedule","value":"true"}]'
 
-    # 查看 CSI-S3 状态，确保其状态为 enabled  
+    # 查看 CSI-S3 状态，确保其状态为 enabled
     kbcli addon list csi-s3
     ```
 
@@ -211,7 +211,7 @@ BackupRepo 是备份数据的存储仓库，支持配置 OSS（阿里云对象�
      # --endpoint https://oss-cn-zhangjiakou-internal.aliyuncs.com \ 可以显示指定 oss endpoint
      --access-key-id <ACCESS KEY> \
      --secret-access-key <SECRET KEY> \
-     --access-method Tool \ 
+     --access-method Tool \
      --default
    ```
 
@@ -240,7 +240,7 @@ BackupRepo 是备份数据的存储仓库，支持配置 OSS（阿里云对象�
      --region ap-guangzhou \
      # 腾讯云中存储桶的命名格式为 <BucketName-APPID>，APPID 为腾讯云自动生成
      # 设置 bucket 时先通过腾讯云的控制台创建 bucket，获取存储桶名称
-     --bucket  test-kb-backup \ 
+     --bucket  test-kb-backup \
      --access-key-id <ACCESS KEY> \
      --secret-access-key <SECRET KEY> \
      --access-method Tool \
@@ -292,13 +292,27 @@ BackupRepo 是备份数据的存储仓库，支持配置 OSS（阿里云对象�
    ```
 
    </TabItem>
+
+   <TabItem value="AzureBlob" label="AzureBlob">
+
+   ```bash
+   kbcli backuprepo create my-repo \
+     --provider azureblob \
+     --container test-kb-backup \
+     --azure-account-name <AZURE_STORAGE_ACCOUNT_NAME> \
+     --azure-account-key <AZURE_STORAGE_ACCOUNT_KEY> \
+     --access-method Tool \
+     --default
+   ```
+
+   </TabItem>
    </Tabs>
 
    以上命令创建了一个名为 `my-repo` 的默认备份仓库。
 
    * `my-repo` 为仓库名，可以留空不填，此时 kbcli 会使用形如 `backuprepo-xxxxx` 的随机名字。
    * `--default` 表示该仓库是默认仓库。全局只能有一个默认仓库，如果系统中存在多个默认仓库，KubeBlocks 无法选出应该使用哪个仓库（这个行为跟 K8s 的 default StorageClass 类似），会导致备份失败。使用 kbcli 创建 BackupRepo 能避免出现这种情况，因为 kbcli 在创建时会确保当前没有第二个默认仓库。
-   * `--provider` 参数对应后端存储类型，即 `storageProvider`，可选值为 `s3`、`cos`、`gcs-s3comp`、`obs`、`oss`、`minio`、`ftp`、`nfs`。不同存储所需的命令行参数不同，可以通过 `kbcli backuprepo create --provider STORAGE-PROVIDER-NAME -h` 命令查看参数信息（注意 `--provider` 参数是必需的）。
+   * `--provider` 参数对应后端存储类型，即 `storageProvider`，可选值为 `s3`、`cos`、`gcs-s3comp`、`obs`、`oss`、`minio`、`azureblob`、`ftp`、`nfs`。不同存储所需的命令行参数不同，可以通过 `kbcli backuprepo create --provider STORAGE-PROVIDER-NAME -h` 命令查看参数信息（注意 `--provider` 参数是必需的）。
 
      `kbcli backuprepo create` 命令执行成功后，就会在系统中创建一个类型为 BackupRepo 的 K8s 资源，可以通过修改该资源的 annotation 来调整默认仓库。
 
@@ -547,6 +561,38 @@ BackupRepo 是备份数据的存储仓库，支持配置 OSS（阿里云对象�
           endpoint: <ip:port>
         credential:
           name: minio-credential-for-backuprepo
+          namespace: kb-system
+      EOF
+      ```
+
+      </TabItem>
+
+      <TabItem value="AzureBlob" label="AzureBlob">
+
+      ```bash
+      # 创建密码，用于存储 Azure Blob 连接密钥
+      kubectl create secret generic azureblob-credential-for-backuprepo \
+        -n kb-system \
+        --from-literal=accountName=<AZURE_STORAGE_ACCOUNT_NAME> \
+        --from-literal=accountKey=<AZURE_STORAGE_ACCOUNT_KEY>
+
+      # 创建 BackupRepo 资源
+      kubectl apply -f - <<-'EOF'
+      apiVersion: dataprotection.kubeblocks.io/v1alpha1
+      kind: BackupRepo
+      metadata:
+        name: my-repo
+        annotations:
+          dataprotection.kubeblocks.io/is-default-repo: "true"
+      spec:
+        storageProviderRef: azureblob
+        accessMethod: Tool
+        pvReclaimPolicy: Retain
+        volumeCapacity: 100Gi
+        config:
+          container: test-kb-backup
+        credential:
+          name: azureblob-credential-for-backuprepo
           namespace: kb-system
       EOF
       ```

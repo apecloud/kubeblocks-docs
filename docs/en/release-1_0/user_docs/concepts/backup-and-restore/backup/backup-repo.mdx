@@ -11,7 +11,7 @@ import TabItem from '@theme/TabItem';
 
 # Introduction
 
-BackupRepo is the storage repository for backup data. Currently, KubeBlocks supports configuring various object storage services as backup repositories, including OSS (Alibaba Cloud Object Storage Service), S3 (Amazon Simple Storage Service), COS (Tencent Cloud Object Storage), GCS (Google Cloud Storage), OBS (Huawei Cloud Object Storage), MinIO, and other S3-compatible services.
+BackupRepo is the storage repository for backup data. Currently, KubeBlocks supports configuring various object storage services as backup repositories, including OSS (Alibaba Cloud Object Storage Service), S3 (Amazon Simple Storage Service), COS (Tencent Cloud Object Storage), GCS (Google Cloud Storage), OBS (Huawei Cloud Object Storage), Azure Blob Storage, MinIO, and other S3-compatible services.
 
 You can create multiple BackupRepos to suit different scenarios. For example, based on different businesses, the data of business A is stored in repository A, and the data of business B is stored in repository B. Or you can configure multiple repositories by region to realize geo-disaster recovery. But it is required to specify backup repositories when you create a backup. You can also create a default backup repository and KubeBlocks uses this default repository to store backup data if no specific repository is specified.
 
@@ -322,6 +322,39 @@ If you do not configure the BackupRepo information when installing KubeBlocks, y
 
    </TabItem>
 
+   <TabItem value="AzureBlob" label="AzureBlob">
+
+   ```bash
+   # Create a secret to save the access key for the Azure Blob Storage
+   kubectl create secret generic azureblob-credential-for-backuprepo \
+     -n kb-system \
+     --from-literal=accountName=<AZURE_STORAGE_ACCOUNT_NAME> \
+     --from-literal=accountKey=<AZURE_STORAGE_ACCOUNT_KEY>
+
+   # Create the BackupRepo resource
+   kubectl apply -f - <<-'EOF'
+   apiVersion: dataprotection.kubeblocks.io/v1alpha1
+   kind: BackupRepo
+   metadata:
+     name: my-repo
+     annotations:
+       dataprotection.kubeblocks.io/is-default-repo: "true"
+   spec:
+     storageProviderRef: azureblob
+     accessMethod: Tool
+     pvReclaimPolicy: Retain
+     volumeCapacity: 100Gi
+     config:
+       container: test-kb-backup
+     credential:
+       name: azureblob-credential-for-backuprepo
+       namespace: kb-system
+     pathPrefix: ""
+   EOF
+   ```
+
+   </TabItem>
+
    </Tabs>
 
 3. View the BackupRepo and its status. If the status is `Ready`, the BackupRepo is ready.
@@ -482,13 +515,27 @@ If you do not configure the BackupRepo information when installing KubeBlocks, y
 
    </TabItem>
 
+   <TabItem value="AzureBlob" label="AzureBlob">
+
+   ```bash
+   kbcli backuprepo create my-repo \
+     --provider azureblob \
+     --container test-kb-backup \
+     --azure-account-name <AZURE_STORAGE_ACCOUNT_NAME> \
+     --azure-account-key <AZURE_STORAGE_ACCOUNT_KEY> \
+     --access-method Tool \
+     --default
+   ```
+
+   </TabItem>
+
    </Tabs>
 
    The above command creates a default backup repository `my-repo`.
 
    * `my-repo` is the name of the created backup repository. If you do not specify a name, the system creates a random name, following the format `backuprepo-xxxxx`.
    * `--default` means that this repository is set as the default repository. Note that there can only be one default global repository. If there exist multiple default repositories, KubeBlocks cannot decide which one to use (similar to the default StorageClass of Kubernetes), which further results in backup failure. Using kbcli to create BackupRepo can avoid such problems because kbcli checks whether there is another default repository before creating a new one.
-   * `--provider` specifies the storage type, i.e. `storageProvider`, and is required for creating a BakcupRepo. The available values are `s3`, `cos`, `gcs-s3comp`, `obs`, `oss`, `minio`, `s3-compatible`, `ftp`, and `nfs`. Parameters for different storage providers vary and you can run `kbcli backuprepo create --provider STORAGE-PROVIDER-NAME -h` to view the flags for different storage providers. Please note that `--provider` is mandatory in configuration.
+   * `--provider` specifies the storage type, i.e. `storageProvider`, and is required for creating a BakcupRepo. The available values are `s3`, `cos`, `gcs-s3comp`, `obs`, `oss`, `azureblob`, `minio`, `s3-compatible`, `ftp`, and `nfs`. Parameters for different storage providers vary and you can run `kbcli backuprepo create --provider STORAGE-PROVIDER-NAME -h` to view the flags for different storage providers. Please note that `--provider` is mandatory in configuration.
 
    After `kbcli backuprepo create` is executed successfully, the system creates the K8s resource whose type is `BackupRepo`. You can modify the annotation of this resource to adjust the default repository.
 
@@ -558,7 +605,7 @@ You can specify the BackupRepo information in a YAML configuration file when ins
 
 :::note
 
-* In KubeBlocks, the available `storageProvider` options are `s3`, `cos`, `gcs-s3comp`, `obs`, `oss`, `minio`, `s3-compatible`, `ftp`, and `nfs`.
+* In KubeBlocks, the available `storageProvider` options are `s3`, `cos`, `gcs-s3comp`, `obs`, `oss`, `azureblob`, `minio`, `s3-compatible`, `ftp`, and `nfs`.
 * For different `storageProvider`, the configuration may differ. `config` and `secrets` in the above example are applied to S3.
 * Execute the command `kubectl get storageproviders.dataprotection.kubeblocks.io` to view the supported `storageProvider` options.
 
