@@ -6,6 +6,9 @@ sidebar_position: 4
 sidebar_label: Scheduled Continuous Backup
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 # Setting Up a PostgreSQL Cluster with Scheduled Continuous Backup Enabled in KubeBlocks
 
 This guide demonstrates how to configure a PostgreSQL cluster on KubeBlocks with:
@@ -165,6 +168,10 @@ kubectl get sts -l app.kubernetes.io/instance=pg-cluster,dataprotection.kubebloc
 kubectl get pod -l app.kubernetes.io/instance=pg-cluster,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
 ```
 
+Where labels
+- `app.kubernetes.io/instance=pg-cluster` is used to identify resources by cluster name
+- `dataprotection.kubeblocks.io/backup-type=Continuous` is used to identify backup by type (Continuous/Full)
+
 ## Verifying Backup Configuration
 
 KubeBlocks automatically creates a `BackupSchedule` resource. Inspect the configuration:
@@ -212,7 +219,48 @@ If you want to use any backup methods powered by wal-g, such as wal-g-archive fo
 To configure wal-g, you need to trigger a `config-wal-g` backup ahead of time.
 :::
 
-To configure wal-g, you need to create a `Backup` resource with `config-wal-g` backup method. It is a special backup method that will create a wal-g configuration file for each replica in the cluster.
+### Create a PostgreSQL Cluster
+
+Deploy a 2-node PostgreSQL replication cluster (1 primary, 1 secondary)
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: pg-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: postgresql
+  topology: replication
+  componentSpecs:
+    - name: postgresql
+      serviceVersion: 16.4.0
+      labels:
+        apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
+      disableExporter: true
+      replicas: 2
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+### Config wal-g using `config-wal-g` backup method
+
+To configure wal-g, you need to create a `Backup` resource with `config-wal-g` backup method.
+It is a special backup method that will create a wal-g configuration file for each replica in the cluster.
 
 ```yaml
 apiVersion: dataprotection.kubeblocks.io/v1alpha1
@@ -226,9 +274,36 @@ spec:
   deletionPolicy: Delete
 ```
 
-If you forget to configure wal-g ahead, you will see that Backups are `Failed` with the following error on backup pods:
+If you forget to configure wal-g, you will see that Backups are `Failed` with the following error on backup pods:
 ```bash
 fatal: unable to switch to directory: /home/postgres/pgdata/wal-g/env: file does not exist
+```
+
+### Schedule Backups
+
+Patch an existing cluster to enable scheduled continuous backup:
+
+```bash
+kubectl patch cluster pg-cluster -n demo --type='merge' -p='
+{
+  "spec": {
+    "backup": {
+      "retentionPeriod": "7d", # retention period
+      "method": "wal-g", # full backup method
+      "enabled": true, # enable full backup
+      "cronExpression": "0 18 * * *", # full backup schedule
+      "continuousMethod": "wal-g-archive", # continuous backup method
+      "pitrEnabled": true, # enable continous method or not. Full backup is required for PITR, so you need to enable full backup first.
+      "repoName": "s3-repo" # specify backuprepo, if not specified, the BackupRepo annotated as `default` will be used.
+    }
+  }
+}'
+```
+
+
+After the cluster is patched, you will see immediate a continuous backup, of method `wal-g-archive', is running.
+```bash
+kubectl get backup -l app.kubernetes.io/instance=pg-cluster,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
 ```
 
 ## Summary
