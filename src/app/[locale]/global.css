@@ -43,6 +43,9 @@ code {
 
 @media screen and (min-width: 980px) {
   .markdown-body.with-sidebar > *:not(.sticky-outer-wrapper) {
+    margin-right: 300px;
+  }
+  .markdown-body.with-sidebar > img {
     padding-right: 300px;
   }
   .markdown-body.with-sidebar .toc {
