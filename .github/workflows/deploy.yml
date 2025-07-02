@@ -1,0 +1,46 @@
+name: Deploy KubeBlocks Docs
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+env:
+  DEPLOY_NAME: "kubeblocks-docs"
+  AWS_REGION: "ap-northeast-1"
+  AWS_CLUSTER: "kubechat"
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/setup-kubectl@v3
+        with:
+          version: "v1.32.2"
+
+      - uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      - uses: aws-actions/configure-aws-credentials@v4.1.0
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: "${{ env.AWS_REGION }}"
+
+      - name: update kubeconfig
+        run: |
+          aws eks update-kubeconfig --name ${{ env.AWS_CLUSTER }} --region ${{ env.AWS_REGION }}
+
+      - name: deploy kubeblocks-docs
+        run: |
+          DEPLOY_NAME="${{ env.DEPLOY_NAME }}"
+          pods_list=$(kubectl get pods -n ${DEPLOY_NAME} -l app.kubernetes.io/instance=${DEPLOY_NAME} --no-headers | awk '{print $1}')
+          if [[ -n "$pods_list" ]]; then
+              for pod_name in $(echo "$pods_list"); do
+                  echo "pod name: $pod_name"
+                  kubectl delete pod -n ${DEPLOY_NAME} ${pod_name} --force
+                  sleep 10
+              done
+          fi
