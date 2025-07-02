@@ -1,0 +1,120 @@
+---
+slug: run-databases-on-k8s-insight-from-chinese-internet-giants
+title: Running Databases on Kubernetes - Insights from Leading Chinese Internet Companies
+description: This blog explores why leading Chinese internet companies are increasingly adopting the practice of running databases on Kubernetes.
+date: 2025-07-02
+authors:
+  name: Wei Cao
+  url: https://github.com/weicao
+  image_url: https://avatars.githubusercontent.com/u/1135270?v=4
+tags: [K8s, databases, operator, Internet, Alibaba, ByteDance, Kuaishou, JD, Meituan]
+image: /img/blogs/thumbnails/blog-run-databases-on-k8s-insight.png
+---
+
+
+# Running Databases on Kubernetes: Insights from Leading Chinese Internet Companies
+
+![Databases on K8s](/img/blogs/run-databases-on-k8s-insight-database_on_k8s_illustration.png)
+
+## Introduction
+
+The rapid evolution of cloud computing and cloud-native technologies has driven enterprises worldwide to migrate their core business systems to containerized platforms. Kubernetes (K8s) has emerged as the de facto standard for container orchestration, gaining widespread adoption across industries. Notably, leading Chinese internet giants including Alibaba, ByteDance, Kuaishou, JD.com, and Meituan have been pioneering the practice of running stateful applications like databases on K8s, building sophisticated Database-as-a-Service (DBaaS) platforms on top of it. This trend not only demonstrates the maturation of K8s technology but also reflects these companies' strategic approach to technology selection and architectural evolution. This article examines the practical implementations of database workloads on K8s by leading Chinese internet companies, analyzing the technical and business drivers, challenges encountered, and emerging trends in this space.
+
+## The Strategic Choice: Self-Built Data Centers vs. Public Cloud
+
+![Self-Built IDC vs Public Cloud](/img/blogs/run-databases-on-k8s-insight-idc_vs_public_cloud.png)
+
+Leading Chinese internet companies have accumulated massive user bases and business scales from their inception, with data volumes and concurrent access patterns far exceeding typical enterprises. In their infrastructure decisions, these companies often favor self-built data centers over complete reliance on public cloud services, driven by several strategic considerations:
+
+1. **Total Cost of Ownership (TCO) Optimization:** For hyperscale internet companies with massive server and bandwidth requirements, self-built data centers often provide better long-term economics compared to public cloud services. While public clouds offer pay-as-you-go flexibility, at scale, the cumulative costs can become prohibitive. Self-built infrastructure allows for economies of scale through bulk procurement and optimized operations.
+
+2. **Performance Engineering and Hardware Customization:** Mission-critical workloads demand extreme performance characteristics—from handling instantaneous traffic spikes during shopping festivals to real-time content delivery for video platforms. Self-built data centers enable deep hardware customization and network architecture optimization tailored to specific workload requirements. While public clouds offer diverse instance types, they provide limited flexibility in underlying hardware specifications and network topology design.
+
+3. **Data Sovereignty and Regulatory Compliance:** With increasingly stringent data protection regulations, these companies maintain strict internal controls over data storage, processing, and transmission. Self-built data centers provide enhanced physical security controls and data sovereignty, facilitating compliance with regulatory requirements while minimizing data breach risks.
+
+4. **Technical Innovation and Competitive Differentiation:** These companies possess substantial R&D capabilities and seek complete control over their infrastructure stack to enable deep optimization, rapid troubleshooting, and technical innovation. Self-built data centers provide the foundation for developing proprietary technologies—custom scheduling systems, storage solutions, and network components—creating unique technical moats and competitive advantages.
+
+5. **Vendor Independence and Architectural Flexibility:** While public clouds offer convenience, they also introduce vendor lock-in risks. Leading internet companies typically avoid binding their entire technology stack to a single cloud provider, maintaining architectural flexibility through self-built infrastructure and multi-cloud strategies to reduce vendor dependencies.
+
+This self-built infrastructure strategy creates a compelling use case for Kubernetes. K8s enables these companies to build efficient, elastic, and automated cloud-native platforms on top of their physical infrastructure, maximizing the benefits of self-built data centers while gaining the operational advantages of containerization and cloud-native technologies. Running databases on K8s represents a natural evolution of this strategic approach.
+
+## Enterprise Case Studies: Database Workloads on Kubernetes
+
+The implementation of database workloads on Kubernetes by leading Chinese internet companies provides valuable insights into cloud-native transformation strategies, operational patterns, and the practical challenges of running stateful applications at scale.
+
+### Alibaba: Pioneer in Deep Integration of Cloud-Native Databases with K8s
+
+Alibaba, as a global leader in e-commerce and cloud computing, has been at the forefront of investment and practice in K8s and cloud-native database fields. As early as 2016, Alibaba began exploring database containerization and implemented hybrid cloud architecture, successfully supporting massive database loads during "Double 11" promotions. Alibaba Cloud's Container Service for Kubernetes (ACK) deeply integrates virtualization, storage, networking, and security capabilities, providing high-performance, scalable full lifecycle management capabilities for enterprise-grade database containerization applications. More importantly, AlibabaCloud's cloud-native database PolarDB has deeply embraced the K8s ecosystem, providing automated deployment and management capabilities based on K8s Operators. PolarDB, deployed on Kubernetes in the public cloud, achieves rapid elastic scaling under its compute-storage separation architecture. These practices enable Alibaba to build highly automated DBaaS services on the K8s platform, significantly improving database operational efficiency and resource utilization.
+
+### ByteDance: Self-Developed Database veDB and Ultra-Large-Scale Cluster Management Based on K8s
+
+ByteDance, as a globally renowned internet technology company, has unique technical characteristics in its practice of running databases on K8s. Since 2016, ByteDance has massively embraced the Kubernetes technology stack, fully transitioning the underlying orchestration and scheduling system of its private cloud platform to K8s. In the database field, ByteDance's breakthrough practice is embodied in its self-developed veDB database being completely deployed based on Kubernetes, focusing on OLTP (Online Transaction Processing) scenarios. Unlike traditional databases using physical machine or virtual machine deployment methods, veDB adopted a cloud-native architecture from its initial design, achieving compute-storage separation through K8s container orchestration capabilities, enabling database instances to elastically scale according to business loads. To support metadata storage requirements for stateful applications like databases in ultra-large-scale K8s clusters, ByteDance self-developed and open-sourced KubeBrain, a high-performance K8s metadata storage system based on distributed KV storage engines, capable of supporting clusters with over 20,000 nodes, effectively solving etcd performance bottleneck issues in ultra-large-scale scenarios. Additionally, ByteDance runs the compute layer of its data warehouse ByteHouse on K8s, achieving compute-storage separation and performance optimization through containerization, further validating the feasibility of K8s in supporting large-scale database workloads.
+
+### Kuaishou: Large-Scale Redis Containerization Migration and KubeBlocks Practice
+
+Kuaishou, as a leading enterprise in the short video and live streaming field, has important reference value in its practice of migrating large-scale Redis services from bare metal to K8s. Kuaishou adopted the classic Redis master-slave architecture, containing three core components: Server, Sentinel, and Proxy, implementing containerized deployment of Redis clusters through K8s StatefulSet controllers. During the migration process, Kuaishou faced technical challenges including multi-shard and multi-instance relationship mapping, data management during lifecycle changes, and dynamic topology relationship maintenance among multiple instances within single shards. To solve these problems, Kuaishou adopted a layered architecture design, using StatefulSet to manage multiple instances under each shard, and building hierarchical workloads on this foundation to achieve unified management of multiple shards in the entire Redis Server cluster. Kuaishou's practical data shows that performance overhead from Redis containerization is within acceptable ranges (no more than 10%), while resource utilization improvements and operational efficiency enhancements from cloud-native adoption bring significant benefits. It's worth noting that Kuaishou is also an important user and contributor of KubeBlocks. Through KubeBlocks' InstanceSet workloads and abstract concepts like Component, Shard, and Cluster, Kuaishou can better build and manage its DBaaS platform on K8s, achieving standardized deployment, elastic scaling, and automated operations for database services.
+
+### JD.com: MySQL Containerization and Elastic Scheduling in E-commerce Scenarios
+
+JD.com, as an e-commerce giant, has extremely high requirements for database availability and elastic scaling capabilities, especially facing traffic peak challenges during e-commerce promotions like "618" and "Double 11". JD.com actively runs MySQL databases in K8s container environments, combined with Vitess, an open-source database sharding middleware, achieving efficient management and online scaling of large-scale database services. Through K8s HorizontalPodAutoscaler (HPA) and VerticalPodAutoscaler (VPA) mechanisms, JD.com can automatically perform horizontal and vertical scaling of database instances according to business traffic tidal changes, ensuring stable support for hundreds of millions or even trillions of transactions during peak periods. Additionally, JD Logistics also utilizes Kubernetes to build hybrid cloud platforms, solving unified management and scheduling challenges for thousands of database instances across physical machines nationwide through the "Archimedes" scheduling system. JD.com has built ecosystems suitable for database containerization on K8s, including DNS service discovery, load balancing, and storage management, ensuring database data persistence and high availability, providing stable and reliable database service support for its massive e-commerce business.
+
+### Meituan: Database Performance Optimization Practices in Large-Scale K8s Clusters
+
+Meituan, as a giant in the life services field, has complex and diverse business scenarios with extremely high requirements for backend database service stability and performance. During Meituan's comprehensive migration of cloud infrastructure from OpenStack to Kubernetes, it deeply explored database containerization performance optimization practices. For resource allocation and performance optimization of databases in K8s environments, Meituan adopted Exclusive CPU Sets, allocating dedicated CPU cores to database containers through cpuset mechanisms, avoiding performance jitter caused by resource contention between different Pods, ensuring database service stability and high performance. Meituan's K8s cluster scale has reached 100,000+ node levels. Through continuous optimization and transformation of Kubernetes schedulers, Kubelet, and resource management, Meituan successfully incorporated stateful applications like databases into K8s management scope. In storage aspects, Meituan optimized local storage and network storage usage strategies, providing high IOPS and low latency storage performance guarantees for database containers. Meanwhile, Meituan developed specialized database monitoring and alerting systems, deeply integrated with K8s native monitoring systems, achieving comprehensive performance monitoring and fault early warning for containerized databases, providing solid technical foundation for rapid business development.
+
+## Technical Drivers for Database Containerization
+
+![Technical Driving Factors](/img/blogs/run-databases-on-k8s-insight-technical_drivers_illustration.png)
+
+The decision to run databases on Kubernetes is driven by several compelling technical factors that address fundamental infrastructure challenges at scale:
+
+1. **Rapid Business Development and Innovation:** Internet companies have fast business iteration speeds with new businesses and features emerging continuously. K8s can provide rapid application deployment and iteration capabilities, enabling DBaaS platforms to better support rapid business development and innovation needs, shortening time-to-market.
+
+2. **Resource Efficiency and Cost Optimization:** Traditional database deployments on virtual machines or bare metal often result in resource fragmentation and suboptimal utilization due to static resource allocation. Kubernetes enables fine-grained resource scheduling and management through containerization, significantly improving server resource utilization. For hyperscale internet companies managing vast server fleets, even marginal improvements in resource efficiency translate to substantial cost savings.
+
+3. **Operational Automation and Efficiency:** Kubernetes provides comprehensive automation capabilities including declarative deployments, horizontal pod autoscaling, self-healing mechanisms, and rolling updates. These capabilities enable the construction of highly automated DBaaS platforms with automated database provisioning, elastic scaling, fault recovery, and zero-downtime upgrades. For instance, when database instances fail, Kubernetes automatically reschedules them to healthy nodes, ensuring service continuity without manual intervention.
+
+4. **Standardization and Operational Consistency:** Kubernetes offers a standardized API surface and operational model for application deployment and lifecycle management. Containerizing databases on K8s enables standardized deployment patterns and operational procedures across different database types and versions, reducing operational complexity. This standardization is particularly valuable for organizations managing diverse database technology stacks.
+
+5. **Dynamic Scaling and Traffic Management:** Internet workloads are characterized by significant traffic variability, especially during peak events like shopping festivals or viral content distribution. Kubernetes' elastic scaling capabilities enable database instances to automatically scale based on workload demands, effectively handling traffic spikes while maintaining service stability and performance characteristics.
+
+6. **Cloud-Native Ecosystem Integration:** Kubernetes serves as the foundation of the cloud-native ecosystem. Running databases on K8s enables seamless integration with cloud-native toolchains including Prometheus for monitoring, Grafana for observability, Fluentd for log aggregation, and service mesh technologies for advanced networking. This integration provides unified monitoring, logging, and alerting capabilities, enhancing overall system observability and operational efficiency.
+
+7. **Multi-Cloud and Hybrid Deployment Flexibility:** Leading internet companies often require multi-cloud or hybrid cloud deployment strategies. Kubernetes, as the de facto cross-platform standard, enables seamless migration and deployment of DBaaS services across different cloud environments and on-premises data centers, avoiding vendor lock-in while maintaining architectural flexibility and workload portability.
+
+## Challenges Faced
+
+Despite the many advantages of running databases on K8s, there are also some challenges:
+
+1. **Stateful Application Management Complexity:** Databases, as stateful applications, face unique challenges on Kubernetes due to the limitations of StatefulSet. It lacks awareness of database roles (e.g., primary, secondary), cannot optimize operations like upgrades based on these roles, enforces strict sequential Pod updates, and does not support heterogeneous configurations within a single StatefulSet. These shortcomings require custom solutions to effectively manage storage, networking, and scheduling for databases in K8s-based DBaaS platforms.
+
+2. **Performance Overhead:** Containerization and virtualization can introduce performance overhead, particularly for DBaaS services with high I/O demands. Optimizing storage and network performance is critical. Solutions include leveraging high-performance CNIs like Cilium and using local PVs with NVMe storage in cloud or IDC environments to ensure low latency and high throughput.
+
+3. **Data Reliability and High Availability**: Ensuring data reliability and high availability on Kubernetes is a significant challenge for stateful applications like databases. Kubernetes lacks native support for advanced database-specific failover mechanisms, consistency guarantees, and synchronous replication. Custom tooling or operators are often required to handle scenarios like automatic failover, data replication, and disaster recovery to meet enterprise-grade SLAs. Additionally, chaos testing tools are essential to validate these mechanisms under failure scenarios, ensuring the system can handle disruptions and maintain reliability.
+
+4. **Security and Isolation**: Running databases on shared Kubernetes clusters requires robust security and isolation mechanisms. Protecting sensitive data, ensuring multi-tenancy isolation, and managing access controls at both the Kubernetes and database levels add layers of complexity. Additionally, monitoring for image vulnerabilities and ensuring timely updates are crucial to prevent potential exploits. Solutions like network policies, encryption, Role-Based Access Control (RBAC), and automated vulnerability scanning for container images must be carefully implemented and continuously maintained.
+
+
+## KubeBlocks: A Powerful Tool for DBaaS on K8s
+
+As the trend of deploying databases on K8s becomes increasingly apparent, the demand for database automation operations tools is becoming more urgent. KubeBlocks, as an open-source K8s Operator dedicated to running and managing stateful applications like databases and message queues on K8s, is gaining favor from more and more internet companies. It aims to help developers, SREs, and platform engineers deploy and maintain dedicated DBaaS platforms in enterprises, supporting deployment in various public and private cloud environments.
+
+The emergence of KubeBlocks greatly simplifies complex operations such as deployment, management, scaling, and backup of DBaaS services, minimizing database operations difficulty. Through a unified control plane, it achieves support for multiple database types, enabling enterprises to manage different types of database instances in a consistent manner.
+
+Currently, many internet companies including Kuaishou, Vipshop, 360, Tencent, Xiaomi, and Momenta are actively exploring and using KubeBlocks as an important tool for building and operating DBaaS platforms on K8s. This indicates that KubeBlocks has gained widespread industry recognition in solving stateful application management complexity on K8s and improving operational efficiency.
+
+## Future Trends
+
+As the K8s ecosystem continues to improve and technology evolves, the trend of running databases on K8s will become more apparent:
+
+1. **Popularization of Operator Patterns:** Database Operators can automate complex operations such as deployment, management, scaling, and backup of DBaaS services, greatly reducing operational difficulty for DBaaS platforms on K8s. More mature database Operators will emerge in the future, promoting the popularization of DBaaS platforms on K8s.
+
+2. **Rise of Cloud-Native Databases:** More and more databases are beginning to natively support K8s or are designed with cloud-native architectures, better utilizing K8s characteristics to provide superior performance and more convenient DBaaS operational experiences.
+
+3. **Serverless Databases:** Combined with Serverless technology, DBaaS services will further achieve pay-as-you-go and elastic scaling, reducing user barriers and costs.
+
+4. **Intelligent Operations:** Combined with AI and machine learning technologies, intelligent operations for DBaaS services will be achieved, including fault prediction, performance optimization, and resource scheduling, further improving DBaaS service availability and efficiency.
+
+## Conclusion
+
+Leading Chinese internet companies running databases on K8s is an inevitable result of technological development and business requirements. K8s brings higher resource utilization, automated operations capabilities, elastic scaling, and cloud-native integration advantages for building DBaaS platforms, thereby reducing operational costs and improving business innovation capabilities and market competitiveness. Although facing challenges such as stateful application management complexity and performance overhead, these challenges will gradually be resolved as the K8s ecosystem matures and cloud-native databases emerge. In the future, K8s will become an important cornerstone for more and more enterprises to build and operate DBaaS platforms, driving database technology into a new cloud-native era.
