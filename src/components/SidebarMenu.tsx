@@ -25,7 +25,7 @@ type SidebatMenuItemProps = {
 };
 
 const isActive = (pathname: string, href?: string) => {
-  return href && href === pathname.replace(/^\/(en|zh)/, "");
+  return href && href === pathname.replace(/^\/(en)/, "");
 };
 
 const checkOpen = (pathname: string, item: SidebarMenuItem): boolean => {

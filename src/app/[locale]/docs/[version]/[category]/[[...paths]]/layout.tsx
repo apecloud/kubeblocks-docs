@@ -5,7 +5,7 @@ export default async function DocsDetail({
   params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ locale: "zh" | "en" }>;
+  params: Promise<{ locale:  "en" }>;
 }) {
   const { locale } = await params;
   setStaticParamsLocale(locale);

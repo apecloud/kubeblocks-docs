@@ -28,9 +28,7 @@ kubeblocks-docs
 │  └─en
 │  │  │ blog_1.mdx
 │  │  │ blog_2.mdx
-│  └─zh
-│     │ blog_1.mdx
-│     │ ...
+│  │  │ ...
 │
 └─docs
 │  └─ en
@@ -42,15 +40,10 @@ kubeblocks-docs
 │  │  │        └─<sidebar_menu_2>
 │  │  │             │ doc_1.mdx
 │  │  │             │ doc_2.mdx
-│  │  │   
+│  │  │
 │  │  └─ release-0.9
-|  |
-│  └── zh
-│      └─ preview
-│      └─ release-0.9
-│ 
 └─reports                         # kubeblocks reports
-│ 
+│
 └─publics
 │   └──img                        # markdown assets
 │

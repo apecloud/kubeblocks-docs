@@ -9,7 +9,7 @@ export default async function BlogsDetail({
   params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ locale: "zh" | "en" }>;
+  params: Promise<{ locale:  "en" }>;
 }) {
   const { locale } = await params;
   setStaticParamsLocale(locale);

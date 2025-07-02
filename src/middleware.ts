@@ -4,7 +4,7 @@ import { createI18nMiddleware } from "next-international/middleware";
 import { NextRequest } from "next/server";
 
 const I18nMiddleware = createI18nMiddleware({
-  locales: ["en"], // ["en", "zh"],
+  locales: ["en"],
   defaultLocale: "en",
   urlMappingStrategy: "rewriteDefault", // redirect | rewrite | rewriteDefault
 });
