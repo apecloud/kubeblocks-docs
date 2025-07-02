@@ -51,7 +51,7 @@ export const getMarkDownSideBar = async (
           Object.assign(item, {
             position: metadata.sidebar_position || metadata.position || 0,
             label: metadata.sidebar_label || metadata.title,
-            href: urlPath.replace(/^\/(en|zh)/, "/docs"),
+            href: urlPath.replace(/^\/(en)/, "/docs"),
             description: metadata.description,
             hidden: Boolean(metadata.hidden),
           });
