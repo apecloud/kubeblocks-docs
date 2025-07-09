@@ -43,3 +43,5 @@ next-env.d.ts
 
 # pdf
 pdf
+
+public/docs-index.json

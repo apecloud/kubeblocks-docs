@@ -9,7 +9,7 @@ sidebar_label: Redis Sharding Cluster
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# Deploying a Redis Sharding Cluste (Cluster Mode) with KubeBlocks
+# Deploying a Redis Sharding Cluster (Cluster Mode) with KubeBlocks
 
 Redis Cluster distributes data across multiple nodes (shards) using hash-based partitioning, allowing horizontal scaling for both reads and writes.
 
@@ -37,12 +37,11 @@ metadata:
 spec:
   terminationPolicy: Delete
   shardings:
-  - name: shard  # shard is the name of the component
-    shards: 3  # shards is the number of shards to create for the cluster
+  - name: shard  # the name of the shard
+    shards: 3  # the number of shards to create for the cluster
     template:
       name: redis
-      componentDef: redis-cluster-7 # redis-cluster-7 is the name of the component definition for each shard
-      disableExporter: true
+      componentDef: redis-cluster-7 # the name of the component definition for each shard
       replicas: 2 # replicas is the number of replicas to create for each shard
       resources:
         limits:
@@ -55,7 +54,6 @@ spec:
       volumeClaimTemplates:
       - name: data
         spec:
-          storageClassName: <STORAGE_CLASS> # STORAGE_CLASS is the name of the storage class to use for the cluster
           accessModes:
           - ReadWriteOnce
           resources:
@@ -77,11 +75,13 @@ spec:
 - `serviceType`: Specifies the service type of `redis-advertised` service, which is used to parse the advertised endpoints of the Redis pods.
    By default, the service type is `NodePort`. If you want to expose the service to the outside of the cluster, you can override the service type to `NodePort` or `LoadBalancer` depending on your need.
 
-:::info
+:::tip
 
-A Redis cluster needs a minimum of three master nodes to ensure high availability and prevent data inconsistency.  A production-ready Redis Cluster is typically recommended to have at least six nodes: three masters for sharding and failover consensus, and three replicas to act as backups for each master.
+A Redis cluster needs a minimum of **three** master nodes to ensure high availability and prevent data inconsistency.
 
-When creating or scaling-in redis clusters, make sure the `shards` is greater than or equal to 3.
+A production-ready Redis Cluster is typically recommended to have at least six nodes: three masters for sharding and failover consensus, and three replicas to act as backups for each master.
+
+When creating or scaling-in redis clusters, make sure the `shards` is greater than or equal to **3**.
 :::
 
 ## Verifying the Deployment
@@ -99,7 +99,7 @@ redis-sharding                        Delete               Running   103s
 
 ### Verify Component and Pod Status
 
-Get all componets working for this cluster:
+Get all components working for this cluster:
 ```bash
 kubectl get cmp -l app.kubernetes.io/instance=redis-sharding -n demo
 ```
@@ -145,7 +145,7 @@ There are in-total six replicas in the cluster, two (one primarily and one secon
 
   Option 1: Using Horizontal Scaling OpsRequest
 
-  To increase the number of shards to `4`, you can use the following opsrequest:
+  To increase the number of shards to `4`, you can use the following OpsRequest:
 
   ```yaml
   apiVersion: operations.kubeblocks.io/v1alpha1
@@ -202,6 +202,30 @@ There are in-total six replicas in the cluster, two (one primarily and one secon
 </Tabs>
 
 Similar to scaling-out, you can also scale-in the cluster by decreasing the `shards` field in the Cluster resource. But make sure the `shards` is greater than or equal to 3.
+
+## Switchover
+
+To switchover a shard, named `redis-sharding-shard-5cd` for example, you can use the following OpsRequest:
+
+```yaml
+kind: OpsRequest
+metadata:
+  name: redis-sharding-switchover-ops
+  namespace: demo
+spec:
+  clusterName: redis-sharding  # redis-sharding is the name of the cluster
+  switchover:
+  - componentObjectName: redis-sharding-shard-5cd  # componentObjectName is the name of one of the shards
+    candidateName: redis-sharding-shard-5cd-0  # candidateName is the name of the candidate instance
+    instanceName: redis-sharding-shard-5cd-1  # instanceName is the name of the primary instance
+  type: Switchover
+```
+
+:::note
+
+`componentObjectName` is the name of one of the shards, which is the full name of the component object.
+
+:::
 
 ## Cleanup
 To remove all resources created during this tutorial:
