@@ -31,7 +31,12 @@ With object storage services prepared, it's time to configure BackupRepo. KubeBl
 * Automatic BackupRepo configuration during KubeBlocks installation;
 * Manual BackupRepo configuration for on-demand scenarios.
 
-If you don't have any object storage at hand, please refer to [Install MinIO](#install-minio)
+:::tip
+
+If you don't have an object storage service from a cloud provider, you can deploy the open-source service MinIO in Kubernetes following the [Install MinIO](../../../references/install-minio) guide.
+
+:::
+
 
 ### Access BackupRepo
 
@@ -641,47 +646,3 @@ You can specify the BackupRepo information in a YAML configuration file when ins
    </TabItem>
 
    </Tabs>
-
-
-## Install MinIO
-
-If you don't have an object storage service from a cloud provider, you can deploy the open-source service MinIO in Kubernetes and use it to configure BackupRepo.
-
-***Steps***
-
-1. Install MinIO in the `kb-system` namespace.
-
-   ```bash
-   helm install minio oci://registry-1.docker.io/bitnamicharts/minio --namespace kb-system --create-namespace --set "extraEnvVars[0].name=MINIO_BROWSER_LOGIN_ANIMATION" --set "extraEnvVars[0].value=off"
-   ```
-
-   Get the initial username and password:
-
-   ```bash
-   # Initial username
-   echo $(kubectl get secret --namespace kb-system minio -o jsonpath="{.data.root-user}" | base64 -d)
-
-   # Initial password
-   echo $(kubectl get secret --namespace kb-system minio -o jsonpath="{.data.root-password}" | base64 -d)
-   ```
-
-2. Generate credentials.
-
-   Access the login page by running `kubectl port-forward --namespace kb-system svc/minio 9001:9001` and then accessing `127.0.0.1:9001`.
-
-   Once you are logged in to the dashboard, you can generate an `access key` and `secret key`.
-
-   ![backup-and-restore-backup-repo-1](/img/docs/en/backup-and-restore-backup-repo-1.png)
-
-3. Create a bucket.
-
-   Create a bucket named `test-minio` for the test.
-
-   ![backup-and-restore-backup-repo-2](/img/docs/en/backup-and-restore-backup-repo-2.png)
-   ![backup-and-restore-backup-repo-3](/img/docs/en/backup-and-restore-backup-repo-3.png)
-
-  :::note
-
-  The access address (endpoint) for the installed MinIO is `http://minio.kb-system.svc.cluster.local:9000`, which will be used to configure BackupRepo. In this case, `kb-system` is the name of the namespace where MinIO is installed.
-
-  :::

@@ -33,7 +33,7 @@ If you don't have an object storage service from a cloud provider, you can deplo
 1. Install MinIO in the `kb-system` namespace.
 
    ```bash
-   helm install minio oci://registry-1.docker.io/bitnamicharts/minio --namespace kb-system --create-namespace --set "extraEnvVars[0].name=MINIO_BROWSER_LOGIN_ANIMATION" --set "extraEnvVars[0].value=off"
+   helm install minio oci://registry-1.docker.io/bitnamicharts/minio --namespace kb-system --create-namespace --set "extraEnvVars[0].name=MINIO_BROWSER_LOGIN_ANIMATION" --set "extraEnvVars[0].value=off"  --version 14.10.5
    ```
 
    Get the initial username and password:
