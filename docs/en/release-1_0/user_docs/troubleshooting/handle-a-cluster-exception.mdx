@@ -56,7 +56,7 @@ ActionSet defined:
 - both backup and restore procedures
 - environment variables used in procedures
 
-And you may check details of each ActionsSet to find out how backup and restore will be performed.
+And you may check details of each ActionSet to find out how backup and restore will be performed.
 
 
 ### How to Check Compatible versions
@@ -108,7 +108,7 @@ But cannot upgrade from `12.14.0` to `14.8.0`.
 If you made some changes to the ComponentDefinition, the status of ComponentDefinition may turn to `Unavailable`.
 KubeBlocks sets the ComponentDefinition as `Unavailable` to prevent the changes from affecting existing clusters.
 
-By describing the ComponentDefinition, you can see following messsage:
+By describing the ComponentDefinition, you can see following message:
 
 ```text
 Status:
@@ -153,7 +153,7 @@ To cancel a running OpsRequest, you can run the following command:
 kubectl patch opsrequest <OPSREQUEST_NAME> -p '{"spec":{"cancel":true}}' --type=merge
 ```
 
-### Cluster/Component stucks in `Updating` status
+### Cluster/Component stuck in `Updating` status
 
 If you find that a cluster/component is stuck in `Updating` status:
 
@@ -181,6 +181,30 @@ status:
     imageID: repo/image:tag@sha256:123456
     name: c1
 ```
-If the two fileds are not match, please check if there are two or more iamges share the same `IMAGG ID` but of different `IMAGE` tags.
+If the two fields are not match, please check if there are two or more images share the same `IMAGG ID` but of different `IMAGE` tags.
 
 If so, please remove those images on your node and create a new Cluster.
+
+
+### Cluster stuck in `Deleting` status, and KubeBlocks logs: `has no pods to running the pre-terminate action`
+
+When deleting a cluster, one may find the cluster stuck in `Deleting` status, and the following error in KubeBlocks logs:
+
+```bash
+kubectl -n kb-system logs deployments/kubeblocks -f
+```
+And you may see the following error in KubeBlocks logs:
+
+```bash
+> INFO	build error: has no pods to running the pre-terminate action
+```
+
+This is because KubeBlocks will run the `pre-terminate` lifecycle action if defined in corresponding `ComponentDefinition`.
+If there are no pods to run the pre-terminate action, the cluster will stuck in `Deleting` status until the pre-terminate action is completed.
+To skip the pre-terminate action, you can annotate the Component by running the following command:
+
+```bash
+kubectl annotate component <COMPONENT_NAME> apps.kubeblocks.io/skip-pre-terminate-action=true
+```
+
+This case happens when you create a cluster but for some reason, it failed to create any pod (e.g. failed to pull the image or network issue or not enough resources).

@@ -21,8 +21,7 @@ INFO reconcile object *v1.ServiceAccount with action UPDATE OK
 ```
 
 ### Affected Version
-- KubeBlocks v1.0.0
-- Kubernetes versions \≤ 1.24
+- KubeBlocks v1.0.0 with Kubernetes versions ≤ 1.24
 
 ### Root Cause
 Before Kubernetes version 1.24, Kubernetes automatically generated Secret-based tokens for ServiceAccounts, as documented in [Kubernetes Service Account Tokens](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/).
@@ -52,10 +51,32 @@ yaml.scanner.ScannerError: while scanning an anchor
 ```
 
 ### Affected Version
-- All KubeBlocks versions with PostgreSQL clusters
+- KubeBlocks v0.9.4 and before
+- KubeBlocks v1.0.0
 
 ### Solution
-Use passwords that do not contain special characters that may cause parsing issues in PostgreSQL configuration files.
+
+Upgrade KubeBlocks to `v1.0.1-beta.6` or `v0.9.5-beta.4` or later.
+
+To fix this, you can explicitly set the list of symbols allowed in password generation policy.
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+spec:
+  componentSpecs:
+    - name: postgresql
+      systemAccounts:
+        - name: postgres
+          passwordConfig:
+            length: 20           # Password length: 20 characters
+            numDigits: 4         # At least 4 digits
+            numSymbols: 2        # At least 2 symbols
+            letterCase: MixedCases # Uppercase and lowercase letters
+            symbolCharacters: '&!' # set the allowed symbols when generating password
+# other fields in the Cluster manifest are omitted for brevity
+```
 
 ## How to report a bug
 
@@ -67,4 +88,4 @@ To report a bug, you may
 kbcli report cluster <clusterName>  --with-logs --mask # pack cluster manifest, version, and logs
 kbcli report kubeblocks --with-logs --mask # pack kubeblocks logs
 ```
-where `clusterName` is the name of the cluster you are reporting the bug for, and `--mask` will mask sensitive info for secrets and configmap.
+where `clusterName` is the name of the cluster you are reporting the bug for, and `--mask` will mask sensitive info for secrets and ConfigMap.
