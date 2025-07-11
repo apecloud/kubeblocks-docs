@@ -45,7 +45,9 @@ export default async function HomePage({
         <Banner />
         <Divider />
         <Customers />
+        <Divider />
         <Evaluate playerUrl={playerUrl} />
+        <Divider />
         <WhyNeedKubeBlocks />
         <Divider />
         <Features />
