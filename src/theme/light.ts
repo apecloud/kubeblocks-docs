@@ -6,6 +6,15 @@ export default createTheme({
   cssVariables: {
     cssVarPrefix: "css",
   },
+  // breakpoints: {
+  //   values: {
+  //     xs: 0,
+  //     sm: 860,
+  //     md: 1024,
+  //     lg: 1328,
+  //     xl: 1536,
+  //   },
+  // },
   palette: {
     mode: "light",
     primary: {
@@ -62,9 +71,11 @@ export default createTheme({
     },
     MuiPaper: {
       styleOverrides: {
-        root: {
+        root: ({ theme }) => ({
           backgroundImage: "none",
-        },
+          boxShadow: "none",
+          border: `1px solid ${theme.palette.divider}`,
+        }),
       },
     },
     MuiOutlinedInput: {

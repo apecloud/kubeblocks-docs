@@ -75,7 +75,7 @@ export default function Features() {
   ];
 
   return (
-    <Box sx={{ paddingBlock: 10 }}>
+    <Box sx={{ paddingBlock: 16 }}>
       <Container>
         <Box textAlign="center" mb={4}>
           <Typography color="primary" gutterBottom>
