@@ -23,6 +23,7 @@ import ThemeSwitcher from "./theme-switch";
 import { useI18n } from "@/locales/client";
 import Link from "next/link";
 import SearchModal from "@/components/SearchModal";
+import { SlackIconNoColor } from "@/components/icons";
 
 // import LocaleSwitcher from "./locale-switch";
 
@@ -148,6 +149,12 @@ export const ElevationScrollAppBar = (props: AppBarProps) => {
               justifyContent: "center",
             }}
           >
+            <IconButton
+              href="https://kubeblocks.slack.com"
+              target="_blank"
+            >
+              <SlackIconNoColor />
+            </IconButton>
             <IconButton
               href="https://github.com/apecloud/kubeblocks"
               target="_blank"
