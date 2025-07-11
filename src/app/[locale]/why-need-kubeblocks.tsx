@@ -76,7 +76,7 @@ export default function WhyNeedKubeBlocks() {
   return (
     <Box
       sx={{
-        paddingBlock: 10,
+        paddingBlock: 12,
       }}
     >
       <Container>

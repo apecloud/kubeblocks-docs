@@ -27,6 +27,16 @@ const nextConfig: NextConfig = {
     return config;
   },
   basePath: '',
+
+  modularizeImports: {
+    '@mui/material': {
+      transform: '@mui/material/{{member}}',
+    },
+    '@mui/icons-material': {
+      transform: '@mui/icons-material/{{member}}',
+    },
+  },
+  poweredByHeader: false,
   output: process.env.OUTPUT_TYPE === 'export' ? 'export' : 'standalone',
 };
 
