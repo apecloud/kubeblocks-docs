@@ -10,20 +10,6 @@ import Customers from "./customers";
 import { getStaticParams } from "@/locales/server";
 import { Evaluate } from "./Evaluate";
 
-async function getPlayerUrl() {
-  let url = "https://www.youtube.com/embed/KNwpG51Whzg?si=wCQ-31H3OiI7aMtZ";
-  try {
-    const response = await fetch("https://ipapi.co/json/");
-    const data = await response.json();
-    if (["CN", "HK"].includes(data.country)) {
-      url = "https://player.bilibili.com/player.html?bvid=BV1ew41137Sn";
-    }
-  } catch (err) {
-    console.log(err);
-  }
-  return url;
-}
-
 export async function generateStaticParams() {
   return getStaticParams();
 }
@@ -37,8 +23,6 @@ export default async function HomePage({
 
   const blogs = await getBlogs(locale);
 
-  const playerUrl = await getPlayerUrl();
-
   return (
     <>
       <Box style={{ minHeight: "var(--container-min-height)" }}>
@@ -46,7 +30,7 @@ export default async function HomePage({
         <Divider />
         <Customers />
         <Divider />
-        <Evaluate playerUrl={playerUrl} />
+        <Evaluate />
         <Divider />
         <WhyNeedKubeBlocks />
         <Divider />

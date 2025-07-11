@@ -9,9 +9,19 @@ import {
   useTheme,
 } from "@mui/material";
 import Image from "next/image";
+import { useMemo } from "react";
 
-export const Evaluate = ({ playerUrl }: { playerUrl: string }) => {
+export const Evaluate = () => {
   const theme = useTheme();
+
+  const playerUrl = useMemo(() => {
+    const timezoneOffset = new Date().getTimezoneOffset();
+    const isChinaTimezone = timezoneOffset === -480;
+
+    return isChinaTimezone
+      ? "https://player.bilibili.com/player.html?bvid=BV1ew41137Sn"
+      : "https://www.youtube.com/embed/KNwpG51Whzg?si=wCQ-31H3OiI7aMtZ";
+  }, []);
 
   return (
     <Container sx={{ p: 8, mb: 4 }}>
