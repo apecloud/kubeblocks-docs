@@ -28,7 +28,7 @@ export const Evaluate = () => {
 
   return (
     <Container sx={{ p: 8, mb: 4 }}>
-      <Box mb={20}>
+      <Box mb={16}>
         <Typography variant="h6" gutterBottom>
           Viktor Farcic
         </Typography>
@@ -40,7 +40,7 @@ export const Evaluate = () => {
         </Typography>
 
         <Divider sx={{ marginBlock: 4 }} />
-        <Grid container spacing={8} alignItems="center">
+        <Grid container spacing={4}>
           <Grid size={{ md: 6, sm: 12, xs: 12 }}>
             <iframe
               src={playerUrl}
@@ -48,13 +48,12 @@ export const Evaluate = () => {
                 width: "100%",
                 height: "320px",
                 borderRadius: "12px",
-                // overflow: "hidden",
                 border: "none",
               }}
             />
           </Grid>
           <Grid size={{ md: 6, sm: 12, xs: 12 }}>
-            <Box sx={{ fontSize: 20 }} className={caveat.className}>
+            <Box sx={{ fontSize: 22 }} className={caveat.className}>
               &quot;Whether or not to run a database on Kubernetes is a topic
               that is often discussed. From my perspective, if you&apos;re
               already using containers and don&apos;t want to use a fully
@@ -98,9 +97,9 @@ export const Evaluate = () => {
           infrastructure and platform space.
         </Typography>
         <Divider sx={{ marginBlock: 4 }} />
-        <Grid container spacing={8} alignItems="center">
+        <Grid container spacing={4}>
           <Grid size={{ md: 6, sm: 12, xs: 12 }}>
-            <Box sx={{ fontSize: 20 }} className={caveat.className}>
+            <Box sx={{ fontSize: 22 }} className={caveat.className}>
               &quot;The minor version of KubeBlocks has a very short release
               cycle and is very actively developed...... I strongly believe that
               KubeBlocks&apos; Addon concept and documentation on how to create
@@ -125,16 +124,15 @@ export const Evaluate = () => {
               </Box>
             </Stack>
           </Grid>
-          <Grid size={{ md: 6, sm: 12, xs: 12 }}>
+          <Grid size={{ md: 6, sm: 12, xs: 12 }} textAlign="right">
             <Image
               alt="KubeBlocks"
               src={`/site/kb_radar_${theme.palette.mode}.png`}
               width={460}
               height={300}
               style={{
-                width: "100%",
+                maxWidth: "90%",
                 height: "auto",
-                borderRadius: 16,
               }}
             />
           </Grid>
