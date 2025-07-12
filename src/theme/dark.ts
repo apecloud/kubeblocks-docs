@@ -32,6 +32,7 @@ export default createTheme({
   },
   typography: {
     fontSize: 14,
+    fontFamily: 'Geist, "Geist Fallback", "Roboto","Helvetica","Arial",sans-serif',
   },
   mixins: {
     toolbar: {

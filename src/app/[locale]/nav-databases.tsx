@@ -74,7 +74,7 @@ export default function DatabasesNav() {
 
   return (
     <DropDown
-      offset={[0, 13]}
+      offset={[0, 12]}
       trigger={
         <Button
           color="inherit"
