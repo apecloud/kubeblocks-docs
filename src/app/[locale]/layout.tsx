@@ -12,8 +12,14 @@ import { NextThemeProvider } from "@/components/NextThemeProvider";
 import { setStaticParamsLocale } from "next-international/server";
 import MessageBox from "@/components/MessageBox";
 import { ElevationScrollAppBar } from "./ElevationScrollAppBar";
+import { Geist } from 'next/font/google';
+
 import "highlight.js/styles/github-dark.css";
 import "./global.css";
+
+const geist = Geist({
+  subsets: ['latin'],
+})
 
 export const metadata: Metadata = {
   title: "KubeBlocks",
@@ -31,7 +37,7 @@ export default async function RootLayout({
   setStaticParamsLocale(locale);
 
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning className={geist.className}>
       <body>
         <I18nProvider locale={locale}>
           <AppRouterCacheProvider options={{ key: "css" }}>

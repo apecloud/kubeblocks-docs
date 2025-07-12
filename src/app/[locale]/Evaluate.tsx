@@ -10,6 +10,9 @@ import {
 } from "@mui/material";
 import Image from "next/image";
 import { useMemo } from "react";
+import { Caveat } from 'next/font/google';
+
+const caveat = Caveat({ subsets: ['latin'] })
 
 export const Evaluate = () => {
   const theme = useTheme();
@@ -51,8 +54,8 @@ export const Evaluate = () => {
             />
           </Grid>
           <Grid size={{ md: 6, sm: 12, xs: 12 }}>
-            <Typography sx={{ fontSize: 16 }}>
-              &quot; Whether or not to run a database on Kubernetes is a topic
+            <Box sx={{ fontSize: 20 }} className={caveat.className}>
+              &quot;Whether or not to run a database on Kubernetes is a topic
               that is often discussed. From my perspective, if you&apos;re
               already using containers and don&apos;t want to use a fully
               managed database service, the answer is yes...... KubeBlocks is a
@@ -62,7 +65,7 @@ export const Evaluate = () => {
               solution for a wide range of databases. It can be a great fit for
               Kubernetes users who want to migrate their databases to run on
               Kubernetes without wanting to lose control.&quot;
-            </Typography>
+            </Box>
 
             <Stack direction="row-reverse" alignItems="center" mt={4} gap={2}>
               <Image
@@ -97,7 +100,7 @@ export const Evaluate = () => {
         <Divider sx={{ marginBlock: 4 }} />
         <Grid container spacing={8} alignItems="center">
           <Grid size={{ md: 6, sm: 12, xs: 12 }}>
-            <Typography sx={{ fontSize: 18 }}>
+            <Box sx={{ fontSize: 20 }} className={caveat.className}>
               &quot;The minor version of KubeBlocks has a very short release
               cycle and is very actively developed...... I strongly believe that
               KubeBlocks&apos; Addon concept and documentation on how to create
@@ -105,7 +108,7 @@ export const Evaluate = () => {
               KubeBlocks also provides support for AI, such as Xinference and
               MilvusDB, which are part of a modern large model technology
               stack.&quot;
-            </Typography>
+            </Box>
             <Stack direction="row-reverse" alignItems="center" mt={4} gap={2}>
               <Image
                 style={{ borderRadius: 56 }}
