@@ -9,22 +9,30 @@ import {
   useTheme,
 } from "@mui/material";
 import Image from "next/image";
-import { useMemo } from "react";
-import { Caveat } from 'next/font/google';
+import { useCallback, useMemo } from "react";
+import { Caveat } from "next/font/google";
 
-const caveat = Caveat({ subsets: ['latin'] })
+const caveat = Caveat({ subsets: ["latin"] });
 
 export const Evaluate = () => {
   const theme = useTheme();
 
-  const playerUrl = useMemo(() => {
-    const timezoneOffset = new Date().getTimezoneOffset();
-    const isChinaTimezone = timezoneOffset === -480;
+  const isInChina = useCallback(() => {
+    try {
+      const timeZoneName = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      return timeZoneName === "Asia/Shanghai" || timeZoneName === "Asia/Urumqi";
+    } catch (err) {
+      console.log(err);
+      const timeZoneOffset = -new Date().getTimezoneOffset() / 60;
+      return timeZoneOffset === 8;
+    }
+  }, []);
 
-    return isChinaTimezone
+  const playerUrl = useMemo(() => {
+    return isInChina()
       ? "https://player.bilibili.com/player.html?bvid=BV1ew41137Sn"
       : "https://www.youtube.com/embed/KNwpG51Whzg?si=wCQ-31H3OiI7aMtZ";
-  }, []);
+  }, [isInChina]);
 
   return (
     <Container sx={{ p: 8, mb: 4 }}>
