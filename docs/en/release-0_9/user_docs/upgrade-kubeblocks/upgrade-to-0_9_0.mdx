@@ -2,7 +2,7 @@
 title: Upgrade to v0.9.0
 description: Upgrade to KubeBlocks v0.9.0, operation, tips and notes
 keywords: [upgrade, 0.9.0]
-draft: true
+
 ---
 
 import Tabs from '@theme/Tabs';
@@ -90,7 +90,7 @@ KubeBlocks 0.9.0 is compatible with KubeBlocks 0.8 APIs, but compatibility with 
 2. Upgrade KubeBlocks.
 
     ```bash
-    kbcli kb upgrade --version 0.9.0 
+    kbcli kb upgrade --version 0.9.0
     ```
 
     :::note
@@ -126,7 +126,7 @@ If the Addon you want to use is `clickhouse/milvus/elasticsearch/llm`, you need 
 <TabItem value="Helm" label="Helm" default>
 
 ```bash
-# Add Helm repo 
+# Add Helm repo
 helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
 
 # If github is not accessible or very slow for you, please use following repo instead
@@ -136,7 +136,7 @@ helm repo add kubeblocks-addons https://jihulab.com/api/v4/projects/150246/packa
 helm repo update
 
 # Update Addon version
-helm upgrade -i {addon-release-name} kubeblocks-addons/{addon-name} --version x.y.z -n kb-system  
+helm upgrade -i {addon-release-name} kubeblocks-addons/{addon-name} --version x.y.z -n kb-system
 ```
 
 </TabItem>

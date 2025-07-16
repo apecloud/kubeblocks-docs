@@ -40,3 +40,9 @@ docker-build: build docker-buildx-setup ## Build and push Docker image
 		-t $(IMG):$(VERSION) .
 	$(DOCKER) buildx rm $(BUILDX_NAME)
 
+# sync kbcli docs, call scripts/sync-kbcli-docs.sh
+BRANCH ?= main
+.PHONY: sync-kbcli-docs
+sync-kbcli-docs: ## Sync kbcli docs, call scripts/sync-kbcli-docs.sh
+	@./scripts/sync-kbcli-docs.sh $(BRANCH)
+	$(YARN) format-md-to-mdx
