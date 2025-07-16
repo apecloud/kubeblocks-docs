@@ -51,7 +51,7 @@ export const getMarkDownSideBar = async (
           Object.assign(item, {
             position: metadata.sidebar_position || metadata.position || 0,
             label: metadata.sidebar_label || metadata.title,
-            href: urlPath.replace(/^\/(en)/, "/docs"),
+            href: urlPath.replace(/^\/(en|zh)/, "/docs"),
             description: metadata.description,
             hidden: Boolean(metadata.hidden),
           });
@@ -83,11 +83,16 @@ export const getMarkDownSideBar = async (
 };
 
 export const getMarkDownMetaData = async (filepath: string) => {
-  const isExists = fs.existsSync(filepath);
-  if (isExists) {
-    const { data } = grayMatter(fs.readFileSync(filepath, "utf8"));
-    return data;
-  } else {
+  try {
+    const isExists = fs.existsSync(filepath);
+    if (isExists) {
+      const { data } = grayMatter(fs.readFileSync(filepath, "utf8"));
+      return data;
+    } else {
+      return {};
+    }
+  } catch (error) {
+    console.error(`Error reading markdown metadata from ${filepath}:`, error);
     return {};
   }
 };

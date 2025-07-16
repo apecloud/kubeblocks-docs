@@ -25,7 +25,7 @@ import Link from "next/link";
 import SearchModal from "@/components/SearchModal";
 import { SlackIconNoColor } from "@/components/icons";
 
-// import LocaleSwitcher from "./locale-switch";
+import LocaleSwitcher from "./locale-switch";
 
 export const ElevationScrollAppBar = (props: AppBarProps) => {
   const pathname = usePathname();
@@ -162,7 +162,7 @@ export const ElevationScrollAppBar = (props: AppBarProps) => {
               <GitHub />
             </IconButton>
             <ThemeSwitcher />
-            {/* <LocaleSwitcher /> */}
+            <LocaleSwitcher />
           </Box>
         </Toolbar>
       </AppBar>

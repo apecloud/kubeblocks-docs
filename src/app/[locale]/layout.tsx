@@ -25,7 +25,7 @@ export default async function RootLayout({
   params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ locale:  "en" }>;
+  params: Promise<{ locale: "zh" | "en" }>;
 }) {
   const { locale } = await params;
   setStaticParamsLocale(locale);

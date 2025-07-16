@@ -6,12 +6,13 @@ import { useChangeLocale, useCurrentLocale } from "@/locales/client";
 import { DropDown } from "@/components/DropDown";
 
 
-type LangType = "en";
+type LangType = "en" | "zh";
 
 const lang: {
   [key in LangType]: string;
 } = {
   en: "English",
+  zh: "简体中文",
 } as const;
 
 export default function LocaleSwitcher() {
