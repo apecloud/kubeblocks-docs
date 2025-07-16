@@ -1,0 +1,311 @@
+---
+description: 了解如何使用KubeBlocks部署带有ProxySQL的MySQL半同步复制集群。本指南涵盖配置、验证及故障转移测试。
+keywords:
+- KubeBlocks
+- MySQL
+- ProxySQL
+- Semi-Synchronous Replication
+- Kubernetes
+- High Availability
+sidebar_label: 带ProxySQL的MySQL集群
+sidebar_position: 2
+title: 在KubeBlocks上部署带ProxySQL的MySQL半同步集群
+---
+# 使用 KubeBlocks 部署 MySQL 半同步集群与 ProxySQL
+
+**半同步复制** 通过确保主节点在提交事务前至少等待一个副本节点的确认，从而增强了主节点与副本节点之间的数据一致性。
+
+**ProxySQL** 是一款高性能 MySQL 代理，作为 MySQL 客户端与服务器之间的中间件。它提供查询路由、负载均衡、查询缓存和高可用性等高级功能。当与 MySQL 半同步集群结合使用时，ProxySQL 可确保无缝故障转移和高效的流量管理，从而实现最佳性能和可靠性。
+
+本指南将引导您使用 KubeBlocks 部署一个集成 ProxySQL 的 MySQL 半同步复制集群。
+
+## 前提条件
+
+在继续之前，请确保满足以下要求：
+- 环境设置：
+  - 已启动并运行一个 Kubernetes 集群。
+  - 已配置 kubectl CLI 工具以与集群通信。
+  - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处的安装说明进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 部署 MySQL 半同步集群
+
+KubeBlocks 采用声明式配置方法来管理 MySQL 集群。以下是一个部署包含 2 个 MySQL 节点（1 个主节点，1 个从节点）和 2 个 ProxySQL 实例的 MySQL 集群配置示例。
+
+应用以下配置：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync-proxysql
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+    - name: proxysql
+      serviceVersion: 2.4.4
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+EOF
+```
+
+**关键字段说明**：
+- `clusterDef: mysql`：指定集群使用的 ClusterDefinition CR。ClusterDefinition 'mysql' 包含多种拓扑结构，例如 'semisync'、'semisync-proxysql'、'mgr'、'mgr-proxysql'、'orc'、'orc-proxysql'。
+- `topology: semisync-proxysql`：配置一个集成 ProxySQL 的半同步复制 MySQL 集群。
+- `componentSpecs`：定义集群中的组件：
+  - 组件 'mysql'：
+    - `serviceVersion: 8.0.35`：指定要部署的 MySQL 版本。此处使用 8.0.35 版本。
+    - `replicas: 2`：设置 MySQL 实例数量（本例中为 2 个）。
+  - 组件 'proxysql'：
+    - `serviceVersion: 2.4.4`：指定要部署的 ProxySQL 版本。此处使用 2.4.4 版本。
+    - `replicas: 2`：设置 ProxySQL 实例数量（本例中为 2 个）。
+
+## 验证部署
+
+### 检查集群状态  
+集群部署完成后，检查其状态：
+
+```bash
+kubectl get cluster -n demo -w
+```
+
+预期输出：
+
+```
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Creating   8s
+example-mysql-cluster   mysql                Delete               Running   3m1s
+```
+
+### 集群详细信息
+要获取集群的详细信息：
+
+```bash
+kbcli cluster describe example-mysql-cluster -n demo
+```
+
+预期输出：
+
+```
+Name: example-mysql-cluster	 Created Time: Feb 10,2025 08:32 UTC+0800
+NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY            STATUS    TERMINATION-POLICY
+demo        mysql                semisync-proxysql   Running   Delete
+
+Endpoints:
+COMPONENT   INTERNAL                                                                     EXTERNAL
+mysql       example-mysql-cluster-mysql.demo.svc.cluster.local:3306                      <none>
+proxysql    example-mysql-cluster-proxysql-proxy-ordinal-0.demo.svc.cluster.local:6032   <none>
+            example-mysql-cluster-proxysql-proxy-ordinal-0.demo.svc.cluster.local:6033
+            example-mysql-cluster-proxysql-proxy-ordinal-1.demo.svc.cluster.local:6032
+            example-mysql-cluster-proxysql-proxy-ordinal-1.demo.svc.cluster.local:6033
+            example-mysql-cluster-proxysql-proxy-server.demo.svc.cluster.local:6033
+
+Topology:
+COMPONENT   SERVICE-VERSION   INSTANCE                           ROLE        STATUS    AZ                NODE                                                       CREATED-TIME
+mysql       8.0.35            example-mysql-cluster-mysql-0      primary     Running   ap-southeast-1b   ip-10-0-2-221.ap-southeast-1.compute.internal/10.0.2.221   Feb 10,2025 08:32 UTC+0800
+mysql       8.0.35            example-mysql-cluster-mysql-1      secondary   Running   ap-southeast-1a   ip-10-0-1-188.ap-southeast-1.compute.internal/10.0.1.188   Feb 10,2025 08:32 UTC+0800
+proxysql    2.4.4             example-mysql-cluster-proxysql-0   <none>      Running   ap-southeast-1b   ip-10-0-2-221.ap-southeast-1.compute.internal/10.0.2.221   Feb 10,2025 08:34 UTC+0800
+proxysql    2.4.4             example-mysql-cluster-proxysql-1   <none>      Running   ap-southeast-1a   ip-10-0-1-188.ap-southeast-1.compute.internal/10.0.1.188   Feb 10,2025 08:34 UTC+0800
+
+Resources Allocation:
+COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+mysql                           500m / 500m          512Mi / 512Mi           data:20Gi      <none>
+proxysql                        500m / 500m          512Mi / 512Mi           <none>         <none>
+
+Images:
+COMPONENT   COMPONENT-DEFINITION           IMAGE
+mysql       mysql-8.0-1.0.0                docker.io/apecloud/mysql:8.0.35
+                                           docker.io/apecloud/mysqld-exporter:0.15.1
+                                           apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.0
+proxysql    proxysql-mysql-1.0.0           docker.io/apecloud/proxysql:2.4.4
+
+Data Protection:
+BACKUP-REPO   AUTO-BACKUP   BACKUP-SCHEDULE   BACKUP-METHOD   BACKUP-RETENTION   RECOVERABLE-TIME
+
+Show cluster events: kbcli cluster list-events -n demo example-mysql-cluster
+```
+
+
+
+
+## 连接到 MySQL 集群
+
+KubeBlocks 会自动创建一个包含 MySQL root 凭据的 Secret。通过以下命令获取凭据：
+
+```bash
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
+root
+
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+22mue70Hx6
+```
+
+### 通过 ProxySQL 连接  
+使用 ProxySQL 连接到 MySQL 集群：
+
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-proxysql-proxy-server.demo.svc.cluster.local -P6033 -uroot -p22mue70Hx6
+```
+
+### 直接连接 MySQL  
+或者，直接连接到 MySQL 实例：
+
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -p22mue70Hx6
+```
+
+
+
+
+## 测试半同步复制
+
+### 验证 Pod 角色
+列出集群中的所有 Pod 并检查其角色：
+
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+```
+
+预期输出：
+
+```bash
+example-mysql-cluster-mysql-0	secondary
+example-mysql-cluster-mysql-1	primary
+```
+
+### 检查复制状态
+验证主节点和副本节点的复制状态：
+
+### 主节点
+在主节点上运行以下命令：
+
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-0.example-mysql-cluster-mysql-headless.demo.svc.cluster.local -uroot -p22mue70Hx6 -e "show status like 'Rpl%_status';"
+```
+
+预期输出：
+
+```sql
++------------------------------+-------+
+| Variable_name                | Value |
++------------------------------+-------+
+| Rpl_semi_sync_replica_status | ON    |
+| Rpl_semi_sync_source_status  | OFF   |
++------------------------------+-------+
+```
+
+说明：
+- "Rpl_semi_sync_replica_status: ON"：表示该从节点当前作为半同步副本运行，正在正常接收并确认来自主节点的变更。
+- "Rpl_semi_sync_source_status: OFF"：表示该从节点在复制架构中不作为主节点（master）运行。
+
+### 副本节点
+在副本节点上执行以下命令：
+
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-1.example-mysql-cluster-mysql-headless.demo.svc.cluster.local -uroot -p22mue70Hx6 -e "show status like 'Rpl%_status';"
+```
+
+预期输出：
+
+```sql
++------------------------------+-------+
+| Variable_name                | Value |
++------------------------------+-------+
+| Rpl_semi_sync_replica_status | OFF   |
+| Rpl_semi_sync_source_status  | ON    |
++------------------------------+-------+
+```
+
+说明：
+- "Rpl_semi_sync_source_status: ON"：表示主实例已配置为半同步复制的主节点（master）。
+- "Rpl_semi_sync_replica_status: OFF"：表示主实例在当前复制架构中不作为从节点运行。
+
+
+
+## 故障转移测试
+### 触发故障转移
+要测试故障转移机制，请删除主节点 Pod：
+
+```bash
+kubectl delete pod example-mysql-cluster-mysql-1 -n demo
+```
+
+这将触发故障转移，从节点实例将被提升为主节点角色。您可以通过以下方式验证 Pod 的新角色：
+### 验证更新后的角色
+
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+```
+
+预期输出：
+
+```bash
+example-mysql-cluster-mysql-0	primary
+example-mysql-cluster-mysql-1
+```
+
+一段时间后，被删除的 Pod 将会重新创建并作为副本重新加入集群：
+
+```bash
+example-mysql-cluster-mysql-0	primary
+example-mysql-cluster-mysql-1    secondary
+```
+
+
+
+
+## 清理
+要删除所有已创建的资源，请连同其命名空间一起删除 MySQL 集群：
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete ns demo
+```
+
+
+
+
+## 概述
+在本指南中，您学习了如何：
+- 使用 KubeBlocks 部署带有 ProxySQL 的 MySQL 半同步复制集群
+- 验证集群角色和复制状态
+- 测试高可用性的故障转移机制
+
+通过将 MySQL 半同步集群与 ProxySQL 结合使用，您可以为生产级部署实现无缝故障转移、高效的流量管理以及更高的可靠性。

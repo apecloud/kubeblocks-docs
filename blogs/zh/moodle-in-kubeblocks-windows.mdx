@@ -1,0 +1,258 @@
+---
+authors:
+  name: DWJ-Squirtle
+  url: https://github.com/DWJ-Squirtle
+date: 2024-07-03
+description: 本博客介绍如何在Windows上使用KubeBlocks MySQL Operator部署Moodle。
+image: /img/blogs/thumbnails/blog-moodle.png
+slug: moodle-in-kubeblocks
+tags:
+- Kubernetes operator
+- database
+- MySQL
+- KubeBlocks
+- Moodle
+- Windows
+title: 使用KubeBlocks MySQL Operator在Kubernetes上部署Moddle
+---
+# 使用 KubeBlocks MySQL Operator 在 K8s 上部署 Moodle（Windows 版）
+
+Moodle 是一个免费的在线学习管理系统，允许教育工作者创建自己的私有网站，填充动态课程内容，从而让人们随时随地学习。
+
+## 简介
+
+本文档将指导您快速入门，在 Windows 上安装并使用 Moodle，并利用 KubeBlocks 提供的 MySQL 数据库。
+
+## 必要准备
+
+- [Docker](https://docs.docker.com/get-docker/)：v20.10.5（runC ≥ v1.0.0-rc93）或更高版本；
+- [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)：用于与 Kubernetes 集群交互；
+- [kbcli](https://cn.kubeblocks.io/docs/preview/user-docs/installation/install-with-kbcli/install-kbcli)：用于 Playground 与 KubeBlocks 之间的交互。
+
+## 准备数据库
+
+### 操作步骤
+
+### 1. 确保已启用 ApeCloud MySQL 插件
+
+```shell
+kbcli addon list
+>
+NAME                           TYPE   STATUS     EXTRAS         AUTO-INSTALL   INSTALLABLE-SELECTOR
+...
+apecloud-mysql                 Helm   Enabled                   true
+...
+```
+
+### 2. 创建 MySQL 集群
+
+这是一个单机模式演示。如需部署 RaftGroup 集群，请参考：[创建并连接 MySQL 集群 | KubeBlocks](https://kubeblocks.io/docs/release-0.8/user_docs/kubeblocks-for-mysql/cluster-management/create-and-connect-a-mysql-cluster)。
+
+```shell
+kbcli cluster create mysql <clustername>
+```
+
+### 3. 获取集群基本信息
+
+执行以下命令获取目标数据库的网络信息，特别注意后续会用到的密码。
+
+```shell
+kbcli cluster connect --show-example --show-password ${cluster-name}
+```
+
+![Figure 1](/img/blogs/obtain-cluster-basic-information.png)
+
+### 4. 服务转发
+
+执行 `port-forward` 将 MySQL 服务暴露给主机。
+
+:::note
+
+注意：由于后续需要在本地机器上启动 MySQL 服务，需修改本地端口号以避免冲突。此处我们已将其改为 3307。
+
+:::
+
+```shell
+kubectl port-forward service/mycluster-mysql 3307:3306
+>
+Forwarding from 127.0.0.1:3307 -> 3306
+Forwarding from [::1]:3307 -> 3306
+```
+
+关于连接数据库的详细指南，请参阅：[从任意位置连接数据库 | KubeBlocks](https://kubeblocks.io/docs/release-0.8/user_docs/connect_database/overview-of-database-connection)。
+
+
+
+## 安装 Moodle
+
+对于 Windows 系统，推荐使用 XAMPP 来安装 Moodle。
+
+### 操作步骤
+
+### 1. 下载并安装 XAMPP
+
+前往官网下载并安装 XAMPP。官网地址如下：[XAMPP Installers and Downloads for Apache Friends](https://www.apachefriends.org/zh_cn/index.html)
+
+### 2. 打开 XAMPP 并启动 Apache 和 MySQL 服务
+
+![Figure 2](/img/blogs/xmapp-start.png)
+
+### 3. 下载 Moodle
+
+前往 Moodle 官网下载对应文件。官网地址如下：[Latest release | Moodle downloads](https://download.moodle.org/releases/latest/)
+
+![Figure 3](/img/blogs/moodle-release.png)
+
+下载完成后，将压缩包解压到 XAMPP 安装目录下的 `htdocs` 文件夹中的下载目录。如果配置全部为默认，则位于 `C:/xampp/htdocs`
+
+### 4. 安装 Moodle
+
+打开浏览器，输入地址 localhost/moodle，然后按照以下步骤安装 Moodle。
+
+#### 1. 选择语言
+
+![Figure 4](/img/blogs/moodle-choose-language.png)
+
+#### 2. 确认路径
+
+默认配置即可，直接点击 <kbd>Next</kbd>。
+
+![Figure 5](/img/blogs/moodle-confirm-paths.png)
+
+#### 3. 选择数据库驱动
+
+此处选择 `mysqli`。
+
+![FIgure 6](/img/blogs/moodle-choose-database-diver.png)
+
+#### 4. 数据库设置
+
+使用之前的 KubeBlocks 设置。
+
+![Figure 7](/img/blogs/moodle-database-setting.png)
+
+#### 5. 服务器检查
+
+**在下载 PHP 扩展时，此步骤可能会出现一些服务器组件检查错误。**
+
+修复步骤如下：
+
+1. 使用文本编辑器打开 `php.ini` 文件，该文件位于 `xampp/` 目录下，搜索并取消以下扩展行的注释：
+
+   `extension=zip`
+
+   `extension=gd`
+
+   `extension=intl`
+
+   `extension=sodium`
+
+   `max_input_vars`
+
+2. 取消 `max_input_vars` 的注释后，将其修改为 `max_input_vars=5000`
+
+3. 将 `xampp/php/libsodium.dll` 库复制到 `xampp/apache/bin/` 目录下。
+
+![Figure 8](/img/blogs/moodle-check-php.png)
+
+#### 6. 等待下载
+
+之后会有一些下载内容，等待即可。
+
+![Figure 9](/img/blogs/moodle-installation.png)
+
+#### 7. Moodle 的基本设置
+
+设置名称和邮箱，安装即将完成。
+
+![Figure 10](/img/blogs/moodle-setting.png)
+
+#### 8. 任务完成
+
+此步骤中，整个安装已完成，现在可以自由使用 Moodle 了！！
+
+![Figure 11](/img/blogs/moodle-hello.png)
+
+更详细的安装步骤，请访问 [Install Moodle - MoodleDocs](https://docs.moodle.org/404/en/Installing_Moodle)。
+
+## 准备 Redis 数据库
+
+### 操作步骤
+
+### 1. 确保 Redis 插件已启用
+
+```shell
+kbcli addon list
+NAME                      TYPE   STATUS     EXTRAS         AUTO-INSTALL   INSTALLABLE-SELECTOR
+...
+redis                     Helm   Enabled                   true
+...
+```
+
+### 2. 创建 Redis 集群
+
+本示例仅演示 Redis 的单机模式版本。更多信息请参考文档 [创建并连接 Redis 集群 | KubeBlocks](https://kubeblocks.io/docs/release-0.8/user_docs/kubeblocks-for-redis/cluster-management/create-and-connect-a-redis-cluster)。
+
+```shell
+kbcli cluster create redis --mode standalone <clustername>
+```
+
+### 3. 获取基础连接信息
+
+执行以下命令获取目标数据库的基础信息。
+
+```shell
+kbcli cluster connect --show-example --show-password --client=cli <clustername>
+```
+
+![Figure 12](/img/blogs/moodle-redis-connection.png)
+
+### 4. 服务转发
+
+执行 `port-forward` 将 Redis 服务暴露给主机。请注意，我的 Redis 实例命名为 'myredis'，你需要将其替换为你自己选择的名称。
+
+```shell
+kubectl port-forward service/myredis-redis-redis 6379:6379
+>
+Forwarding from 127.0.0.1:3306 -> 3306
+Forwarding from [::1]:3306 -> 3306
+```
+
+
+
+
+## 安装 Redis PHP 驱动
+
+### 步骤
+
+### 1. 检查驱动适配器版本
+
+检查您的 PHP 版本、CPU（64位或x86）以及线程安全值（参考 站点管理 > 服务器 > PHP 信息）以获取正确版本。
+
+![Figure 13](/img/blogs/moodle-site-administration.png)
+
+### 2. 下载兼容的 PHP 扩展文件并启用
+
+- 从 [PECL :: Package :: redis (php.net)](https://pecl.php.net/package/redis) 下载对应版本的 PHP-redis 扩展文件
+- 将 DLL 文件 `php_redis.dll` 添加到 `xampp/php/ext` 目录
+- 在 php.ini 中添加 `extension=php_redis.dll` 并重启 web 服务器
+
+## 连接到 Redis 服务器
+
+### 操作步骤
+
+### 1. 服务检查
+
+访问 站点管理 > 插件 > 缓存 > 配置。如果服务配置成功，您将在"已安装的缓存存储"下的"Redis"旁看到一个绿色勾选标记，以及一个添加实例的链接。
+
+![Figure 15](/img/blogs/moodle-redis-service-check.png)
+
+### 2. 添加实例
+
+点击`添加实例`后，填写基本设置。在本示例中，名称为'redis'，服务器地址为127.0.0.1:6379。
+
+![Figure 16](/img/blogs/moodle-redis-add-instance.png)
+
+点击`保存更改`后，返回KubeBlocks时您将看到`正在处理连接`的提示。此时，您可以更流畅地使用Moodle了！
+
+![Figure 17](/img/blogs/moodle-handling-check.png)

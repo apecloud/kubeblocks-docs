@@ -1,0 +1,345 @@
+---
+description: 了解如何通过负载均衡器（LoadBalancer）及其他服务类型，在KubeBlocks中配置和管理MongoDB服务，实现内外部访问。
+keywords:
+- KubeBlocks
+- MongoDB
+- LoadBalancer
+- External Service
+- Expose
+- Kubernetes
+sidebar_label: 管理 MongoDB 服务
+sidebar_position: 5
+title: 使用KubeBlocks声明式集群API创建与销毁MongoDB服务
+---
+请翻译以下内容：
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# 在 KubeBlocks 中使用声明式集群 API 管理 MongoDB 服务
+
+本指南提供了逐步说明，用于对外暴露或内部管理由 KubeBlocks 托管的 MongoDB 服务。您将学习如何通过云服务提供商的负载均衡器服务配置外部访问、管理内部服务，以及在不再需要时正确关闭外部暴露功能。
+
+
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+
+
+## 部署 MongoDB ReplicaSet 集群
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+
+
+## 验证部署
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+
+
+## 查看网络服务
+列出为 MongoDB 集群创建的服务：
+```bash
+kubectl get service -l app.kubernetes.io/instance=mongo-cluster -n demo
+```
+
+示例服务列表：
+```bash
+# 面向所有副本的服务
+mongo-cluster-mongodb              ClusterIP   10.96.249.157   <none>        27017/TCP   44m
+# 读写服务
+mongo-cluster-mongodb-mongodb      ClusterIP   10.96.17.58     <none>        27017/TCP   44m
+# 只读服务
+mongo-cluster-mongodb-mongodb-ro   ClusterIP   10.96.2.71      <none>        27017/TCP   44m
+```
+
+## 暴露 MongoDB 服务
+
+外部服务地址允许公网访问 MongoDB，而内部服务地址将访问限制在用户的 VPC 内。
+
+### 服务类型对比
+
+| 类型          | 使用场景           | 云服务成本 | 安全性  |
+|---------------|--------------------|------------|---------|
+| ClusterIP     | 内部服务通信       | 免费       | 最高    |
+| NodePort      | 开发测试环境       | 低         | 中等    |
+| LoadBalancer  | 生产环境外部访问   | 高         | 通过安全组管理 |
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  选项一：使用 OpsRequest
+
+  要通过 LoadBalancer 对外暴露 MongoDB 服务，创建一个 OpsRequest 资源：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: mongo-cluster-expose-enable-ops
+    namespace: demo
+  spec:
+    type: Expose
+    clusterName: mongo-cluster
+    expose:
+    - componentName: mongodb
+      services:
+      - name: internet
+        # 决定服务暴露方式，默认为 'ClusterIP'
+        # 可选值：'ClusterIP'、'NodePort' 和 'LoadBalancer'
+        serviceType: LoadBalancer
+        # 当 ServiceType 为 LoadBalancer 时，包含云服务商相关参数
+        # 以下是 AWS EKS 的配置示例
+        annotations:
+          service.beta.kubernetes.io/aws-load-balancer-type: nlb
+          service.beta.kubernetes.io/aws-load-balancer-internal: "false"  # 设为 "true" 表示使用内部 VPC IP
+        # 指定服务目标角色
+        # 若指定，服务将仅暴露给具有匹配角色的 Pod
+        roleSelector: primary
+      switch: Enable
+  ```
+
+  等待 OpsRequest 完成：
+  ```bash
+  kubectl get ops mongo-cluster-expose-enable-ops -n demo
+  ```
+
+  示例输出：
+  ```bash
+  NAME                              TYPE     CLUSTER         STATUS    PROGRESS   AGE
+  mongo-cluster-expose-enable-ops   Expose   mongo-cluster   Succeed   1/1        31s
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  选项二：使用 Cluster API
+
+  或者，在 Cluster 资源的 `spec.services` 部分添加 LoadBalancer 服务配置：
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  metadata:
+    name: mongo-cluster
+    namespace: demo
+  spec:
+    terminationPolicy: Delete
+    clusterDef: mongodb
+    topology: replicaset
+    # 暴露外部服务
+    services:
+      - annotations:
+          service.beta.kubernetes.io/aws-load-balancer-type: nlb  # 使用网络负载均衡器
+          service.beta.kubernetes.io/aws-load-balancer-internal: "false"  # 设为 "true" 表示使用内部 VPC IP
+        componentSelector: mongodb
+        name: mongodb-internet
+        serviceName: mongodb-internet
+        roleSelector: primary
+        spec:
+          ipFamilyPolicy: PreferDualStack
+          ports:
+            - name: mongodb
+              port: 27017
+              protocol: TCP
+              targetPort: mongodb
+          type: LoadBalancer
+    componentSpecs:
+    ...
+  ```
+  上述 YAML 配置在 services 部分新增了一个外部服务。该 LoadBalancer 服务包含 AWS 网络负载均衡器 (NLB) 的注解。
+
+  :::note
+  云服务商注解说明
+
+  使用 LoadBalancer 服务时，必须添加对应云服务商的特定注解。以下是常用云服务商的注解示例：
+
+  - AWS
+  ```yaml
+  service.beta.kubernetes.io/aws-load-balancer-type: nlb  # 使用网络负载均衡器
+  service.beta.kubernetes.io/aws-load-balancer-internal: "true"  # 设为 "false" 表示使用面向公网的 LoadBalancer
+  ```
+
+  - Azure
+  ```yaml
+  service.beta.kubernetes.io/azure-load-balancer-internal: "true" # 设为 "false" 表示使用面向公网的 LoadBalancer
+  ```
+
+  - GCP
+  ```yaml
+  networking.gke.io/load-balancer-type: "Internal"  # 限制 LoadBalancer 仅限内部 VPC 访问。默认不指定时为面向公网。
+  cloud.google.com/l4-rbs: "enabled" # 面向公网的 LoadBalancer 优化配置
+  ```
+
+  - 阿里云
+  ```yaml
+  service.beta.kubernetes.io/alibaba-cloud-loadbalancer-address-type: "internet"  # 设为 "intranet" 表示使用内部 LoadBalancer
+  ```
+  :::
+
+
+  :::note
+  `service.beta.kubernetes.io/aws-load-balancer-internal` 注解控制 LoadBalancer 是内部还是面向公网。注意该注解在服务创建后不能动态修改。
+  ```yaml
+    service.beta.kubernetes.io/aws-load-balancer-internal: "false"  # 设为 "true" 表示使用内部 VPC IP
+  ```
+  如果在服务创建后将该注解从 "false" 改为 "true"，注解可能在服务对象中更新，但 LoadBalancer 仍会保留其公网 IP。
+
+  正确修改该行为的步骤：
+  - 首先删除现有的 LoadBalancer 服务
+  - 使用更新后的注解重新创建服务（`service.beta.kubernetes.io/aws-load-balancer-internal`: "true"）
+  - 等待新的 LoadBalancer 配置正确的内部或外部 IP
+  :::
+
+
+  使用以下命令等待集群状态变为 Running：
+  ```bash
+  kubectl get cluster mongo-cluster -n demo -w
+  ```
+  ```
+  NAME            CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+  mongo-cluster   mongodb           Delete               Running   18m
+  ```
+  </TabItem>
+
+</Tabs>
+
+### 验证暴露的服务
+检查服务详情以确认 LoadBalancer 服务已创建：
+
+```bash
+kubectl get service -l app.kubernetes.io/instance=mongo-cluster -n demo
+```
+
+示例输出：
+```bash
+NAME                             TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)              AGE
+mongo-cluster-mongodb-internet   LoadBalancer   172.20.60.24   <EXTERNAL-IP> 27017:31243/TCP      1m
+```
+
+### 等待 DNS 解析生效
+
+LoadBalancer 的 DNS 名称可能需要 2-5 分钟才能解析。验证解析状态：
+
+```bash
+nslookup <EXTERNAL-IP>  # 将 <EXTERNAL-IP> 替换为实际获取的 IP 地址
+```
+
+## 外部连接 MongoDB
+
+### 获取凭证
+
+KubeBlocks 会自动创建一个包含 MongoDB root 凭证的 Secret。获取 MongoDB root 凭证：
+```bash
+NAME=`kubectl get secrets -n demo mongo-cluster-mongodb-account-root -o jsonpath='{.data.username}' | base64 -d`
+PASSWD=`kubectl get secrets -n demo mongo-cluster-mongodb-account-root -o jsonpath='{.data.password}' | base64 -d`
+```
+
+### 使用 MongoDB 客户端连接
+
+现在你可以从外部（例如你的笔记本电脑或 EC2 实例）连接到 MongoDB 数据库：
+```bash
+mongosh "mongodb://<$NAME>:<$PASSWD>@<external-ip>:27017/admin"
+```
+
+## 禁用外部访问
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  方法一：使用 OpsRequest
+
+  要禁用外部访问，创建一个 OpsRequest：
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: mongo-cluster-expose-disable-ops
+    namespace: demo
+  spec:
+    clusterName: mongo-cluster
+    expose:
+    - componentName: mongodb
+      services:
+      - name: internet
+        roleSelector: primary
+        serviceType: LoadBalancer
+      switch: Disable
+    preConditionDeadlineSeconds: 0
+    type: Expose
+  ```
+
+  等待 OpsRequest 完成：
+  ```bash
+  kubectl get ops mongo-cluster-expose-disable-ops -n demo
+  ```
+  示例输出：
+  ```bash
+  NAME                               TYPE     CLUSTER         STATUS    PROGRESS   AGE
+  mongo-cluster-expose-disable-ops   Expose   mongo-cluster   Succeed   1/1        24s
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  方法二：使用 Cluster API
+
+  或者，从 Cluster 资源中移除 `spec.services` 字段：
+  ```bash
+  kubectl patch cluster mongo-cluster -n demo --type=json -p='[
+    {
+      "op": "remove",
+      "path": "/spec/services"
+    }
+  ]'
+  ```
+
+  监控集群状态直到变为 Running：
+  ```bash
+  kubectl get cluster mongo-cluster -n demo -w
+  ```
+
+  ```bash
+  NAME            CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+  mongo-cluster   mongodb              Delete               Running   24m
+  ```
+  </TabItem>
+</Tabs>
+
+### 验证服务移除
+
+确保 'mongo-cluster-mongodb-internet' 服务已被移除：
+
+```bash
+kubectl get service -l app.kubernetes.io/instance=mongo-cluster -n demo
+```
+
+预期结果：'mongo-cluster-mongodb-internet' 服务应该已被移除。
+
+## 清理资源
+要删除所有已创建的资源，请执行以下命令删除 MongoDB 集群及其所在的命名空间：
+```bash
+kubectl delete cluster mongo-cluster -n demo
+kubectl delete ns demo
+```
+
+## 概述
+本指南演示了如何：
+- 使用 KubeBlocks 将 MongoDB 服务暴露给外部或内部访问
+- 通过云服务商特定注解配置负载均衡器（LoadBalancer）服务
+- 通过 OpsRequest 或直接更新 Cluster API 来管理外部访问，实现服务的启用或禁用
+
+KubeBlocks 为 Kubernetes 环境中的 MongoDB 服务管理提供了灵活且简化的解决方案。

@@ -1,0 +1,219 @@
+---
+description: 了解如何在KubeBlocks管理的MongoDB集群中无停机扩展持久卷声明（PVC）。
+keywords:
+- KubeBlocks
+- MongoDB
+- Volume Expansion
+- Kubernetes
+- PVC
+sidebar_label: 存储卷扩容
+sidebar_position: 4
+title: MongoDB集群中扩展存储卷
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# 扩展 MongoDB 集群的存储卷
+
+本指南介绍如何在 **KubeBlocks** 管理的 MongoDB 集群中扩展持久卷声明（PVC）。存储卷扩展功能允许动态增加存储容量，使您的数据库能够随着数据增长无缝扩展。当底层存储类支持时，此操作可在不中断服务的情况下执行。
+
+存储卷扩展允许您在创建持久卷声明（PVC）后增加其容量。该功能在 Kubernetes v1.11 中引入，并在 Kubernetes v1.24 版本正式发布（GA）。
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+### 检查存储类是否支持卷扩展
+
+列出所有可用存储类，并通过检查 `ALLOWVOLUMEEXPANSION` 字段验证是否支持卷扩展：
+```bash
+kubectl get storageclass
+```
+
+示例输出：
+```bash
+NAME                PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+gp2                 kubernetes.io/aws-ebs   Delete          WaitForFirstConsumer   false                  4d10h
+kb-default-sc       ebs.csi.aws.com         Delete          WaitForFirstConsumer   true                   3d7h
+sc-s3-repo-2qsxfh   ru.yandex.s3.csi        Retain          Immediate              false                  3d7h
+```
+请确保您使用的存储类将 `ALLOWVOLUMEEXPANSION` 设置为 true。若为 false，则表示该存储类不支持卷扩展。
+
+## 使用支持扩展的存储类部署 MongoDB 副本集集群
+
+KubeBlocks 采用声明式方式管理 MongoDB 集群。以下是一个部署包含 2 个副本（1 主节点 + 1 从节点）的 MongoDB 集群配置示例。
+
+应用以下 YAML 配置部署集群：
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: mongo-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: mongodb
+  topology: replicaset
+  componentSpecs:
+    - name: mongodb
+      serviceVersion: "6.0.16"
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            # 指定支持卷扩展的存储类名称
+            storageClassName: <STORAGE_CLASS_NAME>
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+**关键字段说明**
+- `storageClassName`: 指定支持卷扩展的 `StorageClass` 名称。若未设置，将使用标记为 `default` 的 StorageClass。
+
+:::note
+**ALLOWVOLUMEEXPANSION**
+
+创建集群时，请确保存储类支持卷扩展（检查 `ALLOWVOLUMEEXPANSION` 字段）。
+
+:::
+
+
+## 验证部署
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+## 扩展存储卷
+
+:::note
+1. 确保存储类支持卷扩展（检查 `ALLOWVOLUMEEXPANSION`）
+2. 新容量必须大于当前容量
+3. 根据存储提供商不同，卷扩展可能需要额外配置
+:::
+
+可通过以下两种方式扩展存储卷：
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  方法一：使用 VolumeExpansion OpsRequest
+
+  应用以下 YAML 为 mongodb 组件扩容：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: mongo-cluster-expand-volume-ops
+    namespace: demo
+  spec:
+    clusterName: mongo-cluster
+    type: VolumeExpansion
+    volumeExpansion:
+    - componentName: mongodb
+      volumeClaimTemplates:
+      - name: data
+        storage: 30Gi
+  ```
+
+  通过以下命令监控扩展进度：
+
+  ```bash
+  kubectl describe ops mongo-cluster-expand-volume-ops -n demo
+  ```
+
+  预期结果：
+  ```bash
+  Status:
+    Phase:            Succeed
+  ```
+  操作完成后，PVC 容量将更新。
+
+  :::note
+  若使用的存储类不支持卷扩展，此 OpsRequest 将快速失败并提示：
+  `storageClass: [STORAGE_CLASS_NAME] of volumeClaimTemplate: [VOLUME_NAME]] not support volume expansion in component [COMPONENT_NAME]`
+  :::
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  方法二：直接更新 Cluster API
+
+  您也可以直接更新 `spec.componentSpecs.volumeClaimTemplates.spec.resources.requests.storage` 字段：
+
+  ```yaml
+  componentSpecs:
+    - name: mongodb
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: <STORAGE_CLASS_NAME>
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                # 指定新容量（必须大于当前值）
+                storage: 30Gi
+  ```
+  KubeBlocks 将根据新配置自动更新 PVC 容量。
+  </TabItem>
+</Tabs>
+
+## 验证操作
+
+检查更新后的集群配置：
+```bash
+kbcli cluster describe mongo-cluster -n demo
+```
+预期输出：
+```bash
+Resources Allocation:
+COMPONENT   INSTANCE-TEMPLATE     CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+mongodb                           500m / 500m          512Mi / 512Mi           data:30Gi      <STORAGE_CLASS_NAME>
+```
+数据卷 PVC 容量已更新为指定值（本例中为 30Gi）。
+
+确认 PVC 扩容完成：
+```bash
+kubectl get pvc -l app.kubernetes.io/instance=mongo-cluster -n demo
+```
+预期输出：
+```bash
+NAME                           STATUS   VOLUME    CAPACITY   ACCESS MODES   STORAGECLASS          AGE
+mongo-cluster-mongodb-data-0   Bound    pvc-uuid  30Gi       RWO            <STORAGE_CLASS_NAME>  33m
+mongo-cluster-mongodb-data-1   Bound    pvc-uuid  30Gi       RWO            <STORAGE_CLASS_NAME>  33m
+mongo-cluster-mongodb-data-2   Bound    pvc-uuid  30Gi       RWO            <STORAGE_CLASS_NAME>  33m
+```
+
+## 清理资源
+删除 MongoDB 集群及其命名空间以释放所有资源：
+```bash
+kubectl delete cluster mongo-cluster -n demo
+kubectl delete ns demo
+```
+
+## 总结
+
+本指南中您已学习如何：
+1. 验证存储类的卷扩展兼容性
+2. 通过以下方式执行卷扩展：
+   - 使用 OpsRequest 进行动态更新
+   - 通过 Cluster API 手动更新
+3. 验证 PVC 新容量并确认扩容操作完成
+
+通过存储卷扩展功能，您可以在不影响服务的情况下高效扩展 MongoDB 集群的存储容量，确保数据库能够随着应用需求同步增长。

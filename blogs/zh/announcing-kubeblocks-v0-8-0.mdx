@@ -1,0 +1,105 @@
+---
+date: 2024-01-12
+description: 本博客介绍KubeBlocks v0.8.0版本的主要变更。
+image: /img/blogs/thumbnails/blog-banner.png
+slug: announcing-kubeblocks-v0-8-0
+tags:
+- KubeBlocks v0.8.0
+- release notes
+title: KubeBlocks v0.8.0 正式发布
+---
+# KubeBlocks v0.8.0 正式发布
+
+激动人心的消息！KubeBlocks v0.8.0 正式发布了！🚀 🎉 🎈
+
+KubeBlocks v0.8.0 在用户体验方面迈出了一大步，引入了组件级 API，这使得标准化构建块变得更小且更易于复用。
+
+例如，ETCD 和 ZK 等广泛用于各类数据库集群的元数据库组件，经过组件模块化后现在可以直接引用。
+
+我们还使 Vitess Proxy 成为了标准组件，这样开发者在定义各种发行版中 MySQL 或 PostgreSQL 引擎的读写分离拓扑时，就无需重复工作（繁重任务）。
+
+此外，Add-on 机制也得到了显著改进。数据库引擎的 Helm Chart 已从 KubeBlocks 代码库中分离出来。从此，数据库引擎或版本的变更将与 KubeBlocks 发布解耦。
+
+## 核心亮点
+
+### 独立组件 API
+
+在集成新数据库引擎时，我们发现 KubeBlocks 的抽象设计存在不足。v0.8.0 版本将 Component 从 Cluster 定义中拆分出来，以更好地支持具有多组件的数据库类型。它支持组件之间的变量引用，包括 ConfigMap、Secret、Service、ServiceReference 等变量引用类型，可以更好地连接组件间的关系，为构建不同拓扑结构的集群奠定基础。
+
+### 从 KubeBlocks 仓库移除插件 Helm Chart
+
+在之前的版本中，数据库引擎的 Helm Chart 位于 "deploy" 目录中，与 KubeBlocks Operator 紧密耦合。但这导致了两个问题：首先，升级 KubeBlocks 会触发数据库引擎的升级；其次，升级数据库引擎会覆盖现有的 CD/CV，导致所有集群重启。
+
+为解决这些问题，KubeBlocks v0.8.0 将数据库引擎放入名为 "kubeblocks-addon" 的独立仓库中，并为数据库引擎及相关资源添加了版本号。这确保新安装不会覆盖现有资源，从而避免集群重启。同时 KubeBlocks 提供了 "kbcli addon" 命令，允许用户下载、安装、使用和卸载特定引擎版本。
+
+### 支持多版本数据库引擎定义
+
+在 v0.8.0 之前，KubeBlocks 升级可能会触发数据库集群重启。KubeBlocks v0.8.0 通过新的 Component API 和插件 Helm Chart 存储机制，在一定程度上解决了该问题。我们将在未来持续优化多版本设计，最终实现无负担升级。
+
+## 变更内容
+
+### 新功能
+
+#### Pika
+
+支持多个 Pulsar 集群共享一个 zookeeper 组件。
+
+#### Clickhouse
+
+集成监控、水平扩展和高可用功能。
+
+#### Oceanbase
+
+新增主备集群模式，支持完整生命周期管理，并集成备份、恢复、监控和切换功能。
+
+#### MySQL
+
+- MySQL 5.7 和 8.0 社区版支持完整生命周期管理，包括备份恢复、监控和高可用。
+- 在 ApeCloud MySQL 上新增日志审计功能。
+
+#### PostgreSQL
+
+支持 wal-g 全量备份和 PITR（时间点恢复）。
+
+#### OpsRequest
+
+支持自定义 OpsRequest，可执行特定操作动作。例如创建和删除 Kafka 主题。
+
+#### NodePort
+
+为 Redis 启用 NodePort 访问方式。
+
+### 兼容性
+
+兼容重构前的 ClusterDefinition 和 ClusterVersion API。
+
+### 易用性
+
+- OpsRequest 支持任务排队，允许用户一次性提交多个任务。对于无法并发执行的任务，系统会在前一个任务完成后自动执行下一个任务。
+- 在 KubeBlocks 安装过程中，现在可以指定镜像仓库地址，加速镜像拉取。
+
+### 可观测性
+
+统一日志和指标收集的配置管理。
+
+### API
+
+- 在 ComponentDefinition 中添加接口定义
+- 新增 OpsDefinition API
+- 为 ActionSet 添加 PreDelete 动作。可在删除备份前执行该动作
+
+### 稳定性
+
+稳定性测试及相关改进。[进行中] KubeBlocks 故障测试。
+
+### kbcli
+
+增强 addon 子命令功能。可从索引仓库安装插件。
+
+## 不兼容变更
+
+- 在 KubeBlocks 0.8.0 中，我们对 OceanBase 进行了功能增强（新增主备集群创建、支持主机网络和动态端口、支持备份恢复、监控、日志等功能）。v0.7.0 版本创建的集群与 v0.8.0 版本不兼容，因此如果您正在使用 v0.7.0 管理 OceanBase，建议升级至 v0.8.0。请先升级 KubeBlocks，再升级 OceanBase Addon。建议使用 OceanBase 官方数据导入导出工具（OBLOADER 和 OBDUMPER）进行数据迁移。
+
+- KubeBlocks 0.8.0 精简了部署 KubeBlocks 时默认安装的数据引擎，移除了 greptime、influxdb、neon、oracle-mysql、oroledb、tdengine、mariadb、nebula、risingwave、starrocks、tidb、zookeeper。您可以通过 kbcli addon 子命令或 kubectl apply 命令从 addon 索引仓库按需安装；如果是从低版本升级，请遵循升级手册操作，避免删除正在使用的 addon，这可能会影响运行中的集群。
+
+- KubeBlocks 0.8.0 的 Helm Chart 不再包含依赖的 CRD。使用 helm 命令安装或升级 KubeBlocks 时，需要先安装对应的 CRD 再安装或升级 KubeBlocks，详情请参考升级手册。

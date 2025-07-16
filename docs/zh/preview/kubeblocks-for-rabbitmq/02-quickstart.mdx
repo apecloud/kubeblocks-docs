@@ -1,0 +1,481 @@
+---
+description: 使用KubeBlocks部署和管理RabbitMQ副本集集群的完整指南，涵盖安装、配置及运维最佳实践。
+keywords:
+- Kubernetes
+- RabbitMQ
+- KubeBlocks
+- Helm
+- Cluster Management
+- QuickStart
+sidebar_label: 快速入门
+sidebar_position: 2
+title: RabbitMQ 快速入门
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# RabbitMQ 快速入门
+
+本指南提供了使用 **KubeBlocks RabbitMQ 插件** 部署和管理 RabbitMQ 副本集集群的完整指引，内容包括：
+- 系统前提条件与插件安装
+- 集群创建与配置
+- 运维管理（包括启停流程）
+- 连接方式与集群监控
+
+## 前提条件
+
+### 系统要求
+
+开始前请确保您的环境满足以下要求：
+
+- 可用的 Kubernetes 集群（推荐 v1.21+ 版本）
+- 已安装并配置好集群访问权限的 `kubectl` v1.21+ 
+- 已安装 Helm（[安装指南](https://helm.sh/docs/intro/install/)）
+- 已安装 KubeBlocks（[安装指南](../user_docs/overview/install-kubeblocks)）
+
+### 验证 RabbitMQ 插件
+
+RabbitMQ 插件默认随 KubeBlocks 一同安装。检查其状态：
+
+```bash
+helm list -n kb-system | grep rabbitmq
+```
+
+<details open>
+<summary>示例输出：</summary>
+
+```bash
+NAME                  NAMESPACE   REVISION    UPDATED                     STATUS      CHART
+kb-addon-rabbitmq     kb-system   1           2025-05-21                  deployed    rabbitmq-1.0.0
+```
+</details>
+
+若插件未启用，请选择以下安装方式：
+
+<Tabs>
+
+  <TabItem value="helm" label="helm" default>
+  ```bash
+  # 添加 Helm 仓库
+  helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
+  # 中国大陆用户若 GitHub 访问困难，可使用以下镜像仓库：
+  #helm repo add kubeblocks-addons https://jihulab.com/api/v4/projects/150246/packages/helm/stable
+
+  # 更新 Helm 仓库
+  helm repo update
+  # 查询可用插件版本
+  helm search repo kubeblocks/rabbitmq --versions
+  # 安装指定版本（将<VERSION>替换为目标版本号）
+  helm upgrade -i kb-addon-rabbitmq kubeblocks-addons/rabbitmq --version <VERSION> -n kb-system
+  ```
+  </TabItem>
+
+  <TabItem value="kbcli" label="kbcli">
+
+  ```bash
+  # 添加索引（kubeblocks 索引默认已添加）
+  kbcli addon index add kubeblocks https://github.com/apecloud/block-index.git
+  # 更新索引
+  kbcli addon index update kubeblocks
+  # 更新所有索引
+  kbcli addon index update --all
+  ```
+
+  插件搜索与安装：
+
+  ```bash
+  # 搜索插件
+  kbcli addon search rabbitmq
+  # 安装指定版本插件（将<VERSION>替换为目标版本号）
+  kbcli addon install rabbitmq --version <VERSION>
+  ```
+  **示例输出：**
+  ```bash
+  ADDON   VERSION         INDEX
+  rabbitmq   0.9.0           kubeblocks
+  rabbitmq   0.9.1           kubeblocks
+  rabbitmq   1.0.0           kubeblocks
+  ```
+  插件启用/停用：
+
+  ```bash
+  # 启用插件
+  kbcli addon enable rabbitmq
+  # 停用插件
+  kbcli addon disable rabbitmq
+  ```
+
+  </TabItem>
+</Tabs>
+
+:::note
+**版本兼容性说明**
+
+请始终确保 RabbitMQ 插件版本与 KubeBlocks 主版本相匹配，以避免兼容性问题。
+
+:::
+
+### 验证支持的 RabbitMQ 版本
+
+**列出可用 RabbitMQ 版本：**
+
+```bash
+kubectl get cmpv rabbitmq
+```
+<details open>
+<summary>示例输出</summary>
+```text
+NAME       VERSIONS                                                    STATUS      AGE
+rabbitmq   4.0.9,3.13.7,3.13.2,3.12.14,3.11.28,3.10.25,3.9.29,3.8.14   Available   26d
+```
+</details>
+
+**检查 ComponentDefinitions 的版本兼容性**
+
+**步骤 1.** 获取与指定 `ComponentVersion` 关联的 `ComponentDefinition` 列表
+
+```bash
+kubectl get cmpv rabbitmq -ojson | jq -r '.metadata.annotations."componentversion.kubeblocks.io/compatible-definitions"' | tr ',' '\n'
+```
+
+<details>
+<summary>示例输出</summary>
+```text
+rabbitmq-1.0.0
+```
+</details>
+
+**步骤 2.** 获取与指定 `ComponentDefinition` 兼容的版本列表
+
+```bash
+kubectl get cmpv rabbitmq -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("rabbitmq"))) | .releases[]'
+```
+
+该命令返回与名为 `rabbitmq` 的 `ComponentDefinition` 兼容的版本：
+
+<details open>
+<summary>示例输出</summary>
+```text
+4.0.9
+3.13.7
+3.13.2
+3.12.14
+3.11.28
+3.10.25
+3.9.29
+3.8.14
+```
+</details>
+
+### 存储配置
+
+RabbitMQ 需要持久化存储。请检查可用存储选项：
+
+```bash
+kubectl get storageclass
+```
+
+推荐存储特性：
+- 最小 20Gi 容量
+- ReadWriteOnce 访问模式
+- 支持存储卷扩容
+- 满足工作负载的性能需求
+
+## 部署 RabbitMQ 集群
+
+使用默认配置部署基础版 RabbitMQ 集群：
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/rabbitmq/cluster.yaml
+```
+
+该操作将创建：
+- 包含 3 个副本的 RabbitMQ 集群
+- 默认资源分配（0.5 CPU，0.5Gi 内存）
+- 20Gi 持久化存储
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: rabbitmq-cluster
+  namespace: demo
+spec:
+  # 定义集群删除时的行为策略
+  # 可选值：[DoNotTerminate, Delete, WipeOut]（KB 0.9 起弃用 `Halt`）
+  # - `DoNotTerminate`：阻止集群删除，确保所有资源保留完整
+  # - `Delete`：在 `Halt` 策略基础上增加 PVC 清理，实现包括持久化数据在内的彻底清除
+  # - `WipeOut`：激进策略，将删除包括外部存储中的卷快照和备份在内的所有集群资源，导致数据完全不可恢复。应谨慎使用，建议仅在非生产环境执行
+  terminationPolicy: Delete
+  # 指定创建集群时使用的 ClusterDefinition 名称
+  # 注意：禁止修改此字段
+  # 必须设置为 `rabbitmq` 才能创建 RabbitMQ 集群
+  clusterDef: rabbitmq
+  # 指定创建集群时采用的 ClusterTopology
+  # 可选值：[clustermode]
+  topology: clustermode
+  componentSpecs:
+    - name: rabbitmq
+      # 指定该组件需要部署的服务版本
+      # 可选版本：[3.10.25,3.11.28,3.12.14,3.13.2,3.13.7,3.8.14,3.9.29]
+      serviceVersion: 3.13.7
+      # 按需调整副本数
+      # 推荐值：[3,5,7]
+      replicas: 3
+      # 定义组件所需的计算资源
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      # 定义组件存储需求的持久卷声明模板列表
+      volumeClaimTemplates:
+        # 对应 componentDefinition.spec.runtime.containers[*].volumeMounts 中定义的挂载卷名称
+        - name: data
+          spec:
+            # 声明所需的存储类名称
+            # 若未指定，默认使用标注了 storageclass.kubernetes.io/is-default-class=true 的存储类
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                # 按需设置存储容量
+                storage: 20Gi
+```
+
+更多 API 字段说明请参阅 [API 参考文档](../user_docs/references/api-reference/cluster)。
+
+### 创建指定版本的 RabbitMQ 集群
+
+在应用配置前，通过设置 `spec.componentSpecs.serviceVersion`（主版本.次版本）字段可创建特定版本的集群：
+
+<Tabs>
+  <TabItem value="rabbitmq4" label="RabbitMQ 4.x" default>
+  ```yaml
+    componentSpecs:
+      - name: rabbitmq
+        serviceVersion: 4.0.9
+  ```
+  </TabItem>
+  <TabItem value="rabbitmq3" label="RabbitMQ 3.x">
+  ```yaml
+    componentSpecs:
+      - name: rabbitmq
+        serviceVersion: 3.13.7    # 可选版本：[3.13.7,3.13.2,3.12.14,3.11.28,3.10.25,3.9.29,3.8.14]
+  ```
+  </TabItem>
+</Tabs>
+
+:::重要说明
+
+RabbitMQ 需要具备 `peer discovery` 角色来创建事件和获取端点信息，这是发现其他节点并组建集群的关键机制。
+
+KubeBlocks 在部署 RabbitMQ 集群时会自动创建具有相应权限（Roles）的服务账户（SA）。
+
+:::
+
+## 验证集群状态
+
+当部署一个包含3个副本的RabbitMQ集群时，请通过以下方式确认部署成功：
+
+1. 集群状态为`Running`
+2. 所有Pod均正常运行
+
+可通过以下任一方式检查状态：
+
+<Tabs>
+  <TabItem value='kubectl' label='kubectl' default>
+```bash
+kubectl get cluster rabbitmq-cluster -n demo -w
+NAME               CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+rabbitmq-cluster   rabbitmq               Delete               Creating   27s
+rabbitmq-cluster   rabbitmq               Delete               Running    64s
+
+kubectl get pods -l app.kubernetes.io/instance=rabbitmq-cluster -n demo
+NAME                          READY   STATUS    RESTARTS   AGE
+rabbitmq-cluster-rabbitmq-0   2/2     Running   0          92s
+rabbitmq-cluster-rabbitmq-1   2/2     Running   0          77s
+rabbitmq-cluster-rabbitmq-2   2/2     Running   0          63s
+```
+  </TabItem>
+
+  <TabItem value='kbcli' label='kbcli'>
+
+  若已安装`kbcli`，可查看完整的集群信息：
+
+```bash
+kbcli cluster describe rabbitmq-cluster -n demo
+
+名称: rabbitmq-cluster	 创建时间: 2025年5月18日 23:05 UTC+0800
+命名空间   集群定义        拓扑模式      状态      终止策略
+demo      rabbitmq       clustermode   Running   Delete
+
+访问端点:
+组件     内部地址                                                外部地址
+rabbitmq rabbitmq-cluster-rabbitmq.demo.svc.cluster.local:5672    <无>
+         rabbitmq-cluster-rabbitmq.demo.svc.cluster.local:15672
+
+拓扑结构:
+组件     服务版本   实例名称                      角色     状态     可用区   节点    创建时间
+rabbitmq 3.17.7    rabbitmq-cluster-rabbitmq-0   <无>    Running  zone-x  x.y.z  2025年5月18日 23:05 UTC+0800
+rabbitmq 3.17.7    rabbitmq-cluster-rabbitmq-1   <无>    Running  zone-x  x.y.z  2025年5月18日 23:06 UTC+0800
+rabbitmq 3.17.7    rabbitmq-cluster-rabbitmq-2   <无>    Running  zone-x  x.y.z  2025年5月18日 23:06 UTC+0800
+
+资源分配:
+组件     实例模板    CPU(请求/限制)    内存(请求/限制)     存储大小     存储类
+rabbitmq             500m / 500m      512Mi / 512Mi      data:20Gi   <无>
+
+镜像信息:
+组件     组件定义            镜像
+rabbitmq rabbitmq-1.0.0    docker.io/library/rabbitmq:3.13.7-management
+
+数据保护:
+备份仓库   自动备份   备份计划   备份方法   备份保留期   可恢复时间
+
+查看集群事件: kbcli cluster list-events -n demo rabbitmq-cluster
+```
+
+  </TabItem>
+</Tabs>
+
+## 访问 RabbitMQ 管理控制台
+
+**获取凭证**  
+用户名和密码存储在名为 `<clusterName>-<cmpName>-account-<accountName>` 的集群 Secret 中。本例中 Secret 名称为 `rabbitmq-cluster-rabbitmq-account-root`。
+
+```bash
+# 获取用户名
+NAME=$(kubectl get secrets -n demo rabbitmq-cluster-rabbitmq-account-root -o jsonpath='{.data.username}' | base64 -d)
+# 获取密码
+PASSWD=$(kubectl get secrets -n demo rabbitmq-cluster-rabbitmq-account-root -o jsonpath='{.data.password}' | base64 -d)
+```
+
+**端口转发服务**  
+
+```bash
+kubectl port-forward svc/rabbitmq-cluster-rabbitmq -ndemo 15672:15672
+```
+
+**访问管理控制台**  
+使用获取的用户名和密码，通过 `http://<endpoint>:<port>/` 地址登录 RabbitMQ 管理控制台。
+
+## 停止 RabbitMQ 集群
+
+停止集群会暂时暂停运行，同时保留所有数据和配置：
+
+**关键影响：**
+- 计算资源（Pod）将被释放
+- 持久化存储（PVC）保持完整
+- 服务定义得以保留
+- 集群配置不会丢失
+- 运营成本降低
+
+<Tabs>
+  <TabItem value="OpsRequest" label="OpsRequest API" default>
+  ```bash
+  kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/rabbitmq/stop.yaml
+  ```
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: rabbitmq-stop
+    namespace: demo
+  spec:
+    clusterName: rabbitmq-cluster
+    type: Stop
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+  也可以通过设置 `spec.componentSpecs.stop` 为 true 来停止集群：
+
+  ```bash
+  kubectl patch cluster rabbitmq-cluster -n demo --type='json' -p='[
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/0/stop",
+    "value": true
+  }
+  ]'
+  ```
+
+  ```yaml
+  spec:
+    componentSpecs:
+      - name: rabbitmq
+        stop: true  # 设置为 true 以停止组件
+        replicas: 3
+  ```
+  </TabItem>
+</Tabs>
+
+## 启动 RabbitMQ 集群
+
+重启已停止的集群将恢复所有数据和配置，继续正常运行。
+
+**关键影响：**
+- 计算资源（Pod）会被重新创建
+- 服务将再次可用
+- 集群恢复到之前的状态
+
+<Tabs>
+  <TabItem value="OpsRequest" label="OpsRequest API" default>
+  ```bash
+  kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/rabbitmq/start.yaml
+  ```
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: rabbitmq-start
+    namespace: demo
+  spec:
+    clusterName: rabbitmq-cluster
+    type: Start
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+  通过将 `spec.componentSpecs.stop` 设置为 false 来重启集群：
+
+  ```bash
+  kubectl patch cluster rabbitmq-cluster -n demo --type='json' -p='[
+  {
+    "op": "remove",
+    "path": "/spec/componentSpecs/0/stop"
+  }
+  ]'
+  ```
+  </TabItem>
+</Tabs>
+
+## 删除 RabbitMQ 集群
+
+请根据数据保留需求谨慎选择删除策略：
+
+| 策略类型        | 删除的资源          | 数据清除情况       | 适用场景               |
+|-----------------|---------------------|--------------------|------------------------|
+| DoNotTerminate  | 无                  | 无                 | 关键生产集群           |
+| Delete          | 所有资源            | PVC存储卷被删除    | 非关键环境             |
+| WipeOut         | 所有资源            | 全部数据*          | 仅限测试环境           |
+
+*包含外部存储中的快照和备份
+
+**删除前检查清单：**
+1. 确认没有应用正在使用该集群
+2. 确保已存在必要的备份
+3. 验证terminationPolicy配置正确
+4. 检查是否存在依赖资源
+
+对于测试环境，可使用以下命令进行完整清理：
+
+```bash
+kubectl patch cluster rabbitmq-cluster -p '{"spec":{"terminationPolicy":"WipeOut"}}' --type="merge" -n demo
+kubectl delete cluster rabbitmq-cluster -n demo
+```

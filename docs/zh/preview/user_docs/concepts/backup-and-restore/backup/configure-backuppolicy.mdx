@@ -1,0 +1,173 @@
+---
+description: 如何配置备份策略
+keywords:
+- backup
+- backup policy
+sidebar_label: 配置备份策略
+sidebar_position: 2
+title: 配置备份策略
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 配置备份策略
+
+## 配置加密密钥
+
+为确保恢复后的集群能正常访问数据，KubeBlocks在备份过程中会对集群凭证进行加密，并将其安全存储在Backup对象的Annotation中。因此，为保障数据安全，强烈建议在安装或升级KubeBlocks时谨慎分配备份对象的Get/List权限，并指定加密密钥。这些措施有助于确保数据得到妥善保护。
+
+自v0.9.0版本起，KubeBlocks已为datasafed集成数据加密功能。当前支持的加密算法包括`AES-128-CFB`、`AES-192-CFB`和`AES-256-CFB`。该功能允许备份数据在写入存储前进行加密，加密密钥将用于加密连接密码及备份数据。您可以根据实际需求引用现有密钥或为数据库集群创建不同的密钥。
+
+### 引用现有密钥
+
+若密钥已存在，您可以选择直接引用而无需设置`dataProtection.encryptionKey`。KubeBlocks提供了快速引用现有加密密钥的方式。
+
+假设已有名为`dp-encryption-key`的预定义Secret，其中包含`encryptionKey`键值。例如通过以下命令创建的Secret：
+
+```bash
+kubectl create secret generic dp-encryption-key \
+    --from-literal=encryptionKey='S!B\*d$zDsb='
+```
+
+随后在安装或升级KubeBlocks时可引用该密钥：
+
+```bash
+kbcli kubeblocks install \
+    --set dataProtection.encryptionKeySecretKeyRef.name="dp-encryption-key" \
+    --set dataProtection.encryptionKeySecretKeyRef.key="encryptionKey"
+# 上述命令等效于：
+# kbcli kubeblocks install --set dataProtection.encryptionKey='S!B\*d$zDsb='
+```
+
+### 创建新密钥
+
+若不需要默认启用备份加密，或需使用独立的`encryptionKey`，只需创建Secret并按以下步骤手动启用备份加密：
+
+1. 创建存储加密密钥的Secret：
+
+    ```bash
+    kubectl create secret generic backup-encryption \
+    --from-literal=secretKey='your secret key'
+    ```
+
+2. 启用加密：
+
+   请确保引用先前创建的密钥：
+
+    ```bash
+    kubectl --type merge patch backuppolicy mysqlcluster-mysql-backup-policy \
+    -p '{"spec":{"encryptionConfig":{"algorithm":"AES-256-CFB","passPhraseSecretKeyRef":{"name":"backup-encryption","key":"secretKey"}}}}'
+    ```
+
+:::note
+
+也可使用`kbcli`简化流程：
+
+```bash
+# 启用加密
+kbcli cluster edit-backup-policy <backup-policy-name> --set encryption.algorithm=AES-256-CFB --set encryption.passPhrase="SECRET!"
+
+# 禁用加密
+kbcli cluster edit-backup-policy <backup-policy-name> --set encryption.disabled=true
+```
+
+:::
+
+现在可照常执行备份和恢复操作。
+
+:::note
+
+步骤1中创建的Secret不可修改或删除，否则可能导致备份解密失败。
+
+:::
+
+默认情况下`encrytpionKey`仅用于加密连接密码，若需同时加密备份数据，请在上述命令中添加`--set dataProtection.enableBackupEncryption=true`。此后所有新建集群将默认启用备份加密。
+
+## 创建集群
+
+准备用于测试备份恢复功能的集群。以下示例使用默认命名空间中的MySQL集群`mycluster`：
+
+```shell
+# 创建MySQL集群
+kbcli cluster create mysql mycluster
+
+# 查看备份策略
+kbcli cluster list-backup-policies mycluster
+>
+名称                            命名空间   默认   集群       组件     创建时间                    状态
+mycluster-mysql-backup-policy   default   true   mycluster   mysql   2025-05-26 18:11 UTC+0800   可用
+```
+
+默认所有备份存储在全局仓库中。执行以下命令查看所有备份仓库，当`DEFAULT`字段为`true`时表示该仓库为默认仓库：
+
+```bash
+# 查看备份仓库
+kbcli backuprepo list
+```
+
+## 查看备份策略
+
+创建数据库集群后，支持备份的数据库会自动生成备份策略。执行以下命令查看集群备份策略：
+
+<Tabs>
+
+<TabItem value="kubectl" label="kubectl" default>
+
+```bash
+kubectl get backuppolicy -l app.kubernetes.io/instance=mycluster
+>
+名称                            备份仓库   状态      创建时间
+mycluster-mysql-backup-policy              可用       83秒
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+```bash
+kbcli cluster list-backup-policies mycluster
+>
+名称                            命名空间   默认   集群       组件     创建时间                    状态
+mycluster-mysql-backup-policy   default   true   mycluster   mysql   2025-05-26 18:11 UTC+0800   可用
+```
+
+</TabItem>
+
+</Tabs>
+
+备份策略包含集群支持的备份方法。执行以下命令查看备份方法：
+
+<Tabs>
+
+<TabItem value="kubectl" label="kubectl" default>
+
+```bash
+kubectl get backuppolicy mycluster-mysql-backup-policy -o yaml
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+```bash
+kbcli cluster describe-backup-policy mycluster
+>
+概览：
+  名称：               mycluster-mysql-backup-policy
+  集群：              mycluster
+  组件：              mysql
+  命名空间：          default
+  默认：              true
+
+备份方法：
+名称              动作集                 快照卷
+xtrabackup        mysql-xtrabackup-br     false
+volume-snapshot   mysql-volume-snapshot   true
+archive-binlog    mysql-pitr              false
+```
+
+</TabItem>
+
+</Tabs>
+
+对于MySQL集群，默认支持两种备份方法：`xtrabackup`和`volume-snapshot`。前者使用备份工具`xtrabackup`将MySQL数据备份至对象存储，后者利用云存储的快照能力通过快照备份数据。创建备份时可指定使用的备份方法。

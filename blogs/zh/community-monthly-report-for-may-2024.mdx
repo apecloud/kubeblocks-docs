@@ -1,0 +1,59 @@
+---
+date: 2024-06-06
+description: 了解 KubeBlocks 社区的最新动态。
+image: /img/blogs/thumbnails/blog-2024-05-monthly-report.png
+slug: Community-Monthly-Report-for-May-2024
+tags:
+- Monthly Report
+- Community
+title: 2024年5月社区月报
+---
+# 2024年5月社区月报
+
+## 概述
+
+5月份，KubeBlocks发布了v0.8.3版本并持续推进v0.9.0版本的开发。主要更新包括支持跨集群引用配置对象和NodeCountCluster功能。社区还修复了相关缺陷。
+
+在过去一个月里，社区合并了170个PR，解决了133个issue，共有24位开发者参与贡献。
+
+## 重点更新
+
+- [#7153](https://github.com/apecloud/kubeblocks/pull/7153) 支持跨集群引用配置
+- [#7258](https://github.com/apecloud/kubeblocks/pull/7258) 支持NodeCountScaler功能
+
+## 缺陷修复
+
+- [#7475](https://github.com/apecloud/kubeblocks/pull/7475) 修复MongoDB执行切换后崩溃的问题
+- [#7447](https://github.com/apecloud/kubeblocks/pull/7447) 适配rolecheck以支持部分数据库引擎的集群初始化
+- [#7365](https://github.com/apecloud/kubeblocks/pull/7365) 支持PVC创建幂等性
+- [#7352](https://github.com/apecloud/kubeblocks/pull/7352) 添加标签区分KubeBlocks和数据保护组件
+- [#7323](https://github.com/apecloud/kubeblocks/pull/7323) 修复configmap 'xxx-rsm-env'未找到的问题
+- [#7299](https://github.com/apecloud/kubeblocks/pull/7299) 为host网络添加lorry端口
+- [#7256](https://github.com/apecloud/kubeblocks/pull/7256) 移除webhook中对集群组件spec的验证
+- [#7266](https://github.com/apecloud/kubeblocks/pull/7267) 修复config-manager容器中存在重复volume挂载的问题
+
+## 新晋贡献者
+
+👏 让我们欢迎
+
+💙 @[d976045024](https://github.com/d976045024), [duiniwukenaihe](https://github.com/duiniwukenaihe), [starnop](https://github.com/starnop) 💙！
+
+很高兴你们加入KubeBlocks社区。上个月他们都完成了首个PR合并。感谢你们的贡献！
+
+## 新手友好任务
+
+我们呼吁更多开发者参与KubeBlocks的协作开发。从[good first issues](https://github.com/apecloud/kubeblocks/contribute)开始，期待与您共同打造下一代数据库管理平台！立即认领👇
+
+- [#7229 [改进] 通过名称指定备份/恢复端口](https://github.com/apecloud/kubeblocks/issues/7229)
+- [#7031 [改进] 文档API `opsrequest.spec.restoreSpec.restoreTimeStr`](https://github.com/apecloud/kubeblocks/issues/7031)
+
+![2024-04-good-first-issues](/img/blogs/2024-04-good-first-issues.jpg)
+
+相关链接：
+- [新手友好任务](https://github.com/apecloud/kubeblocks/contribute)
+- [贡献指南](https://github.com/apecloud/kubeblocks/blob/main/docs/CONTRIBUTING.md)
+- [开发指南](https://github.com/apecloud/kubeblocks/blob/main/docs/00%20-%20index.md)
+
+欢迎加入GitHub讨论或[KubeBlocks Slack群组](https://join.slack.com/t/kubeblocks/shared_invite/zt-29tx52d8n-vli24S6gtD5ODJlNUqLqbQ)！
+
+![2024-05-overview](/img/blogs/2024-05-overview.png)

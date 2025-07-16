@@ -1,0 +1,329 @@
+---
+description: 了解如何在KubeBlocks中设置PostgreSQL集群，并启用定时全量备份与持续增量备份功能。
+keywords:
+- PostgreSQL
+- Backup
+- PITR
+- KubeBlocks
+- Kubernetes
+sidebar_label: 定时持续备份
+sidebar_position: 4
+title: 在KubeBlocks中设置支持定时持续备份的PostgreSQL集群
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 在 KubeBlocks 中配置启用定时持续备份的 PostgreSQL 集群
+
+本指南将演示如何在 KubeBlocks 上配置 PostgreSQL 集群，实现以下功能：
+
+- 定时全量备份（基础备份）
+- 持续 WAL（预写式日志）归档
+- 时间点恢复（PITR）能力
+
+这种组合方案能以最小的恢复点目标（RPO）提供全面的数据保护。
+
+## 什么是 PITR？
+时间点恢复（Point-In-Time Recovery，简称 PITR）是一种通过结合全量备份与连续的二进制日志（binlog）/预写式日志（WAL）/归档日志（archive log）备份，将数据库恢复到特定时间点的技术。
+
+关于如何从全量备份和连续二进制日志备份中恢复数据的详细操作，请参阅[从 PITR 恢复](restore-with-pitr.mdx)指南。
+
+## 前提条件
+
+在开始之前，请确保满足以下要求：
+
+- **环境准备**：
+    - 已部署并运行一个 Kubernetes 集群。
+    - 已配置 `kubectl` CLI 工具，确保其可与集群通信。
+    - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。具体安装步骤请参考链接中的说明。
+
+- **命名空间准备**：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## 备份前提条件
+
+1. 已配置备份仓库：
+   - 已配置 `BackupRepo`
+   - 集群与仓库间网络连通，且 `BackupRepo` 状态为 `Ready`
+
+2. 集群处于运行状态：
+   - 集群必须处于 `Running` 状态
+   - 无正在进行的操作（如扩缩容、升级等）
+
+## 备份方法列表
+
+KubeBlocks PostgreSQL 支持以下备份方法：
+
+| 功能特性         | 方法               | 描述说明 |
+|-------------------|-------------------|----------|
+| 全量备份         | pg-basebackup     | 使用 PostgreSQL 工具 `pg_basebackup` 创建基础备份 |
+| 全量备份         | wal-g             | 使用 `wal-g` 工具创建全量备份（需配置 WAL-G） |
+| 持续备份         | postgresql-pitr   | 定期将 PostgreSQL 预写式日志（WAL）文件上传至备份仓库 |
+| 持续备份         | wal-g-archive     | 定期将 PostgreSQL 预写式日志（WAL）文件上传至备份仓库 |
+
+## 使用备份API部署PostgreSQL集群
+
+部署一个2节点的PostgreSQL复制集群（1个主节点，1个从节点）并指定备份配置。
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: pg-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: postgresql
+  topology: replication
+  componentSpecs:
+    - name: postgresql
+      serviceVersion: 16.4.0
+      labels:
+        apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
+      disableExporter: true
+      replicas: 2
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+  backup:
+    retentionPeriod: 7d
+    # 全量备份配置
+    method: pg-basebackup # 全量备份方法名称
+    enabled: true
+    cronExpression: 0 18 * * * # 全量备份调度时间
+    # 持续备份配置
+    continuousMethod: archive-wal # 持续备份方法
+    pitrEnabled: true # 是否启用持续备份
+    repoName: s3-repo # 指定备份仓库，若未指定则使用标注为`default`的BackupRepo
+```
+
+或者可以通过补丁方式为现有集群启用定时持续备份：
+```bash
+kubectl patch cluster pg-cluster -n demo --type='merge' -p='
+{
+  "spec": {
+    "backup": {
+      "retentionPeriod": "7d",
+      "method": "pg-basebackup",
+      "enabled": true,
+      "cronExpression": "0 18 * * *",
+      "continuousMethod": "archive-wal",
+      "pitrEnabled": true,
+      "repoName": "s3-repo"
+    }
+  }
+}'
+```
+
+**关键配置字段说明**
+
+| 字段 | 取值 | 说明 |
+|-------|-------|-------------|
+| `backup.enabled` | `true` | 启用定时备份功能 |
+| `method` | `pg-basebackup` | 使用PostgreSQL原生工具进行全量备份 |
+| `cronExpression` | `0 18 * * *` | 每天UTC时间18:00执行全量备份 |
+| `retentionPeriod` | `7d` | 备份保留7天 |
+| `repoName` | `s3-repo` | 备份仓库名称（S3兼容存储） |
+| `pitrEnabled` | `true` | 启用WAL持续归档以实现时间点恢复(PITR) |
+| `continuousMethod` | `wal-g-archive` | WAL持续归档方法 |
+
+## 验证部署
+
+监控集群状态直至其转为 Running（运行中）状态：
+```bash
+kubectl get cluster pg-cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+pg-cluster   postgresql           Delete               Creating   50s
+pg-cluster   postgresql           Delete               Running    4m2s
+```
+当集群状态显示为 Running 时，表示您的 PostgreSQL 集群已准备就绪可供使用。
+
+## 监控持续备份
+
+通过以下命令验证持续备份的运行状态：
+```bash
+# 获取持续备份
+kubectl get backup -l app.kubernetes.io/instance=pg-cluster,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
+# 获取处理持续备份的状态化集
+kubectl get sts -l app.kubernetes.io/instance=pg-cluster,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
+# 获取处理持续备份的Pod
+kubectl get pod -l app.kubernetes.io/instance=pg-cluster,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
+```
+
+其中标签说明：
+- `app.kubernetes.io/instance=pg-cluster` 用于通过集群名称标识资源
+- `dataprotection.kubeblocks.io/backup-type=Continuous` 用于按备份类型（持续/全量）进行标识
+
+## 验证备份配置
+
+KubeBlocks 会自动创建一个 `BackupSchedule` 资源。请检查以下配置：
+
+```bash
+kubectl get backupschedule pg-cluster-postgresql-backup-schedule  -n demo -oyaml
+```
+
+示例输出：
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: BackupSchedule
+...
+spec:
+  backupPolicyName: pg-cluster-postgresql-backup-policy
+  schedules:
+  - backupMethod: pg-basebackup
+    cronExpression: 0 18 * * *
+    enabled: true #
+    retentionPeriod: 7d
+  - backupMethod: archive-wal
+    cronExpression: '*/5 * * * *'
+    enabled: true
+    name: archive-wal
+    retentionPeriod: 7d
+```
+
+1. **全量备份** (pg-basebackup)：
+   - 创建完整的集群快照
+   - 按配置的计划运行（默认每日执行）
+   - 作为时间点恢复(PITR)的基础
+
+2. **持续备份** (wal-g-archive)：
+   - 每5分钟归档一次WAL日志
+   - 支持恢复到任意时间点
+   - 需要全量备份作为起始点
+
+
+- cronExpression -> 保持原样
+- retentionPeriod -> 保留周期
+- backupMethod -> 备份方法
+- enabled -> 启用状态
+其他技术名词均采用标准译法）
+
+## 配置 WAL-G 实现全量备份与持续备份
+
+:::note
+
+如需使用任何基于 wal-g 的备份方法（例如用于持续备份的 wal-g-archive 和用于全量备份的 wal-g），您需要先在集群中配置 wal-g。
+
+配置 wal-g 需要预先触发一次 `config-wal-g` 备份。
+:::
+
+### 创建 PostgreSQL 集群
+
+部署一个 2 节点的 PostgreSQL 复制集群（1 主节点，1 从节点）
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: pg-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: postgresql
+  topology: replication
+  componentSpecs:
+    - name: postgresql
+      serviceVersion: 16.4.0
+      labels:
+        apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
+      disableExporter: true
+      replicas: 2
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+### 使用 `config-wal-g` 备份方法配置 wal-g
+
+配置 wal-g 需要创建一个采用 `config-wal-g` 备份方法的 `Backup` 资源。
+这是一种特殊备份方法，会为集群中的每个副本创建 wal-g 配置文件。
+
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: Backup
+metadata:
+  name: pg-cluster-config-wal-g
+  namespace: demo
+spec:
+  backupMethod: config-wal-g
+  backupPolicyName: pg-cluster-postgresql-backup-policy
+  deletionPolicy: Delete
+```
+
+如果忘记配置 wal-g，您会看到备份任务显示为 `Failed`，且在备份 Pod 中出现以下错误：
+```bash
+fatal: unable to switch to directory: /home/postgres/pgdata/wal-g/env: file does not exist
+```
+
+### 设置定时备份
+
+通过补丁方式为现有集群启用定时持续备份：
+
+```bash
+kubectl patch cluster pg-cluster -n demo --type='merge' -p='
+{
+  "spec": {
+    "backup": {
+      "retentionPeriod": "7d", # 保留期限
+      "method": "wal-g", # 全量备份方法
+      "enabled": true, # 启用全量备份
+      "cronExpression": "0 18 * * *", # 全量备份计划
+      "continuousMethod": "wal-g-archive", # 持续备份方法
+      "pitrEnabled": true, # 是否启用持续备份。时间点恢复需要全量备份支持，因此需先启用全量备份
+      "repoName": "s3-repo" # 指定备份仓库，若未指定则使用标注为 `default` 的 BackupRepo
+    }
+  }
+}'
+```
+
+集群补丁完成后，您会立即看到一个采用 `wal-g-archive` 方法的持续备份任务开始运行。
+```bash
+kubectl get backup -l app.kubernetes.io/instance=pg-cluster,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
+```
+
+## 概述
+
+本指南涵盖以下内容：
+1. 使用 pg-basebackup 配置定时全量备份
+2. 通过 wal-g-archive 启用持续 WAL 归档
+3. 设置时间点恢复（PITR）能力
+4. 监控备份操作
+
+核心优势：
+- 定时全量备份确保定期恢复点
+- 持续 WAL 归档最大限度减少潜在数据丢失
+- 时间点恢复支持恢复到任意时间点
+

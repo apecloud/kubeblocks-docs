@@ -1,0 +1,177 @@
+---
+description: 了解如何在KubeBlocks管理的MongoDB副本集集群中执行垂直扩展，以优化资源利用率并提升性能。
+keywords:
+- KubeBlocks
+- MongoDB
+- Vertical Scaling
+- Kubernetes
+- Resources
+sidebar_label: 垂直扩展
+sidebar_position: 2
+title: MongoDB副本集集群中的垂直扩展
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# 使用KubeBlocks实现MongoDB副本集集群的垂直扩缩容
+
+本指南演示如何通过调整计算资源（CPU和内存）对KubeBlocks管理的MongoDB副本集集群进行垂直扩缩容，同时保持副本数量不变。
+
+垂直扩缩容会修改MongoDB实例的计算资源（CPU和内存）但维持副本数不变。主要特点：
+
+- **无中断性**：正确配置时可保持扩缩容期间的可用性
+- **精细化**：可独立调整CPU或内存资源
+- **可逆性**：支持按需进行扩容或缩容
+
+KubeBlocks以最小影响协调扩缩容过程：
+1. 优先更新从节点副本
+2. 待从节点健康后再更新主节点
+3. 集群状态从`更新中`过渡到`运行中`
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署MongoDB副本集集群
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+## 验证部署
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+## 垂直扩缩容
+
+**预期工作流程**：
+
+1. 首先逐个更新从节点副本
+2. 从节点健康后再更新主节点
+3. 集群状态从`更新中`转变为`运行中`
+
+<Tabs>
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+  选项一：使用VerticalScaling操作请求
+
+  应用以下YAML为mongodb组件扩容资源：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: mongo-cluster-vscale-ops
+    namespace: demo
+  spec:
+    clusterName: mongo-cluster
+    type: VerticalScaling
+    verticalScaling:
+    - componentName: mongodb
+      requests:
+        cpu: '1'
+        memory: 1Gi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+  ```
+  垂直扩缩容期间会发生什么？
+  - 首先重建从节点Pod以确保主节点Pod持续可用
+  - 所有从节点Pod更新完成后，主节点Pod将以新资源配置重启
+
+
+  可通过以下命令查看扩缩容进度：
+
+  ```bash
+  kubectl -n demo get ops mongo-cluster-vscale-ops -w
+  ```
+
+  预期输出：
+
+  ```bash
+  NAME                       TYPE              CLUSTER         STATUS    PROGRESS   AGE
+  mongo-cluster-vscale-ops   VerticalScaling   mongo-cluster   Running   0/3        32s
+  mongo-cluster-vscale-ops   VerticalScaling   mongo-cluster   Running   1/3        55s
+  mongo-cluster-vscale-ops   VerticalScaling   mongo-cluster   Running   2/3        82s
+  mongo-cluster-vscale-ops   VerticalScaling   mongo-cluster   Running   3/3        2m13s
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  选项二：直接更新集群API
+
+  也可通过更新`spec.componentSpecs.resources`字段实现垂直扩缩容。
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: mongodb
+        replicas: 3
+        resources:
+          requests:
+            cpu: "1"       # 按需更新资源
+            memory: "1Gi"  # 按需更新资源
+          limits:
+            cpu: "1"       # 按需更新资源
+            memory: "1Gi"  # 按需更新资源
+    ...
+    ```
+  </TabItem>
+</Tabs>
+
+## 最佳实践与注意事项
+
+**规划阶段：**
+- 选择维护窗口或低流量时段执行扩缩容
+- 确认Kubernetes集群有充足资源
+- 操作前检查是否有其他进行中的运维任务
+
+**执行阶段：**
+- 保持CPU与内存的合理配比
+- 设置相同的requests/limits以保证服务质量(QoS)
+
+**后续监控：**
+- 观察资源使用率和应用性能表现
+- 必要时调整MongoDB参数配置
+
+## 验证
+通过检查集群配置或Pod详情验证更新后的资源：
+```bash
+kbcli cluster describe mongo-cluster -n demo
+```
+
+预期输出：
+```bash
+资源分配情况：
+组件       实例模板          CPU(请求/限制)     内存(请求/限制)      存储大小       存储类
+mongodb                     1 / 1              1Gi / 1Gi          data:20Gi     <none>
+```
+
+## KubeBlocks垂直扩缩容的核心优势
+- 无缝扩缩容：按特定顺序重建Pod确保最小影响
+- 动态资源调整：根据工作负载灵活调整CPU和内存
+- 操作灵活：可选择动态扩缩容OpsRequest或直接API更新
+- 高可用保障：扩缩容过程中集群持续可用
+
+## 清理资源
+删除MongoDB副本集集群及相关命名空间：
+```bash
+kubectl delete cluster mongo-cluster -n demo
+kubectl delete ns demo
+```
+
+## 总结
+通过本指南您学会了：
+1. 部署KubeBlocks管理的MongoDB副本集集群
+2. 通过增减mongodb组件资源实现垂直扩缩容
+3. 使用OpsRequest和直接Cluster API两种方式调整资源配置
+
+垂直扩缩容是优化资源利用率和适应工作负载变化的有效手段，可确保MongoDB副本集集群始终保持高性能与高弹性。

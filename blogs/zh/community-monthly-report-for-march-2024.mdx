@@ -1,0 +1,61 @@
+---
+date: 2024-04-07
+description: KubeBlocks v0.8.2，新贡献者加入，快来了解社区最新动态。
+image: /img/blogs/thumbnails/blog-2024-03-monthly-report.png
+slug: Community-Monthly-Report-for-March-2024
+tags:
+- Monthly Report
+- v0.8.2
+- Community
+title: 2024年3月社区月报
+---
+# 2024年3月社区月报
+
+## 概述
+
+3月份，KubeBlocks正式发布了v0.8.2版本。本次更新显著增加了对Redis集群、camellia-redis-proxy的支持，并与Pulsar v3.0.2实现了兼容。此外，开发团队正在积极筹备即将发布的v0.9.0版本。
+
+在过去一个月中，社区共合并了91个PR，解决了92个issue。共有19位社区成员参与了贡献，其中包括6位新贡献者。
+
+截至目前，KubeBlocks在GitHub上已获得1607个star。我们衷心感谢您的支持，并期待更多互动🌟。
+
+## 重点更新
+
+- 新增Redis集群支持
+- 为Cluster API新增分片拓扑支持，用户可通过ShardingSpec定义分片数量和组件规格
+- 支持camellia-redis-proxy。当前运行于K8s v1.14版本，支持配置外部Redis实例（包括K8s集群外的实例）
+- 支持从外部K8s集群高可用访问MongoDB副本集地址
+- 支持Pulsar v3.0.2版本
+- 支持为每个Pulsar broker暴露nodeport地址
+- 为StarRocks新增IPv4/IPv6双栈支持。私有地址和公共地址均可使用IPv4和IPv6（但StarRocks内核仍需支持IPv6）
+- Lorry支持自定义角色探测命令。该命令可通过YAML脚本声明
+
+## 问题修复
+
+- 修复SVC恢复失败问题 (#6768)
+- 解决更新KubeBlocks导致PG重启的问题 (#6771)
+- 修复集群删除时ConfigMap找不到及代码优化问题 (#6793)
+- 解决创建OSS备份仓库时自定义端点无效的问题 (#6819)
+- 修复升级过程中etcd角色探测失败问题 (#6839)
+- 解决协调工作节点无效的问题 (#6805)
+
+## 新贡献者
+
+👏 热烈欢迎
+
+💙 @Aayush Sharma, rustover, luoyuLianga, dingshun-cmss, Yunyinzi, bliubiu 💙
+
+加入KubeBlocks社区！他们上个月成功合并了PR。
+
+我们呼吁更多开发者参与KubeBlocks的协作开发。从[good first issues](https://github.com/apecloud/kubeblocks/contribute)开始，期待与您共同打造下一代数据库管理平台！
+
+![2024-03-good-first-issues](/img/blogs/2024-03-good-first-issues.jpg)
+
+相关链接：
+- Good first issue: https://github.com/apecloud/kubeblocks/contribute
+- 贡献指南: https://github.com/apecloud/kubeblocks/blob/main/docs/CONTRIBUTING.md
+- 开发指南: https://github.com/apecloud/kubeblocks/blob/main/docs/00%20-%20index.md
+
+欢迎加入GitHub Discussion或[KubeBlocks Slack群组](https://join.slack.com/t/kubeblocks/shared_invite/zt-29tx52d8n-vli24S6gtD5ODJlNUqLqbQ)！
+
+![2024-03-overview](/img/blogs/2024-03-overview.jpg)

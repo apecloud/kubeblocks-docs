@@ -1,0 +1,329 @@
+---
+description: 使用KubeBlocks部署和管理Elasticsearch副本集集群的完整指南，涵盖安装、配置及运维最佳实践。
+keywords:
+- Kubernetes
+- Elasticsearch
+- KubeBlocks
+- Helm
+- Cluster Management
+- QuickStart
+sidebar_label: 快速入门
+sidebar_position: 2
+title: Elasticsearch 快速入门
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Elasticsearch 快速入门
+
+本指南提供了使用 **KubeBlocks Elasticsearch 插件** 部署和管理 Elasticsearch 副本集集群的完整流程，涵盖以下内容：
+- 系统先决条件与插件安装
+- 集群创建与配置
+- 运维管理（包括启停操作）
+- 连接方式与集群监控
+
+
+
+## 前提条件
+
+### 系统要求
+
+开始前请确保您的环境满足以下要求：
+
+- 可用的 Kubernetes 集群（推荐 v1.21+ 版本）
+- 已安装配置 `kubectl` v1.21+ 并具备集群访问权限
+- 已安装 Helm（[安装指南](https://helm.sh/docs/intro/install/)）
+- 已安装 KubeBlocks（[安装指南](../user_docs/overview/install-kubeblocks)）
+
+### 验证 Elasticsearch 插件
+
+Elasticsearch 插件默认随 KubeBlocks 安装。检查其状态：
+
+```bash
+helm list -n kb-system | grep elasticsearch
+```
+
+<details open>
+<summary>示例输出：</summary>
+
+```bash
+NAME                       NAMESPACE   REVISION    UPDATED                     STATUS      CHART
+kb-addon-elasticsearch     kb-system   1           2025-05-21                  deployed    elasticsearch-1.0.0
+```
+</details>
+
+若插件未启用，请选择安装方式：
+
+<Tabs>
+
+  <TabItem value="helm" label="helm" default>
+  ```bash
+  # 添加 Helm 仓库
+  helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
+  # 中国大陆用户若 GitHub 访问困难，可使用以下镜像仓库：
+  #helm repo add kubeblocks-addons https://jihulab.com/api/v4/projects/150246/packages/helm/stable
+
+  # 更新 Helm 仓库
+  helm repo update
+  # 查询可用插件版本
+  helm search repo kubeblocks/elasticsearch --versions
+  # 安装指定版本（将<VERSION>替换为目标版本）
+  helm upgrade -i kb-addon-elasticsearch kubeblocks-addons/elasticsearch --version <VERSION> -n kb-system
+  ```
+  </TabItem>
+
+  <TabItem value="kbcli" label="kbcli">
+
+  ```bash
+  # 添加索引（kubeblocks 索引默认已添加）
+  kbcli addon index add kubeblocks https://github.com/apecloud/block-index.git
+  # 更新指定索引
+  kbcli addon index update kubeblocks
+  # 更新所有索引
+  kbcli addon index update --all
+  ```
+
+  插件搜索与安装：
+
+  ```bash
+  # 搜索插件
+  kbcli addon search elasticsearch
+  # 安装指定版本插件（将<VERSION>替换为目标版本）
+  kbcli addon install elasticsearch --version <VERSION>
+  ```
+  **示例输出：**
+  ```bash
+  ADDON   VERSION         INDEX
+  elasticsearch   0.9.0           kubeblocks
+  elasticsearch   0.9.1           kubeblocks
+  elasticsearch   1.0.0           kubeblocks
+  ```
+  插件启用/停用：
+
+  ```bash
+  # 启用插件
+  kbcli addon enable elasticsearch
+  # 停用插件
+  kbcli addon disable elasticsearch
+  ```
+
+  </TabItem>
+</Tabs>
+
+:::note
+**版本兼容性**
+
+请始终确保 Elasticsearch 插件版本与 KubeBlocks 主版本相匹配，以避免兼容性问题。
+
+:::
+
+## 部署 Elasticsearch 集群
+
+出于开发和测试目的，您可以部署一个单节点集群，其中单个节点承担所有角色。
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/elasticsearch/cluster-single-node.yaml
+```
+
+该操作将创建：
+- 一个包含1个组件的 Elasticsearch 集群，其中单个副本承担所有角色
+- 默认资源分配（1核CPU，2Gi内存）
+- 20Gi持久化存储
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: es-singlenode
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mdit
+      componentDef: elasticsearch-8
+      serviceVersion: 8.8.2
+      replicas: 1
+      configs:
+        - name: es-cm
+          variables:
+            mode: "single-node"
+      resources:
+        limits:
+          cpu: "1"
+          memory: "2Gi"
+        requests:
+          cpu: "1"
+          memory: "2Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+更多API字段和描述，请参阅[API参考文档](../user_docs/references/api-reference/cluster)。
+
+## 验证集群状态
+
+当部署一个包含1个副本的Elasticsearch集群时：
+
+通过以下方式确认部署成功：
+1. 集群阶段显示为`Running`
+2. 所有Pod均正常运行
+
+可通过以下任一方法检查状态：
+
+<Tabs>
+  <TabItem value='kubectl' label='kubectl' default>
+    ```bash
+    kubectl get cluster es-singlenode -n demo -w
+    NAME            CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+    es-singlenode                        Delete               Running   49s
+
+    kubectl get pods -l app.kubernetes.io/instance=es-singlenode -n demo
+    NAME                   READY   STATUS    RESTARTS   AGE
+    es-singlenode-mdit-0   3/3     Running   0          58s
+    ```
+  </TabItem>
+
+  <TabItem value='kbcli' label='kbcli'>
+
+  安装`kbcli`后，可查看完整的集群信息：
+
+    ```bash
+    kbcli cluster describe es-singlenode -n demo
+
+    Name: es-singlenode      Created Time: May 19,2025 20:34 UTC+0800
+    NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY   STATUS    TERMINATION-POLICY
+    demo                                        Running   Delete
+
+    Endpoints:
+    COMPONENT   INTERNAL                                              EXTERNAL
+    mdit        es-singlenode-mdit-http.demo.svc.cluster.local:9200   <none>
+
+    Topology:
+    COMPONENT   SERVICE-VERSION   INSTANCE               ROLE     STATUS    AZ       NODE                             CREATED-TIME
+    mdit        8.8.2             es-singlenode-mdit-0   <none>   Running   <none>   kbv10-control-plane/172.19.0.2   May 19,2025 20:34 UTC+0800
+
+    Resources Allocation:
+    COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+    mdit                            1 / 1                2Gi / 2Gi               data:20Gi      standard
+
+    Images:
+    COMPONENT   COMPONENT-DEFINITION            IMAGE
+    mdit        elasticsearch-8-1.0.0           docker.io/library/elasticsearch:8.8.2
+                                                docker.io/prometheuscommunity/elasticsearch-exporter:v1.7.0
+                                                docker.io/apecloud/curl-jq:0.1.0
+
+    Data Protection:
+    BACKUP-REPO   AUTO-BACKUP   BACKUP-SCHEDULE   BACKUP-METHOD   BACKUP-RETENTION   RECOVERABLE-TIME
+
+    Show cluster events: kbcli cluster list-events -n demo es-singlenode
+    ```
+
+  </TabItem>
+</Tabs>
+
+## 停止 Elasticsearch 集群
+
+停止集群会暂时暂停运行，同时保留所有数据和配置：
+
+**关键影响：**
+- 计算资源（Pod）将被释放
+- 持久化存储（PVC）保持完整
+- 服务定义得以保留
+- 集群配置不会丢失
+- 运行成本降低
+
+<Tabs>
+  <TabItem value="OpsRequest" label="OpsRequest API" default>
+    ```yaml
+    apiVersion: operations.kubeblocks.io/v1alpha1
+    kind: OpsRequest
+    metadata:
+      name: elasticsearch-stop
+      namespace: demo
+    spec:
+      clusterName: es-singlenode
+      type: Stop
+    ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+  也可以通过设置 `spec.componentSpecs.stop` 为 true 来停止集群：
+
+    ```bash
+    kubectl patch cluster es-singlenode -n demo --type='json' -p='[
+    {
+      "op": "add",
+      "path": "/spec/componentSpecs/0/stop",
+      "value": true
+    }
+    ```
+  </TabItem>
+</Tabs>
+
+## 启动 Elasticsearch 集群
+
+重启已停止的集群将恢复运行，所有数据和配置保持不变。
+
+**关键影响：**
+- 计算资源（Pod）会被重新创建
+- 服务将再次可用
+- 集群恢复到之前的状态
+
+<Tabs>
+  <TabItem value="OpsRequest" label="OpsRequest API" default>
+
+    ```yaml
+    apiVersion: operations.kubeblocks.io/v1alpha1
+    kind: OpsRequest
+    metadata:
+      name: elasticsearch-start
+      namespace: demo
+    spec:
+      clusterName: es-singlenode
+      type: Start
+    ```
+    </TabItem>
+
+    <TabItem value="ClusterAPI" label="Cluster API">
+    通过将 `spec.componentSpecs.stop` 设置为 false 来重启集群：
+
+    ```bash
+    kubectl patch cluster es-singlenode -n demo --type='json' -p='[
+    {
+      "op": "remove",
+      "path": "/spec/componentSpecs/0/stop"
+    }
+    ```
+  </TabItem>
+</Tabs>
+
+## 删除 Elasticsearch 集群
+
+请根据数据保留需求谨慎选择删除策略：
+
+| 策略类型        | 删除的资源范围    | 数据清除情况       | 适用场景               |
+|-----------------|-------------------|-------------------|-----------------------|
+| DoNotTerminate  | 不删除任何资源     | 保留所有数据       | 关键生产环境集群       |
+| Delete          | 删除所有资源       | 清除PVC存储卷数据  | 非关键环境            |
+| WipeOut         | 删除所有资源       | 彻底清除所有数据*  | 仅限测试环境          |
+
+*包含外部存储中的快照和备份数据
+
+**删除前检查清单：**
+1. 确认无应用正在使用该集群
+2. 确保存在必要的备份
+3. 验证terminationPolicy配置正确
+4. 检查是否存在依赖资源
+
+测试环境完整清理操作：
+
+```bash
+kubectl patch cluster es-singlenode -p '{"spec":{"terminationPolicy":"WipeOut"}}' --type="merge" -n demo
+kubectl delete cluster es-singlenode -n demo
+```

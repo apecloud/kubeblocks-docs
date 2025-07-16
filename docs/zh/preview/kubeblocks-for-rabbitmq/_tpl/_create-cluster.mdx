@@ -1,0 +1,36 @@
+KubeBlocks 采用声明式方式管理 RabbitMQ 集群。以下是一个部署包含 3 个副本的 RabbitMQ 集群的配置示例。
+
+应用以下 YAML 配置来部署集群：
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: rabbitmq-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: rabbitmq
+  topology: clustermode
+  componentSpecs:
+    - name: rabbitmq
+      serviceVersion: 3.13.7
+      replicas: 3
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+

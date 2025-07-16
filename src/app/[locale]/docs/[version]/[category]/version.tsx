@@ -28,7 +28,7 @@ export default function VersionList({ version, versions }: Props) {
   const theme = useTheme();
   const pathnames = usePathname()
     .split("/")
-    .filter((item) => !_.includes(["en"], item));
+    .filter((item) => !_.includes(["zh", "en"], item));
 
   return (
     <DropDown

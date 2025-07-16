@@ -1,0 +1,272 @@
+---
+authors:
+  image_url: https://avatars.githubusercontent.com/u/28781141?v=4
+  name: free6om
+  url: https://github.com/free6om
+date: 2024-08-19
+description: Pod 处于 Terminating 状态无法终止是 Kubernetes 用户常遇到的难题。本文将通过场景复现问题成因，深入分析其根本原因，并提供解决方案。
+image: /img/blogs/thumbnails/blog-pod-terminating.png
+slug: how-to-fix-pods-stuck-in-terminating-status
+tags:
+- pod
+- pods stuck in terminating
+- K8s
+title: 如何修复 Kubernetes 中 Pod 卡在 Terminating 状态的问题？
+---
+# 如何修复 Kubernetes 中 Pod 卡在 Terminating 状态的问题？
+
+遇到 Pod 卡在 "Terminating" 状态是每个 Kubernetes 用户都会经历的偶尔但几乎不可避免的问题之一。
+
+最近，在协助一位社区用户测试从 KubeBlocks v0.8 升级到 v0.9 时，我们遇到了一个集群无法删除的情况。经过一整天的反复排查，我们找出了几个奇怪问题的原因，但有一个问题始终存在 —— 一个 Pod 卡在 Terminating 状态。巧合的是，我当时也在与 KubeBlocks SIG 成员讨论 Pod 生命周期管理，因此决定借此机会深入探究问题的根源。
+
+## 问题复现
+
+经过回忆和多次尝试，复现该问题的步骤如下：
+
+1. 在 KubeBlocks v0.8 中运行 `kbcli playground init`。
+2. 运行 `kbcli cluster create xxxx`。
+3. 将 kbcli 升级至 v0.9 版本。
+4. 在 KubeBlocks v0.9 中运行 `kbcli kubeblocks upgrade`，此时 `helm upgrade job` 超时并失败。
+5. 运行 `helm uninstall kubeblocks`。
+6. 运行 `Delete cluster xxxx`。
+7. 运行 `helm install kubeblocks`。
+8. 此时 `Cluster xxxx` 仍保持 Deleting 状态。
+
+## 问题排查
+
+### 定位问题根源
+
+根据过往经验，当集群删除失败时，通常是由于某些附属资源无法被移除。我们的社区用户也观察到，Pod 和 PVC 都卡在了 Terminating 状态。由于 PVC 在关联的 Pod 被删除前无法移除（受 finalizer 保护机制影响），问题焦点自然转向了 Pod 为何无法删除。
+
+首先检查 Pod 对象的 YAML 文件。根据 Kubernetes 官方文档中关于 Pod 终止流程的说明，我们筛选出与终止相关的字段：
+相关字段仍然较多，但我们需要系统性地逐项分析。幸运的是，分析过程很快有了结论：
+
+1. `deletionTimestamp` 已设置
+2. `finalizer` 为空
+3. 已超过 `terminationGracePeriodSeconds（设置为30秒）`
+4. 所有容器均已 `terminated`
+5. 两个容器以非零代码退出：137 和 143
+根据 K8s 文档，此时 kubelet 应该将 pod phase 更新为 Failed，但当前仍显示为 `Running`
+
+看起来 kubelet 的实际行为与文档描述不符，我们需要进一步查看 kubelet 日志来了解具体情况。
+
+### Kubelet 日志分析
+
+再次面对冗长的日志文件，但幸运的是错误信息出现在末尾附近：
+![](/img/blogs/blog-pod-terminating-1.png)
+
+日志显示 kubelet 在尝试卸载数据卷时，由于找不到对应的 Hostpath CSI Driver 而报错。经确认，Hostpath CSI Driver 确实在之前的某个步骤中被移除。我们立即重新安装了该驱动。
+
+```bash
+kbcli addon enable csi-hostpath-driver
+```
+
+很遗憾，虽然卸载过程不再报错，但Pod和PVC仍卡在Terminating状态：
+
+![](/img/blogs/blog-pod-terminating-2.jpeg)
+
+![](/img/blogs/blog-pod-terminating-3.jpeg)
+
+![](/img/blogs/blog-pod-terminating-4.jpeg)
+
+kubelet日志未能提供更多线索。
+
+![](/img/blogs/blog-pod-terminating-5.png)
+
+### Kubelet详细日志
+
+正如任何维护良好的开源项目一样，健全的日志机制至关重要。
+
+查阅文档后，我们确认kubelet的启动命令和配置文件都支持设置日志级别。该值默认为0，最高可设为7。
+
+于是我们尝试将日志级别提升至6以获取更详细的日志。
+
+遗憾的是，尽管多次尝试，我们无法在K3d中修改日志级别，甚至连GPT-4o也无计可施。
+
+随后我们额外花费时间在minikube中复现该问题，并成功将日志级别设置为6：
+
+```bash
+minikube start --extra-config=kubelet.v=6
+```
+
+然后我们获取到了日志：
+
+```bash
+minikube logs -f
+```
+
+### 简化复现流程
+
+最初的复现步骤相当耗时。根据先前的分析，该问题与KubeBlocks并无直接关联，因此我们可以按以下方式简化流程：
+
+1. 创建一个Pod和PVC。
+2. 禁用Hostpath CSI驱动。
+3. 删除Pod和PVC以触发问题。
+
+随后我们创建了以下Pod和PVC对象：
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: data-xxxxxx
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello-xxxxxx
+spec:
+  containers:
+  - name: nginx
+    image: nginx:latest
+    volumeMounts:
+    - name: volume-xxxxxx
+      mountPath: /data
+  volumes:
+  - name: volume-xxxxxx
+    persistentVolumeClaim:
+      claimName: data-xxxxxx
+```
+
+我们已将 CSI 驱动切换为使用 minikube 内置的 Hostpath：
+
+
+
+```bash
+minikube addon enable csi-hostpath-driver
+```
+
+通过简化的步骤，重现问题并分析冗长的 kubelet 日志变得更容易且更高效。
+
+### 发现更多信息
+
+由于日志量庞大，需要极大的耐心进行梳理。经过一段时间后，浮现出两个疑点。
+
+#### 疑点 1：每 100 毫秒就会出现一条消息报告 "Pod 已终止，但部分存储卷尚未清理"
+
+```bash
+Jul 15 03:49:33 minikube kubelet[1432]: I0715 03:49:33.850919    1432 kubelet.go:2168] "Pod is terminated, but some volumes have not been cleaned up" pod="default/hello-xxxxxx" podUID="9a42f711-028a-4ca2-802a-0e4db734592d"
+```
+
+#### 疑点 2：我们注意到频繁出现指数级增长的"failed to remove dir ...: device or resource busy"错误消息
+
+```bash
+Jul 15 03:49:34 minikube kubelet[1432]: E0715 03:49:34.053463    1432 nestedpendingoperations.go:348] Operation for "{volumeName:kubernetes.io/csi/hostpath.csi.k8s.io^e9216f9a-425b-11ef-9abf-4e607aa5fc75 podName:9a42f711-028a-4ca2-802a-0e4db734592d nodeName:}" failed. No retries permitted until 2024-07-15 03:51:36.0534518 +0000 UTC m=+881.487053596 (durationBeforeRetry 2m2s). Error: UnmountVolume.TearDown failed for volume "volume-xxxxxx" (UniqueName: "kubernetes.io/csi/hostpath.csi.k8s.io^e9216f9a-425b-11ef-9abf-4e607aa5fc75") pod "9a42f711-028a-4ca2-802a-0e4db734592d" (UID: "9a42f711-028a-4ca2-802a-0e4db734592d") : kubernetes.io/csi: Unmounter.TearDownAt failed to clean mount dir [/var/lib/kubelet/pods/9a42f711-028a-4ca2-802a-0e4db734592d/volumes/kubernetes.io~csi/pvc-ea3178bf-fc12-432c-a01b-8389b04c508e/mount]: kubernetes.io/csi: failed to remove dir [/var/lib/kubelet/pods/9a42f711-028a-4ca2-802a-0e4db734592d/volumes/kubernetes.io~csi/pvc-ea3178bf-fc12-432c-a01b-8389b04c508e/mount]: remove /var/lib/kubelet/pods/9a42f711-028a-4ca2-802a-0e4db734592d/volumes/kubernetes.io~csi/pvc-ea3178bf-fc12-432c-a01b-8389b04c508e/mount: device or resource busy
+```
+
+怀疑1表明kubelet会定期检查Pod关联的资源是否已释放，但发现部分存储卷未被清理。
+
+怀疑2指出kubelet尝试删除PVC对应的目录时，该目录仍在使用中。
+
+两者都指向存储卷资源未被释放的问题。
+
+于是我们登录minikube检查目录未被释放的原因：
+
+```bash
+root@minikube:/var/lib/kubelet/pods# lsof +D /var/lib/kubelet/pods/9a42f711-028a-4ca2-802a-0e4db734592d/volumes/kubernetes.io~csi/pvc-ea3178bf-fc12-432c-a01b-8389b04c508e/mount
+root@minikube:/var/lib/kubelet/pods# mount | grep /var/lib/kubelet/pods/9a42f711-028a-4ca2-802a-0e4db734592d/volumes/kubernetes.io~csi/pvc-ea3178bf-fc12-432c-a01b-8389b04c508e/mount
+/dev/vda1 on /var/lib/kubelet/pods/9a42f711-028a-4ca2-802a-0e4db734592d/volumes/kubernetes.io~csi/pvc-ea3178bf-fc12-432c-a01b-8389b04c508e/mount type ext4 (rw,relatime)
+```
+
+此外，`lsof`命令未返回任何结果，表明没有进程在使用该目录。而`mount`命令返回了结果，说明该目录仍处于挂载状态。
+
+这进一步缩小了问题范围：与PVC对应的目录未被卸载或卸载失败。
+
+### 直接得出结论
+
+至此，我们可以得出结论：在删除Pod和PVC的过程中，CSI Driver被重启，导致与PVC对应的目录未能正确卸载，从而阻塞了Pod的终止流程。
+
+解决方案是手动卸载该目录。
+
+### 还有更多疑问？
+
+但等等，CSI Driver本质上不是存储资源的控制平面吗？控制平面的重启不应阻碍存储资源的释放——Kubernetes不可能如此脆弱。
+
+这表明存在更深层次的问题：为什么CSI Driver的重启会导致PVC目录无法卸载？
+
+### 深入挖掘
+
+这无疑是kubelet或CSI Driver中的一个bug。下一步是定位这个bug。由于日志未能提供更多线索，我们需要深入代码层面。
+
+| 组件名称       | 版本     |
+| :------------- | :------ |
+| K8s            | 1.29.3  |
+| Hostpath CSI Driver | 1.11.0 |
+
+基于先前的怀疑，我们利用错误信息追踪到对应的代码位置。
+
+代码位置1：
+
+![](/img/blogs/blog-pod-terminating-6.png)
+
+这里可以清楚地看到，在Pod终止过程中，kubelet每100毫秒检查一次存储卷是否已被清理。直到该方法返回`true`，这个循环才会结束，意味着kubelet会一直卡在这个点。因此，Pod删除流程无法继续，Pod保持Terminating状态。
+
+这一行为与我们观察到的现象以及"怀疑1"中的日志完全吻合。
+
+代码位置2：
+
+![](/img/blogs/blog-pod-terminating-7.png)
+
+这里我们看到kubelet确实尝试删除与PVC对应的目录。继续向上查看代码，我们发现如果删除失败，kubelet会采用指数退避的重试机制。
+
+但一个新的发现是：`removeMountDir`只有在`csi.NodeUnpublishVolume`成功返回（即卸载操作成功）时才会执行。
+
+因此，问题根源被锁定在Hostpath CSI Driver上。
+
+### 真凶浮现
+
+接下来我们检查Hostpath日志，其中报告"Volume...未在...发布"。
+
+```bash
+I0715 03:49:34.052729       1 server.go:101] GRPC call: /csi.v1.Node/NodeUnpublishVolume
+I0715 03:49:34.052749       1 server.go:105] GRPC request: {"target_path":"/var/lib/kubelet/pods/9a42f711-028a-4ca2-802a-0e4db734592d/volumes/kubernetes.io~csi/pvc-ea3178bf-fc12-432c-a01b-8389b04c508e/mount","volume_id":"e9216f9a-425b-11ef-9abf-4e607aa5fc75"}
+I0715 03:49:34.053026       1 nodeserver.go:228] Volume "e9216f9a-425b-11ef-9abf-4e607aa5fc75" is not published at "/var/lib/kubelet/pods/9a42f711-028a-4ca2-802a-0e4db734592d/volumes/kubernetes.io~csi/pvc-ea3178bf-fc12-432c-a01b-8389b04c508e/mount", nothing to do.
+```
+
+原来目录并未发布——难道是重启后元数据丢失了？会不会元数据只存储在内存中？这看起来不太可靠。
+
+不过我们必须考虑到CSI驱动是Hostpath，根据官方文档说明，它仅用于测试用途。真的会这么不可靠吗？
+
+为了确认这一点，我们进行了进一步的代码调查。
+
+![](/img/blogs/blog-pod-terminating-8.png)
+![](/img/blogs/blog-pod-terminating-9.png)
+
+看起来状态元数据确实存储在文件中。打开文件后，我们发现条目显示为：`"Published": null`。
+
+（严格保持原文格式与换行，技术术语"CSI Driver"、"Hostpath"保留英文，中文补充说明其测试用途特性）
+
+```bash
+minikube ssh
+cat /var/lib/csi-hostpath-data/state.json
+
+{"Volumes":[{"VolName":"pvc-be2792ca-6937-4296-a234-381bd7c94f1d","VolID":"f595ce89-4283-11ef-ba81-6a2e54b029dc","VolSize":2147483648,"VolPath":"/csi-data-dir/f595ce89-4283-11ef-ba81-6a2e54b029dc","VolAccessType":0,"ParentVolID":"","ParentSnapID":"","Ephemeral":false,"NodeID":"","Kind":"","ReadOnlyAttach":false,"Attached":false,"Staged":null,"Published":null}],"Snapshots":null}
+```
+
+### 解决问题
+
+谜底揭晓：Hostpath CSI Driver 在持久化元数据时存在一个缺陷。
+是时候向官方仓库提交 issue 和 PR 了。但在提交前，我检查了现有的 issue 列表，发现[该问题已被报告过](https://github.com/kubernetes-csi/csi-driver-host-path/issues/457)。
+
+好消息！已经有人报告了这个问题，并且它已被修复。我们只需要按照[这个 PR](https://github.com/apecloud/helm-charts/pull/21) 中的说明升级驱动即可。
+
+## 总结
+
+实际的故障排查过程远比描述的更加复杂且耗费了大量精力。为了让解释更易于理解，叙述中省略了一些分析步骤和分支路径。
+
+例如，设计一个高效的复现流程花费了相当长的时间，整理kubelet日志也是如此。我们还花费了大量时间阅读kubelet和存储卷管理相关的代码。
+
+一些关键收获：
+
+1. 在Pod终止期间，Kubernetes会无限期等待所有存储卷资源被释放。
+2. kubelet通过为每个Pod分配一个goroutine来处理Pod，该goroutine负责管理其整个生命周期，包括创建、运行、终止和已终止状态。
+3. kubelet中处理存储卷相关任务的模块称为volume manager（存储卷管理器），它会为每个存储卷分配一个goroutine来处理挂载、卸载、分离等操作。
+4. Hostpath CSI Driver绝对不适合生产环境。
+
+（严格保持原文格式和换行，技术术语采用标准译法）

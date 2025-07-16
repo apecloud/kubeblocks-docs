@@ -1,0 +1,269 @@
+---
+description: 了解如何在KubeBlocks中为MySQL集群Pod配置自定义调度策略，通过控制其在可用区间的分布，确保高可用性或优化低延迟性能。
+keywords:
+- KubeBlocks
+- MySQL
+- Kubernetes
+- Pod Scheduling
+- High Availability
+sidebar_label: 自定义调度策略
+sidebar_position: 1
+title: 在KubeBlocks中为MySQL集群Pod配置自定义调度策略
+---
+# 在 KubeBlocks 中为 MySQL 集群 Pod 配置自定义调度策略
+
+本指南演示如何在 KubeBlocks 中为 MySQL 集群 Pod 配置自定义调度策略。例如：
+1. 将 Pod 分散部署在不同可用区（AZs）以提高高可用性。
+2. 将 Pod 部署在同一可用区以降低延迟。
+
+## 前提条件
+
+在继续之前，请确保满足以下条件：
+- 环境准备：
+   - 已启动并运行一个 Kubernetes 集群。
+   - 已配置 kubectl CLI 工具以与集群通信。
+   - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处提供的安装说明进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 验证 Kubernetes 节点分布
+
+我们的 Kubernetes 集群 (EKS) 由 9 个节点组成，分布在 3 个可用区中，每个可用区有 3 个节点。要确认节点在可用区中的分布情况，请运行以下命令：
+
+```bash
+kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | while read node; do echo -n "Node: $node, Zone: "; kubectl get node "$node" -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}'; echo; done
+```
+
+预期输出：
+
+```bash
+ip-10-0-1-107.ap-southeast-1.compute.internal   Ready    <none>   91m     v1.31.5-eks-5d632ec
+ip-10-0-1-183.ap-southeast-1.compute.internal   Ready    <none>   71m     v1.31.5-eks-5d632ec
+ip-10-0-1-217.ap-southeast-1.compute.internal   Ready    <none>   2m13s   v1.31.5-eks-5d632ec
+ip-10-0-2-186.ap-southeast-1.compute.internal   Ready    <none>   91m     v1.31.5-eks-5d632ec
+ip-10-0-2-252.ap-southeast-1.compute.internal   Ready    <none>   71m     v1.31.5-eks-5d632ec
+ip-10-0-2-71.ap-southeast-1.compute.internal    Ready    <none>   2m24s   v1.31.5-eks-5d632ec
+ip-10-0-3-143.ap-southeast-1.compute.internal   Ready    <none>   91m     v1.31.5-eks-5d632ec
+ip-10-0-3-205.ap-southeast-1.compute.internal   Ready    <none>   36s     v1.31.5-eks-5d632ec
+ip-10-0-3-238.ap-southeast-1.compute.internal   Ready    <none>   91m     v1.31.5-eks-5d632ec
+```
+
+从输出中可以看到，每个可用区（AZ）中有三个节点：ap-southeast-1a、ap-southeast-1b 和 ap-southeast-1c。
+
+
+
+## 跨可用区部署 MySQL 集群
+
+### 创建 MySQL 集群
+要跨不同可用区部署一个 3 节点半同步 MySQL 集群（1 主节点，2 从节点），请使用以下 YAML 配置：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 3
+      schedulingPolicy:
+        affinity:
+          podAntiAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              - labelSelector:
+                  matchExpressions:
+                     - key: apps.kubeblocks.io/component-name
+                       operator: In
+                       values:
+                          - mysql
+                topologyKey: topology.kubernetes.io/zone
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+**关键配置项：**
+- `podAntiAffinity`：
+  - 确保属于同一组件（mysql）的 Pod 不会被调度到同一可用区（AZ）的节点上。
+  - 通过使用 `requiredDuringSchedulingIgnoredDuringExecution`，该规则强制要求 Pod 必须被调度到不同的可用区。
+- `labelSelector`：
+  - 匹配带有标签 'apps.kubeblocks.io/component-name=mysql' 的 Pod（该标签由 KubeBlocks 控制器自动添加）。如果您的 MySQL Pod 使用其他标签，请更新此配置。
+- `topologyKey`：
+  - 指定反亲和性的作用范围。此处使用 'topology.kubernetes.io/zone' 来确保 Pod 分布在不同可用区。
+- `requiredDuringSchedulingIgnoredDuringExecution`：
+  - 强制执行严格的调度规则。如果没有可用资源满足该规则，Pod 将保持未调度状态。
+  - 如果需要"软性"要求（即资源不足时允许 Pod 调度到同一可用区），请改用 `preferredDuringSchedulingIgnoredDuringExecution`。
+
+
+### 验证部署
+要监控部署状态，请检查集群状态直至其变为 Running：
+
+```bash
+kubectl get cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster   mysql                Delete               Updating   79s
+example-mysql-cluster   mysql                Delete               Running   2m44s
+```
+
+### 检查 Pod 分布情况
+要验证 MySQL Pod 是否分布在不同的可用区，请使用以下命令：
+
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster -o=jsonpath='{range .items[*]}{"Pod: "}{.metadata.name}{"\tZone: "}{.spec.nodeName}{"\n"}{end}' | while read line; do pod=$(echo $line | awk '{print $2}'); node=$(echo $line | awk '{print $4}'); zone=$(kubectl get node $node -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}'); echo "Pod: $pod, Zone: $zone"; done
+```
+
+预期输出：
+
+```bash
+Pod: example-mysql-cluster-mysql-0, Zone: ap-southeast-1c
+Pod: example-mysql-cluster-mysql-1, Zone: ap-southeast-1b
+Pod: example-mysql-cluster-mysql-2, Zone: ap-southeast-1a
+```
+
+**观察结果：**
+- 3个MySQL Pod已成功分布在不同的可用区（AZ），确保了高可用性。
+
+## 在同一可用区部署 MySQL 集群
+
+### 创建 MySQL 集群
+
+要在同一可用区内部署 Pod 以实现低延迟优化，请使用以下配置：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster2
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 3
+      schedulingPolicy:
+         affinity:
+            podAffinity:
+               requiredDuringSchedulingIgnoredDuringExecution:
+                  - labelSelector:
+                       matchExpressions:
+                          - key: apps.kubeblocks.io/component-name
+                            operator: In
+                            values:
+                               - mysql
+                    topologyKey: topology.kubernetes.io/zone
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+**关键配置项：**
+- `podAffinity`：
+   - 确保属于同一组件（mysql）的Pod被调度到同一可用区（AZ）的节点上。
+   - 通过使用`requiredDuringSchedulingIgnoredDuringExecution`，该规则强制要求Pod必须被调度到同一可用区。
+- `labelSelector`：
+   - 匹配带有标签'apps.kubeblocks.io/component-name=mysql'的Pod（该标签由KubeBlocks控制器自动添加）。如果您的MySQL Pod使用其他标签，请更新此配置。
+- `topologyKey`：
+   - 指定反亲和性的作用范围。此处使用'topology.kubernetes.io/zone'来确保Pod分布在相同的可用区内。
+- `requiredDuringSchedulingIgnoredDuringExecution`：
+   - 强制执行严格的调度规则。如果没有可用资源满足该规则，Pod将保持未调度状态。
+   - 如果需要"软性"要求（即资源不足时允许Pod调度到不同可用区），请改用`preferredDuringSchedulingIgnoredDuringExecution`。
+
+```bash
+kubectl get cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster2   mysql                Delete               Updating   79s
+example-mysql-cluster2   mysql                Delete               Running   2m44s
+```
+
+### 检查 Pod 分布
+
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster2 -o=jsonpath='{range .items[*]}{"Pod: "}{.metadata.name}{"\tZone: "}{.spec.nodeName}{"\n"}{end}' | while read line; do pod=$(echo $line | awk '{print $2}'); node=$(echo $line | awk '{print $4}'); zone=$(kubectl get node $node -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}'); echo "Pod: $pod, Zone: $zone"; done
+```
+
+预期输出：
+
+```bash
+Pod: example-mysql-cluster-mysql-0, Zone: ap-southeast-1c
+Pod: example-mysql-cluster-mysql-1, Zone: ap-southeast-1c
+Pod: example-mysql-cluster-mysql-2, Zone: ap-southeast-1c
+```
+
+**观察结果：**
+- 所有3个MySQL Pod已成功部署在同一可用区，以最小化复制和网络延迟。
+
+## 清理
+要删除所有已创建的资源，请连同其命名空间一起删除 MySQL 集群：
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete cluster example-mysql-cluster2 -n demo
+kubectl delete ns demo
+```
+
+
+
+
+## 总结
+在本教程中，我们成功为 KubeBlocks 中的 MySQL 集群配置了自定义调度策略。我们演示了两种场景：
+- 将 Pod 分散部署在不同可用区（AZ）以实现高可用性。
+- 将 Pod 部署在同一可用区以实现低延迟。
+
+这种灵活性使您能够根据特定需求（无论是容错能力还是性能优化）定制数据库部署方案。
+
+"）

@@ -1,0 +1,61 @@
+---
+date: 2024-03-07
+description: 分片API、Camellia Redis代理... 来看看KubeBlocks社区的最新动态。
+image: /img/blogs/thumbnails/blog-2024-02-monthly-report.png
+slug: Community-Monthly-Report-for-February-2024
+tags:
+- Monthly Report
+- Sharding API
+- Community
+title: 2024年2月社区月度报告
+---
+# 2024年2月社区月报
+
+## 概述
+
+2月份，KubeBlocks 持续推进 v0.8.2 和 v0.9.0 版本的开发工作，重点实现了分片（sharding）API 功能，该特性将在 v0.8.2 版本中发布。
+
+在过去一个月里，社区共合并了 76 个 PR，解决了 57 个 issue。共有 21 位社区成员参与贡献，其中包括 1 位新贡献者。
+
+## 重点进展
+
+- 支持 ShardingSpec API 用于定义具有分片拓扑结构的数据库集群（将在 v0.8.2 版本发布）
+- 支持基于 KubeBlocks 分片 API 创建和删除官方 Redis 集群（将在 v0.8.2 版本发布）
+- 支持 Camellia Redis Proxy 的一键部署、配置管理、水平扩展、重启等操作（将在 v0.8.2 版本发布）
+- 支持声明主机网络能力 (#6705)
+- 支持指定 Operator 应管理的命名空间 (#6641)
+- MongoDB 支持通过主机网络从 K8s 外部连接 (#6689)
+- Lorry 支持 action 命令 (#6474)
+- 兼容 CronJob v1beta1，解决 K8s v1.20 上的备份失败问题 (#6687)
+- 【外部贡献】为 Addon spec 添加版本验证。Addon CRD 支持 provider 和 version 字段，控制器可将 provider 信息添加到标签以便快速查询 (#6603)
+
+## 缺陷修复
+
+- 修复了 componentName 为空时暴露 SVC 的问题 (#6712)
+- 调整 OceanBase 切换功能以适配 Oracle 租户模式 (#6710)
+- 解决了使用主机网络时备份恢复失败的问题 (#6715)
+- 修复参数重配置失败问题 (#6664 #6665)
+- 修复动态参数不生效问题。在 Patroni PostgreSQL 中，如果同时修改动态参数和静态参数，动态参数不会生效 (#6648)
+- 移除暴露 SVC 时生成的重复端口 (#6631)
+- 修复 ServiceAccount 相关 bug。如果 RestoreCR 指定了 ServiceAccount，备份和恢复 Pod 将使用指定的 SA (#6605)
+
+## 新贡献者
+
+👏 热烈欢迎
+
+💙 @Shuimo03 💙
+
+加入 KubeBlocks 社区！Shuimo03 在上月成功合并了一个 PR (#6603)。
+
+我们呼吁更多开发者参与 KubeBlocks 的协同开发。从 [good first issues](https://github.com/apecloud/kubeblocks/contribute) 开始，我们期待与您共同打造下一代数据库管理平台！
+
+![2024-02-good-first-issues](/img/blogs/2024-02-good-first-issues.png)
+
+相关链接：
+- Good first issue: https://github.com/apecloud/kubeblocks/contribute
+- 贡献指南: https://github.com/apecloud/kubeblocks/blob/main/docs/CONTRIBUTING.md
+- 开发指南: https://github.com/apecloud/kubeblocks/blob/main/docs/00%20-%20index.md
+
+欢迎加入 GitHub Discussion 或 [KubeBlocks Slack 群组](https://join.slack.com/t/kubeblocks/shared_invite/zt-29tx52d8n-vli24S6gtD5ODJlNUqLqbQ)！
+
+![2024-02-overview](/img/blogs/2024-02-overview.png)

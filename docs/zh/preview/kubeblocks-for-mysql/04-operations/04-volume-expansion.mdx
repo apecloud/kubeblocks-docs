@@ -1,0 +1,260 @@
+---
+description: 了解如何在KubeBlocks管理的MySQL集群中无停机扩展持久卷声明（PVC）。
+keywords:
+- KubeBlocks
+- MySQL
+- Volume Expansion
+- Kubernetes
+- PVC
+sidebar_label: 存储卷扩容
+sidebar_position: 4
+title: MySQL 集群中扩展存储卷
+---
+
+## 前提条件
+
+在继续之前，请确保满足以下要求：
+- 环境准备：
+    - 已启动并运行一个 Kubernetes 集群。
+    - 已配置 kubectl CLI 工具与集群通信。
+    - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处提供的安装说明进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 部署 MySQL 半同步集群
+
+部署一个 2 节点的半同步 MySQL 集群（1 主节点，1 从节点）：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+
+
+
+## 验证部署
+在 MySQL 集群创建过程中监控其状态：
+
+```bash
+kubectl get cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster   mysql                Delete               Creating   32s
+example-mysql-cluster   mysql                Delete               Running    3m
+```
+
+
+
+
+## 扩展存储卷
+
+存储卷扩展允许您在创建持久卷声明（PVC）后增加其容量大小。该功能在Kubernetes v1.11中引入，并在Kubernetes v1.24版本正式发布（GA）。
+
+关键注意事项：
+- 支持的存储类：PVC使用的存储类必须支持存储卷扩展
+- 无停机时间：大多数情况下，存储卷扩展可以在不中断服务的情况下执行
+- 增量扩展：新容量必须大于当前容量
+
+### 检查存储类是否支持卷扩展
+
+列出所有可用的存储类，并通过检查ALLOWVOLUMEEXPANSION字段验证是否支持卷扩展：
+
+```bash
+kubectl get storageclass
+```
+
+示例输出：
+
+```bash
+NAME                PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+gp2                 kubernetes.io/aws-ebs   Delete          WaitForFirstConsumer   false                  4d10h
+kb-default-sc       ebs.csi.aws.com         Delete          WaitForFirstConsumer   true                   3d7h
+sc-s3-repo-2qsxfh   ru.yandex.s3.csi        Retain          Immediate              false                  3d7h
+```
+
+请确保您使用的存储类已将 `ALLOWVOLUMEEXPANSION` 设置为 `true`。若该值为 `false`，则表示该存储类不支持存储卷扩容。
+
+您可以通过以下两种方式之一进行存储卷扩容：
+    <Tabs>
+
+    <TabItem value="opsRequest" label="OPSREQUEST API" default>
+
+选项 1：使用 VolumeExpansion OpsRequest
+
+应用以下 YAML 来增加 mysql 组件的存储卷大小：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-expand-volume-ops
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  type: VolumeExpansion
+  volumeExpansion:
+  - componentName: mysql
+    volumeClaimTemplates:
+    - name: data
+      storage: 30Gi
+EOF
+```
+
+您可以使用以下命令查看扩缩容操作的进度：
+
+
+
+```bash
+kubectl describe ops example-mysql-expand-volume-ops -n demo
+```
+
+预期结果：
+
+```bash
+Status:
+  Phase:            Succeed
+  Progress:         1/1
+  ...
+```
+
+完成后，PVC 大小将被更新。
+
+    </TabItem>
+
+    <TabItem value="ClusterAPI" label="CLUSTER API">
+
+选项 2：直接通过 Cluster API 更新
+
+或者，您可以将 `spec.componentSpecs.volumeClaimTemplates.spec.resources.requests.storage` 字段更新为所需大小。
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 30Gi  # specify new size, and make sure it is larger than the current size
+EOF
+```
+
+KubeBlocks 将根据新规格自动更新 PVC 大小。
+
+    </TabItem>
+
+    </Tabs>
+
+## 验证
+
+使用以下命令检查更新后的集群配置：
+
+```bash
+kbcli cluster describe example-mysql-cluster -n demo
+```
+
+预期输出：
+
+```bash
+Resources Allocation:
+COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+mysql                           500m / 500m          512Mi / 512Mi           data:30Gi      <none>
+```
+
+数据 PVC 的存储卷大小已更新为指定值（例如本例中的 30Gi）。
+
+检查集群中 PVC 的状态以确认扩容操作已完成：
+
+```bash
+kubectl get pvc -l app.kubernetes.io/instance=example-mysql-cluster -n demo
+```
+
+预期输出：
+
+```bash
+NAME                                           STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+example-mysql-cluster-mysql-data-0             Bound    pvc-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   30Gi       RWO            kb-default-sc  10m
+example-mysql-cluster-mysql-data-1             Bound    pvc-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   30Gi       RWO            kb-default-sc  10m
+```
+
+
+
+
+## 关键注意事项
+1. 确保存储类支持存储卷扩展（检查 `ALLOWVOLUMEEXPANSION`）。
+2. 新容量必须大于当前容量。
+3. 根据存储提供商的不同，存储卷扩展可能需要额外配置。
+
+## 总结
+在本指南中，您学习了如何：
+1. 验证存储类是否支持存储卷扩容。
+2. 通过以下两种方式执行存储卷扩容：
+   - 使用 OpsRequest 进行动态更新。
+   - 通过 Cluster API 进行手动更新。
+3. 验证更新后的 PVC 容量并确保扩容操作完成。
+
+通过存储卷扩容功能，您可以高效地扩展 MySQL 集群的存储容量而无需中断服务，确保数据库能够随着应用需求增长而扩展。

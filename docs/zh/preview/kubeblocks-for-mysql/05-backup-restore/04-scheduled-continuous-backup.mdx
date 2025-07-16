@@ -1,0 +1,181 @@
+---
+description: 了解如何在KubeBlocks中设置MySQL集群，并启用定时全量备份与持续增量备份功能。
+keywords:
+- MySQL
+- Backup
+- PITR
+- KubeBlocks
+- Kubernetes
+sidebar_label: 定时持续备份
+sidebar_position: 4
+title: 在KubeBlocks中设置支持定时持续备份的MySQL集群
+---
+# 在 KubeBlocks 中设置启用定时持续备份的 MySQL 集群
+
+本指南介绍如何在 KubeBlocks 上部署 MySQL 集群，并配置定时全量备份和持续 binlog 备份，以实现时间点恢复（PITR）功能，从而增强数据保护和恢复能力。
+
+## 什么是 PITR？
+时间点恢复（Point-In-Time Recovery，PITR）允许您通过结合全量备份与增量 binlog 备份，将数据库恢复到特定时间点的状态。
+
+有关如何从全量备份和持续 binlog 备份中恢复数据的详细信息，请参阅[从 PITR 恢复](restore-with-pitr.mdx)指南。
+
+
+
+## 前提条件
+
+在继续之前，请确保满足以下条件：
+- 环境准备：
+    - 已启动并运行一个 Kubernetes 集群。
+    - 已配置 kubectl CLI 工具以与集群通信。
+    - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处提供的安装说明进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 部署 MySQL 半同步集群
+
+KubeBlocks 采用声明式方法管理 MySQL 集群。以下是一个配置示例，用于部署包含 2 个节点（1 个主节点，1 个副本节点）的半同步模式 MySQL 集群，并配置定时备份（包括全量备份和持续备份）。
+
+集群配置
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: WipeOut
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+  backup:
+    enabled: true
+    retentionPeriod: 30d
+    method: xtrabackup
+    cronExpression: '0 0 * * *'
+    repoName: s3-repo
+    pitrEnabled: true
+EOF
+```
+
+**关键字段说明**
+- `terminationPolicy: WipeOut`:
+  - 当设置为'WipeOut'时，删除集群会同时删除所有关联数据（包括备份）。
+  - 生产环境建议使用`terminationPolicy: Delete`，该策略在集群删除后仍会保留备份数据。
+- `backup.enabled: true`: 为集群启用定时备份功能。
+- `method: xtrabackup`: 指定使用的备份工具（例如Percona XtraBackup）。
+- `cronExpression: '0 0 * * *'`: 配置备份计划为每天UTC时间午夜执行。
+- `retentionPeriod: 30d`: 备份保留时长为30天。
+- `repoName: s3-repo`: 指定用于存储备份的S3仓库。
+- `pitrEnabled: true`: 启用时间点恢复（Point-in-Time Recovery）功能。
+
+## 验证部署
+
+监控集群状态直到其转变为 Running 状态：
+
+```bash
+kubectl get cluster example-mysql-cluster -n demo
+```
+
+示例输出：
+
+```bash
+NAME                             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Running   38s
+```
+
+当状态显示为 Running 时，表示 MySQL 集群已成功部署。
+
+## 检查 BackupSchedule 资源
+
+当启用定时备份功能时，KubeBlocks 会自动创建一个 BackupSchedule 资源。使用以下命令验证配置：
+
+
+
+```bash
+kubectl get backupschedule example-mysql-cluster-mysql-backup-schedule  -n demo -oyaml
+```
+
+示例输出：
+
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: BackupSchedule
+...
+spec:
+  backupPolicyName: example-mysql-cluster-mysql-backup-policy
+  schedules:
+    - backupMethod: xtrabackup
+      cronExpression: 0 0 * * *
+      enabled: true
+      name: xtrabackup
+      retentionPeriod: 30d
+    - backupMethod: archive-binlog
+      cronExpression: '*/30 * * * *'
+      enabled: true
+      name: archive-binlog
+      retentionPeriod: 30d
+```
+
+**说明**：
+- xtrabackup 调度任务每天 UTC 时间午夜执行一次全量备份。
+- archive-binlog 调度任务每 30 分钟归档一次 binlog 来实现增量备份。
+
+通过这种配置，全量备份与增量备份的组合能确保数据得到全面保护，并支持时间点恢复（PITR）。
+
+## 验证 S3 存储库中的备份
+
+在定时备份任务执行完成后，使用以下命令验证配置的 S3 存储桶中的备份文件：
+
+```bash
+TZ=":UTC" aws s3 ls s3://kubeblocks-backup-repo/ --recursive
+```
+
+示例输出：
+
+```bash
+TZ=":UTC" aws s3 ls s3://kubeblocks-backup-repo/ --recursive
+2025-03-04 02:35:09        127 demo/example-mysql-cluster-77a788fa-352d-40b2-8262-7fcd0c706f58/mysql/77a788fa-example-mysql-cluster-archive-binlog/binlog_005/example-mysql-cluster-mysql-0-bin.000001.zst
+2025-03-04 02:35:10        127 demo/example-mysql-cluster-77a788fa-352d-40b2-8262-7fcd0c706f58/mysql/77a788fa-example-mysql-cluster-archive-binlog/binlog_005/example-mysql-cluster-mysql-0-bin.000002.zst
+2025-03-04 02:35:11       2107 demo/example-mysql-cluster-77a788fa-352d-40b2-8262-7fcd0c706f58/mysql/77a788fa-example-mysql-cluster-archive-binlog/binlog_005/example-mysql-cluster-mysql-0-bin.000003.zst
+2025-03-04 03:05:23     102282 demo/example-mysql-cluster-77a788fa-352d-40b2-8262-7fcd0c706f58/mysql/77a788fa-example-mysql-cluster-archive-binlog/binlog_005/example-mysql-cluster-mysql-0-bin.000004.zst
+2025-03-04 03:35:30      87272 demo/example-mysql-cluster-77a788fa-352d-40b2-8262-7fcd0c706f58/mysql/77a788fa-example-mysql-cluster-archive-binlog/binlog_005/example-mysql-cluster-mysql-0-bin.000005.zst
+2025-03-04 03:35:30         62 demo/example-mysql-cluster-77a788fa-352d-40b2-8262-7fcd0c706f58/mysql/77a788fa-example-mysql-cluster-archive-binlog/binlog_sentinel_005.json
+```
+
+以下输出确认：
+- Binlog 归档每 30 分钟上传一次。
+- 完整备份和增量备份均存储在指定的 S3 存储库中，确保数据的持续保护。
+
+## 总结
+在本指南中，您学习了如何：
+- 在 KubeBlocks 中部署一个支持半同步复制的 MySQL 集群，并启用定时全量备份和持续增量备份。
+- 验证备份计划并检查 S3 存储库中的备份文件。
+通过此配置，您的 MySQL 集群具备了时间点恢复（PITR）能力，可以将数据库恢复到任意特定时间点，实现最小化数据丢失。

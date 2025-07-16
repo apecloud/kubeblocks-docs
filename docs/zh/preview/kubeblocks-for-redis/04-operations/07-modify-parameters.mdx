@@ -1,0 +1,131 @@
+---
+description: 了解如何通过Reconfiguring OpsRequest在KubeBlocks中修改Redis的动态与静态参数，以优化数据库性能与可用性。
+keywords:
+- Redis
+- KubeBlocks
+- OpsRequest
+- dynamic parameters
+- static parameters
+- database configuration
+sidebar_label: 修改Redis参数
+sidebar_position: 7
+title: 修改Redis参数
+---
+# 修改 Redis 参数
+
+数据库重新配置涉及修改参数、设置或配置以优化性能、安全性或可用性。参数变更分为两种类型：
+
+| 类型 | 需要重启 | 生效范围 | 示例参数 |
+|------|------------------|-------|--------------------|
+| **动态参数** | 否 | 立即生效 | `max_connections` |
+| **静态参数** | 是 | 重启后生效 | `shared_buffers` |
+
+对于静态参数，KubeBlocks 通过以下方式最小化停机时间：
+1. 先修改并重启副本节点
+2. 执行切换操作，将更新后的副本提升为主节点（通常可在毫秒级完成）
+3. 重启原主节点
+
+:::note
+
+KubeBlocks Redis 插件未实现任何针对动态参数的重新加载操作，因此任何参数变更都将导致重启。
+
+:::
+
+本指南演示如何使用重新配置操作请求（Reconfiguring OpsRequest）修改 KubeBlocks 管理的 Redis 集群的静态参数。
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署 Redis 集群
+
+import CreatePGCluster from '../_tpl/_create-redis-replication-cluster.mdx'
+
+<CreatePGCluster />
+
+## 验证部署
+
+import VerifyPGCluster from '../_tpl/_verify-redis-replication-cluster.mdx'
+
+<VerifyPGCluster />
+
+## 检查参数值
+
+### 获取凭证
+KubeBlocks 会自动创建包含 Redis root 凭证的 Secret。通过以下命令获取凭证：
+```bash
+NAME=`kubectl get secrets -n demo redis-replication-redis-account-default -o jsonpath='{.data.username}' | base64 -d`
+PASSWD=`kubectl get secrets -n demo redis-replication-redis-account-default -o jsonpath='{.data.password}' | base64 -d`
+```
+
+### 访问 Redis 集群
+使用 Redis 客户端连接集群主节点：
+```bash
+kubectl exec -it -n demo redis-replication-redis-0 -c redis -- redis-cli -a ${PASSWD}
+```
+
+### 查询参数值
+
+连接成功后，可以查询 'aof-timestamp-enabled' 的当前值：
+```sql
+127.0.0.1:6379> CONFIG GET aof-timestamp-enabled
+1) "aof-timestamp-enabled"
+2) "no"
+```
+
+## 静态参数示例：修改 aof-timestamp-enabled
+
+创建重新配置操作请求。应用以下 OpsRequest YAML 将 'aof-timestamp-enabled' 设置为 'yes'：
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: redis-reconfigure-static
+  namespace: demo
+spec:
+  clusterName: redis-replication
+  reconfigures:
+  - componentName: redis
+    parameters:
+    - key: aof-timestamp-enabled
+      value: 'yes'
+  type: Reconfiguring
+```
+
+检查操作请求状态直至完成：
+
+```bash
+kubectl get ops redis-reconfigure-static -n demo -w
+```
+
+示例输出：
+```bash
+redis-reconfigure-static   Reconfiguring   redis-replication   Running   -/-        5s
+redis-reconfigure-static   Reconfiguring   redis-replication   Succeed   -/-        33s
+```
+
+**验证配置变更**
+
+登录 Redis 实例确认 `aof-timestamp-enabled` 参数已更新：
+
+```sql
+127.0.0.1:6379> CONFIG GET aof-timestamp-enabled
+1) "aof-timestamp-enabled"
+2) "yes"
+```
+
+## 清理资源
+删除 Redis 集群及其命名空间以移除所有创建的资源：
+```bash
+kubectl delete cluster redis-replication -n demo
+kubectl delete ns demo
+```
+
+## 总结
+本指南介绍了通过 KubeBlocks 修改 Redis 参数的方法：
+- 静态变更需要重启但停机时间极短
+- 所有变更在应用前都会经过验证
+- 配置遵循声明式管理原则

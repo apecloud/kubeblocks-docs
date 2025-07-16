@@ -1,0 +1,228 @@
+---
+description: 使用KubeBlocks中的Backup API和OpsRequest API为MongoDB集群创建及验证完整备份的逐步指南
+keywords:
+- MongoDB
+- Full Backup
+- KubeBlocks
+- Kubernetes
+- Database Backup
+- XtraBackup
+sidebar_label: 创建完整备份
+sidebar_position: 2
+title: 在KubeBlocks上为MongoDB集群创建完整备份
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# 在KubeBlocks上为MongoDB创建全量备份
+
+本指南演示如何通过以下两种方式为KubeBlocks上的MongoDB集群创建和验证全量备份：
+- 直接使用Backup API进行备份操作
+- 使用OpsRequest API进行托管式备份操作（提供增强的监控能力）
+
+我们将在[从全量备份恢复](./05-restoring-from-full-backup)指南中介绍如何从备份恢复数据。
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署MongoDB集群
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+## 验证部署
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+## 备份准备条件
+
+创建备份前请确保：
+1. 备份仓库已配置：
+   - 存在`BackupRepo`资源
+   - 集群与仓库间网络连通
+   - `BackupRepo`状态显示"Ready"
+
+2. 集群准备就绪：
+   - 集群状态为"Running"
+   - 无正在进行的操作（扩缩容、升级等）
+
+## 查看备份配置
+
+检查可用的备份策略和计划：
+
+```bash
+# 列出备份策略
+kubectl get backuppolicy -n demo -l app.kubernetes.io/instance=mongo-cluster
+
+# 列出备份计划
+kubectl get backupschedule -n demo -l app.kubernetes.io/instance=mongo-cluster
+```
+
+预期输出：
+```bash
+NAME                                  BACKUP-REPO   STATUS      AGE
+mongo-cluster-mongodb-backup-policy                 Available   62m
+
+NAME                                    STATUS      AGE
+mongo-cluster-mongodb-backup-schedule   Available   62m
+```
+
+查看BackupPolicy CR 'mongo-cluster-mongodb-backup-policy'中支持的备份方法：
+
+```bash
+kubectl get backuppolicy mongo-cluster-mongodb-backup-policy -n demo -oyaml | yq '.spec.backupMethods[].name'
+```
+**备份方法列表**
+
+KubeBlocks MongoDB支持以下备份方法：
+
+| 功能           | 方法          | 描述 |
+|-------------|--------|------------|
+| 全量备份 | dump   | 使用MongoDB工具`mongodump`创建数据库内容的二进制导出 |
+| 全量备份 | datafile | 备份数据库的数据文件 |
+| 持续备份 | archive-oplog | 使用`wal-g`持续归档MongoDB操作日志 |
+
+## 通过Backup API备份
+
+### 1. 创建按需备份
+
+`datafile`方法会备份数据库的数据文件
+
+应用以下清单创建备份：
+
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: Backup
+metadata:
+  name: mongodb-backup-datafile
+  namespace: demo
+spec:
+  # 指定备份策略中定义的备份方法名称
+  # - dump
+  # - volume-snapshot
+  # - datafile
+  backupMethod: datafile
+  # 指定应用于此备份的备份策略
+  backupPolicyName: mongo-cluster-mongodb-backup-policy
+  # 决定当备份自定义资源(CR)被删除时，备份仓库中的备份内容是否应被删除。支持的值是`Retain`和`Delete`
+  # - `Retain`表示保留备份内容及其在备份仓库中的物理快照
+  # - `Delete`表示删除备份内容及其在备份仓库中的物理快照
+  deletionPolicy: Delete
+```
+
+### 2. 监控备份并验证完成状态
+
+跟踪进度直至状态显示"Completed"：
+
+```bash
+kubectl get backup mongodb-backup-datafile  -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                      POLICY                                METHOD     REPO            STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME   EXPIRATION-TIME
+mongodb-backup-datafile   mongo-cluster-mongodb-backup-policy   datafile   <BACKUP_REPO>   Running     1119698                 Delete            2025-05-18T14:21:16Z
+mongodb-backup-datafile   mongo-cluster-mongodb-backup-policy   datafile   <BACKUP_REPO>   Running     1119698                 Delete            2025-05-18T14:21:16Z
+mongodb-backup-datafile   mongo-cluster-mongodb-backup-policy   datafile   <BACKUP_REPO>   Completed   1119698      15s        Delete            2025-05-18T14:21:16Z   2025-05-18T14:21:31Z
+```
+
+### 3. 验证备份
+
+通过以下方式确认备份成功：
+- 备份状态显示"Completed"
+- 备份大小符合预期
+- 检查BackupRepo中的文件
+
+`Backup`资源记录以下详细信息：
+- 存储路径
+- 时间范围
+- 备份文件大小
+
+
+## 通过OpsRequest API备份
+
+### 1. 创建按需备份
+
+使用OpsRequest API执行'datafile'方法备份：
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: mongo-cluster-backup
+  namespace: demo
+spec:
+  clusterName: mongo-cluster
+  force: false
+  backup:
+    backupPolicyName: mongo-cluster-mongodb-backup-policy
+    backupMethod: datafile
+    deletionPolicy: Delete
+    retentionPeriod: 1mo
+  type: Backup
+```
+
+### 2. 监控备份进度
+
+#### 1. 监控操作状态
+
+实时跟踪备份进度：
+```bash
+kubectl get ops mongo-cluster-backup  -n demo -w
+```
+
+预期输出：
+```bash
+NAME                   TYPE     CLUSTER         STATUS    PROGRESS   AGE
+mongo-cluster-backup   Backup   mongo-cluster   Running   -/-        5s
+mongo-cluster-backup   Backup   mongo-cluster   Succeed   -/-        10s
+```
+
+- 状态'Succeed'表示备份操作成功完成
+
+#### 2. 验证完成状态
+
+检查最终备份状态：
+
+```bash
+kubectl get backup -n demo -l operations.kubeblocks.io/ops-name=mongo-cluster-backup
+```
+
+示例输出：
+```bash
+NAME                                       POLICY                                METHOD     REPO     STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
+backup-demo-mongo-cluster-20250518142234   mongo-cluster-mongodb-backup-policy   datafile   kb-oss   Completed   1149575      11s        Delete            2025-05-18T14:22:34Z   2025-05-18T14:22:44Z   2025-06-17T14:22:44Z
+```
+
+- 备份状态应显示'Completed'
+
+### 3. 验证备份
+
+通过以下方式确认备份成功：
+- 备份状态显示"Completed"
+- 备份大小符合预期
+- 检查BackupRepo中的文件
+
+`Backup`资源记录以下详细信息：
+- 存储路径
+- 时间范围
+- 其他元数据
+
+## 总结
+
+本指南涵盖：
+1. 部署MongoDB复制集群
+2. 使用以下方式创建全量备份：
+   - 直接Backup API
+   - 托管式OpsRequest API
+3. 监控和验证备份
+
+您的MongoDB数据现已安全备份，可在需要时进行恢复。

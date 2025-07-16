@@ -1,0 +1,239 @@
+---
+description: 了解如何使用KubeBlocks部署Redis分片集群。本指南涵盖配置、验证、故障转移测试及超时设置等内容。
+keywords:
+- KubeBlocks
+- Redis
+- Kubernetes
+- High Availability
+sidebar_label: Redis 分片集群
+sidebar_position: 1
+title: 使用KubeBlocks部署Redis分片集群
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 使用 KubeBlocks 部署 Redis 分片集群（集群模式）
+
+Redis 集群通过基于哈希的分区机制将数据分布到多个节点（分片）上，实现读写能力的水平扩展。
+
+**适用场景**
+- 需要高吞吐量的大规模应用
+- 分布式缓存和会话存储
+- 写密集型工作负载（如实时分析）
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署 Redis 分片集群
+
+创建一个包含 3 个分片、每个分片 2 个副本的 Redis 分片集群（集群模式）：
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: redis-sharding
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  shardings:
+  - name: shard  # 分片名称
+    shards: 3  # 为集群创建的分片数量
+    template:
+      name: redis
+      componentDef: redis-cluster-7 # 每个分片使用的组件定义名称
+      replicas: 2 # 每个分片的副本数量
+      resources:
+        limits:
+          cpu: '1'
+          memory: 1Gi
+        requests:
+          cpu: '1'
+          memory: 1Gi
+      serviceVersion: 7.2.4
+      volumeClaimTemplates:
+      - name: data
+        spec:
+          accessModes:
+          - ReadWriteOnce
+          resources:
+            requests:
+              storage: 20Gi
+      services:
+      # 服务 `redis-advertised` 在 `ComponentDefinition` 中定义
+      # 用于解析 Redis Pod 的广播端点
+      - name: redis-advertised # 这是一个每 Pod 服务，用于解析广播端点
+        podService: true
+        #  - NodePort
+        #  - LoadBalancer
+        serviceType: NodePort
+```
+
+**关键配置说明**：
+- `shardings`: 指定 ShardingSpec 对象列表，用于配置集群组件的分片拓扑
+- `shards`: 指定为集群创建的分片数量
+- `serviceType`: 指定 `redis-advertised` 服务的类型，该服务用于解析 Redis Pod 的广播端点
+   默认服务类型为 `NodePort`。如需将服务暴露到集群外部，可根据需求将服务类型覆盖为 `NodePort` 或 `LoadBalancer`
+
+:::tip
+
+Redis 集群至少需要 **三个** 主节点来确保高可用性并防止数据不一致。
+
+生产环境推荐的 Redis 集群通常至少包含六个节点：三个主节点用于分片和故障转移共识，三个副本节点作为每个主节点的备份。
+
+创建或缩容 Redis 集群时，请确保 `shards` 参数值大于等于 **3**。
+:::
+
+## 验证部署
+
+### 检查集群状态
+集群部署完成后，检查其状态：
+```bash
+kubectl get cluster redis-sharding  -n demo -w
+```
+预期输出：
+```bash
+NAME             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+redis-sharding                        Delete               Running   103s
+```
+
+### 验证组件和 Pod 状态
+
+获取该集群的所有工作组件：
+```bash
+kubectl get cmp -l app.kubernetes.io/instance=redis-sharding -n demo
+```
+
+预期输出：
+```bash
+NAME                       DEFINITION                      SERVICE-VERSION   STATUS    AGE
+redis-sharding-shard-5cd   redis-cluster-7-1.0.0           7.2.4             Running   2m34s
+redis-sharding-shard-drg   redis-cluster-7-1.0.0           7.2.4             Running   2m34s
+redis-sharding-shard-tgf   redis-cluster-7-1.0.0           7.2.4             Running   2m34s
+```
+每个组件代表一个分片，后缀为哈希 ID。
+
+检查 Pod 及其角色：
+
+```bash
+kubectl get pods -l app.kubernetes.io/instance=redis-sharding -L  kubeblocks.io/role -n demo
+```
+
+预期输出：
+```bash
+NAME                         READY   STATUS    RESTARTS   AGE     ROLE
+redis-sharding-shard-5cd-0   2/2     Running   0          3m55s   primary
+redis-sharding-shard-5cd-1   2/2     Running   0          3m35s   secondary
+redis-sharding-shard-drg-0   2/2     Running   0          3m53s   primary
+redis-sharding-shard-drg-1   2/2     Running   0          3m35s   secondary
+redis-sharding-shard-tgf-0   2/2     Running   0          3m54s   primary
+redis-sharding-shard-tgf-1   2/2     Running   0          3m36s   secondary
+```
+集群中共有六个副本，每个组件两个（一个主节点和一个从节点）。
+
+## 分片扩缩容
+
+### 扩展分片（增加分片）
+**预期工作流程**：
+
+1. 新组件被创建，包含两个副本（一个主节点和一个从节点）
+2. 当所有组件就绪（状态为 `Running`）时，集群状态从 `Updating` 变为 `Running`
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  选项 1：使用水平扩缩容 OpsRequest
+
+  将分片数量增加到 `4`，可使用以下 OpsRequest：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: redis-sharding-scale-out-ops
+    namespace: demo
+  spec:
+    clusterName: redis-sharding
+    type: HorizontalScaling
+    horizontalScaling:
+    - componentName: shard
+      shards: 4
+  ```
+
+  监控扩缩容操作进度：
+
+  ```bash
+  kubectl get ops redis-sharding-scale-out-ops -n demo -w
+  ```
+
+  预期结果：
+  ```bash
+  NAME                           TYPE                CLUSTER          STATUS    PROGRESS   AGE
+  redis-sharding-scale-out-ops   HorizontalScaling   redis-sharding   Running   0/1          35s
+  redis-sharding-scale-out-ops   HorizontalScaling   redis-sharding   Succeed   1/1        2m35s
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  选项 2：直接更新 Cluster API
+
+  也可以直接更新 Cluster 资源中的 `shards` 字段：
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: shard
+        shards: 4
+  # 其余字段与原集群 CR 相同，为简洁起见省略
+  ...
+  ```
+
+  或使用命令修补集群 CR：
+
+  ```bash
+  kubectl patch cluster redis-sharding -n demo --type=json -p='[{"op": "replace", "path": "/spec/shardings/0/shards", "value": 4}]'
+  ```
+
+  </TabItem>
+</Tabs>
+
+与扩展类似，也可以通过减少 Cluster 资源中的 `shards` 字段来缩容集群。但请确保 `shards` 值大于等于 3。
+
+## 主从切换
+
+要对名为 `redis-sharding-shard-5cd` 的分片执行主从切换，可使用以下 OpsRequest：
+
+```yaml
+kind: OpsRequest
+metadata:
+  name: redis-sharding-switchover-ops
+  namespace: demo
+spec:
+  clusterName: redis-sharding  # redis-sharding 是集群名称
+  switchover:
+  - componentObjectName: redis-sharding-shard-5cd  # componentObjectName 是某个分片的名称
+    candidateName: redis-sharding-shard-5cd-0  # candidateName 是候选实例名称
+    instanceName: redis-sharding-shard-5cd-1  # instanceName 是主实例名称
+  type: Switchover
+```
+
+:::note
+
+`componentObjectName` 是某个分片的名称，即组件对象的完整名称。
+
+:::
+
+## 清理资源
+删除本教程创建的所有资源：
+
+```bash
+kubectl delete cluster redis-sharding -n demo
+kubectl delete ns demo
+```

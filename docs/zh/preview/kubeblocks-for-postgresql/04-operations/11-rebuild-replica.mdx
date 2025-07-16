@@ -1,0 +1,331 @@
+---
+description: 如何使用原地与非原地方法重建KubeBlocks管理的PostgreSQL复制集群中的副本
+keywords:
+- KubeBlocks
+- PostgreSQL
+- Replica Rebuild
+- In-Place
+- Non-In-Place
+sidebar_label: 恢复PostgreSQL副本
+sidebar_position: 11
+title: 在KubeBlocks中恢复PostgreSQL副本
+---
+# 在KubeBlocks中重建PostgreSQL副本
+
+本指南演示如何使用原地和非原地两种方法重建副本。
+
+**什么是副本重建**？
+
+副本重建是指从零开始或从备份重新创建PostgreSQL副本的过程，同时保持：
+- **数据一致性**：确保副本拥有与主节点完全一致的数据副本
+- **高可用性**：在重建过程中最小化停机时间
+
+在此过程中：
+1. 识别并隔离有问题的副本
+2. 从主节点获取新的基础备份
+3. 流式传输WAL（预写日志）段以追赶进度
+4. 副本重新加入复制集群
+
+**何时需要重建PostgreSQL实例**？
+
+在以下常见场景中需要进行重建：
+- 副本落后主节点过多（不可恢复的延迟），或复制槽损坏
+- 无法自动解决的WAL文件间隙
+- 数据损坏：存储级损坏（磁盘/存储卷问题）、主从节点间数据不一致等
+- 基础设施问题：节点故障、存储设备故障或跨可用区/地域迁移
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+
+
+## 部署 PostgreSQL 集群
+
+import CreatePGCluster from '../_tpl/_create-pg-replication-cluster.mdx'
+
+<CreatePGCluster />
+
+
+
+## 验证部署
+
+import VerifyPGCluster from '../_tpl/_verify-pg-replication-cluster.mdx'
+
+<VerifyPGCluster />
+
+
+
+## 连接到 PostgreSQL 主副本并写入模拟数据
+
+使用以下命令检查副本角色：
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster -L kubeblocks.io/role
+```
+
+示例输出：
+```bash
+NAME                      READY   STATUS    RESTARTS   AGE     ROLE
+pg-cluster-postgresql-0   4/4     Running   0          13m     secondary
+pg-cluster-postgresql-1   4/4     Running   0          12m     primary
+```
+
+### 步骤 1：连接到主实例
+
+KubeBlocks 会自动创建一个包含 PostgreSQL postgres 凭据的 Secret。获取 PostgreSQL postgres 凭据：
+
+```bash
+NAME=`kubectl get secrets -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.username}' | base64 -d`
+PASSWD=`kubectl get secrets -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.password}' | base64 -d`
+```
+
+通过服务 `pg-cluster-postgresql-postgresql` 连接到主副本，该服务会将数据路由到主副本。
+
+```bash
+kubectl exec -ti -n demo pg-cluster-postgresql-0 -- env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql -h pg-cluster-postgresql-postgresql
+```
+
+### 步骤 2：向主实例写入数据
+连接到主实例并向数据库写入一条记录：
+
+```sql
+postgrel> CREATE DATABASE test;
+postgrel> \c test;
+postgrel> CREATE TABLE t1 (id INT PRIMARY KEY, name VARCHAR(255));
+postgrel> INSERT INTO t1 VALUES (1, 'John Doe');
+```
+
+### 步骤 3：验证数据复制
+
+连接到副本实例（例如 pg-cluster-postgresql-0）以验证数据是否已复制：
+```bash
+kubectl exec -ti -n demo pg-cluster-postgresql-0 -- env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql -h 127.0.0.1
+```
+:::注意
+如果主实例是 'pg-cluster-postgresql-0'，则应连接到 'pg-cluster-postgresql-1'。在连接前请确保检查每个实例的角色。
+:::
+
+```sql
+postgrel> \c test;
+postgrel> SELECT * FROM test.t1;
+```
+
+示例输出：
+```bash
+ id |   name
+----+----------
+  1 | John Doe
+(1 row)
+```
+
+## 副本重建
+
+KubeBlocks 提供两种副本重建方式：原地重建（in-place）和非原地重建（non-in-place）。
+
+### 原地重建
+
+**工作流程**：
+1. 终止原 Pod（例如 'pg-cluster-postgresql-0'）
+2. 创建同名新 Pod 并分配新 PVC
+3. 从主节点同步数据
+
+使用以下配置进行原地重建：
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-rebuild-replica-inplace
+  namespace: demo
+spec:
+  clusterName: pg-cluster
+  force: true
+  preConditionDeadlineSeconds: 0
+  rebuildFrom:
+  - componentName: postgresql
+    inPlace: true  # 设置为原地重建模式
+    instances:
+    - name: pg-cluster-postgresql-0
+  type: RebuildInstance
+```
+
+配置中的 "pg-cluster-postgresql-0" 表示需要修复的实例名称（Pod 名称）。
+
+监控重建操作：
+```bash
+kubectl get ops  pg-rebuild-replica-inplace -n demo -w
+```
+示例输出：
+```bash
+NAME                         TYPE              CLUSTER      STATUS    PROGRESS   AGE
+pg-rebuild-replica-inplace   RebuildInstance   pg-cluster   Running   0/1        5s
+pg-rebuild-replica-inplace   RebuildInstance   pg-cluster   Running   0/1        5s
+pg-rebuild-replica-inplace   RebuildInstance   pg-cluster   Running   0/1        46s
+pg-rebuild-replica-inplace   RebuildInstance   pg-cluster   Running   1/1        46s
+pg-rebuild-replica-inplace   RebuildInstance   pg-cluster   Succeed   1/1        47s
+```
+
+验证 Pod 状态，确认副本（"pg-cluster-postgresql-0"）及其 PVC 和 PV 已重建：
+```bash
+kubectl get po,pvc,pv -l app.kubernetes.io/instance=pg-cluster -ndemo
+```
+示例输出：
+```bash
+kubectl get po,pvc,pv -l app.kubernetes.io/instance=pg-cluster -ndemo
+NAME                          READY   STATUS    RESTARTS   AGE
+pod/pg-cluster-postgresql-0   4/4     Running   0          5m6s
+pod/pg-cluster-postgresql-1   4/4     Running   0          14m
+
+NAME                                                 STATUS   VOLUME    CAPACITY   ACCESS MODES  STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+persistentvolumeclaim/data-pg-cluster-postgresql-0   Bound    pvc-xxx   20Gi       RWO            <SC>          <unset>                 5m6s
+persistentvolumeclaim/data-pg-cluster-postgresql-1   Bound    pvc-yyy   20Gi       RWO            <SC>          <unset>                 14m
+```
+
+连接到副本并验证数据恢复情况：
+
+```bash
+kubectl exec -ti -n demo pg-cluster-postgresql-0 -- env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql -h 127.0.0.1
+```
+
+```sql
+postgrel> \c test;
+postgrel> select * from t1;
+ id |   name
+----+----------
+  1 | John Doe
+(1 row)
+```
+
+### 非原地重建
+
+**工作流程**：
+1. 创建新 Pod（例如 'pg-cluster-postgresql-2'）
+2. 从主节点同步数据
+3. 新副本就绪后终止原 Pod
+
+通过创建新实例进行重建：
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-rebuild-replica-non-inplace
+  namespace: demo
+spec:
+  clusterName: pg-cluster
+  force: true
+  preConditionDeadlineSeconds: 0
+  rebuildFrom:
+  - componentName: postgresql
+    inPlace: false
+    instances:
+    - name: pg-cluster-postgresql-0
+  type: RebuildInstance
+```
+
+配置中的 "pg-cluster-postgresql-0" 表示需要修复的实例名称（Pod 名称）。
+
+监控重建操作：
+```bash
+kubectl get ops  pg-rebuild-replica-inplace -n demo -w
+```
+示例输出：
+```bash
+NAME                             TYPE              CLUSTER      STATUS    PROGRESS   AGE
+pg-rebuild-replica-non-inplace   RebuildInstance   pg-cluster   Running   0/1        5s
+pg-rebuild-replica-non-inplace   RebuildInstance   pg-cluster   Running   0/1        5s
+pg-rebuild-replica-non-inplace   RebuildInstance   pg-cluster   Running   0/1        46s
+pg-rebuild-replica-non-inplace   RebuildInstance   pg-cluster   Running   1/1        46s
+pg-rebuild-replica-non-inplace   RebuildInstance   pg-cluster   Succeed   1/1        47s
+```
+
+```bash
+kubectl get pods  -l app.kubernetes.io/instance=pg-cluster -n demo -w
+NAME                      READY   STATUS    RESTARTS   AGE
+pg-cluster-postgresql-0   4/4     Running   0          53m
+pg-cluster-postgresql-1   4/4     Running   0          2m52s
+pg-cluster-postgresql-2   0/4     Pending   0          0s
+pg-cluster-postgresql-2   0/4     Pending   0          4s
+pg-cluster-postgresql-2   0/4     Init:0/4   0          4s
+pg-cluster-postgresql-2   0/4     Init:1/4   0          5s
+pg-cluster-postgresql-2   0/4     Init:2/4   0          6s
+pg-cluster-postgresql-2   0/4     Init:3/4   0          7s
+pg-cluster-postgresql-2   0/4     PodInitializing   0          8s
+pg-cluster-postgresql-2   2/4     Running           0          9s
+pg-cluster-postgresql-2   2/4     Running           0          12s
+pg-cluster-postgresql-2   2/4     Running           0          14s
+pg-cluster-postgresql-2   3/4     Running           0          14s
+pg-cluster-postgresql-2   3/4     Running           0          16s
+pg-cluster-postgresql-2   4/4     Running           0          3m30s
+pg-cluster-postgresql-0   4/4     Terminating       0          4m3s
+pg-cluster-postgresql-0   4/4     Terminating       0          4m3s
+pg-cluster-postgresql-0   4/4     Terminating       0          4m3s
+```
+
+连接到新副本实例（'pg-cluster-postgresql-2'）并验证数据：
+
+```bash
+kubectl exec -ti -n demo pg-cluster-postgresql-2 -- env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql -h 127.0.0.1
+```
+
+```sql
+postgrel> \c test;
+postgrel> select * from t1;
+ id |   name
+----+----------
+  1 | John Doe
+(1 row)
+```
+
+### 从备份重建
+
+以下配置展示通过指定 `backupName` 从已知备份恢复故障副本：
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-rebuild-from-backup
+  namespace: demo
+spec:
+  clusterName: pg-cluster
+  force: true
+  rebuildFrom:
+  - backupName: <PG_BACKUP_NAME>
+    componentName: postgresql
+    inPlace: true
+    instances:
+    - name: pg-cluster-postgresql-1
+  type: RebuildInstance
+```
+
+### 指定节点重建
+
+如需将新副本重建到特定节点，可使用 `targetNodeName` 参数：
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-rebuild-from-backup
+  namespace: demo
+spec:
+  clusterName: pg-cluster
+  force: true
+  rebuildFrom:
+  - backupName: <PG_BACKUP_NAME>
+    componentName: postgresql
+    inPlace: true
+    instances:
+    - name: pg-cluster-postgresql-1
+      targetNodeName: <NODE_NAME> # 新 Pod 将被调度到指定节点
+  type: RebuildInstance
+```
+
+## 总结
+关键要点：
+- 原地重建：成功重建副本并恢复已删除数据。
+- 非原地重建：创建了新的副本实例并成功恢复数据。
+
+两种方法均能有效恢复副本并确保数据一致性。

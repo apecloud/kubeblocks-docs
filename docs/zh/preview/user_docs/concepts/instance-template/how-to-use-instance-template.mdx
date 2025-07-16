@@ -1,0 +1,207 @@
+---
+description: 应用实例模板
+keywords:
+- apply instance template
+- instance template
+sidebar_label: 应用实例模板
+sidebar_position: 2
+title: 应用实例模板
+---
+# 应用实例模板
+
+实例模板可应用于多种场景。本节以RisingWave集群为例进行说明。
+
+KubeBlocks支持管理RisingWave集群。RisingWave插件由RisingWave官方团队贡献。为使RisingWave达到最佳运行状态，它需要依赖外部存储解决方案（如AWS S3或阿里云OSS）作为其状态后端。在创建RisingWave集群时，必须为外部存储配置凭证等相关信息以确保正常运行，且这些信息可能因集群而异。
+
+在RisingWave的官方镜像中，这些信息可以通过环境变量注入。因此，在KubeBlocks 0.9版本中，我们可以在实例模板中配置相应的环境变量，并在每次创建集群时设置这些环境变量的值，从而将凭证信息注入到RisingWave的容器中。
+
+## 示例说明
+
+在 RisingWave 插件的默认模板中，[环境变量配置](https://github.com/apecloud/kubeblocks-addons/blob/main/addons/risingwave/templates/cmpd-compute.yaml#L26)如下所示：
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1alpha1
+kind: ComponentDefinition
+metadata:
+  name: risingwave
+# ...
+spec:
+#...
+  runtime:
+    containers:
+      - name: compute
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+        command:
+        - /risingwave/bin/risingwave
+        - compute-node
+        env:
+        - name: RUST_BACKTRACE
+          value: "1"
+        - name: RW_CONFIG_PATH
+          value: /risingwave/config/risingwave.toml
+        - name: RW_LISTEN_ADDR
+          value: 0.0.0.0:5688
+        - name: RW_ADVERTISE_ADDR
+          value: $(KB_POD_FQDN):5688
+        - name: RW_META_ADDR
+          value: load-balance+http://$(metaSvc)-headless:5690
+        - name: RW_METRICS_LEVEL
+          value: "1"
+        - name: RW_CONNECTOR_RPC_ENDPOINT
+          value: $(connectorSvc):50051
+        - name: RW_PROMETHEUS_LISTENER_ADDR
+          value: 0.0.0.0:1222
+# ...
+```
+
+当在[集群资源](https://github.com/apecloud/kubeblocks-addons/blob/main/addons-cluster/risingwave/templates/cluster.yaml)中添加实例模板后：
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1alpha1
+kind: Cluster
+metadata:
+  name: {{ include "risingwave-cluster.name" . }}
+  namespace: {{ .Release.Namespace }}
+# ...
+spec:
+  componentSpecs:
+  - componentDef: compute
+    name: compute
+    replicas: {{ .Values.risingwave.compute.replicas }}
+    instances:
+    - name: instance
+      replicas: {{ .Values.risingwave.compute.replicas }}
+      env:
+      - name: RW_STATE_STORE
+        value: "hummock+s3://{{ .Values.risingwave.stateStore.s3.bucket }}"
+      - name: AWS_REGION
+        value: "{{ .Values.risingwave.stateStore.s3.region }}"
+      {{- if eq .Values.risingwave.stateStore.s3.authentication.serviceAccountName "" }}
+      - name: AWS_ACCESS_KEY_ID
+        value: "{{ .Values.risingwave.stateStore.s3.authentication.accessKey }}"
+      - name: AWS_SECRET_ACCESS_KEY
+        value: "{{ .Values.risingwave.stateStore.s3.authentication.secretAccessKey }}"
+      {{- end }}
+      - name: RW_DATA_DIRECTORY
+        value: "{{ .Values.risingwave.stateStore.dataDirectory }}"
+      {{- if .Values.risingwave.stateStore.s3.endpoint }}
+      - name: RW_S3_ENDPOINT
+        value: "{{ .Values.risingwave.stateStore.s3.endpoint }}"
+      {{- end }}
+      {{- if .Values.risingwave.metaStore.etcd.authentication.enabled }}
+      - name: RW_ETCD_USERNAME
+        value: "{{ .Values.risingwave.metaStore.etcd.authentication.username }}"
+      - name: RW_ETCD_PASSWORD
+        value: "{{ .Values.risingwave.metaStore.etcd.authentication.password }}"
+      {{- end }}
+      - name: RW_ETCD_ENDPOINTS
+        value: "{{ .Values.risingwave.metaStore.etcd.endpoints }}"
+      - name: RW_ETCD_AUTH
+        value: "{{ .Values.risingwave.metaStore.etcd.authentication.enabled}}"
+# ...
+```
+
+在上述示例中，我们通过 `instances` 字段添加了一个名为 `instance` 的实例模板。该模板定义了若干环境变量，例如 `RW_STATE_STORE` 和 `AWS_REGION`。KubeBlocks 会将这些环境变量追加到默认模板定义的环境变量列表中。因此，最终渲染出的实例将同时包含默认模板和该实例模板中定义的所有环境变量。
+
+此外，实例模板中的 `replicas` 字段与 `componentSpec` 中的设置完全一致（均为 `{{ .Values.risingwave.compute.replicas }}`），这意味着在覆盖默认模板后，该实例模板将用于渲染该组件内的所有实例。
+
+## 实例模板详细信息
+
+- `Name`字段：每个组件可以定义多个实例模板，通过`Name`字段配置模板名称，同一组件内必须保持唯一。
+- `Replica`字段：每个模板可通过`Replicas`字段设置基于该模板渲染的实例数量，默认值为1。同一组件内所有实例模板的`Replicas`之和必须小于等于该组件的`Replicas`值。若基于实例模板渲染的实例数量小于组件所需总数，剩余实例将使用默认模板渲染。
+
+基于实例模板渲染的实例命名模式为`$(集群名称)-$(组件名称)-$(实例模板名称)-序号`。例如上述RisingWave集群中，集群名称为`risingwave`，组件名称为`compute`，实例模板名称为`instance`，`Replicas`数量为3，因此渲染出的实例名称为risingwave-compute-instance-0、risingwave-compute-instance-1和risingwave-compute-instance-2。
+
+实例模板可在集群创建时使用，也可在运营期间更新，具体包括添加、删除或更新实例模板。更新实例模板可能会更新、删除或重建实例，建议在执行更新前仔细评估最终变更是否符合预期。
+
+### 注解（Annotations）
+
+实例模板中的`Annotations`用于覆盖默认模板中的`Annotations`字段。若实例模板`Annotations`中的Key已存在于默认模板中，则该Key对应的`value`将采用实例模板中的值；若默认模板中不存在该Key，则将该Key和Value添加到最终`Annotations`中。
+
+***示例：***
+
+默认模板中的`annotations`为：
+
+```yaml
+annotations:
+  "foo0": "bar0"
+  "foo1": "bar"
+```
+
+实例模板中的`annotations`为：
+
+```yaml
+annotations:
+  "foo1": "bar1"
+  "foo2": "bar2"
+```
+
+则渲染后的实际注解为：
+
+```yaml
+annotations:
+  "foo0": "bar0"
+  "foo1": "bar1"
+  "foo2": "bar2"
+```
+
+:::注意
+
+KubeBlocks会添加系统`Annotations`，且不会覆盖这些注解。
+
+:::
+
+### 标签（Labels）
+
+您也可以通过实例模板设置`Labels`。
+
+与`Annotations`类似，实例模板中的`Labels`遵循相同的覆盖逻辑应用于现有标签。
+
+:::注意
+
+KubeBlocks会添加系统`Labels`，且不会覆盖这些标签。
+
+:::
+
+### 镜像（Image）
+
+实例模板中的`Image`字段用于覆盖默认模板中第一个容器的`Image`字段。
+
+:::注意
+
+使用`Image`字段需谨慎：对于类似StatefulSet的数据库，更改`Image`通常涉及数据格式兼容性问题。更改此字段时，请确保实例模板中的镜像版本与默认模板中的版本完全兼容。
+
+:::
+
+KubeBlocks 0.9及以上版本通过`ComponentVersion`提供详细的镜像版本设计，建议使用`ComponentVersion`进行版本管理。
+
+### 节点名称（NodeName）
+
+实例模板中的`NodeName`将覆盖默认模板中的同名字段。
+
+### 节点选择器（NodeSelector）
+
+实例模板中的`NodeSelector`将覆盖默认模板中的同名字段。
+
+### 容忍度（Tolerations）
+
+实例模板中的`Tolerations`将覆盖默认模板中的同名字段。
+
+若实例模板中的`Toleration`与默认模板中的某个`Toleration`完全相同（具有相同的`Key`、`Operator`、`Value`、`Effect`和`TolerationSeconds`），则该`Toleration`将被忽略；否则会添加到默认模板的`Tolerations`列表中。
+
+### 运行时类名（RuntimeClassName）
+
+实例模板中的`RuntimeClassName`将覆盖默认模板中的同名字段。
+
+### 资源（Resources）
+
+实例模板中的`Resources`将覆盖默认模板中的同名字段并获取最高优先级。
+
+### 环境变量（Env）
+
+实例模板中定义的环境变量（`Env`）将覆盖除KubeBlocks设置的默认`Env`外的其他所有环境变量。覆盖逻辑与`Annotations`和`Labels`类似：若环境变量名称相同，则使用实例模板中的值或值来源；若不同，则添加为新环境变量。

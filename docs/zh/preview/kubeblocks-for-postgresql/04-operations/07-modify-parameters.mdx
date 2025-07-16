@@ -1,0 +1,263 @@
+---
+description: 了解如何通过Reconfiguring OpsRequest在KubeBlocks中修改PostgreSQL的动态与静态参数，以优化数据库性能及可用性。
+keywords:
+- PostgreSQL
+- KubeBlocks
+- OpsRequest
+- dynamic parameters
+- static parameters
+- database configuration
+sidebar_label: 修改 PostgreSQL 参数
+sidebar_position: 7
+title: 修改 PostgreSQL 参数
+---
+# 修改 PostgreSQL 参数
+
+数据库重新配置涉及修改参数、设置或配置以优化性能、安全性或可用性。参数变更分为两类：
+
+| 类型 | 需重启 | 生效范围 | 示例参数 |
+|------|------------------|-------|--------------------|
+| **动态参数** | 否 | 立即生效 | `max_connections` |
+| **静态参数** | 是 | 重启后生效 | `shared_buffers` |
+
+对于静态参数，KubeBlocks 通过以下方式最小化停机时间：
+1. 先修改并重启副本节点
+2. 执行主从切换，将更新后的副本提升为主节点（通常毫秒级完成）
+3. 重启原主节点
+
+本指南演示如何使用 Reconfiguring OpsRequest 修改 KubeBlocks 管理的 PostgreSQL 集群的动态和静态参数。
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署 PostgreSQL 集群
+
+import CreatePGCluster from '../_tpl/_create-pg-replication-cluster.mdx'
+
+<CreatePGCluster />
+
+## 验证部署
+
+import VerifyPGCluster from '../_tpl/_verify-pg-replication-cluster.mdx'
+
+<VerifyPGCluster />
+
+## 检查参数值
+
+### 获取凭据
+KubeBlocks 会自动创建包含 PostgreSQL postgres 凭据的 Secret。通过以下命令获取凭据：
+```bash
+NAME=`kubectl get secrets -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.username}' | base64 -d`
+PASSWD=`kubectl get secrets -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.password}' | base64 -d`
+```
+
+### 访问 PostgreSQL 集群
+使用 PostgreSQL 客户端连接集群主节点：
+```bash
+kubectl exec -it -n demo pg-cluster-postgresql-0 -c postgresql -- env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql
+```
+
+### 查询参数值
+
+连接后，可以查询 'max_connections' 和 'shared_buffers' 的当前值：
+```sql
+postgres=# SHOW max_connections;
+ max_connections
+-----------------
+ 56
+(1 row)
+
+postgres=# show pgaudit.log;
+ pgaudit.log
+-------------
+ ddl,read,write
+(1 row)
+
+postgres=# show shared_buffers;
+ shared_buffers
+----------------
+ 128MB
+(1 row)
+```
+
+## 动态参数示例：修改 max_connections 和 pgaudit.log
+
+像 `max_connections` 这样的动态参数无需重启 PostgreSQL 即可修改。变更会立即生效，允许您：
+- 动态调整连接数限制
+- 修改审计日志级别
+- 调优性能参数
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-reconfigure-dynamic
+  namespace: demo
+spec:
+  clusterName: pg-clusters
+  reconfigures:
+  - componentName: postgresql
+    parameters:
+      - key: max_connections
+        value: '100'
+      - key: pgaudit.log
+        value: ddl
+  type: Reconfiguring
+```
+
+此配置：
+- 将 `pgaudit.log` 从默认的 `ddl,read,write` 改为仅记录 `ddl`
+- 将 `max_connections` 从 56 增加到 100
+
+`pgaudit.log` 参数控制审计日志粒度。可用选项：
+
+| 值    | 描述 |
+|----------|-------------|
+| none     | 不执行额外日志记录 |
+| ddl      | 记录所有数据定义语言(DDL)语句|
+| dml      | 记录所有数据操作语言(DML)语句
+| role     | 记录所有角色相关命令 |
+| read     | 记录所有读操作|
+| write    | 记录所有写操作|
+| function | 记录所有函数调用|
+| misc     | 记录杂项命令|
+| all      | 记录所有操作|
+
+
+等待 OpsRequest 完成：
+```bash
+kubectl get ops pg-reconfigure-dynamic -n demo -w
+```
+
+示例输出：
+```bash
+NAME                     TYPE            CLUSTER      STATUS    PROGRESS   AGE
+pg-reconfigure-dynamic   Reconfiguring   pg-cluster   Running   -/-        11s
+pg-reconfigure-dynamic   Reconfiguring   pg-cluster   Succeed   -/-        31s
+```
+
+**验证配置变更**
+
+登录 PostgreSQL 实例确认 `max_connections` 和 `pgaudit.log` 参数已更新：
+
+```sql
+postgres=# show max_connections;
+ max_connections
+-----------------
+ 100
+(1 row)
+
+postgres=# show pgaudit.log;
+ pgaudit.log
+-------------
+ ddl
+(1 row)
+```
+
+输出验证了两个参数均已更新：
+- `max_connections` 增加到 100
+- `pgaudit.log` 缩减为仅记录 DDL
+
+## 静态参数示例：修改 shared_buffers
+
+像 `shared_buffers` 这样的静态参数需要重启。本示例将缓冲区从 128MB 增加到 256MB。
+
+创建 Reconfigure OpsRequest。应用以下 OpsRequest YAML 来更新 'shared_buffers'：
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: postgresql-reconfigure-static
+  namespace: demo
+spec:
+  clusterName: pg-cluster
+  force: false
+  reconfigures:
+  - componentName: postgresql
+    parameters:
+    - key: shared_buffers
+      value: '256MB'
+  preConditionDeadlineSeconds: 0
+  type: Reconfiguring
+```
+
+检查 OpsRequest 状态直至完成：
+
+```bash
+kubectl get ops postgresql-reconfigure-static -n demo -w
+```
+示例输出：
+```bash
+postgresql-reconfigure-static   Reconfiguring   pg-cluster   Running   -/-        5s
+postgresql-reconfigure-static   Reconfiguring   pg-cluster   Succeed   -/-        31s
+```
+
+**验证配置变更**
+
+登录 PostgreSQL 实例确认 `shared_buffers` 参数已更新：
+
+```sql
+postgres=# show shared_buffers;
+ shared_buffers
+----------------
+ 256MB
+(1 row)
+```
+
+## 重新配置的有效性检查
+
+KubeBlocks 在应用变更前会验证参数。例如，`max_connections` 遵循以下规则：
+
+```cue
+max_connections?: int & >=6 & <=8388607
+```
+这意味着 `max_connections` 必须是 6 到 8388607 之间的整数。
+
+如果您尝试为此参数设置字符串值：
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: postgresql-reconfigure-invalid
+  namespace: demo
+spec:
+  type: Reconfiguring
+  clusterName: pg-cluster
+  reconfigures:
+  - componentName: postgresql
+    parameters:
+    - key: max_connections
+      value: 'abc'
+```
+
+通过检查 OpsRequest 状态
+```bash
+kubectl get ops postgresql-reconfigure-invalid -n demo
+```
+
+此 OpsRequest 会快速失败。要查看详情，可以描述 `Parameter` CR：
+
+```bash
+kubectl describe parameter postgresql-reconfigure-invalid -n demo
+```
+
+您将看到消息 `failed to validate updated config: [failed to parse field max_connections: [strconv.Atoi: parsing "STRING": invalid syntax]]`
+
+## 清理
+要删除所有创建的资源，删除 PostgreSQL 集群及其命名空间：
+```bash
+kubectl delete cluster pg-cluster -n demo
+kubectl delete ns demo
+```
+
+## 总结
+本指南介绍了通过 KubeBlocks 修改 PostgreSQL 参数：
+- 动态变更（如 `max_connections`）立即生效
+- 静态变更（如 `shared_buffers`）需要重启但停机时间最短
+- 所有变更在应用前都会经过验证
+- 配置遵循声明式管理原则

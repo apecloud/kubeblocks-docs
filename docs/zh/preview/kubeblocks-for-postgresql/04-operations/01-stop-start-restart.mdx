@@ -1,0 +1,288 @@
+---
+description: 了解如何在KubeBlocks中管理PostgreSQL集群状态，包括停止、启动和重启操作，以优化资源使用。
+keywords:
+- KubeBlocks
+- PostgreSQL
+- Cluster Management
+- Stop
+- Start
+- Restart
+sidebar_label: 生命周期管理
+sidebar_position: 1
+title: PostgreSQL 集群生命周期管理（停止、启动、重启）
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# PostgreSQL 集群生命周期管理
+
+本指南演示如何在 **KubeBlocks** 中管理 PostgreSQL 集群的运行状态，包括：
+
+- 停止集群以节省资源
+- 启动已停止的集群
+- 重启集群组件
+
+这些操作有助于优化 Kubernetes 环境中的资源使用并降低运维成本。
+
+KubeBlocks 中的生命周期管理操作：
+
+| 操作       | 效果                     | 使用场景                 |
+|------------|--------------------------|--------------------------|
+| 停止       | 暂停集群，保留存储       | 成本节约、维护窗口       |
+| 启动       | 恢复集群运行             | 暂停后恢复服务           |
+| 重启       | 重建组件 Pod             | 配置变更、故障排查       |
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署 PostgreSQL 集群
+
+import CreatePGCluster from '../_tpl/_create-pg-replication-cluster.mdx'
+
+<CreatePGCluster />
+
+## 验证部署
+
+import VerifyPGCluster from '../_tpl/_verify-pg-replication-cluster.mdx'
+
+<VerifyPGCluster />
+
+## 集群生命周期操作
+
+### 停止集群
+
+在 KubeBlocks 中停止 PostgreSQL 集群将：
+
+1. 终止所有运行中的 Pod
+2. 保留持久化存储（PVC）
+3. 维持集群配置
+
+此操作适用于：
+- 临时成本节约
+- 维护窗口期
+- 开发环境暂停
+
+<Tabs>
+
+<TabItem value="opsRequest" label="OpsRequest API" default>
+
+选项 1：使用 OpsRequest API
+
+创建停止操作请求：
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-cluster-stop-ops
+  namespace: demo
+spec:
+  clusterName: pg-cluster
+  type: Stop
+```
+</TabItem>
+
+<TabItem value="ClusterAPI" label="Cluster API">
+
+选项 2：使用 Cluster API 补丁
+
+通过修改 stop 字段直接调整集群规格：
+
+```bash
+kubectl patch cluster pg-cluster -n demo --type='json' -p='[
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/0/stop",
+    "value": true
+  }
+]'
+```
+
+</TabItem>
+
+</Tabs>
+
+### 验证集群停止
+
+确认停止操作成功：
+
+1. 检查集群状态转换：
+    ```bash
+    kubectl get cluster pg-cluster -n demo -w
+    ```
+    示例输出：
+    ```bash
+    NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+    pg-cluster   postgresql           Delete               Stopping   6m3s
+    pg-cluster   postgresql           Delete               Stopped    6m55s
+    ```
+
+2. 验证无运行中的 Pod：
+    ```bash
+    kubectl get pods -n demo
+    ```
+    示例输出：
+    ```bash
+    No resources found in demo namespace.
+    ```
+
+3. 确认持久卷仍然存在：
+    ```bash
+    kubectl get pvc -n demo
+    ```
+    示例输出：
+    ```bash
+    NAME                           STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+    data-pg-cluster-postgresql-0   Bound    pvc-dcfb1ebc-2773-4edd-9898-e11da76062c4   20Gi       RWO            standard       19m
+    data-pg-cluster-postgresql-1   Bound    pvc-36366e01-0178-43fa-b1a0-4168b057dd10   20Gi       RWO            standard       19m
+    ```
+
+### 启动集群
+
+启动已停止的 PostgreSQL 集群将：
+1. 重新创建所有 Pod
+2. 重新挂载持久化存储
+3. 恢复服务端点
+
+预期行为：
+- 集群恢复到之前状态
+- 不会发生数据丢失
+- 服务自动恢复
+<Tabs>
+
+<TabItem value="opsRequest" label="OpsRequest API" default>
+
+发起启动操作请求：
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-cluster-start-ops
+  namespace: demo
+spec:
+  # 指定此操作目标集群资源的名称
+  clusterName: pg-cluster
+  type: Start
+```
+
+</TabItem>
+
+<TabItem value="ClusterAPI" label="Cluster API">
+
+修改集群规格以恢复运行：
+1. 设置 stop: false，或
+2. 完全移除 stop 字段
+
+    ```bash
+    kubectl patch cluster pg-cluster -n demo --type='json' -p='[
+      {
+        "op": "remove",
+        "path": "/spec/componentSpecs/0/stop"
+      }
+    ]'
+    ```
+  </TabItem>
+
+</Tabs>
+
+### 验证集群启动
+
+确认启动操作成功：
+
+1. 检查集群状态转换：
+    ```bash
+    kubectl get cluster pg-cluster -n demo -w
+    ```
+    示例输出：
+    ```bash
+    NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+    pg-cluster   postgresql           Delete               Updating   22m
+    pg-cluster   postgresql           Delete               Running    22m
+    ```
+
+2. 验证 Pod 重建：
+    ```bash
+    kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster
+    ```
+    示例输出：
+    ```bash
+    NAME                     READY   STATUS    RESTARTS   AGE
+    pg-cluster-postgresql-0   1/1     Running   0          2m
+    pg-cluster-postgresql-1   1/1     Running   0          1m
+    ```
+
+3. 检查服务端点：
+    ```bash
+    kubectl get endpoints pg-cluster-postgresql -n demo
+    ```
+
+### 重启集群
+
+重启操作提供：
+- 无需完全停止集群即可重建 Pod
+- 组件级粒度控制
+- 最小化服务中断
+
+使用场景：
+- 需要重启的配置变更
+- 资源刷新
+- 故障排查
+
+**使用 OpsRequest API**
+
+针对特定组件进行重启：
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-cluster-restart-ops
+  namespace: demo
+spec:
+  clusterName: pg-cluster
+  type: Restart
+  restart:
+  - componentName: postgresql
+```
+
+**验证重启完成**
+
+确认组件重启成功：
+
+1. 跟踪 OpsRequest 进度：
+    ```bash
+    kubectl get opsrequest pg-cluster-restart-ops -n demo -w
+    ```
+    示例输出：
+    ```bash
+    NAME                     TYPE      CLUSTER      STATUS    PROGRESS   AGE
+    pg-cluster-restart-ops   Restart   pg-cluster   Running   0/2        10s
+    pg-cluster-restart-ops   Restart   pg-cluster   Running   1/2        65s
+    pg-cluster-restart-ops   Restart   pg-cluster   Running   2/2        2m5s
+    pg-cluster-restart-ops   Restart   pg-cluster   Succeed   2/2        2m5s
+    ```
+
+2. 检查 Pod 状态：
+    ```bash
+    kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster
+    ```
+  注意：重启后 Pod 将显示新的创建时间戳
+
+3. 验证组件健康状态：
+    ```bash
+    kbcli cluster describe pg-cluster -n demo
+    ```
+
+操作完成后，集群将返回 Running 状态。
+
+## 总结
+在本指南中，您学会了如何：
+1. 停止 PostgreSQL 集群以暂停运行同时保留持久化存储
+2. 启动已停止的集群使其重新上线
+3. 重启特定集群组件以重建其 Pod 而无需停止整个集群
+
+通过管理 PostgreSQL 集群的生命周期，您可以优化资源利用率、降低成本并在 Kubernetes 环境中保持灵活性。KubeBlocks 提供了执行这些操作的无缝方式，确保高可用性和最小化服务中断。

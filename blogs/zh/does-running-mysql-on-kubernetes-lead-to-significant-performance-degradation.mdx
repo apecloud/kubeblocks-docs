@@ -1,0 +1,184 @@
+---
+authors:
+  image_url: https://avatars.githubusercontent.com/u/1814084?v=4
+  name: Thomas
+  url: https://github.com/realzyy
+date: 2023-08-18
+description: 在Kubernetes上运行MySQL会导致显著的性能下降吗？
+image: /img/blogs/thumbnails/blog-mysql.png
+slug: Does-running-MySQL-on-Kubernetes-lead-to-significant-performance-degradation
+tags:
+- benchmark
+- MySQL database operator
+title: 在Kubernetes上运行MySQL会导致显著的性能下降吗？
+---
+# 在Kubernetes上运行MySQL会导致显著的性能下降吗？
+
+在Kubernetes上运行MySQL会导致显著的性能下降吗？尽管最近有人提出了这个担忧，但很少有人进行测试，结果也很少公开分享。  
+为了回答这个问题，我们使用了一个流行的基准测试工具，在以下典型场景中评估MySQL的吞吐量和延迟，并尝试给出报告和我们的见解：
+- MySQL和基准测试工具部署在同一个K8s集群中，模拟应用和数据库运行在同一个K8s集群的情况。
+- MySQL和基准测试工具部署在两个K8s集群中，模拟应用和数据库运行在两个K8s集群的情况。
+
+此外，我们使用相同的测试方法获取了Amazon RDS MySQL的性能数据。通过比较Amazon RDS MySQL的性能数据，用户可以更全面地了解K8s上的MySQL性能是否能满足其生产需求。
+
+## 方法论
+
+### 应用负载
+作为LAMP技术栈的一部分，MySQL常被用于构建网站和Web应用。用户通常不会在MySQL中运行长事务或复杂查询，因此我们采用包含相对简单事务和查询的OLTP工作负载来测试性能。以下是几种具有代表性的工作负载：
+- 读密集型负载：80%操作为读取，20%为写入
+- 读写均衡负载：50%操作为读取，50%为写入
+- 写密集型负载：20%操作为读取，80%为写入
+
+我们选择[sysbench](https://github.com/akopytov/sysbench)作为基准测试工具。这是一个广泛使用的工具，支持多线程脚本化运行。Sysbench能够模拟上述应用负载，并以每秒查询数(QPS)输出吞吐量指标，以99百分位数(ms)输出延迟指标。
+
+### 开源MySQL Operator
+
+对于K8s而言，MySQL是一个复杂的有状态应用，需要通过operator进行部署和配置。我们选取了以下几个开源MySQL operator进行测试，其信息如下：
+- [MySQL Operator for Kubernetes](https://github.com/mysql/mysql-operator) by the Oracle team  
+该Operator用于管理Kubernetes集群内的MySQL InnoDB Cluster设置，提供包含自动化升级和备份在内的完整生命周期管理。
+
+- [XtraDB Cluster Operator](https://github.com/percona/percona-xtradb-cluster-operator) by the Percona team  
+基于Percona XtraDB Cluster的最佳实践，该Operator提供了在本地或云端的Kubernetes环境中快速、一致地部署和扩展Percona XtraDB Cluster实例所需的全部功能。
+
+- [KubeBlocks](https://github.com/apecloud/kubeblocks) by the ApeCloud团队  
+KubeBlocks是一个开源Kubernetes operator，用于管理公有云或本地环境中的关系型、NoSQL、向量和流式数据库。它专为生产环境设计，在大多数场景下提供可靠、高性能、可观测且经济高效的数据基础设施。
+
+### 基础设施 - 计算、存储与网络
+
+我们采用全球最大的云计算供应商AWS来提供基准测试所需的计算、存储和网络资源。通过测试Amazon RDS多可用区双备用实例建立了基准性能。
+
+我们测试了三种主流实例类型：4 vCPU/16GB内存、8 vCPU/32GB内存以及16 vCPU/64GB内存。选择这些实例类型的原因是：更小规格的实例通常用于开发环境且不存在性能瓶颈，而更大规格的实例使用范围有限、代表性不足。我们选择了最新的Intel CPU平台实例类型，虽然AMD和ARM平台在特定场景下可能表现更优，但测试结论与本测试保持一致。
+
+我们指定gp3作为主要块存储选项。该选择可确保3000 IOPS的稳定基线性能，同时支持根据卷大小弹性扩展IOPS和吞吐量。在gp3不适用的情况下，我们会考虑使用io2作为替代方案。虽然gp3和io2都能提供卓越性能，但需要注意成本差异。我们为不同vCPU数量配置了多种卷大小，并调整IOPS以在CPU密集型与IO密集型场景下均获得最佳性能。
+
+为满足生产环境的灾难恢复需求，我们在同一区域但不同可用区的EC2实例上部署了MySQL。这使得我们能够观察跨可用区容器网络对MySQL性能的影响。此外，我们在MySQL上层配置了四层负载均衡器，用于处理来自其他K8s集群上部署的sysbench的请求。
+
+## 洞察分析
+
+### 参数默认值对吞吐量影响最大
+
+无论是全托管MySQL服务还是自建MySQL，都提供了参数的自动配置并允许用户手动调整。由于大多数用户对MySQL参数并不熟悉，这些参数的默认值就显得尤为重要。本报告测试中，对MySQL性能影响较大的参数包括：innodb_flush_log_at_trx_commit、innodb_redo_log_capacity和sync_binlog。它们的默认值如下：
+
+|                                | AWS RDS MySQL集群 | KubeBlocks operator | Percona operator | MySQL operator |
+|--------------------------------|-------------------|---------------------|------------------|----------------|
+| innodb_flush_log_at_trx_commit | 1                 | 1                   | 0                | 1              |
+| innodb_redo_log_capacity       | 100M              | 2G                  | 100M             | 100M           |
+| sync_binlog                    | 1                 | 1                   | 1                | 1              |
+
+为了实现MySQL的AZ级故障恢复能力，用户必须将innodb_flush_log_at_trx_commit和sync_binlog都设置为1，但这可能会带来一定的性能损失。AWS RDS MySQL集群、KubeBlocks operator和MySQL operator的参数默认值遵循这一最佳实践，而Percona operator由于其数据复制的实现方式采用了不同的默认值。
+为了获得更好的性能，用户应将innodb_redo_log_capacity设置为2G。这可能需要牺牲一些存储空间，但可以获得更好的吞吐量。AWS RDS MySQL集群、Percona operator和MySQL operator在这方面还有提升空间。通过手动修改AWS RDS MySQL集群的innodb_redo_log_capacity设置，可以大幅提升吞吐量。
+
+### IOPS对响应时间影响最大
+
+无论是全托管MySQL服务还是自建MySQL，响应时间（RT）都与并发线程数呈正相关。增加并发线程数会导致RT上升。当负载较重时，增加并发线程数会带来额外负担，降低整体吞吐量，甚至导致数据库崩溃。通常情况下，大多数MySQL连接处于空闲状态，活跃连接数并不高。在10个并发线程的测试中，MySQL的RT数据如下：
+
+<div>
+  <img src='/img/blogs/mysql-rt.png' alt="mysql rt" style={{padding: "10px 10%"}} />
+</div>
+
+本文选择的三个工作负载都涉及对EBS的大量读写操作。通过将innodb_redo_log_capacity设置为2G，KubeBlocks在IO密集型场景下具有更低的RT。将IOPS调整到12000后，AWS RDS MySQL集群的RT有明显改善。为了获得更好的性能，用户应购买足够的IOPS。但需注意AWS的IOPS价格较高，并非越多越好。
+
+### 在K8s上运行MySQL不一定会导致性能下降
+
+本报告还测试了在IOPS充足情况下的其他场景，以验证缓冲池命中率和跨K8s集群网络可能产生的影响。具体测试数据如下：
+
+<div>
+  <img src='/img/blogs/max-throughput.png' alt="max throughput" style={{padding: "10px 10%"}} />
+</div>
+
+当数据未完全加载到内存时，AWS RDS MySQL集群的吞吐量略低于由KubeBlocks operator管理的MySQL。随后，将sysbench部署到另一个K8s集群以访问AWS RDS MySQL集群和由KubeBlocks operator管理的MySQL。sysbench模拟的三种工作负载均实现了一定性能提升，但AWS RDS MySQL集群的吞吐量仍略低于由KubeBlocks operator管理的MySQL。
+
+我们可以得出以下结论：
+1. 参数配置不当会导致MySQL性能下降。
+2. IOPS不足会导致MySQL性能下降。
+3. 缓冲池命中率低会导致MySQL性能下降。
+4. 如果以上三种情况均未发生，在K8s上运行MySQL不会对性能产生负面影响。
+
+以上结论已在AWS上得到验证，很可能在其他公有云上仍然成立。但请注意，本报告未在裸金属服务器上进行验证，因此结果可能存在偏差。
+
+## 详细基准测试
+
+### MySQL 和 sysbench 部署在同一个 K8s 集群中
+
+<div>
+  <img src='/img/blogs/MySQL-and-sysbench-are-deployed-in-the-same-K8s-cluster.png' alt="在同一个K8s集群中部署MySQL和sysbench" style={{padding: "10px 10%"}} />
+</div>
+
+#### 读密集型工作负载
+
+<div style={{display: "flex"}}>
+  <img src='/img/blogs/Read-intensive-workload-1.png' alt="图1" width='33%' style={{padding: "5px"}} />
+  <img src='/img/blogs/Read-intensive-workload-3.png' alt="图3" width="33%" style={{padding: "5px"}} />
+  <img src='/img/blogs/Read-intensive-workload-6.png' alt="图6" width="33%" style={{padding: "5px"}} />
+</div>
+<div style={{display: "flex"}}>
+  <img src='/img/blogs/Read-intensive-workload-2.png' alt="图2" width="33%" style={{padding: "5px"}} />
+  <img src='/img/blogs/Read-intensive-workload-5.png' alt="图5" width="33%" style={{padding: "5px"}} />
+  <img src='/img/blogs/Read-intensive-workload-7.png' alt="图7" width="33%" style={{padding: "5px"}} />
+</div>
+
+#### 读写均衡工作负载
+
+<div style={{display: "flex"}}>
+  <img src='/img/blogs/Read-write-balanced-workload-1.png' alt="图1" width="33%" style={{padding: "5px"}} />
+  <img src='/img/blogs/Read-write-balanced-workload-3.png' alt="图3" width="33%" style={{padding: "5px"}} />
+  <img src='/img/blogs/Read-write-balanced-workload-5.png' alt="图5" width="33%" style={{padding: "5px"}} />
+</div>
+<div style={{display: "flex"}}>
+  <img src='/img/blogs/Read-write-balanced-workload-2.png' alt="图2" width="33%" style={{padding: "5px"}} />
+  <img src='/img/blogs/Read-write-balanced-workload-4.png' alt="图4" width="33%" style={{padding: "5px"}} />
+  <img src='/img/blogs/Read-write-balanced-workload-6.png' alt="图6" width="33%" style={{padding: "5px"}} />
+</div>
+
+#### 写密集型工作负载
+
+<div style={{display: "flex"}}>
+  <img src='/img/blogs/Write-intensive-workload-1.png' alt="图1" width="33%" style={{padding: "5px"}} />
+  <img src='/img/blogs/Write-intensive-workload-3.png' alt="图3" width="33%" style={{padding: "5px"}} />
+  <img src='/img/blogs/Write-intensive-workload-5.png' alt="图5" width="33%" style={{padding: "5px"}} />
+</div>
+<div style={{display: "flex"}}>
+  <img src='/img/blogs/Write-intensive-workload-2.png' alt="图2" width="33%" style={{padding: "5px"}} />
+  <img src='/img/blogs/Write-intensive-workload-4.png' alt="图4" width="33%" style={{padding: "5px"}} />
+  <img src='/img/blogs/Write-intensive-workload-6.png' alt="图6" width="33%" style={{padding: "5px"}} />
+</div>
+
+### MySQL 和 sysbench 部署在两个 K8s 集群中
+
+<div>
+  <img src='/img/blogs/MySQL-and-sysbench-are-deployed-in-two-K8s-clusters.png' alt="MySQL和sysbench部署在两个K8s集群中" style={{padding: "10px 10%"}} />
+</div>
+
+#### 读密集型工作负载
+
+<div style={{display: "flex"}}>
+  <img src='/img/blogs/Read-intensive-workload-two-1.png' alt="图1" width="33%" style={{padding: "5px"}} />
+  <img src='/img/blogs/Read-intensive-workload-two-3.png' alt="图3" width="33%" style={{padding: "5px"}} />
+  <img src='/img/blogs/Read-intensive-workload-two-5.png' alt="图5" width="33%" style={{padding: "5px"}} />
+</div>
+<div style={{display: "flex"}}>
+  <img src='/img/blogs/Read-intensive-workload-two-2.png' alt="图2" width="33%" style={{padding: "5
+
+<div style={{display: "flex"}}>
+  <img src='/img/blogs/Read-write-balanced-workload-two-1.png' alt="Image 1" width="33%" style={{padding: "5px"}} />
+  <img src='/img/blogs/Read-write-balanced-workload-two-3.png' alt="Image 3" width="33%" style={{padding: "5px"}} />
+  <img src='/img/blogs/Read-write-balanced-workload-two-5.png' alt="Image 5" width="33%" style={{padding: "5px"}} />
+</div>
+<div style={{display: "flex"}}>
+  <img src='/img/blogs/Read-write-balanced-workload-two-2.png' alt="Image 2" width="33%" style={{padding: "5px"}} />
+  <img src='/img/blogs/Read-write-balanced-workload-two-4.png' alt="Image 4" width="33%" style={{padding: "5px"}} />
+  <img src='/img/blogs/Read-write-balanced-workload-two-6.png' alt="Image 6" width="33%" style={{padding: "5px"}} />
+</div>
+
+#### 读写均衡型工作负载
+
+<div style={{display: "flex"}}>
+  <img src='/img/blogs/Write-intensive-workload-two-1.png' alt="Image 1" width="33%" style={{padding: "5px"}} />
+  <img src='/img/blogs/Write-intensive-workload-two-3.png' alt="Image 3" width="33%" style={{padding: "5px"}} />
+  <img src='/img/blogs/Write-intensive-workload-two-5.png' alt="Image 5" width="33%" style={{padding: "5px"}} />
+</div>
+<div style={{display: "flex"}}>
+  <img src='/img/blogs/Write-intensive-workload-two-2.png' alt="Image 2" width="33%" style={{padding: "5px"}} />
+  <img src='/img/blogs/Write-intensive-workload-two-4.png' alt="Image 4" width="33%" style={{padding: "5px"}} />
+  <img src='/img/blogs/Write-intensive-workload-two-6.png' alt="Image 6" width="33%" style={{padding: "5px"}} />
+</div>

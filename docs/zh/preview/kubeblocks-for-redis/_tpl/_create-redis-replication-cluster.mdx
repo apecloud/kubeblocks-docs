@@ -1,0 +1,76 @@
+KubeBlocks 采用声明式方法来管理 Redis 复制集群。  
+以下是一个部署包含两个组件（redis 和 redis sentinel）的 Redis 复制集群的配置示例。
+
+应用以下 YAML 配置来部署集群：
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: redis-replication
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: redis
+  topology: replication
+  componentSpecs:
+    - name: redis
+      serviceVersion: "7.2.4"
+      disableExporter: false
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+    - name: redis-sentinel
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+### 关键配置说明：
+1. **集群定义**  
+   - `clusterDef: redis` 指定使用 Redis 集群定义  
+   - `topology: replication` 设置为复制模式拓扑
+
+2. **Redis 组件**  
+   - 版本 `7.2.4`  
+   - 2 个副本（1 主 1 从）  
+   - 资源限制：0.5 CPU 核 + 0.5Gi 内存  
+   - 数据存储卷：20Gi RWO（ReadWriteOnce）存储
+
+3. **Sentinel 组件**  
+   - 3 个哨兵节点（满足高可用法定人数）  
+   - 相同资源配置  
+   - 独立的数据存储卷配置
+
+4. **终止策略**  
+   - `terminationPolicy: Delete` 表示删除集群时会清理所有资源
+
+注：`storageClassName: ""` 表示使用默认存储类，实际部署时应根据 Kubernetes 环境配置具体存储类名称。

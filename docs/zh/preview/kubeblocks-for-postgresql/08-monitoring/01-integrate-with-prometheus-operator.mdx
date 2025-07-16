@@ -1,0 +1,271 @@
+---
+description: 了解如何在KubeBlocks中通过Prometheus Operator为PostgreSQL集群配置可观测性。设置监控并通过Grafana实现指标可视化。
+keywords:
+- KubeBlocks
+- PostgreSQL
+- Prometheus
+- Grafana
+- Observability
+- Metrics
+sidebar_label: PostgreSQL 集群可观测性
+sidebar_position: 2
+title: 使用 Prometheus Operator 实现 PostgreSQL 集群可观测性
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 使用 Prometheus Operator 监控 PostgreSQL
+
+本指南演示如何在 KubeBlocks 中为 PostgreSQL 集群配置全面的监控方案，包含以下组件：
+
+1. Prometheus Operator 用于指标采集
+2. 内置 PostgreSQL exporter 用于指标暴露
+3. Grafana 用于可视化展示
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+
+
+## 安装监控套件
+
+### 1. 安装 Prometheus Operator
+使用 Helm 部署 kube-prometheus-stack：
+
+```bash
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm install prometheus prometheus-community/kube-prometheus-stack \
+  -n monitoring \
+  --create-namespace
+```
+
+### 2. 验证安装
+检查所有组件是否正常运行：
+```bash
+kubectl get pods -n monitoring
+```
+
+预期输出：
+```bash
+NAME                                                     READY   STATUS    RESTARTS   AGE
+alertmanager-prometheus-kube-prometheus-alertmanager-0   2/2     Running   0          114s
+prometheus-grafana-75bb7d6986-9zfkx                      3/3     Running   0          2m
+prometheus-kube-prometheus-operator-7986c9475-wkvlk      1/1     Running   0          2m
+prometheus-kube-state-metrics-645c667b6-2s4qx            1/1     Running   0          2m
+prometheus-prometheus-kube-prometheus-prometheus-0       2/2     Running   0          114s
+prometheus-prometheus-node-exporter-47kf6                1/1     Running   0          2m1s
+prometheus-prometheus-node-exporter-6ntsl                1/1     Running   0          2m1s
+prometheus-prometheus-node-exporter-gvtxs                1/1     Running   0          2m1s
+prometheus-prometheus-node-exporter-jmxg8                1/1     Running   0          2m1s
+```
+
+## 部署 PostgreSQL 集群
+
+import CreatePGCluster from '../_tpl/_create-pg-replication-cluster.mdx'
+
+<CreatePGCluster />
+
+**关键监控配置**
+- `disableExporter: false` 启用内置指标导出器
+- 导出器以边车容器形式运行于每个 PostgreSQL Pod 中
+- 通过 9187 端口采集 PostgreSQL 指标
+
+## 验证部署
+监控集群状态直至其转为 Running（运行中）状态：
+```bash
+kubectl get cluster pg-cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+pg-cluster   postgresql           Delete               Creating   50s
+pg-cluster   postgresql           Delete               Running    4m2s
+```
+当集群状态显示为 Running 时，表示您的 PostgreSQL 集群已准备就绪可供使用。
+
+## 配置指标收集
+
+### 1. 验证Exporter端点
+确认指标已暴露：
+
+```bash
+kubectl get po pg-cluster-postgresql-0 -n demo -oyaml | \
+  yq '.spec.containers[] | select(.name=="exporter") | .ports'
+```
+
+示例输出：
+```yaml
+- containerPort: 9187
+  name: http-metrics  # 用于PodMonitor
+  protocol: TCP
+```
+
+测试指标端点：
+
+```bash
+kubectl -n demo exec -it pods/pg-cluster-postgresql-0 -- \
+  curl -s http://127.0.0.1:9187/metrics | head -n 50
+```
+
+### 2. 创建PodMonitor
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: pg-cluster-pod-monitor
+  namespace: demo
+  labels:               # 必须与'prometheus.spec.podMonitorSelector'中的设置匹配
+    release: prometheus
+spec:
+  jobLabel: app.kubernetes.io/managed-by
+  # 定义从关联的Kubernetes 'Pod'对象传输到采集指标的标签
+  # 根据实际需求设置标签
+  podTargetLabels:
+  - app.kubernetes.io/instance
+  - app.kubernetes.io/managed-by
+  - apps.kubeblocks.io/component-name
+  - apps.kubeblocks.io/pod-name
+  podMetricsEndpoints:
+    - path: /metrics
+      port: http-metrics   # 必须与exporter端口名称匹配
+      scheme: http
+  namespaceSelector:
+    matchNames:
+      - demo               # 目标命名空间
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: pg-cluster
+      apps.kubeblocks.io/component-name: postgresql
+```
+**PodMonitor配置指南**
+
+| 参数 | 是否必填 | 说明 |
+|-----------|----------|-------------|
+| `port` | 是 | 必须与exporter端口名称('http-metrics')匹配 |
+| `namespaceSelector` | 是 | 指定PostgreSQL运行的命名空间 |
+| `labels` | 是 | 必须与Prometheus的podMonitorSelector匹配 |
+| `path` | 否 | 指标端点路径（默认：/metrics） |
+| `interval` | 否 | 采集间隔（默认：30s） |
+
+## 验证监控配置
+
+### 1. 检查 Prometheus 监控目标
+转发并访问 Prometheus 用户界面：
+
+```bash
+kubectl port-forward svc/prometheus-kube-prometheus-prometheus -n monitoring 9090:9090
+```
+在浏览器中打开：
+http://localhost:9090/targets
+
+检查是否存在与 PodMonitor 对应的抓取任务（任务名称为 'demo/pg-cluster-pod-monitor'）。
+
+预期状态：
+- 目标状态应为 UP（正常运行）。
+- 目标的标签应包含 podTargetLabels 中定义的标签（例如 'app_kubernetes_io_instance'）。
+
+### 2. 测试指标收集
+验证指标是否正在被采集：
+```bash
+curl -sG "http://localhost:9090/api/v1/query" --data-urlencode 'query=up{app_kubernetes_io_instance="pg-cluster"}' | jq
+```
+
+示例输出：
+```json
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "__name__": "up",
+          "app_kubernetes_io_instance": "pg-cluster",
+          "app_kubernetes_io_managed_by": "kubeblocks",
+          "apps_kubeblocks_io_component_name": "postgresql",
+          "apps_kubeblocks_io_pod_name": "pg-cluster-postgresql-1",
+          "container": "exporter",
+          "endpoint": "http-metrics",
+          "instance": "10.244.0.129:9187",
+          "job": "demo/pg-cluster-pod-monitor",
+          "namespace": "demo",
+          "pod": "pg-cluster-postgresql-1"
+        },
+        "value": [
+          1747377596.792,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "up",
+          "app_kubernetes_io_instance": "pg-cluster",
+          "app_kubernetes_io_managed_by": "kubeblocks",
+          "apps_kubeblocks_io_component_name": "postgresql",
+          "apps_kubeblocks_io_pod_name": "pg-cluster-postgresql-0",
+          "container": "exporter",
+          "endpoint": "http-metrics",
+          "instance": "10.244.0.128:9187",
+          "job": "demo/pg-cluster-pod-monitor",
+          "namespace": "demo",
+          "pod": "pg-cluster-postgresql-0"
+        },
+        "value": [
+          1747377596.792,
+          "1"
+        ]
+      }
+    ]
+  }
+}
+```
+
+## 在 Grafana 中可视化监控数据
+
+### 1. 访问 Grafana
+通过端口转发登录 Grafana：
+
+```bash
+kubectl port-forward svc/prometheus-grafana -n monitoring 3000:80
+```
+在浏览器中访问 `http://localhost:3000`，使用默认凭据登录：
+- 用户名：'admin'
+- 密码：'prom-operator'（默认值）
+
+### 2. 导入仪表板
+导入 KubeBlocks PostgreSQL 监控仪表板：
+
+1. 在 Grafana 中导航至 "+" → "Import"
+2. 选择以下任一方式导入：
+   - 粘贴仪表板 URL：
+     `https://raw.githubusercontent.com/apecloud/kubeblocks-addons/main/addons/postgresql/dashboards/postgresql.json`
+   - 或直接上传 JSON 文件
+
+**仪表板包含：**
+- 集群状态概览
+- 查询性能指标
+- 连接数统计
+- 复制健康状况
+
+![postgresql-monitoring-grafana-dashboard.png](/img/docs/en/postgresql-monitoring-grafana-dashboard.png)
+
+
+
+## 删除
+要删除所有已创建的资源，请运行以下命令：
+```bash
+kubectl delete cluster pg-cluster -n demo
+kubectl delete ns demo
+kubectl delete podmonitor pg-cluster-pod-monitor -n demo
+```
+
+## 概述
+在本教程中，我们使用 Prometheus Operator 为 KubeBlocks 中的 PostgreSQL 集群配置了可观测性方案。
+通过配置 `PodMonitor` 资源，我们实现了 Prometheus 对 PostgreSQL exporter 指标的自动抓取。
+最终在 Grafana 中完成了这些指标的可视化。该方案为监控 PostgreSQL 数据库的健康状态和性能表现提供了有效的数据洞察。
+

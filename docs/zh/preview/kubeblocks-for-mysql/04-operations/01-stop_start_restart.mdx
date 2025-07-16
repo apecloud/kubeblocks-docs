@@ -1,0 +1,308 @@
+---
+description: 了解如何在KubeBlocks中管理MySQL集群的生命周期，包括停止、启动和重启集群，以优化资源使用并保持灵活性。
+keywords:
+- KubeBlocks
+- MySQL
+- Cluster Management
+- Stop
+- Start
+- Restart
+sidebar_label: 生命周期管理
+sidebar_position: 1
+title: 管理MySQL集群生命周期（停止、启动与重启）
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# 管理 MySQL 集群生命周期
+
+本指南演示如何在 **KubeBlocks** 中管理 MySQL 集群的生命周期，包括停止、启动和重启集群。适当的生命周期管理有助于优化资源使用、降低运维成本，并确保 Kubernetes 环境中的灵活性。
+
+
+## 前提条件
+
+在继续之前，请确保满足以下要求：
+- 环境准备：
+    - 已启动并运行一个 Kubernetes 集群。
+    - 已配置 kubectl CLI 工具以与集群通信。
+    - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 部署 MySQL 半同步集群
+
+KubeBlocks 采用声明式方法管理 MySQL 集群。以下是一个配置示例，用于部署包含 2 个节点（1 个主节点，1 个副本节点）的半同步模式 MySQL 集群。
+
+应用以下 YAML 配置来部署集群：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+
+
+
+## 验证部署
+监控集群状态直到其转变为 Running 状态：
+
+```bash
+kubectl get cluster example-mysql-cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Creating   7s
+example-mysql-cluster   mysql                Delete               Running   63s
+```
+
+当集群状态变为 Running 时，您的 MySQL 集群即可投入使用。
+
+（严格保留原文格式与换行）
+
+## 管理集群生命周期
+
+### 停止集群
+
+停止集群会终止其所有正在运行的 Pod，但保留持久化存储。当您需要临时暂停集群以节省成本时，此功能非常有用。
+
+    <Tabs>
+
+    <TabItem value="opsRequest" label="OPSREQUEST API" default>
+
+选项 1：使用 OpsRequest
+
+您可以通过 OpsRequest 停止集群：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-cluster-stop-ops
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  type: Stop
+EOF
+```
+
+</TabItem>
+
+    <TabItem value="ClusterAPI" label="集群API">
+
+选项二：使用声明式集群API
+
+或者，您可以通过在集群配置中将 `spec.componentSpecs.stop` 字段设置为 `true` 来停止集群：
+
+```bash
+kubectl patch cluster example-mysql-cluster -n demo --type='json' -p='[
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/0/stop",
+    "value": true
+  }
+]'
+```
+
+</TabItem>
+
+    </Tabs>
+
+### 验证集群停止
+监控集群状态，确保其已转为"已停止(Stopped)"状态：
+
+```bash
+kubectl get cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                       CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster   mysql                Delete               Stopping   93s
+example-mysql-cluster   mysql                Delete               Stopped    101s
+```
+
+集群中没有正在运行的 Pod，但持久存储仍被保留。
+
+```bash
+kubectl get pods -n demo
+```
+
+预期输出：
+
+```bash
+No resources found in demo namespace.
+```
+
+
+
+
+
+```bash
+kubectl get pvc -n demo
+```
+
+
+
+
+```bash
+NAME                                 STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS    VOLUMEATTRIBUTESCLASS   AGE
+data-example-mysql-cluster-mysql-0   Bound    pvc-98ce87ab-acc6-4f95-8638-16e8052f98d8   20Gi       RWO            kb-default-sc   <unset>                 16m
+data-example-mysql-cluster-mysql-1   Bound    pvc-5bb87b23-7c38-45de-bf04-f2822051d897   20Gi       RWO            kb-default-sc   <unset>                 16m
+```
+
+### 启动集群
+
+启动集群会重新创建 Pod 并使集群恢复在线状态。
+    <Tabs>
+
+    <TabItem value="opsRequest" label="OPSREQUEST API" default>
+
+选项 1：使用 OpsRequest
+
+您可以通过 OpsRequest 启动已停止的集群：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-cluster-start-ops
+  namespace: demo
+spec:
+  # Specifies the name of the Cluster resource that this operation is targeting.
+  clusterName: example-mysql-cluster
+  type: Start
+EOF
+```
+
+</TabItem>
+
+    <TabItem value="ClusterAPI" label="集群API">
+
+选项1：使用声明式集群API
+
+或者，您也可以通过以下方式启动集群：
+- 将`spec.componentSpecs.stop`字段设置为false，或者
+- 完全移除`spec.componentSpecs.stop`字段。
+
+
+
+```bash
+kubectl patch cluster example-mysql-cluster -n demo --type='json' -p='[
+  {
+    "op": "remove",
+    "path": "/spec/componentSpecs/0/stop"
+  }
+]'
+```
+
+</TabItem>
+
+    </Tabs>
+
+### 验证集群启动
+
+监控集群状态以确保其恢复至运行状态：
+
+```bash
+kubectl get cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                       CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster   mysql                Delete               Updating   5m54s
+example-mysql-cluster   mysql                Delete               Running    6m6s
+```
+
+### 重启集群
+
+重启集群允许您为特定组件（如mysql）重新创建Pod，而无需删除或停止整个集群。
+
+#### 使用 OpsRequest
+
+要重启特定组件（例如mysql），请使用以下OpsRequest：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-cluster-restart-ops
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  type: Restart
+  restart:
+  - componentName: mysql
+EOF
+```
+
+#### 验证集群重启
+监控集群状态以确保重启成功完成：
+
+```bash
+kubectl get opsrequest example-mysql-cluster-restart-ops -n demo -w
+```
+
+预期输出：
+
+```bash
+NAME                                TYPE      CLUSTER                 STATUS    PROGRESS   AGE
+example-mysql-cluster-restart-ops   Restart   example-mysql-cluster   Succeed   2/2        3m16s
+```
+
+操作完成后，集群将恢复至 Running 状态。
+
+## 概述
+在本指南中，您学习了如何：
+1. 停止 MySQL 集群以暂停操作，同时保留持久存储。
+2. 启动已停止的集群以使其重新上线。
+3. 重启特定集群组件以重新创建其 Pod，而无需停止整个集群。
+
+通过管理 MySQL 集群的生命周期，您可以优化资源利用率、降低成本并在 Kubernetes 环境中保持灵活性。KubeBlocks 提供了一种无缝执行这些操作的方式，确保高可用性和最小化中断。
+

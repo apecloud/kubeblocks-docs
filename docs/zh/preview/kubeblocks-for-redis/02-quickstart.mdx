@@ -1,0 +1,561 @@
+---
+description: KubeBlocks 部署与管理 Redis 复制集群的完整指南，涵盖安装、配置及运维最佳实践。
+keywords:
+- Kubernetes
+- Redis
+- KubeBlocks
+- Helm
+- Cluster Management
+- QuickStart
+sidebar_label: 快速入门
+sidebar_position: 2
+title: Redis 快速入门
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Redis 快速入门
+
+本指南将全面介绍如何使用 **KubeBlocks Redis 插件** 部署和管理 Redis 复制集群，内容包括：
+- 系统前提条件与插件安装
+- 集群创建与配置
+- 启停操作管理
+- 连接方式与集群监控
+
+## 前提条件
+
+### 系统要求
+
+开始前请确保环境满足以下要求：
+
+- 可用的 Kubernetes 集群（推荐 v1.21+ 版本）
+- 已安装配置 `kubectl` v1.21+ 并具备集群访问权限
+- 已安装 Helm（[安装指南](https://helm.sh/docs/intro/install/)）
+- 已安装 KubeBlocks（[安装指南](../user_docs/overview/install-kubeblocks)）
+
+### 验证 Redis 插件
+
+Redis 插件默认随 KubeBlocks 安装。检查其状态：
+
+```bash
+helm list -n kb-system | grep redis
+```
+
+<details open>
+<summary>示例输出：</summary>
+
+```bash
+NAME               NAMESPACE   REVISION    UPDATED                     STATUS      CHART
+kb-addon-redis     kb-system   1           2025-05-21                  deployed    redis-1.0.0
+```
+</details>
+
+若插件未启用，可选择安装方式：
+
+<Tabs>
+
+  <TabItem value="helm" label="helm" default>
+  ```bash
+  # 添加 Helm 仓库
+  helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
+  # 中国大陆用户若 GitHub 访问困难或缓慢，可使用此替代仓库：
+  #helm repo add kubeblocks-addons https://jihulab.com/api/v4/projects/150246/packages/helm/stable
+
+  # 更新 Helm 仓库
+  helm repo update
+  # 搜索可用插件版本
+  helm search repo kubeblocks/redis --versions
+  # 安装指定版本（将 <VERSION> 替换为所选版本）
+  helm upgrade -i kb-addon-redis kubeblocks-addons/redis --version <VERSION> -n kb-system
+  ```
+  </TabItem>
+
+  <TabItem value="kbcli" label="kbcli">
+
+  ```bash
+  # 添加索引（kubeblocks 默认已添加）
+  kbcli addon index add kubeblocks https://github.com/apecloud/block-index.git
+  # 更新索引
+  kbcli addon index update kubeblocks
+  # 更新所有索引
+  kbcli addon index update --all
+  ```
+
+  搜索并安装插件：
+
+  ```bash
+  # 搜索插件
+  kbcli addon search redis
+  # 安装指定版本插件（将 <VERSION> 替换为所选版本）
+  kbcli addon install redis --version <VERSION>
+  ```
+  **示例输出：**
+  ```bash
+  ADDON   VERSION         INDEX
+  redis   0.9.0           kubeblocks
+  redis   0.9.1           kubeblocks
+  redis   1.0.0           kubeblocks
+  ```
+  启用或禁用插件：
+
+  ```bash
+  # 启用插件
+  kbcli addon enable redis
+  # 禁用插件
+  kbcli addon disable redis
+  ```
+
+  </TabItem>
+</Tabs>
+
+:::note
+**版本兼容性**
+
+请始终确保 Redis 插件版本与 KubeBlocks 主版本匹配以避免兼容性问题。
+
+:::
+
+### 验证支持的 Redis 版本
+
+**列出可用 Redis 版本：**
+
+```bash
+kubectl get cmpv redis
+```
+<details open>
+<summary>示例输出</summary>
+```text
+NAME    VERSIONS            STATUS      AGE
+redis   7.2.7,7.2.4,7.0.6   Available   33d
+```
+</details>
+
+**检查 ComponentDefinitions 的版本兼容性**
+
+**步骤 1.** 获取与给定 `ComponentVersion` 关联的 `ComponentDefinition` 列表
+
+```bash
+kubectl get cmpv redis -ojson | jq -r '.metadata.annotations."componentversion.kubeblocks.io/compatible-definitions"' | tr ',' '\n'
+```
+
+<details>
+<summary>示例输出</summary>
+```text
+redis-7-1.0.0
+```
+</details>
+
+**步骤 2.** 获取与给定 `ComponentVersion` 关联的 `ComponentDefinition` 列表
+
+```bash
+kubectl get cmpv redis -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("^redis-7"))) | .releases[]'
+```
+
+这将返回与名为 `redis-14` 的 `ComponentDefinition` 兼容的版本：
+
+<details open>
+<summary>示例输出</summary>
+```text
+7.2.7
+7.2.4
+7.0.6
+```
+</details>
+
+### 存储配置
+
+Redis 需要持久化存储。验证可用选项：
+
+```bash
+kubectl get storageclass
+```
+
+推荐存储特性：
+- 最小 20Gi 容量
+- ReadWriteOnce 访问模式
+- 支持存储卷扩展
+- 满足工作负载的性能需求
+
+
+## 部署 Redis 复制集群
+
+使用默认配置部署基础 Redis 复制集群：
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/redis/cluster.yaml
+```
+
+此操作将创建：
+- 包含两个组件的 Redis 复制集群：Redis（2 副本）和 Redis Sentinel（3 副本）
+- 默认资源分配（0.5 CPU，0.5Gi 内存）
+- 20Gi 持久化存储
+- 自动主从配置
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: redis-replication
+  namespace: demo
+spec:
+  # 指定删除 Cluster 时的行为
+  # 有效选项：[DoNotTerminate, Delete, WipeOut]（KB 0.9 起弃用 `Halt`）
+  # - `DoNotTerminate`：阻止删除 Cluster。此策略确保所有资源保持完整
+  # - `Delete`：扩展 `Halt` 策略，同时移除 PVC，实现彻底清理并删除所有持久化数据
+  # - `WipeOut`：激进策略，删除所有 Cluster 资源，包括外部存储中的卷快照和备份
+  # 这将导致数据完全删除，应谨慎使用，主要在非生产环境以避免不可逆数据丢失
+  terminationPolicy: Delete
+  # 指定创建 Cluster 时使用的 ClusterDefinition 名称
+  # 注意：请勿更新此字段
+  # 值必须为 `redis` 才能创建 Redis 集群
+  clusterDef: redis
+  # 指定创建 Cluster 时使用的 ClusterTopology 名称
+  topology: replication
+  componentSpecs:
+    - name: redis
+      serviceVersion: "7.2.4"
+      # 决定是否在 Component 的无头服务上注解指标导出器信息
+      # 有效选项：[true, false]
+      disableExporter: false
+      # 指定 Component 中期望的副本数
+      replicas: 2
+      # 指定 Component 所需的资源
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                # 按需设置存储大小
+                storage: 20Gi
+    - name: redis-sentinel
+      replicas: 3
+      resources:
+        # 指定 Component 所需的资源
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                # 按需设置存储大小
+                storage: 20Gi
+```
+
+更多 API 字段和描述，请参阅 [API 参考](../user_docs/references/api-reference/cluster)。
+
+### 创建特定版本的 Redis 复制集群
+
+要创建指定版本的集群，在应用前配置 `spec.componentSpecs.serviceVersion`（主.次版本）字段：
+
+<Tabs>
+  <TabItem value="Redis77" label="Redis 7">
+  ```yaml
+    componentSpecs:
+      - name: redis
+        serviceVersion: 7.2.4    # 有效选项：[7.0.6, 7.2.4, 7.2.7]
+  ```
+    </TabItem>
+</Tabs>
+
+## 验证集群状态
+
+当部署一个包含5个副本（2个Redis实例和3个Redis Sentinel实例）的Redis复制集群时：
+- Redis运行时会包含1个主副本（支持读写操作）和1个从副本（仅支持读操作）
+
+通过以下检查确认部署成功：
+1. 集群状态为`Running`
+2. 所有Pod正常运行
+3. 副本角色分配正确
+
+可通过以下任一方式检查状态：
+
+<Tabs>
+  <TabItem value='kubectl' label='kubectl' default>
+```bash
+kubectl get cluster redis-replication -n demo
+NAME                CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+redis-replication   redis                Delete               Running   3m49s
+
+kubectl get pods -l app.kubernetes.io/instance=redis-replication -L  kubeblocks.io/role -n demo
+NAME                                 READY   STATUS    RESTARTS   AGE     ROLE
+redis-replication-redis-0            3/3     Running   0          3m38s   primary
+redis-replication-redis-1            3/3     Running   0          3m16s   secondary
+redis-replication-redis-sentinel-0   2/2     Running   0          4m35s
+redis-replication-redis-sentinel-1   2/2     Running   0          4m17s
+redis-replication-redis-sentinel-2   2/2     Running   0          3m59s
+```
+  </TabItem>
+
+  <TabItem value='kbcli' label='kbcli'>
+
+  安装`kbcli`后，可查看完整的集群信息：
+
+```bash
+kbcli cluster describe redis-replication -n demo
+
+名称: redis-replication	 创建时间: 2025年5月17日 15:45 UTC+0800
+命名空间   集群定义        拓扑结构      状态      终止策略
+demo      redis          replication   Running   Delete
+
+端点:
+组件         内部地址                                                                            外部地址
+redis        redis-replication-redis-redis.demo.svc.cluster.local:6379                           <none>
+redis-sentinel redis-replication-redis-sentinel-redis-sentinel.demo.svc.cluster.local:26379     <none>
+
+拓扑结构:
+组件         服务版本   实例名称                             角色        状态      可用区   节点   创建时间
+redis        7.2.4     redis-replication-redis-0            primary     Running   zone-x  x.y.z  MM/DD
+redis        7.2.4     redis-replication-redis-1            secondary   Running   zone-x  x.y.z  MM/DD
+redis-sentinel 7.2.7   redis-replication-redis-sentinel-0   <none>      Running   zone-x  x.y.z  MM/DD
+redis-sentinel 7.2.7   redis-replication-redis-sentinel-1   <none>      Running   zone-x  x.y.z  MM/DD
+redis-sentinel 7.2.7   redis-replication-redis-sentinel-2   <none>      Running   zone-x  x.y.z  MM/DD
+
+资源分配:
+组件         实例模板      CPU(请求/限制)   内存(请求/限制)    存储大小     存储类
+redis                     500m / 500m     512Mi / 512Mi     data:20Gi   <none>
+redis-sentinel            500m / 500m     512Mi / 512Mi     data:20Gi   <none>
+
+镜像:
+组件         组件定义                镜像
+redis        redis-7-1.0.0          docker.io/redis/redis-stack-server:7.2.0-v10
+                                   docker.io/apecloud/agamotto:0.1.2-beta.1
+                                   docker.io/redis/redis-stack-server:7.2.0-v14
+redis-sentinel redis-sentinel-7-1.0.0 docker.io/redis/redis-stack-server:7.2.0-v14
+
+数据保护:
+备份仓库   自动备份   备份计划   备份方法   备份保留期   可恢复时间
+
+查看集群事件: kbcli cluster list-events -n demo redis-replication
+```
+
+  </TabItem>
+</Tabs>
+
+
+## 访问Redis复制集群
+
+KubeBlocks自动提供：
+1. 凭证存储在Secret `redis-replication-redis-account-default`中
+2. ClusterIP服务 `redis-replication-redis-redis`
+
+### 获取凭证
+```bash
+# 获取用户名
+NAME=$(kubectl get secret -n demo redis-replication-redis-account-default -o jsonpath='{.data.username}' | base64 --decode)
+# 获取密码
+PASSWD=$(kubectl get secret -n demo redis-replication-redis-account-default -o jsonpath='{.data.password}' | base64 --decode)
+```
+
+### 连接方式
+
+<Tabs>
+  <TabItem value="直接访问Pod" label="直接访问Pod" default>
+
+  直接连接到Pod：
+  ```bash
+  kubectl exec -ti -n demo redis-replication-redis-0 -- \
+    redis-cli -h redis-replication-redis-redis -a ${PASSWD}
+  ```
+  </TabItem>
+
+  <TabItem value="本地端口转发" label="本地端口转发">
+
+  1. 转发服务端口：
+  ```bash
+  kubectl port-forward svc/redis-replication-redis-redis 6379:6379 -n demo
+  ```
+
+  2. 通过本地连接：
+  ```bash
+  redis-cli -h 127.0.0.1 -a ${PASSWD}
+  ```
+  </TabItem>
+</Tabs>
+
+:::note
+**生产环境注意事项**
+
+生产环境中应避免使用`kubectl exec`和`port-forward`，建议采用：
+- 通过LoadBalancer或NodePort服务提供外部访问
+- 使用网络策略限制访问
+- 启用TLS加密确保连接安全
+- 使用连接池提升性能
+:::
+
+
+## 停止Redis复制集群
+
+停止集群会暂时暂停操作，同时保留所有数据和配置：
+
+**关键影响：**
+- 释放计算资源（Pod）
+- 持久化存储（PVC）保持完整
+- 服务定义保留
+- 集群配置保留
+- 降低运营成本
+
+
+<Tabs>
+  <TabItem value="OpsRequest" label="OpsRequest API" default>
+  ```bash
+  kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/redis/stop.yaml
+  ```
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: redis-stop
+    namespace: demo
+  spec:
+    clusterName: redis-replication
+    type: Stop
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+  也可以通过设置`spec.componentSpecs.stop`为true来停止：
+
+  ```bash
+  kubectl patch cluster redis-replication -n demo --type='json' -p='[
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/0/stop",
+    "value": true
+  },
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/1/stop",
+    "value": true
+  }
+  ]'
+  ```
+
+  ```yaml
+  spec:
+    componentSpecs:
+      - name: redis
+        stop: true  # 设置为停止组件
+        replicas: 2
+  ```
+  </TabItem>
+</Tabs>
+
+
+## 启动Redis复制集群
+
+重启已停止的集群会恢复操作，所有数据和配置保持不变。
+
+**关键影响：**
+- 重新创建计算资源（Pod）
+- 服务重新可用
+- 集群恢复到之前状态
+
+<Tabs>
+  <TabItem value="OpsRequest" label="OpsRequest API" default>
+  ```bash
+  kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/redis/start.yaml
+  ```
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: redis-start
+    namespace: demo
+  spec:
+    clusterName: redis-replication
+    type: Start
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+  通过将`spec.componentSpecs.stop`设置为false来重启：
+
+  ```bash
+  kubectl patch cluster redis-replication -n demo --type='json' -p='[
+  {
+    "op": "remove",
+    "path": "/spec/componentSpecs/0/stop"
+  },
+  {
+    "op": "remove",
+    "path": "/spec/componentSpecs/1/stop"
+  }
+  ]'
+  ```
+
+  </TabItem>
+</Tabs>
+
+## 删除 Redis 复制集群
+
+请根据数据保留需求谨慎选择删除策略：
+
+| 策略            | 删除的资源          | 删除的数据               | 适用场景                     |
+|-----------------|---------------------|--------------------------|-----------------------------|
+| DoNotTerminate  | 无                  | 无                       | 关键生产集群                 |
+| Delete          | 所有资源            | 删除PVC数据              | 非关键环境                   |
+| WipeOut         | 所有资源            | 全部数据*                | 仅限测试环境                 |
+
+*包含外部存储中的快照和备份
+
+**删除前检查清单：**
+1. 确认没有应用正在使用该集群
+2. 确保已存在必要的备份
+3. 验证terminationPolicy设置正确
+4. 检查是否存在依赖资源
+
+对于测试环境，可使用以下命令进行完整清理：
+
+```bash
+kubectl patch cluster redis-replication -p '{"spec":{"terminationPolicy":"WipeOut"}}' --type="merge" -n demo
+kubectl delete cluster redis-replication -n demo
+```
+
+## 为什么Redis Sentinel先于Redis启动
+
+Redis Sentinel是Redis的高可用性解决方案，为Redis实例提供监控、通知和自动故障转移功能。
+
+Redis组件中的每个副本在启动时，都会连接Redis Sentinel实例以获取当前的主从节点信息。它需要确定：
+- 自身是否应作为主节点运行
+- 如果不是主节点，当前主节点是哪个以便进行复制
+
+具体来说，每个Redis副本会执行以下操作：
+
+1. 检查现有主节点
+   - 查询Redis Sentinel确认是否已选举出主节点
+   - 获取主节点的地址和端口信息
+2. 必要时初始化为主节点
+   - 如果未找到主节点（例如集群初始部署时），将当前Redis实例配置为主节点
+   - 更新Redis配置禁用复制功能
+3. 配置为从节点（如果主节点存在）
+   - 如果存在主节点，则将当前Redis实例设置为从节点
+   - 在Redis配置中添加`replicaof`指令指向主节点地址和端口
+   - 启动数据复制以从主节点同步数据
+
+KubeBlocks确保Redis Sentinel优先启动，以便为Redis副本提供正确的初始化信息。这种依赖关系在KubeBlocks的CRD `ClusterDefinition`中有明确表达，确保了正确的启动顺序。
+
+有关`replication`拓扑结构组件的启动和升级顺序的更多详情，可通过以下命令查看：
+
+```bash
+kubectl get cd redis -oyaml | yq '.spec.topologies[] | select(.name=="replication") | .orders'
+```

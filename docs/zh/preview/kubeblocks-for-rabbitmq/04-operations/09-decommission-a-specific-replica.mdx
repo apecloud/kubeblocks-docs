@@ -1,0 +1,149 @@
+---
+description: 了解如何对由KubeBlocks管理的RabbitMQ集群中特定Pod执行下线（停用）操作。
+keywords:
+- KubeBlocks
+- RabbitMQ
+- Decommission Pod
+- Horizontal Scaling
+- Kubernetes
+sidebar_label: 下线 RabbitMQ 副本
+sidebar_position: 9
+title: 在KubeBlocks管理的RabbitMQ集群中下线特定Pod
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 下线 KubeBlocks 管理的 RabbitMQ 集群中的特定 Pod
+
+本指南介绍如何在 KubeBlocks 管理的 RabbitMQ 集群中下线（停用）特定 Pod。下线操作可在保持可用性的同时实现对集群资源的精确控制，适用于工作负载再平衡、节点维护或故障处理等场景。
+
+## 为什么选择 KubeBlocks 下线 Pod？
+
+在传统的基于 StatefulSet 的部署中，Kubernetes 无法下线特定 Pod。StatefulSet 会确保 Pod 的顺序和身份标识，缩容操作总是移除序号最高的 Pod（例如从 3 个副本缩容时，会优先移除 `Pod-2`）。这一限制导致无法精确控制要下线的 Pod，使得维护、工作负载分配或故障处理变得复杂。
+
+KubeBlocks 通过允许管理员直接下线特定 Pod 来突破这一限制。这种细粒度控制既能确保高可用性，又能在不中断整个集群的情况下实现更好的资源管理。
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署 RabbitMQ 集群
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+## 验证部署
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+## 下线 Pod
+
+**预期工作流程**：
+1. 从 `onlineInstancesToOffline` 指定的副本被移除
+2. Pod 优雅终止
+3. 集群状态从 `Updating` 转为 `Running`
+
+在下线组件中的特定 Pod 前，请确保该组件拥有多个副本。若不符合条件，请先进行扩容操作。
+
+例如，可以通过以下命令修改集群 CR，将 querynode 组件的副本数声明为 3：
+
+```bash
+kubectl patch cluster milvus-cluster -n demo --type='json' -p='[
+  {
+    "op": "replace",
+    "path": "/spec/componentSpecs/2/replicas",
+    "value": 3
+  }
+]'
+```
+
+要下线特定 Pod（如 'rabbitmq-cluster-rabbitmq-1'），可采用以下任一方法：
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  方法一：使用 OpsRequest
+
+  创建 OpsRequest 将 Pod 标记为下线状态：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: rabbitmq-cluster-decommission-ops
+    namespace: demo
+  spec:
+    clusterName: rabbitmq-cluster
+    type: HorizontalScaling
+    horizontalScaling:
+    - componentName: rabbitmq
+      scaleIn:
+        onlineInstancesToOffline:
+          - 'rabbitmq-cluster-rabbitmq-1'  # 指定需要下线的实例名称
+  ```
+
+  #### 监控下线进度
+  查看下线操作的执行状态：
+
+  ```bash
+  kubectl get ops rabbitmq-cluster-decommission-ops -n demo -w
+  ```
+  示例输出：
+
+  ```bash
+NAME                              TYPE                CLUSTER          STATUS    PROGRESS   AGE
+rabbitmq-cluster-decommission-ops   HorizontalScaling   rabbitmq-cluster   Running   0/1        8s
+rabbitmq-cluster-decommission-ops   HorizontalScaling   rabbitmq-cluster   Running   1/1        31s
+rabbitmq-cluster-decommission-ops   HorizontalScaling   rabbitmq-cluster   Succeed   1/1        31s
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  方法二：使用 Cluster API
+
+  也可直接更新 Cluster 资源来下线指定 Pod：
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: rabbitmq
+        replicas: 2       # 下线后的预期副本数
+        offlineInstances:
+          - rabbitmq-cluster-rabbitmq-1   # <----- 指定待下线的 Pod
+   ...
+  ```
+  </TabItem>
+
+</Tabs>
+
+### 验证下线结果
+
+应用更新配置后，检查集群中剩余的 Pod：
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=rabbitmq-cluster
+```
+
+示例输出：
+```bash
+NAME                          READY   STATUS    RESTARTS   AGE
+rabbitmq-cluster-rabbitmq-0   2/2     Running   0          25m
+rabbitmq-cluster-rabbitmq-2   2/2     Running   0          24m
+```
+
+## 总结
+核心要点：
+- 传统 StatefulSet 缺乏精确的 Pod 移除控制
+- KubeBlocks 支持定向 Pod 下线
+- 两种实现方式：OpsRequest 或 Cluster API
+
+该功能在保持可用性的同时，提供了细粒度的集群管理能力。

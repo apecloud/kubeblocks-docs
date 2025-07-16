@@ -1,0 +1,149 @@
+---
+date: 2024-07-09
+description: 本博客介绍KubeBlocks v0.9.0版本的主要变更。
+image: /img/blogs/thumbnails/blog-release-0.9.png
+slug: announcing-kubeblocks-v0-9-0
+tags:
+- KubeBlocks v0.9.0
+- release notes
+title: KubeBlocks v0.9.0 正式发布
+---
+# KubeBlocks v0.9.0 版本发布公告
+
+我们非常高兴地宣布 KubeBlocks v0.9.0 版本正式发布，这标志着我们向备受期待的 v1.0 版本又迈进了一步。该版本引入了多项重大改进和新特性，全面提升了 KubeBlocks 平台的功能性和用户体验。
+
+
+
+## API 亮点
+
+- 在 KubeBlocks v0.9 中，随着 KubeBlocks 引入拓扑支持，集群构建体验变得更加灵活直观，就像用积木搭建集群一样。ClusterDefinition API 新增了 `topologies` 字段，允许开发者提供具有不同拓扑结构的多种部署模式。数据库用户可以在创建 Cluster 时通过 `topology` 字段选择拓扑结构。例如，Redis Addon 提供了三种拓扑：Standalone（单机）、Replication（复制）和 Proxy（代理）。Standalone 拓扑仅包含一个 Component - RedisServer，Replication 拓扑包含 RedisServer 和 Sentinel 两个 Components，而 Proxy 拓扑则额外添加了第三个 Component，例如 Twemproxy。
+- KubeBlocks 现在支持管理分布式数据库的水平扩展（Reshard）。您可以用一个 Component 表示一个水平分片，并通过增加或减少 Components 来扩展或收缩这个水平分片。这种扩展能力也将用于 Redis 和 Pika 的分布式部署。
+- KubeBlocks 现在使用 InstanceSet 替代 StatefulSet 来管理 Pods。InstanceSet 支持指定 Pod 下线以及 Pod 原地更新，并且在数据库复制架构中主从数据库可以采用不同的 Pod 规格（StatefulSet 不支持这些特性）。
+- 开发者可以为 Components 添加更多自定义事件处理器！v0.8 引入的 ComponentDefinition API 包含 `lifeCycleActions` 字段，允许您定义各种自定义事件处理器。在此基础上，KubeBlocks v0.9 为自定义 addon 实现提供了更多处理器，包括 roleprobe（节点角色探测）、memberLeave（节点下线）、preTerminate（Component 下线）和 postProvision（Component 上线）。事件处理器的扩展增强了 KubeBlocks 的表达能力。例如，preTerminate 和 postProvision 可用于在分布式数据库中执行跨分片数据重分配（Rebalance），或向 Sentinel 和 Orchestrator 等第三方 HA 管理器发起注册。
+
+## 插件亮点
+
+- KubeBlocks 支持 Redis 集群模式（分片模式）
+  
+  Redis 集群模式旨在提供水平写入扩展能力和智能客户端高可用策略，同时具备出色的故障转移能力。Redis 集群将数据分布在多个 Redis 节点上，显著提升系统容量、性能和可用性。
+
+- KubeBlocks 引入 MySQL 复制模式
+  
+  相比 MGR 集群，MySQL 复制拓扑结构所需资源更少（仅需两个数据库副本）且数据复制开销更低。当对服务可用性和数据可靠性没有极端要求时，复制拓扑是更具成本效益的选择。您可以使用 `kbcli` 主动切换 MySQL 副本角色，或通过 `kubectl` 删除指定的 Kubernetes Pod 触发被动故障转移。如果没有长事务和大表 DDL 操作，故障转移通常可在 30 秒内完成。
+
+## 变更内容
+
+### 新功能
+
+#### KubeBlocks
+
+- ClusterDefinition API
+  - 支持拓扑 API，允许开发者自定义多种拓扑结构。
+- Cluster API
+  - 支持 ShardingSpec API。
+  - 支持分片扩缩容。
+- ComponentDefinition API
+  - `lifecycleActions` API 支持用户自定义操作动作，包括 roleprobe、memberLeave、preTerminate、postProvision。
+  - 新增 Vars API 用于引用实例相关的动态资源和信息，包括 secret、service 和 service 引用。
+    - 支持 Vars API。
+    - 支持跨 Component 的 Vars 引用。
+    - 优化 ServiceRef 引用。
+  - 支持动态配置，在垂直扩缩容或水平扩缩容后重新生成指定变量。
+- Component
+  - 支持删除 Component。
+  - 支持 ComponentVersion。
+- InstanceSet API
+  - InstanceSet 替代 StatefulSet 来管理 Pod。
+  - 支持实例模板。
+  - 支持指定实例缩容。
+  - 支持原地更新。
+- OpsRequest API
+  - 支持重建故障备份实例。
+  - 支持 force 标志控制并发。
+  - 支持自定义多任务顺序执行。
+- 支持 NodeCountScaler。
+- 支持 PITR（时间点恢复）。
+- 支持跨 Namespace 恢复。
+
+#### kbcli
+
+- 支持 PostgreSQL 时间点恢复。
+- `cluster` 支持 `rebuild-instance` 子命令以重建实例。
+- `cluster create` 子命令支持 `elasticsearch`。
+- 支持在创建备份仓库时指定路径前缀。
+
+#### 插件
+
+##### Redis
+
+- 支持官方 Redis Cluster 拓扑。
+- 增强 Redis 的功能和稳定性。
+  - 适配 ComponentDefinition 和 ComponentVersion 等新 API，支持多种拓扑形式。
+  - 优化 Redis Replication Cluster 初始化逻辑，移除对 DownwardAPI 的依赖。
+  - 支持 Redis v7.2.4。
+- Redis 分片集群支持备份和恢复。
+
+##### MySQL
+
+- 新增开源组件 Orchestrator Addon 用于管理 MySQL。
+
+##### PostgreSQL
+
+- 支持 PostgreSQL PITR。
+- 支持 PostgreSQL v15.7。
+
+##### Qdrant
+
+- Qdrant 分片集群支持备份和恢复。
+
+##### MogDB
+
+- 支持在 v5.0.5 中创建、扩缩容、备份和切换 MogDB Replication Cluster。
+
+##### ElasticSearch
+
+- 支持 Elasticsearch v7.7.1、v7.10.1 和 v8.8.2。
+
+##### Pulsar
+
+- 支持 v3.0.2。
+- 支持 NodePort。
+
+##### VictoriaMetrics
+
+- 支持 VictoriaMetrics v1.100.1。
+
+### Release 0.9 中的 API 弃用及其他变更
+
+- ConfigConstraint API 稳定并从 v1alpha1 升级到 v1beta1。
+- StorageProvider 的组变更，从 `storage.kubeblocks.io` 迁移到 `dataprotection.kubeblocks.io`。
+- ClusterVersion v1alpha1 CRD 将在 Release 1.0 中移除。
+- ComponentClassDefinition v1alpha1 CRD 将在 Release 1.0 中移除。
+- ComponentResourceConstraint v1alpha1 CRD 将在 Release 1.0 中移除。
+- ClusterDefinition API
+  - `type`、`componentDefs`、`connectionCredential` 将在 Release 1.0 中移除。
+- Cluster API
+  - 调度：`tenancy` 和 `availabilityPolicy` 将在 Release 1.0 中移除。
+  - API 简化：`replicas`、`resources`、`storage` 和 `network` 将在 Release 1.0 中移除。
+- ComponentDefinition API
+  - switchPolicy 将在 Release 1.0 中移除。相同功能可通过 `componentDefinition.spec.lifecycleActions.switchover` API 实现。
+- ServiceRef API
+  - `cluster` 将在 Release 1.0 中移除。相同功能可通过 `serviceRef.clusterServiceSelector` 实现。
+
+此外，所有引用上述 API 的字段也被标记为弃用，并将在 Release 1.0 中移除。
+
+- `clusterVersionRef`
+- `componentDefRef`
+- `classDefRef`
+
+KubeBlocks Release 0.9 仍保持与标记为弃用的 API 的兼容性。
+
+### 弃用功能
+
+#### kbcli 弃用功能
+
+- 移除 `bench`、`fault` 和 `migration` 子命令以精简功能。
+
+## 升级至 v0.9
+
+请参阅 [升级至 KubeBlocks v0.9](https://kubeblocks.io/docs/release-0.9/user_docs/installation/upgrade/upgrade-kubeblocks-to-0.9)。

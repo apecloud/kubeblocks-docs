@@ -1,0 +1,220 @@
+---
+description: 使用KubeBlocks中的Backup API和OpsRequest API为Redis集群创建及验证完整备份的逐步指南
+keywords:
+- Redis
+- Full Backup
+- KubeBlocks
+- Kubernetes
+- Database Backup
+- XtraBackup
+sidebar_label: 创建完整备份
+sidebar_position: 2
+title: 在KubeBlocks上为Redis集群创建完整备份
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# 在KubeBlocks上为Redis创建全量备份
+
+本指南演示如何通过以下两种方式在KubeBlocks上为Redis集群创建和验证全量备份：
+- Backup API（直接备份操作）
+- OpsRequest API（带增强监控的托管备份操作）
+
+我们将在[从全量备份恢复](./05-restoring-from-full-backup)指南中介绍如何从备份恢复数据。
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署Redis集群
+
+import CreateCluster from '../_tpl/_create-redis-replication-cluster.mdx'
+
+<CreateCluster />
+
+## 验证部署
+
+import VerifyCluster from '../_tpl/_verify-redis-replication-cluster.mdx'
+
+<VerifyCluster />
+
+## 备份前提条件
+
+创建备份前请确保：
+1. 备份仓库已配置：
+   - 存在`BackupRepo`资源
+   - 集群与仓库之间的网络连通性
+   - `BackupRepo`状态显示"Ready"
+
+2. 集群准备就绪：
+   - 集群状态为"Running"
+   - 没有正在进行的操作（扩缩容、升级等）
+
+## 查看备份配置
+
+检查可用的备份策略和计划：
+
+```bash
+# 列出备份策略
+kubectl get backuppolicy -n demo -l app.kubernetes.io/instance=redis-replication
+
+# 列出备份计划
+kubectl get backupschedule -n demo -l app.kubernetes.io/instance=redis-replication
+```
+
+预期输出：
+```bash
+NAME                                    BACKUP-REPO   STATUS      AGE
+redis-replication-redis-backup-policy                 Available   17m
+
+NAME                                              STATUS      AGE
+redis-replication-redis-backup-schedule           Available   60m
+```
+
+查看BackupPolicy CR 'redis-replication-redis-backup-policy'中支持的备份方法：
+
+```bash
+kubectl get backuppolicy redis-replication-redis-backup-policy -n demo -oyaml | yq '.spec.backupMethods[].name'
+```
+**备份方法列表**
+
+KubeBlocks Redis支持以下备份方法：
+
+| 功能           | 方法          | 描述 |
+|-------------|--------|------------|
+| 全量备份 | datafile  | 使用`redis-cli BGSAVE`命令备份数据 |
+| 持续备份 | aof | 通过归档AOF文件(Append-Only Files)持续执行增量备份 |
+
+## 通过Backup API备份
+
+### 1. 创建按需备份
+
+`datafile`方法使用redis `BGSAVE`命令执行全量备份，并通过`datasafed push`上传备份文件。
+
+应用以下清单创建备份：
+
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: Backup
+metadata:
+  name: redis-backup-datafile
+  namespace: demo
+spec:
+  backupMethod: datafile
+  backupPolicyName: redis-replication-redis-backup-policy
+  # 决定当备份自定义资源(CR)被删除时，是否应删除备份仓库中的备份内容。
+  # 支持的值为`Retain`和`Delete`。
+  # - `Retain`表示保留备份内容及其在备份仓库中的物理快照。
+  # - `Delete`表示删除备份内容及其在备份仓库中的物理快照。
+  deletionPolicy: Delete
+```
+
+### 2. 监控备份并验证完成
+
+跟踪进度直到状态显示"Completed"：
+
+```bash
+kubectl get backup redis-backup-datafile  -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                    POLICY                                  METHOD     REPO            STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
+redis-backup-datafile   redis-replication-redis-backup-policy   datafile   <BACKUP_REPO>   Completed   3412         10s        Delete            2025-05-17T09:24:59Z   2025-05-17T09:25:08Z
+```
+
+### 3. 验证备份
+
+通过以下方式确认备份成功完成：
+- 备份状态显示"Completed"
+- 备份大小符合预期
+- 检查BackupRepo中的文件
+
+`Backup`资源记录以下详细信息：
+- 存储路径
+- 时间范围
+- 备份文件大小
+
+
+## 通过OpsRequest API备份
+
+### 1. 创建按需备份
+
+使用OpsRequest API执行备份：
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: redis-replication-backup
+  namespace: demo
+spec:
+  clusterName: redis-replication
+  force: false
+  backup:
+    backupPolicyName: redis-replication-redis-backup-policy
+    backupMethod: datafile
+    deletionPolicy: Delete
+    retentionPeriod: 1mo
+  type: Backup
+```
+
+### 2. 监控备份进度
+
+#### 1. 监控操作状态
+
+实时跟踪备份进度：
+```bash
+kubectl get ops redis-replication-backup  -n demo -w
+```
+
+预期输出：
+```bash
+NAME                       TYPE     CLUSTER             STATUS    PROGRESS   AGE
+redis-replication-backup   Backup   redis-replication   Succeed   -/-        35s
+```
+
+- 状态为'Succeed'表示备份操作成功完成。
+
+#### 2. 验证完成
+
+检查最终备份状态：
+
+```bash
+kubectl get backup -n demo -l operations.kubeblocks.io/ops-name=redis-replication-backup
+```
+
+示例输出：
+```bash
+NAME                                           POLICY                                  METHOD     REPO            STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
+backup-demo-redis-replication-20250517092706   redis-replication-redis-backup-policy   datafile   <BACKUP_REPO>   Completed   3458         10s        Delete            2025-05-17T09:27:06Z   2025-05-17T09:27:16Z   2025-06-16T09:27:16Z
+```
+
+- 备份状态应显示'Completed'。
+
+### 3. 验证备份
+
+通过以下方式确认备份成功完成：
+- 备份状态显示"Completed"
+- 备份大小符合预期
+- 检查BackupRepo中的文件
+
+`Backup`资源记录以下详细信息：
+- 存储路径
+- 时间范围
+- 其他元数据
+
+## 总结
+
+本指南涵盖：
+1. 部署Redis复制集群
+2. 使用以下方式创建全量备份：
+   - 直接Backup API
+   - 托管OpsRequest API
+3. 监控和验证备份
+
+您的Redis数据现已安全备份，可在需要时进行恢复。

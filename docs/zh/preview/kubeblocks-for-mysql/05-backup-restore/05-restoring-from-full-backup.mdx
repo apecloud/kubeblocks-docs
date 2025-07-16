@@ -1,0 +1,197 @@
+---
+description: 了解如何通过集群注解（Cluster Annotation）或运维API（Ops API）在KubeBlocks中从现有备份恢复一个新的MySQL集群。
+keywords:
+- MySQL
+- Restore
+- Backup
+- KubeBlocks
+- Kubernetes
+sidebar_label: 恢复 MySQL 集群
+sidebar_position: 5
+title: 从备份恢复MySQL集群
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 从备份恢复 MySQL 集群
+
+本指南说明如何在 KubeBlocks 中从现有备份恢复一个新的 MySQL 集群。演示两种方法：使用**集群注解（Cluster Annotation）**或**运维 API（Ops API）**。
+
+**运维 API** 为恢复操作提供了更强的控制力和进度监控能力，本质上是集群注解的封装实现。
+
+## 前提条件
+- KubeBlocks 环境：
+  - 已安装 KubeBlocks operator 及所需 CRD。
+  - 已配置 kubectl 以访问您的 Kubernetes 集群。
+- 现有备份：
+  - 在 'demo' 命名空间中存在名为 example-mysql-backup-backup 的有效备份。
+
+## 验证备份状态
+
+在执行恢复操作前，请确保已有完整的备份可用。恢复过程将使用此备份创建一个新的 MySQL 集群。
+
+运行以下命令检查备份状态：
+
+```bash
+kubectl get backup -n demo
+```
+
+预期输出：
+
+```bash
+NAME                           POLICY                                      METHOD       REPO      STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
+example-mysql-cluster-backup   example-mysql-cluster-mysql-backup-policy   xtrabackup   s3-repo   Completed   1633717      18s        Delete            2025-03-07T03:25:22Z   2025-03-07T03:25:40Z
+```
+
+
+
+
+## 通过集群注解恢复备份
+
+### 创建恢复后的集群
+
+创建一个引用备份的新集群，并配置恢复参数。
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster-restored
+  namespace: demo
+  annotations:
+    kubeblocks.io/restore-from-backup: '{"mysql":{"name":"example-mysql-cluster-backup","namespace":"demo","volumeRestorePolicy":"Parallel"}}'
+spec:
+  terminationPolicy: WipeOut
+  componentSpecs:
+    - name: mysql
+      componentDef: "mysql-8.0"
+      serviceVersion: 8.0.35
+      disableExporter: false
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+### 监控恢复进度
+
+观察 Pod 初始化：
+
+```bash
+kubectl get pods -n demo -w
+```
+
+预期工作流程：
+
+1. 数据准备 Pods：
+
+```bash
+restore-preparedata-XXXXX-<hash>   0/1     Init:0/1   0          6s
+restore-preparedata-XXXXX-<hash>   1/1     Running    0          12s
+restore-preparedata-XXXXX-<hash>   0/1     Completed 0          20s
+```
+
+这些 Pod 会将备份数据复制到持久卷（PVC）中。
+
+
+2. MySQL 集群 Pod：
+
+```bash
+example-mysql-cluster-restored-mysql-0     0/4     Pending        0          0s
+example-mysql-cluster-restored-mysql-0     4/4     Running        0          20s
+```
+
+Pod 使用恢复的数据进行初始化并启动 MySQL 服务。
+
+## 通过 Ops API 执行恢复
+
+或者，使用 Ops API 发起恢复流程：
+
+### 步骤 1：创建恢复请求
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-cluster-restore
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster-restored
+  force: false
+  restore:
+    backupName: example-mysql-cluster-backup
+    backupNamespace: demo
+  type: Restore
+EOF
+```
+
+### 步骤 2：监控运维进度
+
+监控恢复操作的进度：
+
+```bash
+kubectl get ops example-mysql-cluster-restore -n demo -w
+```
+
+预期输出：
+
+```bash
+NAME                            TYPE      CLUSTER                         STATUS    PROGRESS   AGE
+example-mysql-cluster-restore   Restore   example-mysql-cluster-restored   Running   -/-        55s
+example-mysql-cluster-restore   Restore   example-mysql-cluster-restored   Succeed   -/-        3m3s
+```
+
+
+
+
+
+## 验证恢复后集群状态
+
+在恢复流程完成后，请验证新恢复集群的状态：
+
+```bash
+kubectl get cluster example-mysql-cluster-restored -n demo
+```
+
+示例输出：
+
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster-restored                        WipeOut               Running   3m2s
+```
+
+
+
+
+## 清理
+要删除所有已创建的资源，请连同其命名空间一起删除 MySQL 集群：
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete cluster example-mysql-cluster-restored -n demo
+kubectl delete ns demo
+```
+
+
+
+
+## 概述
+本指南演示了如何通过集群注解（Cluster Annotation）或运维API（Ops API）从现有备份恢复MySQL集群。按照这些步骤操作，您可以在KubeBlocks中高效地将关键数据恢复到新的MySQL集群。
+

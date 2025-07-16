@@ -1,0 +1,230 @@
+---
+description: 了解如何在KubeBlocks管理的MySQL集群中执行垂直扩展，以优化资源利用率并提升性能。
+keywords:
+- KubeBlocks
+- MySQL
+- Vertical Scaling
+- Kubernetes
+- Resources
+sidebar_label: 垂直扩展
+sidebar_position: 2
+title: MySQL 集群中的垂直扩展
+---
+
+
+## 什么是垂直扩展？
+垂直扩展涉及增加或减少分配给正在运行的数据库集群的资源（例如 CPU 和内存）。
+与调整副本数量的水平扩展不同，垂直扩展侧重于扩展单个 Pod 的容量。
+
+可扩展的资源包括：
+- CPU 核心：数据库的处理能力。
+- 内存（RAM）：可用于数据库操作的内存。
+
+KubeBlocks 通过精心编排 Pod 重启来确保无缝的垂直扩展，从而最小化停机时间。例如：
+- 首先重新创建从节点 Pod。
+- 最后更新主节点 Pod 以保持集群可用性。
+
+## 前提条件
+
+在继续之前，请确保满足以下条件：
+- 环境设置：
+    - Kubernetes 集群已启动并运行。
+    - kubectl CLI 工具已配置为可与集群通信。
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) 已安装。请按照此处的安装说明进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 部署 MySQL 半同步集群
+
+部署一个 2 节点的半同步 MySQL 集群（1 个主节点，1 个从节点）：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+
+
+
+## 验证部署
+在创建 MySQL 集群时监控其状态：
+
+```bash
+kubectl get cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster   mysql                Delete               Creating   66s
+example-mysql-cluster   mysql                Delete               Running    72s
+```
+
+请按照以下要求翻译内容，保持所有格式、间距和换行不变：
+
+    <Tabs>
+
+    <TabItem value="opsRequest" label="OPSREQUEST API" default>
+选项一：使用 VerticalScaling OpsRequest
+
+应用以下 YAML 为 mysql 组件扩容资源：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-cluster-vscale-ops
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  type: VerticalScaling
+  verticalScaling:
+  - componentName: mysql
+    requests:
+      cpu: '1'
+      memory: 1Gi
+    limits:
+      cpu: '1'
+      memory: 1Gi
+EOF
+```
+
+垂直扩缩容期间会发生什么？
+- 首先会重建从节点 Pod，以确保主节点 Pod 保持可用状态。
+- 当所有从节点 Pod 更新完成后，主节点 Pod 会以新的资源配置重新启动。
+
+您可以通过以下命令查看扩缩容操作的进度：
+
+```bash
+kubectl describe ops example-mysql-cluster-vscale-ops -n demo
+```
+
+预期结果：
+
+```bash
+Status:
+  Phase:            Succeed
+  Progress:         2/2
+  ...
+```
+
+</TabItem>
+
+    <TabItem value="ClusterAPI" label="集群API">
+选项二：直接通过集群API更新
+
+或者，您也可以通过更新 `spec.componentSpecs.resources` 字段来实现垂直扩缩容，将其值设置为期望的资源规格。
+
+
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        requests:
+          cpu: "1"       # Update the resources to your need.
+          memory: "1Gi"  # Update the resources to your need.
+        limits:
+          cpu: "1"       # Update the resources to your need.
+          memory: "1Gi"  # Update the resources to your need.
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+</TabItem>
+
+    </Tabs>
+
+
+
+## 验证
+通过检查集群配置或 Pod 详细信息来验证更新后的资源：
+
+```bash
+kbcli cluster describe example-mysql-cluster -n demo
+```
+
+预期输出：
+
+```bash
+Resources Allocation:
+COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+mysql                           1 / 1                1Gi / 1Gi               data:20Gi      <none>
+```
+
+
+
+
+## KubeBlocks 垂直扩展的核心优势
+- **无缝扩缩容**：Pod 按特定顺序重建，确保业务影响最小化
+- **动态资源调整**：根据工作负载需求轻松调整 CPU 和内存配置
+- **灵活控制**：可选择 OpsRequest 实现动态扩缩容，或直接通过 API 更新实现精准控制
+- **高可用保障**：扩缩过程中集群持续可用，保持高可用性
+
+
+
+## 总结
+在本指南中，您学习了如何：
+1. 部署一个由 KubeBlocks 管理的 MySQL 集群。
+2. 通过增加或减少 mysql 组件的资源来进行垂直扩展。
+3. 使用 OpsRequest 和直接更新 Cluster API 两种方式来调整资源分配。
+
+垂直扩展是优化资源利用率和适应不断变化的工作负载需求的强大工具，可确保您的 MySQL 集群保持高性能和弹性。

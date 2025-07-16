@@ -1,0 +1,42 @@
+KubeBlocks 采用声明式方法来管理 Milvus 集群。  
+以下是一个部署包含 3 个副本的 Milvus 集群的配置示例。
+
+应用以下 YAML 配置来部署集群：
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: milvus-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: milvus
+  topology: clustermode
+  componentSpecs:
+    - name: milvus
+      serviceVersion: 3.13.7
+      replicas: 3
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+注：  
+1. 配置中 `terminationPolicy: Delete` 表示删除集群时会同时清理相关资源  
+2. `topology: clustermode` 指定以集群模式部署 Milvus  
+3. 每个 Pod 资源限制为 0.5 核 CPU 和 0.5GiB 内存  
+4. 为每个节点配置了 20Gi 的持久卷存储，使用 `ReadWriteOnce` 访问模式

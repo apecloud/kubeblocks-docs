@@ -28,7 +28,7 @@ Many of Kubeblocks' clients have a strong demand for Redis Cluster, so we have a
 
 1. Install KubeBlocks 0.9.0.
 
-```
+```bash
 slc@slcmac kbcli % ./bin/kbcli kubeblocks list-versions --devel
 VERSION         RELEASE-NOTES
 0.9.0-beta.8    https://github.com/apecloud/kubeblocks/releases/tag/v0.9.0-beta.8
@@ -40,12 +40,12 @@ slc@slcmac kbcli % kbcli kubeblocks install --version="0.9.0-beta.8"
 
 Although Redis cluster addon is installed by default, the network standard compatibility caused some issue, we need to install it manually.
 
-```
+```bash
 # Disable addon
 slc@slcmac addons % kbcli addon disable redis
 # Install the latest addon on the branch
 slc@slcmac addons % git clone git@github.com:apecloud/kubeblocks-addons.git
-slc@slcmac addons % cd kubeblocks-addons/addons/redis 
+slc@slcmac addons % cd kubeblocks-addons/addons/redis
 slc@slcmac addons % helm dependency build && cd ..
 slc@slcmac addons % helm install redis ./redis
 slc@slcmac addons % helm list
@@ -58,7 +58,7 @@ To reproduce the issue, we modify the configuration of the addon before executin
 
 The cluster created using NodePort mode with 3 primary nodes and 3 secondary nodes.
 
-```
+```bash
 slc@slcmac addons % helm install redisc ./redis-cluster --set mode=cluster --set nodePortEnabled=true --set redisCluster.shardCount=3
 slc@slcmac addons % kg pods | grep -v job
 NAME                                           READY   STATUS    RESTARTS   AGE
@@ -72,7 +72,7 @@ redisc-shard-5g8-1                             3/3     Running   0          14m
 We can see clearly that 3 primary-secondary pods are created, but the relationship between nodes is not built.
 Announce ip/port/bus-port
 
-```
+```bash
 redisc-shard-5g8-0
 kubectl exec -it redisc-shard-5g8-0 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-ip 172.18.0.2
 kubectl exec -it redisc-shard-5g8-0 -c redis-cluster -- redis-cli -a O3605v7HsS config set re 30039
@@ -89,20 +89,20 @@ kubectl exec -it redisc-shard-xwz-0 -c redis-cluster -- redis-cli -a O3605v7HsS 
 
 Create Slot
 
-```
+```bash
 kubectl exec -it redisc-shard-5g8-0 -c redis-cluster -- redis-cli -a O3605v7HsS cluster ADDSLOTSRANGE 0 5461
 kubectl exec -it redisc-shard-hxx-0 -c redis-cluster -- redis-cli -a O3605v7HsS cluster ADDSLOTSRANGE 5462 10922
 kubectl exec -it redisc-shard-xwz-0 -c redis-cluster -- redis-cli -a O3605v7HsS cluster ADDSLOTSRANGE 10923 16383
 ```
 Cluster Meet
 
-```
-# login to one of the primary nodes 
+```bash
+# login to one of the primary nodes
 slc@slcmac redis % kubectl exec -it redisc-shard-5g8-0 -c redis-cluster -- /bin/bash
 root@redisc-shard-5g8-0:/# redis-cli -a O3605v7HsS
 127.0.0.1:6379> cluster nodes
 ff935854b7626a7e4374598857d5fbe998297799 172.18.0.2:30039@32461 myself,master - 0 0 0 connected 0-5461
-# Only one node found, we have to meet other two nodes. 
+# Only one node found, we have to meet other two nodes.
 slc@slcmac redis %  kubectl exec -it redisc-shard-5g8-0 -c redis-cluster -- redis-cli -a O3605v7HsS cluster meet 172.18.0.2 30182 31879
 OK
 slc@slcmac redis %  kubectl exec -it redisc-shard-5g8-0 -c redis-cluster -- redis-cli -a O3605v7HsS cluster meet 172.18.0.2 31993 30105
@@ -122,7 +122,7 @@ At this moment, a 3-node cluster is created.
 We use the pod `redisc-shard-5g8-1` as the standby of primary pod `redisc-shard-5g8-0`.
 Check the link on primary pod, it is not connected to any other primary pod.
 
-```
+```bash
 # Check link
 root@redisc-shard-5g8-1:/# netstat -anop | grep redis
 tcp        0      0 0.0.0.0:16379           0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
@@ -134,7 +134,7 @@ tcp6       0      0 :::6379                 :::*                    LISTEN      
 Headless address of the secondary pod: redisc-shard-5g8-1.redisc-shard-5g8-headless:6379
 The complete `join` command is:
 
-```
+```bash
 slc@slcmac redis % kubectl exec -it redisc-shard-5g8-1 -c redis-cluster -- /bin/bash
 root@redisc-shard-5g8-1:/# redis-cli -a O3605v7HsS --cluster add-node redisc-shard-5g8-1.redisc-shard-5g8-headless:6379 172.18.0.2:30039 --cluster-slave --cluster-master-id ff935854b7626a7e4374598857d5fbe998297799
 >>> Adding node redisc-shard-5g8-1.redisc-shard-5g8-headless:6379 to cluster 172.18.0.2:30039
@@ -158,7 +158,7 @@ Waiting for the cluster to join
 172.18.0.2:30039  is the announced ip/port of the primary pod.
 
 Check connection:
-```
+```bash
 root@redisc-shard-5g8-1:/# netstat -anop | grep redis
 tcp        0      0 0.0.0.0:16379           0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
 tcp        0      0 0.0.0.0:6379            0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
@@ -173,7 +173,7 @@ tcp6       0      0 :::6379                 :::*                    LISTEN      
 The secondary pod and other 3 primary pods are connected on announced bus port, and also the secondary pod is connected to its primary pod.
 Check the cluster topology on the secondary pod.
 
-```
+```bash
 root@redisc-shard-5g8-1:/# redis-cli -a O3605v7HsS
 127.0.0.1:6379> cluster nodes
 ff935854b7626a7e4374598857d5fbe998297799 172.18.0.2:30039@32461 master - 0 1713327060494 0 connected 0-5461
@@ -183,7 +183,7 @@ a54e8fa9474c620154f4c1abc9628116deb3dc7e 172.18.0.2:30182@31879 master - 0 17133
 ```
 Check the cluster topology on the primary pod, and the newly added secondary pod is missing.
 
-```
+```bash
 root@redisc-shard-5g8-0:/# redis-cli -a O3605v7HsS
 127.0.0.1:6379> cluster nodes
 ff935854b7626a7e4374598857d5fbe998297799 172.18.0.2:30039@32461 myself,master - 0 1713327106000 0 connected 0-5461
@@ -193,25 +193,25 @@ a54e8fa9474c620154f4c1abc9628116deb3dc7e 172.18.0.2:30182@31879 master - 0 17133
 
 During the previous `add-node` process, the` cluster meet` operation reported success, but the primary node did not actually see the new replica node. After reviewing the ·/data/running.log·, the following error information was found:
 
-```
+```bash
 root@redisc-shard-5g8-0:/data# grep 16379 running.log
 1:M 17 Apr 2024 04:05:37.610 - Connection with Node 30e6d55c687bfc08e4a2fcd2ef586ba5458d801f at 10.42.0.1:16379 failed: Connection refused
 **10 times repeated**
 30e6d55c687bfc08e4a2fcd2ef586ba5458d801f at 10.42.0.1:16379 failed: Connection refused
 ```
-Therefore, actually this `cluster meet` operation is failed. But why? 
+Therefore, actually this `cluster meet` operation is failed. But why?
 
 ## Troubleshooting
 
 1. The mysterious IP address.
 The default Redis Cluster bus port is 16379 = 6379 + 10000. If the bus port is not explicitly announced, Redis Cluster will use this default address. So the issue seems to be that when the primary pod received the meet request, it tried to reconnect to the other pod's default bus port (16379), but was unable to connect. However, the replica pod's IP (10.42.0.237) is not the same as the IP (10.42.0.1) mentioned in the error message. Why would the primary pod try to reconnect to an inconsistent IP?
 
-```
+```bash
 slc@slcmac redis %  kg pods -A -o wide | grep redisc-shard-5g8-1
 default       redisc-shard-5g8-1                             3/3     Running     0              72m    10.42.0.237   k3d-k3s-default-server-0
 ```
-Continuing the investigation, it was found that 10.42.0.1 is actually the address of the k3d (the Kubernetes version we use in the development environment) CNI0. 
-```
+Continuing the investigation, it was found that 10.42.0.1 is actually the address of the k3d (the Kubernetes version we use in the development environment) CNI0.
+```bash
 slc@slcmac redis % docker ps
 CONTAINER ID   IMAGE                            COMMAND                  CREATED        STATUS        PORTS                             NAMES
 8f8958df3298   moby/buildkit:buildx-stable-1    "buildkitd --allow-i…"   6 weeks ago    Up 6 weeks                                      buildx_buildkit_project-v3-builder0
@@ -247,7 +247,7 @@ It turns out that the link corresponding to the gossip protocol (local 16379 -> 
 
 Link information of primary- 1 redisc-shard-5g8-0:
 
-```
+```bash
 root@redisc-shard-5g8-0:/data# netstat -anop | grep redis
 tcp        0      0 0.0.0.0:6379            0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
 tcp        0      0 0.0.0.0:16379           0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
@@ -263,7 +263,7 @@ tcp6       0      0 :::16379                :::*                    LISTEN      
 ```
 Link information of primary-2 redisc-shard-hxx-0:
 
-```
+```bash
 root@redisc-shard-hxx-0:/# netstat -anop | grep redis
 tcp        0      0 0.0.0.0:16379           0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
 tcp        0      0 0.0.0.0:6379            0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
@@ -278,14 +278,14 @@ tcp6       0      0 :::6379                 :::*                    LISTEN      
 ```
 Mapping relationship between two links:
 
-```
+```bash
 # On primary-1 redisc-shard-5g8-0, capture packets on NodePort 31879 (primary  -2 redisc-shard-hxx-0):
 05:40:04.817984 IP redisc-shard-5g8-0.redisc-shard-5g8-headless.default.svc.cluster.local.58412 > k3d-k3s-default-server-0.31879: Flags [P.], seq 6976:9336, ack 7081, win 10027, options [nop,nop,TS val 4191410578 ecr 867568717], length 2360
 05:40:04.818428 IP k3d-k3s-default-server-0.31879 > redisc-shard-5g8-0.redisc-shard-5g8-headless.default.svc.cluster.local.58412: Flags [.], ack 9336, win 498, options [nop,nop,TS val 867569232 ecr 4191410578], length 0
 05:40:04.819269 IP k3d-k3s-default-server-0.31879 > redisc-shard-5g8-0.redisc-shard-5g8-headless.default.svc.cluster.local.58412: Flags [P.], seq 7081:9441, ack 9336, win 501, options [nop,nop,TS val 867569233 ecr 4191410578], length 2360
 05:40:04.819309 IP redisc-shard-5g8-0.redisc-shard-5g8-headless.default.svc.cluster.local.58412 > k3d-k3s-default-server-0.31879: Flags [.], ack 9441, win 10026, options [nop,nop,TS val 4191410580 ecr 867569233], length 0
 
-# On primary-2 redisc-shard-hxx-0, capture packets on local Port 24780 (primary-1 redisc-shard-5g8-0): 
+# On primary-2 redisc-shard-hxx-0, capture packets on local Port 24780 (primary-1 redisc-shard-5g8-0):
 05:40:04.818178 IP 10.42.0.1.24780 > redisc-shard-hxx-0.redisc-shard-hxx-headless.default.svc.cluster.local.16379: Flags [P.], seq 32624:34984, ack 32937, win 10027, options [nop,nop,TS val 4191410578 ecr 867568717], length 2360
 05:40:04.818371 IP redisc-shard-hxx-0.redisc-shard-hxx-headless.default.svc.cluster.local.16379 > 10.42.0.1.24780: Flags [.], ack 34984, win 498, options [nop,nop,TS val 867569232 ecr 4191410578], length 0
 05:40:04.819239 IP redisc-shard-hxx-0.redisc-shard-hxx-headless.default.svc.cluster.local.16379 > 10.42.0.1.24780: Flags [P.], seq 32937:35297, ack 34984, win 501, options [nop,nop,TS val 867569233 ecr 4191410578], length 2360
@@ -305,7 +305,7 @@ Now that the root cause is known, the problem becomes easier to solve.
 
 For this kind of "meet failure" scenario, we can have secondary-1 explicitly announce its IP/port/bus-port, and then have it actively join the cluster. This way, when primary-1 tries to reconnect, it will use the announced IP to establish the connection.
 
-```
+```bash
 slc@slcmac redis % kubectl exec -it redisc-shard-5g8-1 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-ip 172.18.0.2
 slc@slcmac redis % kubectl exec -it redisc-shard-5g8-1 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-port 31309
 slc@slcmac redis % kubectl exec -it redisc-shard-5g8-1 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-bus-port 31153
@@ -323,7 +323,7 @@ a54e8fa9474c620154f4c1abc9628116deb3dc7e 172.18.0.2:30182@31879 master - 0 17133
 OK
 ```
 Check primary-1 to see the difference after `meet`.
-```
+```bash
 root@redisc-shard-5g8-0:/data# redis-cli -a O3605v7HsS
 Warning: Using a password with '-a' or '-u' option on the command line interface may not be safe.
 127.0.0.1:6379> cluster nodes
@@ -336,9 +336,9 @@ ff935854b7626a7e4374598857d5fbe998297799 172.18.0.2:30039@32461 myself,master - 
 e4d9b914e7ee7c4fd399bdf3dd1c98f7a0a1791b 172.18.0.2:31993@30105 master - 0 1713334506133 2 connected 10923-16383
 a54e8fa9474c620154f4c1abc9628116deb3dc7e 172.18.0.2:30182@31879 master - 0 1713334506233 1 connected 5462-10922
 ```
-A gossip link for secondary-1 can be found on primary-1. 
+A gossip link for secondary-1 can be found on primary-1.
 
-```
+```bash
 root@redisc-shard-5g8-0:/data# netstat -anop | grep redis
 tcp        0      0 0.0.0.0:6379            0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
 tcp        0      0 0.0.0.0:16379           0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
@@ -355,7 +355,7 @@ tcp6       0      0 :::16379                :::*                    LISTEN      
 ```
 
 We can see three new gossip links from primary-1/2/3 on secondary-1.
-```
+```bash
 root@redisc-shard-5g8-1:/# netstat -anop | grep redis
 tcp        0      0 0.0.0.0:16379           0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
 tcp        0      0 0.0.0.0:6379            0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
@@ -379,7 +379,7 @@ Those three links are actually the primary pod connecting successfully through t
 
 Announce ip/port/bus-port
 
-```
+```bash
 slc@slcmac redis % kubectl exec -it redisc-shard-hxx-1 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-ip 172.18.0.2
 slc@slcmac redis % kubectl exec -it redisc-shard-hxx-1 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-port 30662
 slc@slcmac redis % kubectl exec -it redisc-shard-hxx-1 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-bus-port 30960
@@ -387,12 +387,12 @@ slc@slcmac redis % kubectl exec -it redisc-shard-hxx-1 -c redis-cluster -- /bin/
 ```
 Add-node secondary-2 (This process includes `meet` operation)
 
-```
+```bash
 redis-cli -a O3605v7HsS --cluster add-node 172.18.0.2:30662 172.18.0.2:30182 --cluster-slave --cluster-master-id a54e8fa9474c620154f4c1abc9628116deb3dc7e
 ```
 Check cluster topology on secondary-2.
 
-```
+```bash
 127.0.0.1:6379> cluster nodes
 3a136cd50eb3f2c0dcc3844a0de63d5e44b462d7 172.18.0.2:31309@31153 slave ff935854b7626a7e4374598857d5fbe998297799 0 1713335442641 0 connected
 a54e8fa9474c620154f4c1abc9628116deb3dc7e 172.18.0.2:30182@31879 master - 0 1713335442328 1 connected 5462-10922
@@ -402,7 +402,7 @@ ff935854b7626a7e4374598857d5fbe998297799 172.18.0.2:30039@32461 master - 0 17133
 ```
 Check cluster topology on primary-2.
 
-```
+```bash
 127.0.0.1:6379> cluster nodes
 e4d9b914e7ee7c4fd399bdf3dd1c98f7a0a1791b 172.18.0.2:31993@30105 master - 0 1713335448690 2 connected 10923-16383
 ff935854b7626a7e4374598857d5fbe998297799 172.18.0.2:30039@32461 master - 0 1713335448892 0 connected 0-5461
@@ -415,7 +415,7 @@ a54e8fa9474c620154f4c1abc9628116deb3dc7e 172.18.0.2:30182@31879 myself,master - 
 
 Announce ip/port/bus-port and then add node.
 
-```
+```bash
 slc@slcmac redis % kubectl exec -it redisc-shard-xwz-1 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-ip 172.18.0.2
 slc@slcmac redis % kubectl exec -it redisc-shard-xwz-1 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-port 30110
 slc@slcmac redis % kubectl exec -it redisc-shard-xwz-1 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-bus-port 30971
@@ -450,7 +450,7 @@ Waiting for the cluster to join
 
 Check cluster topology on any primary pod.
 
-```
+```bash
 127.0.0.1:6379> cluster nodes
 e4d9b914e7ee7c4fd399bdf3dd1c98f7a0a1791b 172.18.0.2:31993@30105 master - 0 1713335724101 2 connected 10923-16383
 ff935854b7626a7e4374598857d5fbe998297799 172.18.0.2:30039@32461 master - 0 1713335724101 0 connected 0-5461
@@ -472,7 +472,7 @@ The default CNI used by k3s/k3d is Flannel, and as analyzed above, Flannel will 
 We also tested the scenario of k3s and Calico, where Calico uses vxlan to establish the Pod network. We found that when using NodePort, there is still a NAT problem on Calico. Assuming the NodePort we use is 10.128.0.52:32135, on the inbound direction, the communication to the local port 16379 through the NodePort (10.128.0.52) will still be translated to the address of the Node's vxlan.calico network device (192.168.238.0).
 This is the network connection of one of the secondary pods:
 
-```
+```bash
 root@redisc-shard-ffv-1:/# netstat -anop | grep redis
 tcp        0      0 0.0.0.0:16379           0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
 tcp        0      0 0.0.0.0:6379            0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
@@ -492,9 +492,9 @@ tcp6       0      0 :::16379                :::*                    LISTEN      
 tcp6       0      0 :::6379                 :::*                    LISTEN      1/redis-server *:63  off (0.00/0/0)
 ```
 
-On Node 10.128.0.52, the are two devices. 
+On Node 10.128.0.52, the are two devices.
 
-```
+```bash
 ens4: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1460
         inet 10.128.0.52  netmask 255.255.255.255  broadcast 0.0.0.0
         inet6 fe80::4001:aff:fe80:34  prefixlen 64  scopeid 0x20<link>
@@ -515,7 +515,7 @@ vxlan.calico: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1410
 
 If the NodePort uses the Node that the Pod is located on, it will not be NATed in Calico.
 
-```
+```bash
 slc@cluster-1:~$ kubectl exec -it redisc-shard-ffv-1 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-ip 10.128.0.54 // Set the announced IP to the local Node IP where the Pod is located.
 OK
 slc@cluster-1:~$ kubectl exec -it redisc-shard-ffv-1 -c redis-cluster -- /bin/bash

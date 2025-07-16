@@ -10,4 +10,5 @@ export const {
   useChangeLocale,
 } = createI18nClient({
   en: () => import("./en"),
+  zh: () => import("./zh"),
 });

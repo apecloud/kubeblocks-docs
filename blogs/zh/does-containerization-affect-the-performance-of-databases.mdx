@@ -1,0 +1,502 @@
+---
+authors:
+  image_url: https://avatars.githubusercontent.com/u/111858489?v=4
+  name: dullboy
+  url: https://github.com/nayutah
+date: 2024-01-26
+description: 容器化会影响数据库的性能吗？
+image: /img/blogs/thumbnails/blog-containerization.png
+slug: Does-containerization-affect-the-performance-of-databases
+tags:
+- containerization
+- database performance
+- Kubernetes
+title: 容器化会影响数据库的性能吗？
+---
+# 容器化会影响数据库性能吗？
+
+数据库容器化的浪潮正在兴起，如图1所示。数据库和分析技术已成为技术领域的重要组成部分。然而，一个普遍的困境依然存在：容器化是否会影响数据库性能？如果是，哪些因素会起作用？我们该如何应对容器化带来的性能和稳定性问题？
+
+<img src='/img/blogs/Usage-of-containerized-workloads-by-category.png'  alt="Usage of containerized workloads by category<sup>[4]</sup>"   />
+
+<span style={{ display: "flex", justifyContent: "center", margin: "-6px 0 10px", fontSize: "12px" }}>图 1. 按类别划分的容器化工作负载使用情况<sup>[4]</sup></span>
+
+## 容器化的优势与技术原理
+
+容器化是一种将应用程序及其所有必要组件打包成独立、可移植且不可变的运行时环境的智能方式。可以将其视为简化应用打包、部署和管理过程的技术魔法。这种魔法由Docker或Containerd等容器运行时引擎实现，这些引擎负责创建、部署和监管容器。
+
+Kubernetes（K8s）是容器编排领域的颠覆者。这个开源平台作为管理容器的中央枢纽，提供了可扩展的基础架构，能自动化多种操作。作为主流的容器编排工具，它处理从无缝部署到高效扩缩容、全面管理和智能调度的所有环节。
+
+### 容器化的优势
+
+1. 灵活性与可移植性
+  
+   数据库的部署和迁移变得更简单可靠。通过容器化，可以以基础设施即代码（IaC）的形式，通过声明式API指定数据库的运行时环境和版本。
+
+2. 资源隔离与可扩展性
+
+   借助容器运行时引擎，容器化确保每个数据库实例在具有专用资源的独立环境中运行。这种隔离最大限度地减少了工作负载间的干扰，实现了计算资源的高效利用，同时提升了性能和可靠性。
+
+3. 更友好的调度策略
+
+   容器化精细的资源管理为智能调度策略铺平了道路。它支持针对不同场景定制部署策略，例如混合离线和在线工作负载以平衡资源使用，或组合多种数据库工作负载以提高整体效率。此外，提高部署密度可以显著降低计算成本。
+
+### 容器化的技术原理与分类
+
+#### 虚拟化
+
+谈到容器，虚拟化不可忽视。虚拟化是一种抽象和隔离计算资源的技术，允许多个虚拟实例在同一物理服务器上同时运行。这是通过在硬件和操作系统之间使用称为Hypervisor的软件层实现的。该层将物理服务器划分为多个虚拟机，每个虚拟机都有自己独立的操作系统和资源。
+
+容器化则是一种更轻量级的虚拟化技术。它利用操作系统级虚拟化创建隔离空间，使应用程序及其所需环境能够运行。容器化常与虚拟化结合使用，以满足不同计算场景中对隔离的各种需求。
+
+#### 虚拟化+容器技术分类
+
+根据资源隔离和虚拟化方式，主流的虚拟化+容器技术可分为以下几类：
+
+请按照要求翻译以下内容，严格保持所有格式、间距和换行：
+
+1. 标准容器（Standard Containers）遵循开放容器倡议（OCI）标准，如Docker/Containerd，使用runC作为运行时，是当前K8s工作负载的首选方案。
+2. 用户态内核容器（User-Space Kernel Containers）如gVisor同样符合OCI标准，采用runsc作为运行时，以更好的隔离性和安全性著称，但会牺牲部分性能，适合低要求工作负载。
+3. 微内核容器（Microkernel Containers）采用Firecracker和Kata-Container等虚拟机管理程序，也符合OCI规范，使用runC或runv作为运行时，在安全性、隔离性和性能之间取得平衡，介于标准容器和用户态内核容器之间。
+4. 虚拟机（Virtual Machines）包括KVM、Xen、VMWare等，构成主流云服务商服务器的虚拟化基础层，通常作为K8s中的节点运行，比容器更接近底层。
+
+<img src='/img/blogs/Comparison-of-system-architecture.png'  alt="各类轻量级虚拟化方法的系统架构对比"  />
+
+<span style={{ display: "flex", justifyContent: "center", margin: "-6px 0 10px", fontSize: "12px" }}>图2. 各类轻量级虚拟化方法的系统架构对比。橙色代表内核空间，绿色代表用户空间。<sup>[2]</sup></span>
+
+
+#### OCI合规容器化技术探究
+
+以下段落分析了几种主流的符合OCI规范的容器化技术。
+
+1. RunC
+
+   RunC是符合OCI规范的容器运行时，作为Docker/Containerd核心容器引擎的关键组件。它利用Linux的Namespace和Cgroup功能为容器创建安全隔离环境。
+
+   在容器运行时，RunC通过Namespaces隔离容器的进程、网络、文件系统和进程间通信（IPC），同时使用Cgroups限制容器进程的资源消耗。这种隔离方式确保容器内的应用在相对独立的环境中运行，与主机系统及其他容器相互隔离。
+
+   虽然RunC的隔离方式会引入一定开销，但这种开销仅限于namespace映射、约束检查及部分统计流程，理论上微乎其微。此外，当系统调用涉及长耗时操作时，统计开销可忽略不计。总体而言，基于Namespace+Cgroup的隔离方式对CPU、内存和I/O性能影响极小。
+
+
+<img src='/img/blogs/Architecture-of-runc.png'  alt="RunC架构图"   />
+
+<span style={{ display: "flex", justifyContent: "center", margin: "-6px 0 10px", fontSize: "12px" }}>图3. RunC架构图</span>
+
+2. Kata Containers
+
+   想象一个安全的气泡，每个应用都在自己的空间运行，与外界隔绝——这正是Kata Containers通过虚拟机技术实现的场景。基于Intel的Clear Containers创新，Kata Containers将虚拟机监控器的轻量级管控与容器运行时的敏捷性相结合。
+
+   每个容器都拥有独立的虚拟机，包含专属内核和用户空间，确保应用被隔离在各自的安全区间。这种方式增强了隔离性，使容器化应用难以窥探主机资源。但需要权衡的是：与传统容器运行时相比，虚拟机的启动和管理额外步骤可能导致系统调用和I/O操作略有延迟。
+
+<img src='/img/blogs/Architecture-of-Kata-Containers.png'  alt="Kata Containers架构图"   />
+
+<span style={{ display: "flex", justifyContent: "center", margin: "-6px 0 10px", fontSize: "12px" }}>
+图4. Kata Containers架构图
+</span>
+
+3. gVisor
+
+gVisor 是一种前沿的容器运行时，它利用用户态虚拟化技术来提供增强的安全性和隔离性。gVisor 的核心是一个独特的"沙箱化内核"，运行在容器内部，模拟并管理操作系统的接口。
+
+   这种巧妙的设计确保容器化应用与主机内核保持隔离，防止它们直接干扰或访问主机资源。虽然这种方法显著提升了安全性，但需要注意的是，与标准容器运行时相比，它可能会导致系统调用和 I/O 性能开销的增加。
+
+<img src='/img/blogs/Architecture-of-gVisor.png'  alt="Architecture of gVisor"   />
+
+<span style={{ display: "flex", justifyContent: "center", margin: "-6px 0 10px", fontSize: "12px" }}>
+图 5. gVisor 架构
+</span>
+
+4. Firecracker
+
+   Firecracker 是专为无服务器计算和轻量级工作负载定制的虚拟化解决方案。它采用微虚拟机（micro-VM）概念，将每个容器视为独立的虚拟机。
+   
+   Firecracker 核心使用 KVM（基于内核的虚拟机）实现虚拟化。每个容器运行在自己的虚拟机中，拥有独立的内核和根文件系统，并通过单独的虚拟设备模拟器与主机系统交互。这种方法确保了更高层级的安全性和隔离性。然而，与传统容器运行时相比，Firecracker 可能会导致更高的系统调用和 I/O 操作开销。
+
+<img src='/img/blogs/Architecture-of-Firecracker.png'  alt="Architecture of Firecracker"   />
+
+<span style={{ display: "flex", justifyContent: "center", margin: "-6px 0 10px", fontSize: "12px" }}>
+图 6. Firecracker 架构
+</span>
+
+#### 基础原理对比
+
+表 1. 容器化中虚拟化与隔离实现方式概览
+
+|        | Containerd-RunC  | Kata-容器 |gVisor  |FireCracker-Containerd  |
+|:----------------|:---------| :---------| :---------| :---------|
+| 隔离机制 | 命名空间 + Cgroup| 客户机内核| 沙箱化内核| 微虚拟机| 
+| OCI 运行时| RunC| Clear Container + runv| runsc| RunC| 
+| 虚拟化方式| 命名空间| QEMU/Cloud Hypervisor+KVM| 基于规则的执行| rust-VMM + KVM| 
+| vCPU| Cgroup| Cgroup| Cgroup| Cgroup| 
+| 内存| Cgroup| Cgroup| Cgroup| Cgroup| 
+| 系统调用| 主机| 客户机 + 主机| Sentry| 客户机 + 主机| 
+| 磁盘 I/O| 主机| virtio| Gofer| virtio| 
+| 网络 I/O| 主机 + veth| tc + veth| netstack| tap + virtio-net
+
+此外，已有分析探讨了 Containerd 和 CRI-O 等容器引擎在实现方式上的差异<sup>[3][5]</sup>。不过这些比较超出了本文讨论范围，留给感兴趣的读者自行探索。
+
+## Kubernetes 与容器化对数据库的影响
+
+如前所述，容器化为数据库带来诸多优势。它简化了数据库的部署和管理流程，提供了统一且隔离的运行环境。这项技术使得数据库能够在多样且复杂的环境中轻松部署和灵活迁移，同时也为版本控制提供了更标准化、用户友好的方式。此外，借助 Kubernetes 的支持，数据库内部的各类角色与组件能够实现无缝、动态的整合。
+
+### 容器化为数据库带来的挑战
+
+然而，Kubernetes 与容器化的结合也为数据库带来了诸多挑战，这些挑战源于数据库运行方式的本质特性。与常见的无状态应用不同，数据库具有以下特征：
+
+1. **数据库是由多角色构成的复杂应用**
+
+   一个功能完备的数据库由多个角色组成，每个角色承担特定功能。例如在 MySQL 主从架构中，存在两个 MySQL 容器：一个作为主节点（Primary），另一个作为从节点（Secondary）。主节点提供读写能力，而从节点为只读状态并作为热备节点。这些角色具有差异性，准确表达其不对等关系至关重要。此外，在创建、重启、删除、备份和高可用性维护等操作中，如何正确管理这些角色也极为关键。其核心在于如何管理跨容器的数据依赖关系，而当前容器和 Kubernetes 尚未提供完善的抽象方案来解决此类相互依赖性问题。
+
+2. **数据库要求强大的数据持久性与一致性**
+
+   它们对存储有严苛要求，仅靠容器化技术无法满足，生产级负载还需要依赖容器存储接口（CSI）和持久卷（PersistentVolume）等附加组件。存储介质的选择也直接决定了数据库可支持的操作范围。例如云盘具备高持久性、快照备份能力，以及跨计算节点灵活挂载/卸载的特性，这对数据库备份、恢复和高可用保障非常有利；而本地盘在这些方面则存在局限。例如当节点故障时，本地盘上的数据副本可能永久丢失，这对维持高可用性构成重大挑战，且备份方案也会受限。不同的存储解决方案意味着不同级别的持久性、不同的数据库功能集和架构设计。
+
+3. **数据库是追求极致性能的资源消耗大户**
+
+   数据库存在多样化的性能需求，可分为 CPU、内存、网络和存储等类别。例如在处理海量数据分析时，ClickHouse 和 Greenplum 这类产品对 CPU 和存储 I/O 的需求极高；而 Redis 和 Memcached 等数据库则更依赖内存和网络 I/O；还有 MySQL 和 PostgreSQL 这类经典的传统 OLTP 数据库，同样对 CPU 和存储 I/O 有强需求。此外，即使在单一数据库内部，不同查询类型对资源的需求也可能存在巨大差异。
+
+4. **数据库具备特有的安全需求**
+
+   数据库中存储的数据通常具有高价值和高机密性，因此需要严格的环境隔离、数据访问控制和审计机制。
+
+总结来说，在容器与Kubernetes结合的平台上运行数据库时，数据库本身和容器+K8s系统都面临着一系列严峻挑战。数据库需要足够灵活以应对容器的短暂生命周期、浮动IP、底层基础设施的持续升级，以及不同环境下的性能复杂性。与此同时，容器化和K8s必须解决诸如引入角色、编排容器与全局一致数据状态的底层需求、满足高性能期望，以及符合严格安全措施等问题。
+
+鉴于前文提到的1、2、4点，KubeBlocks已制定了一套全面的解决方案。如需了解更多详情，可访问http://kubeblocks.io。现在回到讨论的核心，本文后续部分将更详细探讨容器化如何影响数据库性能。
+
+### Kubernetes与容器化如何影响数据库性能
+
+如前所述，数据库性能依赖于CPU、内存、存储和网络等关键要素。本节将深入探讨K8s和容器化可能如何从这些方面影响数据库性能。值得一提的是，虽然K8s具有某些可能影响性能的调度和亲和性策略，但这些策略与容器化并无本质关联，因此不在本文讨论范围内。
+
+接下来的部分将从上述视角展示容器化如何影响应用程序（尤其是数据库）的性能。这些章节汇集了大量行业研究论文和最新测试结果，以剖析数据背后的原因和差异。我们还进行了额外测试以填补空白，重点关注先前被忽视的特定领域，例如K8s的容器网络接口（CNI）如何影响网络效率。
+
+#### CPU
+
+测试服务器配置：四核超线程Intel Core i5-7500处理器，8GB内存，1TB硬盘，Ubuntu 18.04 LTS系统。
+
+测试案例：本实验数据和场景基于文献<sup>[1]</sup>的研究。案例1中，使用sysbench以四个并发线程执行质数计算，性能以每秒处理的事件数衡量。该测试案例旨在模拟纯计算型工作负载，大部分操作发生在用户空间，系统调用可忽略不计。因此理论上预期不同容器技术的性能表现应相近。
+
+结果：不同容器间的CPU性能差异可忽略不计，与裸金属系统相比仅有约4%的性能下降。
+
+分析：观察到的4%性能下降很可能源于Cgroup施加的CPU限制。当Sysbench的并发进程数与超线程数相同时，极易触发Cgroup限流。此时进程因限流必须等待一个CFS周期（默认为100ms）。由于Cgroup基于jiffies而非秒级分配资源，配置4个vCPU的容器几乎不可能达到400%的利用率。预期会出现一定性能损失，且可通过Cgroup内的cpu.stat文件追踪此类限流频率。
+
+<img src='/img/blogs/CPU-performance-Sysbench-benchmark.png'  alt="CPU性能（Sysbench基准测试）"   />
+
+<span style={{ display: "flex", justifyContent: "center", margin: "-6px 0 10px", fontSize: "12px" }}>图7. CPU性能（Sysbench基准测试）（王星宇 2022）</span>
+
+案例：使用Davi1d进行视频解码，视频文件大小为数百兆字节。该测试涉及大量系统调用，因为需要从磁盘读取数据。这些系统调用会在一定程度上影响应用程序的性能。
+
+结果：runC和Kata-QEMU的性能下降约4%，这与质数测试中观察到的结果一致。gVisor-ptrace表现出更显著的性能下降（13%），而gVisor-KVM提供的性能与裸机设置相当。
+
+分析：视频解码涉及顺序读取，Linux对顺序读取有预读优化。因此，大多数I/O操作直接从页缓存读取数据。RunC主要受Cgroup限制约束，而其他三种解决方案更多受系统调用执行方式的影响。论文未进一步分析gVisor-ptrace和gVisor-KVM之间的差异。gVisor使用名为gofer的组件进行文件系统操作，该组件有其独特的缓存方法。进一步分析可能需要关注gVisor的系统调用过程及其缓存机制。
+
+<img src='/img/blogs/CPU-performance-Dav1d-benchmark.png'  alt="CPU性能（Dav1d基准测试）"   />
+
+<span style={{ display: "flex", justifyContent: "center", margin: "-6px 0 10px", fontSize: "12px" }}>图8. CPU性能（Dav1d基准测试）（Xingyu Wang 2022）</span>
+
+#### 内存
+
+案例：RAMSpeed，包含4个子场景（复制、缩放、加法、三元组）。此处未详细说明底层原理的具体细节。
+
+结果：各种解决方案的性能相似。
+
+分析：一旦内存分配并处理了页错误，理论上容器化不应显著影响内存访问。真正影响内存性能的因素是mmap和brk等系统调用。但在本测试中，此类系统调用的比例极小。
+
+<img src='/img/blogs/Memory-access-performance.png'  alt="内存访问性能"   />
+
+<span style={{ display: "flex", justifyContent: "center", margin: "-6px 0 10px", fontSize: "12px" }}>
+图9. 内存访问性能（Xingyu Wang 2022）
+</span>
+
+案例：Redis-Benchmark，包含子场景（GET、SET、LPUSH、LPOP、SADD）。
+
+结果：K8s+容器化对runC和Kata-QEMU影响极小，而gVisor性能显著下降。gVisor-ptrace性能下降约95%，gVisor-KVM性能下降约56%。
+
+分析：Redis运行单线程应用程序，网络I/O负载较重。所有网络I/O操作均通过系统调用执行，这严重影响了gVisor的性能。原论文错误地将性能损失主要归因于内存分配。然而，Redis内部使用用户空间内存管理工具jemalloc。Jemalloc利用mmap系统调用从操作系统请求大块内存，然后在本地分配较小块。由于jemalloc成熟的内存分配和缓存机制，mmap系统调用的频率极低。当Redis满载时，网络I/O的CPU系统使用率约为70%。因此，gVisor在此场景下性能问题的主要原因是拦截系统调用的开销及其内部网络栈（称为netstack）。此评估还表明，gVisor不适合网络I/O需求密集的环境。
+
+<img src='/img/blogs/Redis-performance-for-different-container-runtimes.png'  alt="不同容器运行时的Redis性能"   />
+
+<span style={{ display: "flex", justifyContent: "center", margin: "-6px 0 10px", fontSize: "12px" }}>图10. 不同容器运行时的Redis性能（Xingyu Wang 2022）</span>
+
+#### 磁盘I/O
+
+案例：IOZone读写16GB文件。
+
+结果：K8s + 容器化对顺序读写性能影响可忽略不计。但Kata-QEMU表现出显著性能下降，降幅在12-16%之间。
+
+分析：大块数据的读写本质上是顺序操作。如前所述，顺序读取受益于操作系统预取数据的优化能力，且大部分顺序读写任务由页缓存处理。原研究检测了Kata-QEMU的影响，发现virtio-9p文件系统是根源。virtio-9p系统最初为网络应用设计，缺乏针对虚拟化环境的专门优化。
+
+<img src='/img/blogs/Disk-read-and-write-performance.png'  alt="Disk read and write performance"   />
+
+<span style={{ display: "flex", justifyContent: "center", margin: "-6px 0 10px", fontSize: "12px" }}>图11. 磁盘读写性能（王星宇 2022）</span>
+
+案例：在tmpfs（共享内存中的临时文件存储）上进行测试，以隔离并评估系统调用和内存拷贝对性能的影响。
+
+结果：除gVisor外，其他解决方案性能相近。
+
+分析：gVisor的系统调用开销更高，导致与redis-benchmark场景中观察到的类似性能下降。
+
+<img src='/img/blogs/Disk-read-and-write-performance-tmpfs-overlay.png'  alt="Disk read and write performance (tmpfs overlay)"   />
+
+<span style={{ display: "flex", justifyContent: "center", margin: "-6px 0 10px", fontSize: "12px" }}>图12. 磁盘读写性能（tmpfs覆盖层）（王星宇 2022）</span>
+
+案例：单线程SQLite数据插入基准测试，执行时间越短越好。
+
+结果：RunC表现与裸金属相当，Kata执行时间增加17%，gVisor执行时间增加125%。
+
+分析：数据库工作负载复杂，涉及CPU、内存、网络和磁盘I/O的组合，且频繁进行系统调用。在此类复杂环境中，gVisor可能并非最优选择。
+
+<img src='/img/blogs/Database-record-insertion-performance%20.png'  alt="Database record insertion performance"  />
+
+<span style={{ display: "flex", justifyContent: "center", margin: "-6px 0 10px", fontSize: "12px" }}>图13. 数据库记录插入性能（王星宇 2022）</span>
+
+#### 网络I/O
+
+案例：TCP流吞吐量测试，吞吐量越高越好。
+
+结果：gVisor网络性能较差，与redis-benchmark案例观察到的现象类似。其他解决方案受影响极小。
+
+分析：gVisor受限于其系统调用机制和netstack实现，导致整体吞吐量较低。
+
+<img src='/img/blogs/TCP_STREAM-network-performance.png'  alt="TCP_STREAM network performance"  />
+
+<span style={{ display: "flex", justifyContent: "center", margin: "-6px 0 10px", fontSize: "12px" }}>图14. TCP_STREAM网络性能（王星宇 2022）</span>
+
+案例：本案例评估TCP_RR、TCP_CRR和UDP_RR。RR代表请求与响应，TCP连接仅建立一次并复用后续请求。CRR表示每次测试创建新TCP连接。TCP_RR对应长连接场景，TCP_CRR对应短连接场景。
+
+结果：RunC表现与裸金属相当；Kata有轻微损耗；gVisor仍存在大幅性能下降，其底层原理与前述相同。
+
+<img src='/img/blogs/TCP_RR-TCP_CRR-and-UDP_RR-performance.png'  alt="TCP_RR, TCP_CRR and UDP_RR performance"   />
+
+<span style={{ display: "flex", justifyContent: "center", margin: "-6px 0 10px", fontSize: "12px" }}>图15. TCP_RR、TCP_CRR和UDP_RR性能（王星宇 2022）</span>
+
+#### CNI网络
+
+容器常与K8s配合使用，基于K8s的容器编排已成为事实标准。在K8s环境中，网络通常通过CNI与容器技术组合实现。市面上有多种广受欢迎的CNI方案，例如Calico、Flannel、Cilium等。最新版本中，Calico和Cilium都大量运用了eBPF（扩展版伯克利包过滤器）技术。尽管具体实现存在差异，这两种CNI在多数测试场景中表现出相近的性能。关于性能细节，请参阅[CNI基准测试：理解Cilium网络性能](https://cilium.io/blog/2021/05/11/cni-benchmark/)<sup>[6]</sup>。
+
+以下测试通过对比Cilium eBPF传统主机路由模式与Cilium eBPF模式，来考察CNI对数据库性能的具体影响。
+
+传统主机路由：
+
+在Cilium eBPF的传统主机路由模式中，iptables在数据包过滤和定向方面起着关键作用。它仍是设置和控制网络流量路由规则的重要工具。在此框架下，Cilium通过iptables规则将数据流导向自身的代理，随后由代理接管并进行流量处理和转发。
+
+该模式下，Cilium利用iptables的NAT（网络地址转换）功能来实现地址转换和服务负载均衡。
+
+基于eBPF的主机路由：
+
+在新的eBPF路由模式中，Cilium不再依赖iptables，而是利用Linux内核的扩展伯克利包过滤器（eBPF）进行数据包过滤和转发。eBPF主机路由允许绕过主机命名空间内所有iptables及上层协议栈开销，同时减少穿越虚拟网络接口时的部分上下文切换开销。网络数据包从面向网络的设备早期捕获后，直接递送至K8s Pod的网络命名空间。对于出站流量，数据包虽仍经过veth pair，但会被eBPF快速捕获并直接发往外部网络接口。eBPF直接查询路由表，确保该优化完全透明，并能与系统上运行的其他路由服务无缝集成。
+
+<img src='/img/blogs/Comparison-of-legacy-and-eBPF-container-networking.png'  alt="传统与eBPF容器网络对比"   />
+
+<span style={{ display: "flex", justifyContent: "center", margin: "-6px 0 10px", fontSize: "12px" }}>
+图16. 传统与eBPF容器网络对比<sup>[6]</sup>
+</span>
+
+测试环境：
+
+Kubernetes: v1.25.6  
+CNI: cilium:v1.12.14  
+
+节点CPU: Intel(R) Xeon(R) CPU E5-2680 v4 @ 2.40GHz  
+内存: 128G  
+
+Redis: 7.0.6, 2 vCPU, 最大内存: 2Gi  
+
+测试用例：
+
+表2. K8s中不同服务路由路径概览
+
+|        | 网络类型  | 源 |目标  |
+|:----------------|:---------| :---------| :---------| 
+| NodeLocal2HostPod	  | 主机网络  | 	节点  | 	本地Pod  | 
+| NodeLocal	  | 以太网	  | 节点  | 	本地进程  | 
+| PodLocal2Pod|	Pod|	Pod	|本地Pod|
+|Node2HostPod	|主机网络|	节点	|远端Pod|
+|NodeLocal2NodePort	|NodePort	|节点	|本地NodePort|
+|Node2Node	|以太网|	节点|	远端进程|
+|NodeLocal2Pod|	Pod	|节点	|本地Pod|
+|Pod2Pod	|Pod|	Pod	|远端Pod|
+|Node2NodePort|	NodePort	|节点|	远端NodePort|
+|Pod2NodePort	|Pod + NodePort	|Pod	|远端NodePort|
+|Node2Pod|	Pod|	节点	|远端Pod|
+
+测试结果：
+
+传统iptables主机路由模式：
+
+<img src='/img/blogs/Redis-benchmark-under-legacy-host-routing-with-iptables.png'  alt="iptables传统主机路由下的Redis基准测试"   />
+
+<span style={{ display: "flex", justifyContent: "center", margin: "-6px 0 10px", fontSize: "12px" }}>图17. iptables传统主机路由下的Redis基准测试</span>
+
+<img src='/img/blogs/Comparison-between-Host-network-and-Pod-network-under-legacy-host-routing.png'  alt="Comparison between Host network and Pod network under legacy host-routing"  />
+
+<span style={{ display: "flex", justifyContent: "center", margin: "-6px 0 10px", fontSize: "12px" }}>
+图 18. 传统主机路由模式下主机网络与Pod网络的性能对比
+</span>
+
+基于eBPF的主机路由：
+
+<img src='/img/blogs/Redis-benchmark-under-eBPF-based-host-routing.png'  alt="Redis benchmark under eBPF-based host-routing"  />
+
+<span style={{ display: "flex", justifyContent: "center", margin: "-6px 0 10px", fontSize: "12px" }}>
+图 19. 基于eBPF主机路由的Redis基准测试
+</span>
+
+<img src='/img/blogs/Comparison-between-Host-network-and-Pod-network-under-eBPF-based-host-routing.png'  alt="Comparison between Host network and Pod network under eBPF-based host-routing"  />
+
+<span style={{ display: "flex", justifyContent: "center", margin: "-6px 0 10px", fontSize: "12px" }}>
+图 20. 基于eBPF主机路由模式下主机网络与Pod网络的性能对比
+</span>
+
+分析：传统主机路由方式会拖累网络效率，导致Pod网络与主机网络之间存在高达40%的性能差距。而采用eBPF实现主机路由后，两者性能表现趋于接近。无论路由规则多么复杂，这种改进都能有效弥合两类网络之间的性能鸿沟。这一技术进步具有颠覆性意义，尤其对于Redis这类重度依赖网络性能的应用而言。
+
+#### 总结
+
+在CPU、内存和磁盘I/O方面，runC的表现最接近裸金属。Kata Containers性能略逊于runC，但提供了更好的安全性和隔离性。由于系统调用实现方式的差异，gVisor性能表现最差——这可能与其侧重安全特性有关，不过新版gVisor正在持续优化性能表现。
+
+网络性能需要特别关注，因为它受Kubernetes CNI（容器网络接口）影响。在将Cilium eBPF与runC结合的测试中发现，容器网络性能可以达到与主机网络相当的水平。此外，Cilium虽然支持Kata-containers，但与其他容器技术的兼容性存在一定限制。
+
+总体而言，runC在多方面都能提供媲美传统裸金属的性能表现，因此成为运行Kubernetes工作负载的首选方案。Kata Containers虽然在速度上稍逊于runC，但通过增强隔离性在效率与安全之间取得了良好平衡。而gVisor虽然能实现更灵活的隔离，却以性能下降为代价，更适合安全性优先于速度的场景。Firecracker通常适用于与Kata Containers相似的场景。
+
+因此，对于数据库工作负载，我们推荐优先考虑runC和Kata-containers方案。
+
+### 常见数据库性能问题
+
+数据库性能问题困扰着众多用户。本节将深入分析导致此类问题的典型场景，剖析数据库及其支撑基础设施的复杂工作机制，并重点介绍我们团队正在着力改进的领域。
+
+#### 磁盘I/O挂起
+
+设想这样一种场景：MySQL 正忙于将临时文件写入页缓存（page cache），这涉及到对Ext4文件系统元数据的频繁更新。在此类高强度操作期间，CPU和I/O都可能处于高负载状态。MySQL进程可能会频繁遭遇CPU节流（throttling），导致脏页（dirty pages）不断堆积。最终系统会尝试通过刷写这些脏页来清理缓存，但这可能使硬件通道被脏I/O操作完全占满。如果恰巧此时持有Ext4日志锁（Journal Lock）的进程被CPU暂停，就会导致使用同一文件系统的其他进程陷入冻结状态。若此类暂停频繁发生且持续时间较长，就可能引发IO挂起（IO hang）。该问题在共享本地磁盘的环境中尤为突出，例如裸金属系统或使用hostpath CSI存储的场景。目前公认的解决方案是通过Cgroup V2提供的BufferedIO流控功能来调节写入流量。
+
+如图所示，瓶颈往往并非源于单一问题，而是由多个相互关联的要素复杂交织形成。就磁盘I/O挂起而言，涉及多个组件：页缓存与内存和磁盘I/O交互；CPU节流与CPU调度机制相关；而Ext4日志系统则与锁机制紧密相连。正是这些因素相互影响的复杂网络，最终导致了全面的IO挂起。
+
+值得一提的是，许多数据库厂商推荐使用XFS作为首选文件系统来优化I/O操作。若想深入了解磁盘I/O对数据库的深远影响，可参阅[《Kubernetes上优化PG性能的测试报告》](./../blog/a-testing-report-for-optimizing-PG-performance-on-kubeblocks.md)<sup>[7]</sup>。
+
+#### 内存不足（OOM）
+
+采用Cgroup进行内存隔离后，操作系统的内存管理方式与传统裸金属环境截然不同。这种变化使得系统在内存分配和回收方面面临更多挑战和更高要求。
+
+假设某个Pod被配置为请求和限制均为1GB内存。在这1GB物理内存范围内，所有页面的分配与回收都必须完成。考虑到数据库本身就是内存消耗大户，即便启动一个空数据库就可能占用数百MB内存，这导致实际应用可用的内存空间极为有限。如果再加入监控、日志采集等通常以边车（sidecar）形式运行的附加任务，数据库很快就会面临极高的内存耗尽风险。
+
+但真正的恐怖之处并不在于内存不足（OOM）错误本身，而在于OOM发生前那段漫长而痛苦的性能衰退过程。对于数据库和同节点上的其他Pod而言，这无异于无尽的噩梦。在系统最终因OOM崩溃前，页面回收机制会陷入低效的慢路径（slow path），徒劳地反复尝试回收足够内存，直到达到设定阈值才放弃。在此期间，连接到数据库的客户端可能会遭遇大量事务超时和连接中断问题。
+
+被称为"页面回收慢路径"的过程不仅会干扰单个Cgroup命名空间，还会对整个操作系统产生更广泛的影响。这是因为操作系统在主机级别共享许多数据结构。以Pod的内存为例：理论上它可能属于特定的Cgroup命名空间，但实际上主机内核通过依赖全局锁的统一伙伴系统（Buddy System）来管理它。这意味着如果一个Pod面临严重的内存压力并触发页面回收慢路径，可能会无意中拖累其他运行良好的Pod的内存管理子系统。极端情况下，这可能导致整个节点上的数据库性能下降，而原因仅仅是一个Pod的内存限制设置过于严格。
+
+要彻底解决这个问题，需要更精细的隔离策略，例如采用微内核或虚拟机技术，为不同Pod分配独立的内存管理空间。此外，另一种方法是在OOM不可避免时，主动监控和评估数据库内的各项性能指标，从而确保采取"快速失败"策略。
+
+#### 连接数过多
+
+OLTP数据库通常具有专门预分配的缓冲池，其内存分配相对稳定。而容易波动的组件包括连接结构体、中间计算的工作内存、页表、页缓存等。
+
+对于PostgreSQL和Oracle等多进程模型数据库，每个数据库连接本质上都是一个独立进程。假设您有一个大型缓冲池（内存中的数据存储区），当创建新进程时，系统需要建立映射来跟踪所有这些数据，而这个映射表并不小。缓冲池中每4KB数据需要8字节的映射条目，因此页表与缓冲池的比例为8/4K=1/512。如果有512个连接，这些条目所需的内存就与缓冲池本身一样大！这会严重限制数据库的扩展能力，特别是在需要同时处理大量用户时，导致许多用户可能注意不到的巨大隐性内存成本。
+
+通常有两种策略可以解决这个问题。第一种策略是在数据库前部署代理层。该层拦截大量传入连接，但仅维持少量到实际数据库后端的连接。例如，如果代理保持P个到后端数据库的连接，但可以处理来自应用程序的C个连接（C >> P），这种连接复用能显著减轻数据库负载。第二种策略使用大页（Hugepages），如果大小为2M，页表与缓冲池的比例将变为1/256k（从8/2M计算得出）。这种调整几乎消除了页表开销，使多进程模型能够支持更多连接。然而，大页技术自身也存在复杂性，会给资源管理带来额外压力。因此，基于代理的方案通常被视为更优且用户友好的选择。
+
+多线程处理主要有两种方式。第一种方式为每个连接分配一个线程。虽然这避免了连接数增加时复制页表的问题，但可能导致资源冲突和过多上下文切换，进而降低性能。不过，通过引入代理可以缓解这些问题。第二种方式使用线程池，由较少的线程（P）处理较多的连接（C）（C >> P），Percona MySQL等系统采用这种方式。
+
+无论是代理还是线程池，都旨在通过不同的实现方式实现连接复用。此外，组合使用这些策略可以提升系统容量并降低总体负载。
+
+表 3. 不同数据库进程-连接模型概览
+
+<table>
+  <tr>
+    <th> </th>
+    <th> </th>
+    <th>连接数:进程数</th>
+    <th> 页表</th>
+    <th> 备注</th>
+  </tr>
+  <tr>
+    <td rowspan="2">多进程</td>
+    <td>代理</td>
+    <td>C:P</td>
+    <td>*P</td>
+    <td>C >> P</td>
+  </tr>
+  <tr>
+    <td>直连</td>
+    <td>C:C</td>
+    <td>*C</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td rowspan="2">多线程</td>
+    <td>线程池</td>
+    <td>C:P</td>
+    <td>*1</td>
+    <td>C >> P</td>
+  </tr>
+  <tr>
+    <td>每线程</td>
+    <td>C:C</td>
+    <td>*1</td>
+    <td></td>
+  </tr>
+</table>
+
+#### TCP 重传
+
+网络主要从两个方面影响数据库性能。
+
+一是延迟。网络延迟会影响数据传输时长，进而影响客户端的整体响应时间。随着延迟增加，在相同时间内处理相同数量的请求需要更多连接，导致内存使用量增加、上下文切换频繁和资源争用加剧，这些都会随时间推移降低性能。
+
+二是带宽。网络传输质量和相关延迟很大程度上取决于单个TCP连接的可用带宽，以及网络设备和交换机端口的峰值带宽能力。这些环节中任何一处出现拥塞都可能导致操作系统内核或硬件层面的丢包，进而引发重传和乱序问题，进一步增加延迟并引发连锁性能问题。
+
+除性能外，网络问题还会影响系统可用性和稳定性，例如因高延迟导致心跳超时触发故障转移，或造成主备系统间数据复制出现显著延迟。
+
+#### CPU 调度等待
+
+在某些基于虚拟机的容器化方案中，容器内运行的进程在宿主机内核中没有直接对应实体。对宿主机内核而言，它只能看到属于虚拟机虚拟化层的进程。如果在虚拟机内发现某个进程处于"运行中"状态，并不代表它在宿主机上实际运行。这是因为宿主机和虚拟机运行在两个独立的CPU调度系统上。只有当虚拟机内进程处于"运行中"状态，且宿主机上对应的虚拟机进程也处于活跃状态时，该进程才真正开始执行。
+
+从进程被设为"运行中"到真正执行之间的间隔称为额外调度等待时间。这种延迟会影响数据库性能，在性能关键场景中，可以通过降低宿主机负载或配置虚拟机CPU亲和性等策略来减轻影响。
+
+#### 锁与闩锁
+
+在数据库技术中，锁(Lock)用于保护资源，而闩锁(Latch)用于保护临界区。尽管目的不同，但两者在操作系统层面依赖相同的底层机制。例如在Linux中，常用futex来实现更高层次的互斥锁和条件变量。
+
+当CPU、I/O和内存等资源充足时，数据库的可扩展性通常受限于其自身的事务和锁系统。以TPC-C基准测试为例：大多数单机数据库的可扩展性上限在32核(64超线程)~64核(128超线程)之间。超过32核后，额外CPU对数据库整体性能的提升效果会逐渐减弱。
+
+此问题的讨论与容器关系不大，本文不再赘述。
+
+#### 各类性能瓶颈
+
+表 4. 不同数据库性能瓶颈概览
+
+请按照要求翻译以下内容，严格保持所有格式、间距和换行：
+
+|       |  存储引擎 |磁盘 I/O |I/O 单元 |进程模型 |性能瓶颈 |
+|:----------------|:---------| :---------| :---------|:---------|:---------|
+|MySQL|InnoDB|DirectIO + BufferedIO|页|多线程|I/O 带宽 + 锁 + 连接数|
+|PostgreSQL|HeapTable|BufferedIO|页|多进程|I/O 带宽 + 锁 + 连接数|
+|MongoDB|WiredTiger|BufferedIO/DirectIO|页|多线程|I/O 带宽 + 锁 + 连接数|
+|Redis|RDB + Aof|BufferedIO|键值对|单线程*|CPU 系统态（网络）|
+
+- 对于 MySQL，监控溢出临时文件的管理至关重要。这些文件通过 BufferedIO 管理，如果没有通过 Cgroup 进行适当限制，可能会导致操作系统中脏页快速累积。这将形成一个性能瓶颈：刷脏页操作几乎会耗尽存储设备的全部带宽，导致常规请求处理变慢甚至停滞——这是典型的磁盘 I/O 挂起案例。
+- PostgreSQL 采用多进程模型，因此需要重点监控连接数和页表大小。虽然 Hugepages 可以缓解页表的部分压力，但其本身也存在缺陷。使用 pgBouncer 等代理实现连接池是更好的解决方案。当启用全页写入时，PostgreSQL 对 I/O 带宽有极高需求，此时 I/O 带宽会成为瓶颈。当 I/O 和连接数都运作良好时，在高并发场景下 PostgreSQL 的内部锁机制可能成为瓶颈。更多细节可参考[《Kubernetes 上优化 PG 性能的测试报告》](./../blog/a-testing-report-for-optimizing-PG-performance-on-kubeblocks.md)<sup>[7]</sup>。
+- MongoDB 通常能提供稳定的性能表现，但容易遇到磁盘 I/O 和连接数限制的问题。WiredTiger 存储引擎在缓存与 I/O 之间的流量管理方面表现优异，即使在高 I/O 资源需求下也能最大限度避免 I/O 挂起。但需要注意，OLTP（在线事务处理）数据库的工作负载比 MongoDB 更为复杂，保持平衡更具挑战性。
+- Redis 的性能瓶颈通常出现在网络层面，因此必须密切关注应用与 Redis 服务器之间的延迟。延迟质量取决于网络连接状况。当 Redis 满负荷运行时，网络栈会消耗超过 70% 的 CPU 资源。为解决这一难题并提升网络性能，Redis 6.0 推出了新特性：网络 I/O 多线程。尽管有此升级，Redis 的核心工作线程仍保持单线程设计，在提升整体效率的同时保留了平台标志性的简洁性。
+
+
+
+## 摘要
+
+本文基于对行业研究的全面梳理，通过测试容器与网络CNI的组合填补了研究空白，深入探讨了容器化对CPU、内存、磁盘I/O和网络性能的影响机制，并提出了解决方案。测试数据分析表明，runC + cilium eBPF提供了接近裸金属性能的容器化方案。对于追求更高安全隔离性的场景，Kata-containers展现出卓越的替代价值。
+
+进一步地，本文在容器化基础上对数据库常见性能瓶颈进行了理论分析，指出重负载数据库对Host Kernel的复杂依赖关系，特别关注了页表、日志锁、TCP重传和CPU调度等待等易被忽视的因素。这些问题大多并非容器化特有，而是普遍存在的共性问题。最后，本文对几款热门数据库进行了定性分析，并基于团队多年运维经验总结了常见问题，希望这些问题能持续获得关注并在架构层面得到解决。
+
+数据库容器化已成为高频讨论话题。做，还是不做？这个问题萦绕在每个决策者心头。从我们的视角看，数据库容器化在性能、稳定性、有状态依赖等关键挑战正被逐个击破。只要有需求，每个挑战都会得到完美解答。
+
+# 参考文献
+
+[1] Wang, Xing et al. “Performance and isolation analysis of RunC, gVisor and Kata Containers runtimes.” Cluster Computing 25 (2022): 1497-1513.
+
+[2] Goethals, Tom et al. “A Functional and Performance Benchmark of Lightweight Virtualization Platforms for Edge Computing.” 2022 IEEE International Conference on Edge Computing and Communications (EDGE) (2022): 60-68.
+
+[3] Espe, Lennart et al. “Performance Evaluation of Container Runtimes.” International Conference on Cloud Computing and Services Science (2020).
+
+[4] 10 insights on real-world container use: https://www.datadoghq.com/container-report/.
+
+[5] Kube container Performance CRI-O vs containerD maybe alternatives: https://www.reddit.com/r/kubernetes/comments/x75sb4/kube_container_performance_crio_vs_containerd/.
+
+[6] CNI Benchmark: Understanding Cilium Network Performance: https://cilium.io/blog/2021/05/11/cni-benchmark/.
+
+[7] A testing report for optimizing PG performance on Kubernetes: https://kubeblocks.io/blog/A-testing-report-for-optimizing-PG-performance-on-Kubernetes.

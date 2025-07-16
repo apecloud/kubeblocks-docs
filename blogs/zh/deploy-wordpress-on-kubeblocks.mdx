@@ -1,0 +1,214 @@
+---
+authors:
+  image_url: https://avatars.githubusercontent.com/u/57531827?v=4
+  name: skyrise-l
+  url: https://github.com/skyrise-l
+date: 2024-07-16
+description: 本博客介绍如何使用KubeBlocks MySQL Operator在Kubernetes上部署高可用WordPress站点。
+image: /img/blogs/thumbnails/blog-wordpress.png
+slug: deploy-wordpress-on-kubeblocks
+tags:
+- Kubernetes
+- operator
+- MySQL
+- KubeBlocks
+- WordPress
+title: 使用KubeBlocks MySQL Operator在Kubernetes上部署高可用性WordPress站点
+---
+# 使用 KubeBlocks MySQL Operator 在 Kubernetes 上部署高可用 WordPress 站点
+
+（保持原始格式的空行与间距）
+
+##  简介
+
+###  WordPress
+
+WordPress 是全球最受欢迎的内容管理系统（CMS）。自 2003 年发布以来，它已成为构建网站的首选工具。其庞大的插件和主题生态系统让用户可以轻松扩展功能并增强网站外观。活跃的 WordPress 社区还提供了丰富的资源和支持，进一步降低了开发和维护的难度。
+
+因此，WordPress 成为全球数百万用户的选择，在网站构建领域占据主导地位。
+
+###  什么是 KubeBlocks？
+
+KubeBlocks 是一个开源的 Kubernetes Operator，用于管理多种数据库和有状态中间件。它支持超过 30 种数据库系统，包括 MySQL、PostgreSQL、Redis、MongoDB、Kafka、ClickHouse 和 Elasticsearch。KubeBlocks 的核心理念是使用一组通用的抽象 API（CRD）来描述这些不同数据库引擎之间的共享属性。这使得数据库供应商和开发者可以通过插件（addons）来适配引擎间的差异。
+
+###  为什么使用 KubeBlocks？
+
+当使用 Bitnami 镜像部署 WordPress 时，内置的 MariaDB 数据库提供了开箱即用的解决方案。然而，这种方式存在以下缺点：
+
+- **高可用性限制**：Bitnami 镜像中的 MariaDB 实例通常部署在单个节点上。如果该节点出现问题，可能导致网站服务中断。此外，内置的 MariaDB 缺乏自动故障转移机制。
+- **资源竞争**：将 MariaDB 数据库和 WordPress 服务托管在同一个 Pod 中会导致资源争用，使资源分配变得复杂。
+- **扩展性差**：虽然 MariaDB 支持扩展，但水平扩展数据库（通过添加实例来提高性能和容量）非常复杂，需要额外的管理和配置工具。
+- **监控和管理不足**：内置的 MariaDB 缺乏全面的监控和管理功能，难以及时发现和解决性能问题或故障。
+
+而 KubeBlocks 可以有效解决这些不足：
+
+- **高可用性**：KubeBlocks 可以为 WordPress 和数据库分别提供高可用性解决方案，提升整体系统可靠性。
+- **资源隔离**：KubeBlocks 将 WordPress 和数据库运行在独立的 Pod 中，提供更好的资源隔离，避免争用。
+- **强大的扩展性**：KubeBlocks 支持独立扩展 WordPress 和数据库副本，允许根据需求动态调整资源。
+- **易于管理**：KubeBlocks 只需一条命令即可为 WordPress 创建所需的数据库集群。同时，它还提供了数据库的内置备份和监控功能，提高管理效率。
+
+## 部署
+
+### 安装 KubeBlocks
+
+KubeBlocks 包含一个专用的命令行工具 kbcli。如果您尚未安装 KubeBlocks，只需几条简单命令即可同时安装 kbcli 和 KubeBlocks。
+在安装前，请确保您的环境满足 [KubeBlocks 的要求](https://kubeblocks.io/docs/preview/user_docs/installation/install-with-kbcli/install-kubeblocks-with-kbcli#environment-preparation)。
+
+1. 安装 kbcli。
+
+```bash
+   curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash
+   ```
+
+2. 安装 KubeBlocks。
+
+```bash
+   kbcli kubeblocks install
+   ```
+
+3. 检查 KubeBlocks 是否安装成功。
+
+```bash
+   kbcli kubeblocks status
+   ```
+
+您可以参考官方文档了解详细操作步骤。
+
+- [安装 kbcli](https://kubeblocks.io/docs/preview/user_docs/installation/install-with-kbcli/install-kbcli)
+- [安装 KubeBlocks](https://kubeblocks.io/docs/preview/user_docs/installation/install-with-kbcli/install-kubeblocks-with-kbcli)
+
+### 创建高可用集群
+
+在部署 WordPress 之前，您需要创建一个数据库集群来管理 WordPress 的后端数据。您可以使用 [kbcli](https://kubeblocks.io/docs/preview/user_docs/kubeblocks-for-apecloud-mysql/cluster-management/create-and-connect-an-apecloud-mysql-cluster) 或 [kubectl](https://kubeblocks.io/docs/preview/api_docs/kubeblocks-for-apecloud-mysql/cluster-management/create-and-connect-an-apecloud-mysql-cluster) 创建该集群。
+
+1. 创建高可用集群。
+
+   此处我们使用 KubeBlocks 提供的 `apecloud-mysql` 插件为 WordPress 创建一个 MySQL 集群。通过 kbcli，您可以快速创建一个具有多副本、高可用且生产就绪的 MySQL 数据库集群。
+
+   以下示例将副本数设置为 3，这将启用 RaftGroup 模式并创建一个包含三个副本的 MySQL 集群。
+
+```bash
+   # Enable addon (enabled by default)
+   kbcli addon install apecloud-mysql
+
+   # Create a cluster and you can set parameters, such as creating a cluster with three replicas by --set replicas=3
+   kbcli cluster create apecloud-mysql --cluster-definition=apecloud-mysql --set replicas=3
+   ```
+
+检查集群状态并等待所有 Pod 处于运行状态。
+
+```bash
+   kubectl get pods
+   ```
+
+![Figure 1](/img/blogs/blog-wordpress-1.png)
+
+2. 获取访问地址
+
+   您可以直接通过Pod或服务访问MySQL集群。本示例将演示通过服务访问集群的方式。
+
+   运行以下命令获取服务地址，其格式为`apecloud-mysql.default（命名空间）.svc.cluster.local（默认后缀）`。
+
+```bash
+   kubectl get services
+   ```
+
+
+
+```bash
+      kbcli cluster connect apecloud-mysql
+      ```
+
+2. 在数据库中，执行以下SQL语句创建用户并授予权限。根据需要设置数据库权限。
+
+```bash
+      CREATE USER 'myadmin'@'%' IDENTIFIED BY 'password';
+      GRANT ALL PRIVILEGES ON *.* TO 'myadmin'@'%';
+      FLUSH PRIVILEGES;
+      create database wordpress;
+      ```
+
+3. 运行以下命令创建 `mysql-secret` 并设置键值 `mariadb-password=password`。在安装过程中，WordPress 将使用此密码键值作为数据库密码。请注意密码键名必须为 mariadb-password，用户名不会从此 secret 中读取。
+
+（严格保持原有格式和换行，技术术语按规范翻译）
+
+```bash
+      kubectl create secret generic mysql-secret --from-literal=mariadb-password=password
+      ```
+
+:::注意
+
+您可以创建一个 Secret 以便在后续 WordPress 安装过程中引用，从而避免以明文形式传输密码。
+
+:::
+
+2. 安装 WordPress。
+
+   1. 安装 WordPress 并配置参数。
+
+```bash
+      helm install my-release oci://registry-1.docker.io/bitnamicharts/wordpress \
+      --set mariadb.enabled=false \
+      --set externalDatabase.host=apecloud-mysql.default.svc.cluster.local \
+      --set externalDatabase.database=wordpress \
+      --set externalDatabase.port=3306 \
+      --set externalDatabase.user="myadmin"
+      --set externalDatabase.existingSecret="mysql-secret" \
+      --set replicaCount=2
+      ```
+
+参数说明：
+
+      - `mariadb.enabled`：设置为 `false` 可禁用 MariaDB 安装，转而使用外部数据库服务。
+      - `host`：使用先前获取的 MySQL 服务地址来访问 MySQL 服务，例如 `apecloud-mysql.default.svc.cluster.local`。
+      - `user`、`database`、`port`：根据实际需求设置这些参数。
+      - `existingSecret`：这是安全传输密码的推荐方式。您可以在此引用先前创建的 secret 来传输密码，以避免明文传输。注意 secret 必须包含连接密码。设置 `existingSecret` 后，password 字段将被忽略。
+      - `password`：这是可选参数，因为本文推荐使用 `existingSecret` 来避免明文传输。此外，当设置了 `existingSecret` 时，password 字段将被忽略。
+      - `replicaCount`：表示要启动的 WordPress 实例 Pod 数量。
+
+   2. 检查 Pod 状态并确保所有 Pod 均已就绪且正在运行。
+
+```bash
+      kubectl get pods
+      ```
+
+![Figure 3](/img/blogs/blog-wordpress-3.png)
+
+   3. 进入 WordPress 容器。您可以远程查看数据库，并查看 WordPress 的数据库信息。
+
+```bash
+      kubectl exec -it wordpress-584444f68b-sxcss  -- bash
+      mysql -h  apecloud-mysql.default.svc.cluster.local  -u Wordpress
+      ```
+
+![Figure 4](/img/blogs/blog-wordpress-4.png)
+
+现在，WordPress 和数据库集群已成功部署。
+
+### 高可用性演示
+
+本博客将通过删除一个 Pod 来模拟故障转移。
+
+```bash
+kubectl delete pod apecloud-mysql-0
+```
+
+删除 Pod `apecloud-mysql-0` 后，可以看到它有 3/4 个容器已就绪，其中 MySQL 容器不可用。
+
+![Figure 5](/img/blogs/blog-wordpress-5.png)
+
+但这不会影响数据库的整体连接性。
+
+此外，可以观察到 `apecloud-mysql-1` 成为了新的主 Pod，这展示了 KubeBlocks 强大的故障转移能力。
+
+![Figure 6](/img/blogs/blog-wordpress-6.png)
+
+### 集群扩缩容
+
+当遇到性能问题或类似情况时，可能需要对数据库进行扩容。KubeBlocks 提供了便捷的扩缩容命令 `kbcli vscale`，可以轻松增加计算资源。
+
+```bash
+kbcli cluster vscale mycluster --components=apecloud-mysql --cpu=500m --memory=500Mi
+```
+
+有关更多数据库参数设置，请参考[官方文档](https://github.com/bitnami/containers/tree/main/bitnami/WordPress#connect-WordPress-container-to-an-existing-database)。

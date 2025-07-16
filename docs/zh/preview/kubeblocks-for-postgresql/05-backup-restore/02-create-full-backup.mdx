@@ -1,0 +1,254 @@
+---
+description: KubeBlocks 中通过 Backup API 和 OpsRequest API 创建并验证 PostgreSQL 集群完整备份的逐步指南
+keywords:
+- PostgreSQL
+- Full Backup
+- KubeBlocks
+- Kubernetes
+- Database Backup
+- XtraBackup
+sidebar_label: 创建完整备份
+sidebar_position: 2
+title: 在KubeBlocks上为PostgreSQL集群创建完整备份
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# 在KubeBlocks上为PostgreSQL创建全量备份
+
+本指南演示如何通过以下两种方式为KubeBlocks上的PostgreSQL集群创建和验证全量备份（使用`pg-basebackup`方法）：
+- Backup API（直接备份操作）
+- OpsRequest API（带增强监控的托管备份操作）
+
+我们将在[从全量备份恢复](./05-restoring-from-full-backup)指南中介绍如何从备份恢复数据。
+
+## 先决条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署PostgreSQL集群
+
+import CreatePGCluster from '../_tpl/_create-pg-replication-cluster.mdx'
+
+<CreatePGCluster />
+
+## 验证部署
+
+import VerifyPGCluster from '../_tpl/_verify-pg-replication-cluster.mdx'
+
+<VerifyPGCluster />
+
+## 备份前提条件
+
+创建备份前请确保：
+1. 备份仓库已配置：
+   - 存在`BackupRepo`资源
+   - 集群与仓库之间的网络连通性
+   - `BackupRepo`状态显示"Ready"
+
+2. 集群准备就绪：
+   - 集群状态为"Running"
+   - 没有正在进行的操作（扩缩容、升级等）
+
+## 识别备份配置
+
+检查可用的备份策略和计划：
+
+```bash
+# 列出备份策略
+kubectl get backuppolicy -n demo -l app.kubernetes.io/instance=pg-cluster
+
+# 列出备份计划
+kubectl get backupschedule -n demo -l app.kubernetes.io/instance=pg-cluster
+```
+
+预期输出：
+```bash
+NAME                                            BACKUP-REPO   STATUS      AGE
+pg-cluster-postgresql-backup-policy                           Available   58m
+
+NAME                                              STATUS      AGE
+pg-cluster-postgresql-backup-schedule             Available   60m
+```
+
+查看BackupPolicy CR 'pg-cluster-postgresql-backup-policy'中支持的备份方法：
+
+```bash
+kubectl get backuppolicy pg-cluster-postgresql-backup-policy -n demo -oyaml | yq '.spec.backupMethods[].name'
+```
+
+示例输出：
+```bash
+pg-basebackup
+wal-g
+wal-g-incremental
+archive-wal
+wal-g-archive
+```
+
+
+**备份方法列表**
+
+KubeBlocks PostgreSQL支持以下备份方法：
+
+| 功能           | 方法          | 描述 |
+|-------------------|-----------------|-------------|
+| 全量备份       | pg-basebackup   | 使用PostgreSQL工具`pg_basebackup`创建基础备份 |
+| 全量备份       | wal-g  | 使用`wal-g`创建全量备份（需要WAL-G配置） |
+| 持续备份 | postgresql-pitr | 定期将PostgreSQL预写日志(WAL)文件上传到备份仓库，通常与`pg-basebackup`配合使用|
+| 持续备份 | wal-g-archive | 定期将PostgreSQL预写日志(WAL)文件上传到备份仓库，通常与`wal-g`配合使用|
+
+## 通过Backup API备份
+
+### 1. 创建按需备份
+
+`pg-basebackup`方法使用PostgreSQL原生工具`pg_basebackup`。
+
+应用以下清单创建备份：
+
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: Backup
+metadata:
+  name: pg-cluster-pg-basebackup
+  namespace: demo
+spec:
+  backupMethod: pg-basebackup
+  backupPolicyName: pg-cluster-postgresql-backup-policy
+  # 决定当备份自定义资源(CR)被删除时，备份仓库中的备份内容是否应被删除。
+  # 支持的值为`Retain`和`Delete`。
+  # - `Retain`表示保留备份内容及其在备份仓库中的物理快照。
+  # - `Delete`表示删除备份内容及其在备份仓库中的物理快照。
+  deletionPolicy: Delete
+```
+
+### 2. 监控备份并验证完成
+
+跟踪进度直到状态显示"Completed"：
+
+```bash
+kubectl get backup pg-cluster-pg-basebackup  -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                       POLICY                                METHOD          REPO            STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
+pg-cluster-pg-basebackup   pg-cluster-postgresql-backup-policy   pg-basebackup   <BACKUP_REPO>   Completed   4722262      10s        Delete            2025-05-16T02:53:45Z   2025-05-16T02:53:55Z
+```
+
+### 3. 验证备份
+
+通过以下方式确认成功完成：
+- 备份状态显示"Completed"
+- 备份大小符合预期
+- 检查BackupRepo中的文件
+
+`Backup`资源记录以下详细信息：
+- 存储路径
+- 时间范围
+- 备份文件大小
+
+
+## 通过OpsRequest API备份
+
+### 1. 创建按需备份
+
+使用OpsRequest API执行'pg-basebackup'方法备份：
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-cluster-backup
+  namespace: demo
+spec:
+  clusterName: pg-cluster
+  force: false
+  backup:
+    backupPolicyName: pg-cluster-postgresql-backup-policy
+    backupMethod: pg-basebackup
+    deletionPolicy: Delete
+    retentionPeriod: 1mo
+  type: Backup
+```
+
+### 2. 监控备份进度
+
+#### 1. 监控操作状态
+
+实时跟踪备份进度：
+```bash
+kubectl get ops pg-cluster-backup  -n demo -w
+```
+
+预期输出：
+```bash
+NAME                TYPE     CLUSTER      STATUS    PROGRESS   AGE
+pg-cluster-backup   Backup   pg-cluster   Succeed   -/-        35s
+```
+
+- STATUS为'Succeed'表示备份操作成功完成。
+
+#### 2. 验证完成
+
+检查最终备份状态：
+
+```bash
+kubectl get backup -n demo -l operations.kubeblocks.io/ops-name=pg-cluster-backup
+```
+
+示例输出：
+```bash
+NAME                                    POLICY                                METHOD          REPO           STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
+backup-demo-pg-cluster-20250516025810   pg-cluster-postgresql-backup-policy   pg-basebackup   <BACKUP_REPO>  Completed   4725590      10s        Delete            2025-05-16T02:58:10Z   2025-05-16T02:58:20Z   2025-06-15T02:58:20Z
+```
+- 备份状态应显示'Completed'。
+
+### 3. 验证备份
+
+通过以下方式确认成功完成：
+- 备份状态显示"Completed"
+- 备份大小符合预期
+- BackupRepo中的文件
+
+`Backup`资源记录以下详细信息：
+- 存储路径
+- 时间范围
+- 其他元数据
+
+## 故障排除
+
+当遇到备份问题时，例如备份状态为`Failed`或长时间卡在`Running`状态，请按照以下步骤诊断和解决问题：
+
+1. 检查Backup资源中的错误事件或状态更新：
+  ```bash
+  kubectl describe backup <BACKUP_NAME> -n demo
+  ```
+
+2. 验证备份作业状态并检查其日志：
+  ```bash
+  kubectl -n demo get job -l app.kubernetes.io/instance=pg-cluster,app.kubernetes.io/managed-by=kubeblocks-dataprotection
+  ```
+  并检查Pod日志：
+  ```bash
+  kubectl -n demo logs <POD_NAME>
+  ```
+3. 查看KubeBlocks控制器日志获取详细错误信息：
+  ```bash
+  kubectl -n kb-system logs deploy/kubeblocks -f
+  ```
+
+## 总结
+
+本指南涵盖：
+1. 部署PostgreSQL复制集群
+2. 使用以下方式创建全量备份：
+   - 直接Backup API
+   - 托管OpsRequest API
+3. 监控和验证备份
+
+您的PostgreSQL数据现已安全备份，可在需要时进行恢复。

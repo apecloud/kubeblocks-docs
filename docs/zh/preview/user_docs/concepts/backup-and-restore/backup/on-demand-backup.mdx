@@ -1,0 +1,142 @@
+---
+description: 如何通过快照和备份工具按需备份数据库
+keywords:
+- backup
+- on-demand backup
+- snapshot backup
+- backup tool
+sidebar_label: 按需备份
+sidebar_position: 4
+title: 按需备份
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 按需备份
+
+KubeBlocks 支持按需备份。您可以通过指定 `--method` 来自定义备份方式。以下示例分别展示了使用备份工具和存储卷快照两种方法。
+
+## 备份工具
+
+以下命令使用 `xtrabackup` 备份方式创建一个名为 `mybackup` 的备份。
+
+<Tabs>
+
+<TabItem value="kubectl" label="kubectl" default>
+
+创建备份：
+```bash
+kubectl apply -f - <<EOF
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: Backup
+metadata:
+  name: mybackup
+  namespace: default
+spec:
+  backupMethod: xtrabackup
+  backupPolicyName: mycluster-mysql-backup-policy
+  deletionPolicy: Delete
+EOF
+```
+
+查看备份：
+```bash
+kubectl get backup mybackup
+>
+NAME       POLICY                          METHOD       REPO     STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
+mybackup   mycluster-mysql-backup-policy   xtrabackup   kb-oss   Completed   1632402      10s        Delete            2025-05-26T10:14:33Z   2025-05-26T10:14:42Z
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+创建备份
+```bash
+kbcli cluster backup mycluster --name mybackup --method xtrabackup
+>
+Backup mybackup created successfully, you can view the progress:
+	kbcli cluster list-backups --names=mybackup -n default
+```
+
+查看备份
+```bash
+kbcli cluster list-backups --names mybackup
+>
+NAME       NAMESPACE   SOURCE-CLUSTER   METHOD       STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATE-TIME                  COMPLETION-TIME              EXPIRATION
+mybackup   default     mycluster        xtrabackup   Completed   1632402      10s        Delete            May 26,2025 18:14 UTC+0800   May 26,2025 18:14 UTC+0800
+```
+
+</TabItem>
+
+</Tabs>
+
+## 存储卷快照备份
+
+:::note
+**前提条件**
+使用存储卷快照备份需要：
+- StorageClass 必须支持存储卷快照功能
+
+请查阅 CSI 驱动及其功能支持列表：
+https://kubernetes-csi.github.io/docs/drivers.html
+
+:::
+
+要使用快照创建备份，需在 YAML 配置文件中将 `backupMethod` 或在 kbcli 命令中将 `--method` 参数设置为 `volume-snapshot`。
+
+<Tabs>
+
+<TabItem value="kubectl" label="kubectl" default>
+
+```bash
+# 创建备份
+kubectl apply -f - <<EOF
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: Backup
+metadata:
+  name: my-snapshot-backup
+  namespace: default
+spec:
+  backupMethod: volume-snapshot
+  backupPolicyName: mycluster-mysql-backup-policy
+EOF
+```
+
+
+查看备份
+```bash
+kubectl get backup my-snapshot-backup
+>
+NAME                 POLICY                           METHOD            REPO   STATUS    TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME   EXPIRATION-TIME
+my-snapshot-backup   mycluster2-mysql-backup-policy   volume-snapshot          Running                           Delete            2025-05-26T10:30:10Z
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+```bash
+# 创建备份
+kbcli cluster backup mycluster --name my-snapshot-backup --method volume-snapshot
+>
+Backup mybackup created successfully, you can view the progress:
+        kbcli cluster list-backups --names=mybackup -n default
+
+# 查看备份
+kbcli cluster list-backups --names=my-snapshot-backup -n default
+>
+NAME                 NAMESPACE   SOURCE-CLUSTER   METHOD            STATUS    TOTAL-SIZE   DURATION   DELETION-POLICY   CREATE-TIME                  COMPLETION-TIME   EXPIRATION
+my-snapshot-backup   default     mycluster        volume-snapshot   Running                           Delete            May 26,2025 18:30 UTC+0800
+```
+
+</TabItem>
+
+</Tabs>
+
+:::caution
+
+1. 使用快照创建备份时，请确保所用存储支持快照功能，否则备份可能失败。
+
+2. 通过 `kbcli` 手动创建的备份不会自动删除，需要您手动清理。
+
+:::

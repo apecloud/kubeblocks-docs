@@ -1,0 +1,308 @@
+---
+description: 了解如何以最短停机时间部署和升级由KubeBlocks管理的PostgreSQL集群。
+hidden: true
+keywords:
+- KubeBlocks
+- PostgreSQL
+- Upgrade
+- Rolling Upgrade
+- Kubernetes
+sidebar_label: 次版本升级
+sidebar_position: 6
+title: 在KubeBlocks中升级PostgreSQL集群的次版本
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 在 KubeBlocks 中升级 PostgreSQL 集群的次版本
+
+本指南将带您完成由 KubeBlocks 管理的 PostgreSQL 集群的部署及次版本升级过程，确保升级期间实现最小化停机时间。
+
+为了将对数据库可用性的影响降至最低，升级流程会优先从副本（从节点实例）开始。待所有副本升级完成后，系统会执行主从切换操作，将其中一个已升级的副本提升为主节点。切换过程非常迅速，通常能在几百毫秒内完成。切换完成后，原主节点实例将进行升级，从而确保对应用程序的干扰最小化。
+
+## 前提条件
+
+在开始之前，请确保满足以下要求：
+
+- **环境准备**：
+    - 已部署并运行一个 Kubernetes 集群。
+    - 已配置 `kubectl` CLI 工具，能够与集群通信。
+    - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。具体安装步骤请参考链接指引。
+
+- **命名空间准备**：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## 部署 PostgreSQL 复制集群
+
+KubeBlocks 采用声明式方式管理 PostgreSQL 集群。以下是一个部署包含 2 个副本（1 个主节点，1 个从节点）的 PostgreSQL 集群配置示例。
+
+应用以下 YAML 配置来部署集群：
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: pg-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: postgresql
+  topology: replication
+  componentSpecs:
+    - name: postgresql
+      serviceVersion: 14.7.2  # 此处使用 14.7.2 版本用于测试次版本升级
+      labels:
+        apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
+      disableExporter: true
+      replicas: 2
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+说明：
+1. 配置中明确指定了集群拓扑为复制模式（replication）
+2. 通过 replicas: 2 设置了一个主节点和一个从节点的复制集群
+3. 为测试次版本升级功能，特别指定了 PostgreSQL 14.7.2 版本
+4. 资源配置部分定义了每个 Pod 的 CPU 和内存限制
+5. 通过 volumeClaimTemplates 声明了 20Gi 的持久卷存储
+
+## 验证部署
+监控集群状态直至其转为运行状态（Running）：
+```bash
+kubectl get cluster pg-cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+pg-cluster   postgresql           Delete               Creating   50s
+pg-cluster   postgresql           Delete               Running    4m2s
+```
+当集群状态显示为 Running 时，表示您的 PostgreSQL 集群已准备就绪可供使用。
+
+:::tip
+如果是首次创建集群，可能需要一定时间拉取镜像后才能进入运行状态。
+
+:::
+
+
+## 列出所有可用的 PostgreSQL 版本
+
+使用以下命令可查看当前 KubeBlocks 安装支持的 PostgreSQL 版本列表：
+```bash
+kubectl get cmpv postgresql
+```
+预期输出示例：
+```bash
+NAME         VERSIONS                                              STATUS      AGE
+postgresql   16.4.0,15.7.0,14.8.0,14.7.2,12.15.0,12.14.1,12.14.0   Available   33d
+```
+
+注意：实际支持的版本列表可能因您使用的 KubeBlocks 版本不同而有所差异。
+
+## PostgreSQL 版本升级指南
+
+### 识别当前主从实例
+
+执行以下命令查看集群实例的角色分布：
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster -L kubeblocks.io/role
+```
+
+预期输出：
+```bash
+NAME                      READY   STATUS    RESTARTS   AGE   ROLE
+pg-cluster-postgresql-0   4/4     Running   0          66m   primary
+pg-cluster-postgresql-1   4/4     Running   0          65m   secondary
+```
+
+### 检查同组件定义的兼容版本
+
+**步骤1.** 获取与指定`ComponentVersion`关联的`ComponentDefinition`列表
+
+```bash
+kubectl get cmpv postgresql -ojson | jq -r '.metadata.annotations."componentversion.kubeblocks.io/compatible-definitions"' | tr ',' '\n'
+```
+
+<details>
+<summary>示例输出</summary>
+```text
+postgresql-12-1.0.0
+postgresql-14-1.0.0
+postgresql-15-1.0.0
+postgresql-16-1.0.0
+```
+</details>
+
+**步骤2.** 获取与指定`ComponentDefinition`关联的兼容版本
+
+```bash
+kubectl get cmpv postgresql -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("postgresql-14"))) | .releases[]'
+```
+
+该命令返回与名为`postgresql-14`的`ComponentDefinition`兼容的版本：
+
+<details open>
+<summary>示例输出</summary>
+```text
+14.7.2
+14.8.0
+```
+</details>
+
+### 执行版本升级
+
+**预期工作流程**：
+1. 从节点副本优先升级（逐个进行）
+2. 待从节点健康后最后升级主节点
+3. 集群状态从`Updating`转变为`Running`
+
+通过修改Cluster资源中的serviceVersion字段实现版本升级。本例将PostgreSQL从`14.7.2`升级至`14.8.0`
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  方案一：使用运维请求(OpsRequest)
+
+  可通过创建OpsRequest执行升级：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: pg-upgrade
+    namespace: demo
+  spec:
+    # 指定目标Cluster资源名称
+    clusterName: pg-cluster
+    type: Upgrade
+    upgrade:
+      components:
+      - componentName: postgresql
+        # 指定组件目标服务版本
+        serviceVersion: "14.8.0"
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+  方案二：使用声明式Cluster API
+
+  也可通过修改集群配置中的`spec.componentSpecs.serviceVersion`字段实现：
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  metadata:
+    name: pg-cluster
+    namespace: demo
+  spec:
+    terminationPolicy: Delete
+    clusterDef: postgresql
+    topology: replication
+    componentSpecs:
+      - name: postgresql
+        serviceVersion: 14.8.0  # 设置为14.8.0进行升级
+        labels:
+          apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
+        disableExporter: true
+        replicas: 2
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "0.5Gi"
+          requests:
+            cpu: "0.5"
+            memory: "0.5Gi"
+        volumeClaimTemplates:
+          - name: data
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 20Gi
+  ```
+  </TabItem>
+</Tabs>
+
+### 监控升级过程
+升级过程中观察Pod状态变化：
+```bash
+kubectl get pods -n demo -w
+```
+预期输出：
+```bash
+NAME                      READY   STATUS    RESTARTS   AGE
+pg-cluster-postgresql-0   4/4     Running   0          97s
+pg-cluster-postgresql-1   4/4     Running   0          50s
+pg-cluster-postgresql-1   3/4     Running   2 (2s ago)   68s
+pg-cluster-postgresql-0   4/4     Running   2 (6s ago)   2m6s
+```
+**关键观察点**：
+- 从节点副本('pg-cluster-postgresql-1')优先升级
+- 发生主从切换操作，原从节点成为新主节点
+- 最终原主节点('pg-cluster-postgresql-0')完成升级
+
+升级完成后角色发生切换：
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster -L kubeblocks.io/role
+```
+更新后的角色分布：
+```bash
+NAME                      READY   STATUS    RESTARTS   AGE   ROLE
+pg-cluster-postgresql-0   4/4     Running   0          2m    secondary
+pg-cluster-postgresql-1   4/4     Running   0          2m    primary
+```
+
+## 验证
+
+### 检查集群状态
+确保集群处于 Running（运行中）状态：
+```bash
+kubectl get cluster pg-cluster -n demo -w
+```
+预期输出：
+```bash
+NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+pg-cluster   postgresql                Delete               Running   17m
+```
+
+### 验证 PostgreSQL 版本
+获取 PostgreSQL 的 postgres 账户凭据：
+```bash
+NAME=`kubectl get secrets -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.username}' | base64 -d`
+PASSWD=`kubectl get secrets -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.password}' | base64 -d`
+```
+
+连接到升级后的实例并验证 PostgreSQL 版本：
+```bash
+kubectl exec -ti -n demo pg-cluster-postgresql-1 -- \
+  env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql -c "SELECT VERSION();"
+```
+
+## 总结
+在本指南中，您学习了如何：
+- 使用 KubeBlocks 部署 PostgreSQL 复制集群
+- 以最小停机时间执行 PostgreSQL 次版本的滚动升级
+- 验证升级是否成功
+
+这种滚动升级策略通过先升级副本、执行主从切换，再升级原主节点的方式，确保了高可用性。

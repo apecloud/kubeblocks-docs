@@ -1,0 +1,42 @@
+KubeBlocks 采用声明式方法来管理 Qdrant 集群。  
+以下是部署一个包含 3 个副本的 Qdrant 集群的示例配置。
+
+应用以下 YAML 配置来部署集群：
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: qdrant-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: qdrant
+  topology: cluster
+  componentSpecs:
+    - name: qdrant
+      serviceVersion: 1.10.0
+      replicas: 3
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+注：  
+1. 配置中 `terminationPolicy: Delete` 表示删除集群时会同时删除相关资源  
+2. `topology: cluster` 指定了集群拓扑模式  
+3. 每个 Qdrant 副本申请了 0.5 核 CPU 和 0.5Gi 内存资源  
+4. 通过 `volumeClaimTemplates` 为每个 Pod 声明了 20Gi 的持久卷存储

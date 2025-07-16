@@ -1,0 +1,197 @@
+---
+authors:
+  name: Yuxing Liu
+date: 2024-11-25
+description: 基于快手在规模化实施云原生Redis的实践经验，本文深入探讨了Kubernetes环境下有状态服务管理的实用解决方案与关键考量。
+image: /img/blogs/thumbnails/blog-redis-kuaishou-cover.jpeg
+slug: manage-large-scale-redis-on-k8s-with-kubeblocks
+tags:
+- Redis
+- Kubernetes
+- Kuaishou
+- Stateful service
+- StatefulSet
+- Large-scale Redis
+- Operator
+- Database
+title: 使用Operator在Kubernetes上管理大规模Redis集群——快手的实践方案
+---
+# 使用Operator在Kubernetes上管理大规模Redis集群：快手实践
+
+> **关于快手**  
+>  
+> 快手是中国及全球领先的内容社区和社交平台，致力于成为世界上最以客户为中心的公司。快手以尖端AI技术为支撑的技术基础设施，持续推动创新和产品升级，丰富其服务内容和应用场景，创造卓越的客户价值。通过快手平台上的短视频和直播，用户可以分享生活、发现所需商品和服务并展示才华。通过与内容创作者和企业紧密合作，快手提供覆盖娱乐、在线营销服务、电子商务、本地服务、游戏等广泛领域的技术、产品和服务，满足多样化用户需求。
+
+> **关于作者**  
+>  
+> 刘宇星是快手的高级软件工程师。宇星曾就职于阿里云和快手的云原生团队，专注于云原生领域，在云原生技术的开源、商业化和规模化方面积累了丰富经验。宇星是CNCF/Dragonfly项目的维护者之一，也是CNCF/Sealer项目的维护者之一。目前，他致力于推动快手有状态业务的云原生转型。
+
+作为一款流行的短视频应用，快手高度依赖Redis来为用户提供低延迟响应。在私有云基础设施上运行，如何以最少人工干预实现大规模Redis集群的自动化管理是一个重大挑战。一个颇具前景的解决方案应运而生：使用Operator在Kubernetes上运行Redis。
+
+虽然容器化应用和Nginx等无状态服务已成为标准实践，但在Kubernetes上运行数据库和Redis等有状态服务仍存在争议。基于快手将Redis从物理机迁移到云原生解决方案的经验，本文探讨了使用KubeBlocks Operator在Kubernetes上管理有状态服务的解决方案和关键考量。
+
+## 背景
+
+随着技术的发展，快手的底层基础设施正在向云原生技术栈转型。基础设施团队为应用和PaaS系统提供容器和Kubernetes支持。虽然快手的无状态服务几乎已完全采用Kubernetes，但云原生有状态服务的转型之路仍面临诸多挑战。
+
+以Redis为例，这是快手使用最广泛的有状态服务之一，其特点是规模庞大。在这种体量下，即使是很小的成本节约也能为公司带来可观的财务收益。在长期规划中，快手认识到在Kubernetes上运行Redis的巨大潜力，特别是通过提高资源利用率来实现成本优化。本文分享了快手将Redis迁移至Kubernetes的经验，包括解决方案、遇到的挑战以及相应的应对策略。
+
+## 快手如何在 Kubernetes 上运行 Redis？
+
+### Redis 部署架构
+
+为了满足灵活的分片管理需求，并支持热点迁移和隔离，快手采用了水平分片、主从高可用的 Redis 架构，由 Server、Sentinel 和 Proxy 三个组件构成。
+
+![Figure 2](/img/blogs/blog-redis-kuaishou-2.png)
+
+### 分析：快手对 Redis Operator 的需求是什么？
+
+**首先，Redis Pod 管理需要分层处理**
+
+Redis Pod 管理需要分为两层：第一层管理多个分片，第二层管理单个分片内的多个副本。它需要支持动态调整分片数量和每个分片的副本数量，以适应不同的工作负载和使用场景。
+
+这意味着，在 Operator 的实现中，需要用一种工作负载（如 StatefulSet）来管理每个分片内的多个副本。在此基础上，还需要再构建一层（某种 CRD 对象）来实现对整个 Redis 集群中多个分片的管理。
+
+**其次，在故障和 Day-2 运维中确保数据一致性和可靠性**
+
+在分片或副本的生命周期变更过程中，需要确保数据的一致性和可靠性。例如，分片扩缩容需要进行数据重平衡，而分片内实例扩缩容可能需要进行数据备份和恢复。
+
+因此，Operator 需要支持分片和副本两个层级的生命周期钩子，能够在不同生命周期阶段执行自定义的数据管理操作。
+
+**第三，支持拓扑感知的服务发现和金丝雀发布**
+
+分片内多个 Redis Pod 之间的拓扑关系可能会因为高可用切换、升级、扩缩容等事件动态变化。服务发现和金丝雀发布等功能都依赖于实时拓扑。
+
+为了实现这一点，Operator 需要支持动态拓扑感知，通过引入角色探测和角色标记能力，实现基于动态拓扑的服务发现和金丝雀发布。
+
+这些需求超出了任何现有开源 Redis Operator 的能力范围，通常需要开发一个高度复杂的 Kubernetes Operator 才能满足。但对于大多数平台团队来说，从零开始构建一个稳定且 API 设计良好的 Operator 是一项艰巨的任务，因为这需要同时具备 Kubernetes 和数据库专业知识，并经过大量实际场景测试。
+
+### KubeBlocks 解决方案进入视野
+
+在评估了多个方案后，**KubeBlocks** 作为一个开源的 Kubernetes 数据库 Operator 引起了我们的注意。KubeBlocks 的独特之处在于其可扩展性，它提供了一种 **Addon 机制**，允许你使用它的 API 来描述一个数据库的 Day-1 和 Day-2 特性与行为，从而实现在 Kubernetes 上的全生命周期管理。正如其官网所述，KubeBlocks 的愿景是 "Run any database on Kubernetes"。这种灵活性使我们能够定制 KubeBlocks 的 Redis Addon 来适配我们内部的 Redis 集群部署架构。
+
+KubeBlocks 的 API 设计也非常符合我们对 Redis 集群管理的需求：
+
+**1. InstanceSet：比 StatefulSet 更强大的工作负载**
+
+**InstanceSet** 是 KubeBlocks 内部用来替代 StatefulSet 的一种工作负载，专门用于管理数据库 Pod。与 StatefulSet 类似，InstanceSet 支持管理多个 Pod（称为 Instance）。关键区别在于，InstanceSet 能够追踪每个数据库 Pod 的 **Role**（例如 primary、secondary）。对于不同的数据库（因为 KubeBlocks 支持多种类型），KubeBlocks 允许自定义 Pod 的角色、角色探测方式，以及在金丝雀升级时基于角色的升级顺序。InstanceSet 控制器会在运行时动态探测角色变化，并将角色信息作为标签更新到 Pod 的元数据中，从而实现基于角色的 Service selector。
+
+StatefulSet 为每个实例分配一个全局有序且递增的标识符。这种机制提供了稳定的网络和存储身份，集群内的拓扑结构依赖于这些标识符。然而，由于运行时拓扑会动态变化，StatefulSet 提供的固定标识符可能无法满足需求。例如，StatefulSet 标识符不能存在空缺，也不允许删除中间位置的标识符。
+
+快手平台团队向 KubeBlocks 社区贡献了多个 PR，包括允许同一 InstanceSet 内的 Pod 拥有不同配置、按指定序号下线 Pod（无需先下线更高序号的 Pod）、控制升级并发度等增强功能。这些改进使得 InstanceSet 更能适应快手在生产环境中管理大规模 Redis 集群的需求。
+
+**2. 分层 CRD 和控制器设计：Component 与 Cluster 对象**
+
+KubeBlocks 采用 **Component**、**Cluster** 多层 CRD 结构来管理数据库集群的复杂拓扑，这一设计与快手 Redis 集群部署架构完美契合：
+
+- **Component**：代表 Redis 集群中的一组 Pod。例如 Proxy Pod 构成一个 Component，Sentinel Pod 构成另一个 Component，而 Redis-Server Pod 则按分片组织为一个或多个 Component，每个分片对应一个 Component。Component 的数量会随着分片数量动态变化。
+
+> ⛱️ **分片（Shard）**：一种特殊的 Component，定义了水平扩展数据库的分片行为。每个分片共享相同配置。以快手 Redis Cluster 为例，每个分片（Component）包含一个主 Pod 和一个副本 Pod。扩容时会新增一个分片（Component），缩容时则移除一个分片，实现分片级别的扩缩容和生命周期管理。
+
+- **Cluster**：代表整个 Redis 集群，整合了 Proxy、Server 和 Sentinel 等 Component，同时管理它们的启动拓扑和关联关系。
+
+这种分层设计简化了扩缩容操作，增强了生命周期管理能力，并为支持生产环境中复杂的 Redis 部署架构提供了所需的灵活性。
+
+通过与 KubeBlocks 社区的紧密协作，我们通过以下方式实现了 Redis 集群的编排：
+
+![Figure 3](/img/blogs/blog-redis-kuaishou-3.png)
+
+Redis Cluster 包含三个 Component：`redis-server`、`redis-sentinel` 和 `redis-proxy`。每个 Component 内部使用 **InstanceSet** 而非 **StatefulSet** 来管理 Pod。
+
+### 使用 Kubernetes Federation 管理超大规模 Redis 集群
+
+在快手，多个应用以多租户模式运行在单个超大规模 Redis 集群中。例如，单个集群可能包含超过 10,000 个 Pod，超出了单个 Kubernetes 集群的承载能力。因此，我们不得不将 Redis 集群部署在多个 Kubernetes 集群上。关键在于，我们需要对 Redis 应用用户隐藏多集群管理的复杂性。
+
+#### 联邦 K8s 集群架构
+
+幸运的是，快手的 Kubernetes 基础设施团队提供了成熟的 Kubernetes 联邦服务，具备统一调度和统一视图能力：
+
+- **统一调度**：联邦作为集中式资源调度入口，支持跨多个成员集群的资源调度。
+- **统一视图**：联邦作为统一的资源访问点，可以无缝获取联邦和成员集群中的资源。
+
+因此，问题转化为：如何将基于 KubeBlocks 的 Redis 集群管理方案融入快手内部的联邦集群架构？以下是整体架构：
+
+![Figure 4](/img/blogs/blog-redis-kuaishou-4.png)
+
+联邦 Kubernetes 集群作为中央控制平面，负责管理多个成员集群。其主要职责包括跨集群编排、资源分发以及 Redis 集群的生命周期管理。具体功能如下：
+
+- **跨集群实例分发与管理**：根据资源需求，将 Redis 组件（Proxy、Sentinel、Server）分配到不同成员集群。
+- **并发控制**：协调跨集群操作，确保一致性并避免冲突。
+- **状态聚合**：收集并汇总各成员集群中所有组件的状态，提供统一视图。
+
+成员 K8s 集群是实际部署和管理 Redis Pod（实例）的独立 Kubernetes 集群。每个成员集群负责运行 Redis 集群的一部分。其职责包括：
+
+- **实例管理**：通过 InstanceSet 对 Redis Pod（Proxy、Sentinel、Server）进行本地化管理。
+
+因此，我们将 KubeBlocks Operator 拆分为两部分并部署在不同 Kubernetes 集群中：
+
+- **InstanceSet 控制器**部署在成员集群中，负责本地 Pod 管理。
+- **Cluster 控制器**和 **Component 控制器**部署在联邦集群中，处理全局资源编排与协调。
+
+KubeBlocks 的分层 CRD 和控制器设计是实现此部署模式的关键。若采用单体式 CRD 和控制器设计，则无法实现联邦 Kubernetes 集群与成员 Kubernetes 集群的分离部署。
+
+#### Fed-InstanceSet 控制器
+
+由于可能存在多个成员 Kubernetes 集群，需要将联邦 Kubernetes 集群中的 InstanceSet 拆分为多个子 InstanceSet，每个成员集群分配一个。同时，原 InstanceSet 管理的实例（Pod）需要分配到成员集群的新 InstanceSet 中。
+
+为此，**快手开发了 Fed-InstanceSet 控制器**来管理联邦集群与成员集群间的交互。其核心职责包括：
+
+- **调度决策**：根据预定义策略决定各成员集群应部署的实例数量。
+- **InstanceSet 拆分与分发**：将联邦集群的 InstanceSet 拆分并分发至对应成员集群。
+
+为实现实例拆分并确保 Redis 实例在成员集群中的全局唯一性和正确顺序，快手向 KubeBlocks 社区提交了 PR，为 InstanceSet 新增 **Ordinals** 字段，用于精确分配实例索引。
+
+**Fed-InstanceSet 控制器**利用该字段为每个成员集群分配唯一索引范围，确保跨集群实例的唯一性和顺序正确性。
+
+![Figure 5](/img/blogs/blog-redis-kuaishou-5.png)
+
+## 讨论：有状态服务适合 Kubernetes 吗？
+
+### 在 Kubernetes 上运行有状态服务的优势与风险
+
+我们认为，在 Kubernetes 上运行有状态服务具有显著优势：
+
+- **提升资源利用率**：通过合并多个小型资源池进行统一调度，并实现应用与 Redis 或 Redis 与其他有状态服务的共置，优化资源使用，显著降低成本。
+- **提高运维效率**：借助 Kubernetes 的声明式 API 和 Operator 模式，以基础设施即代码（IaC）的方式管理 Redis 服务，减少人工干预需求。
+- **降低维护成本**：以往 Redis 运行在物理机上，需要专人管理硬件基础设施。通过将基础设施统一容器化并迁移至 Kubernetes，降低了基础设施相关的维护成本，同时提升了整体管理效率。
+
+尽管在 Kubernetes 上运行有状态服务带来巨大收益，但潜在风险仍需谨慎评估，特别是对于数据库和 Redis 这类对重要性和稳定性要求极高的有状态服务。主要挑战包括：
+
+1. **性能下降风险**：与直接运行在物理机相比，容器化运行进程引入了额外抽象层，尤其是覆盖网络带来的延迟，这引发了服务性能可能下降的担忧。
+2. **稳定性顾虑**：在 Kubernetes 基础设施上构建数据库平台（DBaaS），会让人担忧数据库或 Redis 的稳定性（可用性和可靠性）是否可能受到影响。
+3. **运维复杂度增加**：当出现问题时，是否需要同时具备数据库和 K8s 技术专长的专家才能有效定位和解决问题？
+
+![图 1](/img/blogs/blog-redis-kuaishou-1.png)
+
+以下部分将更详细探讨这些风险。
+
+### 降低在 Kubernetes 上运行 Redis 的风险
+
+#### 性能
+
+与传统基于主机的部署相比，在云原生架构中容器化 Redis 引入了额外的抽象层。然而，行业基准测试和快手内部测试表明，性能差异通常控制在 10% 以内，这在大多数用例中往往可以忽略不计。虽然这种差异通常可以接受，但仍建议各组织自行进行性能测试，以确保方案满足其工作负载的特定需求。
+
+#### 稳定性
+
+将有状态服务迁移至 Kubernetes 后，通过自动化极大提升了运维效率。但这也使得执行流程更加不透明，即便是小的配置变更也可能影响大量实例。为降低意外场景（如 Pod 驱逐、人为错误或 Operator 缺陷）带来的稳定性风险，快手利用 Kubernetes API 服务器中的 **Admission Webhook** 机制拦截并验证变更请求。这种方式允许快手直接拒绝任何未授权的操作。考虑到跨多个可用区（AZs）的多集群 Kubernetes 环境，确保跨集群的变更控制至关重要。为此，快手开发了名为 **kube-shield** 的内部风险缓解系统。
+
+此外，值得一提的是，快手通过改进对细粒度调度分布的支持，并引入基于资源利用率的负载均衡特性，进一步提升了可用性和稳定性。
+
+#### 运维复杂度
+
+将基于主机的系统迁移至基于Kubernetes的环境，同时确保持续维护，需要同时具备Redis和K8s技术的深厚专业知识。仅依赖Redis团队或K8s团队独立提供支持将面临挑战。合理的职责划分不仅能提升效率，还能让各团队充分发挥其专业领域的优势。
+
+例如，在快手的云原生Redis解决方案中：
+
+- **Redis团队**：专注于定义Redis集群对象，并将其运维经验封装为声明式配置
+- **容器云团队**：负责Kubernetes侧的工作，包括开发和维护Operator、处理调度问题以及保障集群生命周期
+
+![Figure 6](/img/blogs/blog-redis-kuaishou-6.png)
+
+## 总结
+
+有状态服务的云原生化转型是一段充满挑战的复杂旅程，需要仔细权衡其利弊。但对快手而言，其价值不言而喻。从Redis开始，快手与KubeBlocks社区紧密合作，实现了一个高性价比的云原生解决方案。
+
+展望未来，快手计划以此经验为基础，推动更多有状态服务（如数据库和中间件）的云原生化转型，从而在技术和成本效益上获得双重收益。
+
+在8月的KubeCon香港峰会上，快手与KubeBlocks团队进行了联合演讲。如果您感兴趣，可以回看[演讲内容](https://kubeblocks.io/blog/migrate-redis-at-kuaishou-from-bare-metal-to-k8s)获取更多洞见。

@@ -1,0 +1,98 @@
+---
+description: 版本说明 v0.9.1
+keywords:
+- kubeblocks
+- release notes
+sidebar_position: 9
+title: v0.9.1
+---
+# KubeBlocks 0.9.1 (2024-10-18)
+
+我们很高兴地宣布 KubeBlocks v0.9.1 正式发布！
+
+在此版本中，KubeBlocks 进一步优化了其 API 和插件系统，为您带来新功能和更好的用户体验。本次更新包含通过 Cluster API 启停集群、OpsRequest 中的实例重建能力、Redis 的时间点恢复（PITR）和基于键的恢复等新特性。我们还修复了一些错误并进行了多项改进以增强整体功能。
+
+阅读完整的[版本说明](../upgrade/upgrade-to-v09-version)并升级到 KubeBlocks v0.9.1，探索更多功能！
+
+## 亮点功能
+
+### KubeBlocks 核心
+
+- 支持通过 Cluster API 启停集群
+
+  该特性提供了新的操作选项，以满足不同场景下的需求。
+
+- 增强 OpsRequest 中的实例重建能力
+
+  结合 KubeBlocks 的 [InstanceSet](https://kubeblocks.io/blog/instanceset-introduction)，该功能大幅提升了系统在故障场景下的恢复能力。
+
+### 插件系统
+
+- Redis
+
+  支持时间点恢复（PITR）和基于键的恢复。
+
+- ZooKeeper
+
+  新增备份支持。
+
+- 新版本支持
+
+  MySQL 和 PostgreSQL 插件支持更多版本。有关插件的最新版本信息，请参阅[插件列表](https://github.com/apecloud/kubeblocks-addons?tab=readme-ov-file#supported-add-ons)。
+
+## 变更内容
+
+### 新特性
+
+#### KubeBlocks 核心
+
+- OpsDefinition 和 BackupPolicyTemplate 支持组件名前缀和正则匹配 [#8174](https://github.com/apecloud/kubeblocks/pull/8174)
+
+  现在支持通过组件名前缀和正则表达式进行匹配，提供更高的灵活性。
+
+- 高可用性（HA）记录 [#8089](https://github.com/apecloud/kubeblocks/pull/8089)
+
+  KubeBlocks 新增高可用性记录功能，增强系统容错能力和可靠性。
+
+- 支持通过 Cluster API 启停集群 [#7783](https://github.com/apecloud/kubeblocks/pull/7783)
+
+  简化集群管理操作。
+
+- 支持实例重建时的水平扩展 [#7710](https://github.com/apecloud/kubeblocks/pull/7710)
+
+  通过 OpsRequest API 中的 inPlace 字段，可选择原地重建或远程重建实例。
+
+- 自动清理失败的 OpsRequests [#7796](https://github.com/apecloud/kubeblocks/pull/7796)
+
+  新增自动清理机制，优化资源管理。
+
+- 备份失败时的日志收集 [#8208](https://github.com/apecloud/kubeblocks/pull/8208)
+
+  支持在备份操作失败时收集相关日志。
+
+#### 插件系统
+
+- Redis 插件
+  - 单机副本支持时间点恢复（PITR）[#7998](https://github.com/apecloud/kubeblocks/pull/7998)
+  - 支持基于键的恢复 [#8129](https://github.com/apecloud/kubeblocks/pull/8129)
+- 新增 Loki 支持 [#707](https://github.com/apecloud/kubeblocks-addons/pull/707)
+- 新增 MinIO 支持 [#926](https://github.com/apecloud/kubeblocks-addons/pull/926)
+- 新增 RabbitMQ 支持 [#746](https://github.com/apecloud/kubeblocks-addons/pull/746)
+- 支持 MySQL 8.4 [#987](https://github.com/apecloud/kubeblocks-addons/pull/987)
+- 支持 PostgreSQL 16 [#973](https://github.com/apecloud/kubeblocks-addons/pull/973)
+- ZooKeeper 插件
+  - 新增备份支持 [#794](https://github.com/apecloud/kubeblocks-addons/pull/794), [#851](https://github.com/apecloud/kubeblocks-addons/pull/851)
+
+### 其他改进
+
+- ComponentDefinition 不可变性检查
+
+  新增默认的不可变性检查机制，防止意外修改，提升系统稳定性。
+
+- 移除 Application 插件 (#7866)
+
+  该插件已从代码库中移除且不再默认安装，但仍可手动安装使用。
+
+## 升级至 v0.9.1
+
+请参考[升级至 KubeBlocks v0.9.x](../upgrade/upgrade-to-v09-version)指南。

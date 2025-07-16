@@ -1,0 +1,164 @@
+---
+description: 了解如何通过集群注解或OpsRequest API，在KubeBlocks中从现有备份恢复一个新的Qdrant集群。
+keywords:
+- Qdrant
+- Restore
+- Backup
+- KubeBlocks
+- Kubernetes
+sidebar_label: 恢复 Qdrant 集群
+sidebar_position: 5
+title: 从备份恢复 Qdrant 集群
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 从备份恢复 Qdrant 集群
+
+本指南演示在 KubeBlocks 中从备份恢复 Qdrant 集群的两种方法：
+
+1. **集群注解法** - 使用 YAML 注解的简单声明式方法
+2. **OpsRequest API 法** - 支持进度监控的增强型操作控制
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 恢复准备：定位完整备份
+开始恢复前，请确保存在可用的完整备份。恢复过程将使用该备份创建新的 Qdrant 集群。
+
+- 新集群可访问的备份仓库
+- 状态为 `Completed` 的有效完整备份
+- 充足的 CPU/内存资源
+- 足够的存储容量
+
+查找可用完整备份：
+
+```bash
+kubectl get backup -n demo -l dataprotection.kubeblocks.io/backup-type=Full,app.kubernetes.io/instance=qdrant-cluster # 获取完整备份列表
+```
+
+从状态为 `Completed` 的备份中选择一个。
+
+## 方案一：集群注解恢复法
+
+### 步骤 1：创建恢复集群
+通过恢复配置创建新集群：
+
+关键参数：
+- `kubeblocks.io/restore-from-backup` 注解
+- 上一步骤中定位的备份名称和命名空间
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: qdrant-cluster-restored
+  namespace: demo
+  annotations:
+    # 注意：将 <FULL_BACKUP_NAME> 替换为您的备份名称
+    kubeblocks.io/restore-from-backup: '{"qdrant":{"name":"<FULL_BACKUP_NAME>","namespace":"demo","volumeRestorePolicy":"Parallel"}}'
+spec:
+  terminationPolicy: Delete
+  clusterDef: qdrant
+  topology: cluster
+  componentSpecs:
+    - name: qdrant
+      serviceVersion: 1.10.0
+      replicas: 3
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+### 步骤 2：监控恢复进度
+通过以下命令跟踪恢复状态：
+
+```bash
+# 查看恢复状态
+kubectl get restore -n demo -w
+
+# 查看集群状态
+kubectl get cluster -n demo -w
+```
+
+## 方案二：OpsRequest API 恢复法
+
+### 步骤 1：发起恢复操作
+通过 OpsRequest API 创建恢复请求：
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: qdrant-cluster-restore
+  namespace: demo
+spec:
+  clusterName: qdrant-cluster-restored
+  force: false
+  restore:
+    backupName: <FULL_BACKUP_NAME>
+    backupNamespace: demo
+  type: Restore
+```
+
+### 步骤 2：跟踪操作进度
+监控恢复状态：
+
+```bash
+# 查看恢复状态
+kubectl get restore -n demo -w
+
+# 查看集群状态
+kubectl get cluster -n demo -w
+```
+
+### 步骤 3：验证恢复集群
+确认恢复成功：
+```bash
+kubectl get cluster qdrant-cluster-restored -n demo
+```
+示例输出：
+```bash
+NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+qdrant-cluster-restored  qdrant              Delete               Running   3m3s
+```
+
+## 清理资源
+删除所有创建的资源，包括 Qdrant 集群及其命名空间：
+
+```bash
+kubectl delete cluster qdrant-cluster -n demo
+kubectl delete cluster qdrant-cluster-restored -n demo
+kubectl delete ns demo
+```
+
+## 总结
+
+本指南涵盖两种恢复方法：
+
+1. **集群注解法** - 基于 YAML 的简单方案
+   - 获取系统凭证
+   - 创建带恢复注解的集群
+   - 监控进度
+
+2. **OpsRequest API 法** - 增强的操作控制
+   - 创建恢复请求
+   - 跟踪操作状态
+   - 验证完成情况

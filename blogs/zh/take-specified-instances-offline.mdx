@@ -1,0 +1,110 @@
+---
+authors:
+  image_url: https://avatars.githubusercontent.com/u/28781141?v=4
+  name: free6om
+  url: https://github.com/free6om
+date: 2024-09-19
+description: 本博客介绍KubeBlocks如何通过InstanceSet实现指定实例的下线操作。
+image: /img/blogs/thumbnails/blog-specified-instances-offline.png
+slug: take-specified-instances-offline
+tags:
+- statefulset
+- kubernetes
+- instance
+- instanceset
+- instance offline
+- horizontal scale
+- scale in
+- scale out
+title: 如何将指定实例下线？
+---
+# 如何下线指定实例？
+
+在[上一篇博客](https://kubeblocks.io/blog/instanceset-introduction)中，我们介绍了InstanceSet，以及由此衍生出的一系列用于解决高可用性等数据库需求的功能。在本篇博客中，我们将介绍其中一项功能——下线指定实例。
+
+## 为什么需要此特性？
+
+在 v0.9.0 之前，KubeBlocks 将工作负载生成为 ***StatefulSets***，这是一把双刃剑。虽然 KubeBlocks 可以利用 ***StatefulSets*** 的优势来管理数据库等有状态应用，但也继承了它的局限性。
+
+其中一个局限在水平扩缩容场景中尤为明显：***StatefulSets*** 会按照 *Ordinal* 顺序依次卸载 Pod，这可能会影响其中运行的数据库的可用性。
+
+例如，使用名为 `foo-bar` 的 ***StatefulSet*** 管理一个包含一个主节点和两个从节点副本的 PostgreSQL 数据库，且 Pod `foo-bar-2` 被选为主节点。此时，如果我们因读取负载较低决定缩容该数据库集群，根据 ***StatefulSet*** 的规则，我们只能卸载当前作为主节点的 Pod `foo-bar-2`。这种情况下，我们要么直接卸载 `foo-bar-2`（触发故障转移机制从 `foo-bar-0` 和 `foo-bar-1` 中选举新的主节点 Pod），要么使用切换机制先将 `foo-bar-2` 转换为从节点 Pod 再卸载。无论采用哪种方式，都会存在一段不可写入的时期。
+
+同一场景下还存在另一个问题：如果承载 `foo-bar-1` 的节点发生硬件故障导致磁盘损坏，使得数据读写不可访问，根据最佳运维实践，我们需要卸载 `foo-bar-1` 并在健康的节点上重建副本。但基于 ***StatefulSets*** 执行此类运维操作并不容易。
+
+为解决上述局限性，从 v0.9 版本开始，KubeBlocks 用 ***InstanceSet*** 替代了 ***StatefulSets***。***InstanceSet*** 是一个通用工作负载 API，负责管理一组实例。通过 ***InstanceSet***，KubeBlocks 引入了指定实例扩缩容特性以提升可用性。
+
+## 如何下线指定实例？
+
+在 KubeBlocks v0.9 版本中，Cluster API 新增了 `OfflineInstances` 字段，用于指定需要下线的实例。
+
+例如，当前 PostgreSQL 集群的状态如下：
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1alpha1
+kind: Cluster
+metadata:
+  name: foo
+spec:
+  componentSpecs:
+name: bar
+    replicas: 3
+...
+```
+
+如果需要将此集群的副本数缩减至 2 个并将实例 `foo-bar-1` 下线，可以按如下方式更新集群对象：
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1alpha1
+kind: Cluster
+metadata:
+  name: foo
+spec:
+  componentSpecs:
+name: bar
+    replicas: 2
+    offlineInstances: ["foo-bar-1"]
+...
+```
+
+当 KubeBlocks 处理上述 spec 时，它会将集群缩容至 2 个副本并使实例 `foo-bar-1` 下线。最终，集群中剩余的实例将是：`foo-bar-0` 和 `foo-bar-2`。
+
+## 如何在 OpsRequest 中使用此功能？
+
+OpsRequest API 支持水平扩展，从 KubeBlocks v0.9 版本开始，OpsRequest API 新增了 `onlineInstanceToOffline` 字段以支持将指定实例下线。例如，
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  generateName: foo-horizontalscaling-
+spec:
+  clusterRef: foo
+  force: false
+  horizontalScaling:
+componentName: bar
+    scaleIn:
+      onlineInstancesToOffline: ["foo-bar-1"]
+  ttlSecondsAfterSucceed: 0
+  type: HorizontalScaling
+```
+
+在执行过程中，OpsRequest Controller 会将 `onlineInstancesToOffline` 合并到 Cluster 对象对应的 `offlineInstances` 中。最终由 Cluster Controller 处理名为 `foo-bar-1` 实例的下线任务。
+
+通过编辑集群 YAML 或创建 OpsRequest 任务，即可实现指定实例（如 `foo-bar-1`）的下线操作，突破了 StatefulSet 的限制，更好地支持业务需求。更多水平扩缩容的示例，请参阅 [KubeBlocks 文档](https://kubeblocks.io/docs/preview/api_docs/maintenance/scale/horizontal-scale)。
+
+## 注意事项
+
+在 Cluster API 中，需要同时修改 `OfflineInstances` 和 `Replicas` 才能实现指定实例下线的目标。以下是当前 API 允许的一些非常规组合，建议在使用前充分理解，以避免意外后果。
+
+| 变更前 | 配置离线实例 | 变更后 |
+| :----: | :-----------------------: | :---: |
+| `replicas=3, offlineInstances=[]` | `replicas=2,offlineInstances=["foo-bar-3"]` | `foo-bar-0, foo-bar-1` |
+| `replicas=2, offlineInstances=["foo-bar-1"]` | `replicas=2, offlineInstances=[]` | `foo-bar-0, foo-bar-1` |
+| `replicas=2, offlineInstances=["foo-bar-1"]` | `replicas=3, offlineInstances=["foo-bar-1"]` | `foo-bar-0, foo-bar-2, foo-bar-3` |
+
+## 参考文档
+
+- [Kubernetes 社区关于 Pod 的讨论](https://github.com/kubernetes/kubernetes/issues/83224)
+- [KubeBlocks 的水平扩缩容特性](https://kubeblocks.io/docs/release-0.9/api_docs/maintenance/scale/horizontal-scale)
+

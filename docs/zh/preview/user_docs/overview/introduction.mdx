@@ -1,0 +1,258 @@
+---
+description: KubeBlocks 简介
+keywords:
+- kubeblocks
+- overview
+- introduction
+sidebar_position: 1
+title: 简介
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 简介
+
+## 什么是 KubeBlocks
+
+KubeBlocks 是一个开源的 Kubernetes Operator，专为数据库（更准确地说，是为包括数据库和消息队列等中间件在内的有状态应用）设计，使用户能够在 Kubernetes 上运行和管理多种类型的数据库。据我们所知，大多数数据库 Operator 通常只管理特定类型的数据库。例如：
+- CloudNativePG、Zalando、CrunchyData 和 StackGres 的 Operator 可以管理 PostgreSQL
+- Strimzi 管理 Kafka
+- Oracle 和 Percona 的 MySQL Operator 管理 MySQL
+
+相比之下，KubeBlocks 被设计为一个**通用数据库 Operator**。这意味着在设计 KubeBlocks 的 API 时，我们并未将其绑定到任何特定数据库，而是抽象了各类数据库的共性，形成了一套与引擎无关的通用 API。因此，围绕这套抽象 API 实现的 Operator 也同样不依赖于具体的数据库引擎。
+
+![KubeBlocks 的设计架构，一个通用数据库 Operator](/img/docs/en/kubeblocks_general_purpose_arch.png)
+
+在上图中，Cluster、Component 和 InstanceSet 都是 KubeBlocks 提供的 CRD。如果您想了解更多关于它们的信息，请参考[概念](../concepts/concept)部分。
+
+KubeBlocks 提供了一个 Addon API 来支持各类数据库的集成。例如，我们目前为以下主流开源数据库引擎提供了 KubeBlocks Addon：
+- MySQL
+- PostgreSQL
+- Redis
+- MongoDB
+- Kafka
+- RabbitMQ
+- Minio
+- Elasticsearch
+- StarRocks
+- Qdrant
+- Milvus
+- ZooKeeper
+- etcd
+- ...
+
+有关 Addon 的详细列表及其功能，请参阅[支持的 Addon](supported-addons.md)。
+
+统一的 API 使得 KubeBlocks 成为在 Kubernetes 上运行多种类型数据库的理想选择。它可以显著降低学习多个 Operator 的复杂度。
+
+## 统一API如何降低学习成本
+
+以下示例展示了如何使用KubeBlocks的Cluster API编写YAML文件来创建一个包含两个副本的MySQL集群。
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: test-mysql
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      componentDef: "mysql-8.0"
+      serviceVersion: 8.0.35
+      disableExporter: false
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+接下来就是神奇之处：只需修改少量字段，您就能创建一个包含两个副本的PostgreSQL集群！同样的方法也适用于MongoDB和Redis（Redis示例稍长是因为它创建了两个组件：redis-server和sentinel），这种模式可以应用于一系列数据库引擎。
+
+<Tabs>
+<TabItem value="PostgreSQL" label="PostgreSQL" default>
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: test-pg
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: postgresql
+  topology: replication
+  componentSpecs:
+    - name: postgresql
+      serviceVersion: 16.4.0
+      labels:
+        apps.kubeblocks.postgres.patroni/scope: test-pg-postgresql
+      disableExporter: true
+      replicas: 2
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+</TabItem>
+<TabItem value="MongoDB" label="MongoDB">
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: test-mongo
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: mongodb
+  topology: replicaset
+  componentSpecs:
+    - name: mongodb
+      serviceVersion: "6.0.16"
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+</TabItem>
+<TabItem value="Redis" label="Redis">
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1alpha1
+kind: Cluster
+metadata:
+  name: test-redis
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  componentSpecs:
+  - name: redis
+    componentDef: redis-7
+    replicas: 2
+    resources:
+      limits:
+        cpu: '0.5'
+        memory: 0.5Gi
+      requests:
+        cpu: '0.5'
+        memory: 0.5Gi
+    volumeClaimTemplates:
+    - name: data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+  - name: redis-sentinel
+    componentDef: redis-sentinel
+    replicas: 3
+    resources:
+      limits:
+        cpu: '0.5'
+        memory: 0.5Gi
+      requests:
+        cpu: '0.5'
+        memory: 0.5Gi
+    volumeClaimTemplates:
+      - name: data
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 10Gi
+```
+
+</TabItem>
+</Tabs>
+
+这意味着在Kubernetes上管理多种数据库变得简单、高效且标准化，为您节省了大量原本需要查阅手册和API文档的时间。
+
+## 核心特性
+
+- **数据库集群的创建与销毁**：支持快速部署和清理数据库集群。
+- **集群启停控制**：可对数据库集群执行启动、停止及重启操作。
+- **多样化拓扑部署**：创建集群时支持选择引擎插件（Addon）提供的部署拓扑方案。例如：
+  - Redis可选基于Sentinel的读写分离架构或Redis Cluster模式
+  - MySQL可选搭配Proxy实现读写分离，并支持多种高可用方案（内置Raft共识插件、外部etcd协调器或Orchestrator）
+- **差异化副本配置**：支持单个数据库集群内不同副本采用不同配置。典型场景如MySQL集群中主实例使用8核CPU而只读副本使用4核CPU——此功能是Kubernetes StatefulSet原生不具备的。
+- **灵活网络管理**：
+  - **动态服务暴露**：可将数据库访问端点动态发布为多种Service类型（ClusterIP、LoadBalancer、NodePort）
+  - **HostNetwork支持**：支持主机网络模式
+  - **智能客户端访问**：
+    - 部分数据库（如Redis、MongoDB、Kafka）支持通过智能客户端（Smart Client）访问，该客户端能根据服务端返回的节点地址自动重定向请求或处理读写分离
+    - 对于etcd等具备客户端自动故障转移能力的数据库，KubeBlocks支持为每个Pod分配独立服务地址（Pod Service）
+- **全面的Day-2运维支持**：
+  - **水平扩缩容**（增减副本数量）
+  - **垂直扩缩容**（调整单副本CPU/内存资源）
+  - **PVC存储卷扩容**
+  - **备份与恢复功能**
+  - **配置变更**（支持热加载时自动生效）
+  - **参数修改**
+  - **主从切换**
+  - **滚动升级**
+  - **指定副本下线**
+  - **次版本升级**
+- **双模式API**：
+  - 除声明式API外，还提供专用于执行一次性运维任务的OpsRequest API
+  - OpsRequest API额外支持队列管理、并发控制、进度跟踪和操作回滚等高级特性
+- **可观测性**：支持与Prometheus和Grafana集成实现监控可视化
+- **高效CLI工具**：
+  - 提供功能强大且符合直觉的命令行工具`kbcli`
+  - 显著简化Kubernetes上KubeBlocks自定义资源的操作流程，减少输入量
+  - 对Kubernetes资深用户，kbcli可与kubectl配合使用，形成更高效的操作组合
+
+"）
+
+## 部署架构
+下图展示了KubeBlocks在云环境中的典型部署示意图。
+
+Kubernetes应部署在节点间可通过网络互相通信的环境中（例如VPC内部）。KubeBlocks Operator部署在专用命名空间（kb-system）中，而数据库实例则部署在用户指定的命名空间内。
+
+在生产环境中，我们建议将KubeBlocks Operator（以及安装的Prometheus和Grafana）与数据库部署在不同的节点上。默认情况下，数据库集群的多个副本会通过反亲和性规则调度到不同节点运行，以确保高可用性。用户还可以配置可用区（AZ）级别的反亲和性，将数据库副本分布到不同的可用区，从而增强灾难恢复能力。
+
+每个数据库副本运行在独立的Pod中。除了运行数据库进程的主容器外，Pod还包含若干边车容器：一个名为`lorry`的容器（从KubeBlocks v1.0开始将更名为kbagent），用于执行来自KubeBlocks控制器的Action命令；另一个名为`config-manager`的容器，负责管理数据库配置文件并支持热更新。此外，引擎的Addon可能包含一个exporter容器，用于收集Prometheus监控所需的指标。
+
+![KubeBlocks Architecture](/img/docs/en/kubeblocks-architecture-ha.png)

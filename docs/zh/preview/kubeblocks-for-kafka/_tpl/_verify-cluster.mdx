@@ -1,0 +1,33 @@
+监控集群状态直至其转为 Running（运行中）状态：
+```bash
+kubectl get cluster kafka-separated-cluster -n demo -w
+```
+
+预期输出：
+
+```bash
+kubectl get cluster kafka-separated-cluster -n demo
+NAME                      CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+kafka-separated-cluster   kafka                Delete               Creating   13s
+kafka-separated-cluster   kafka                Delete               Running    63s
+```
+
+检查 Pod 状态及其角色：
+```bash
+kubectl get pods -l app.kubernetes.io/instance=kafka-separated-cluster -n demo
+```
+
+预期输出：
+```bash
+NAME                                         READY   STATUS    RESTARTS   AGE
+kafka-separated-cluster-kafka-broker-0       2/2     Running   0          13m
+kafka-separated-cluster-kafka-controller-0   2/2     Running   0          13m
+kafka-separated-cluster-kafka-exporter-0     1/1     Running   0          12m
+```
+
+当集群状态显示为 Running 时，表示您的 Kafka 集群已准备就绪可供使用。
+
+:::tip
+如果是首次创建集群，可能需要一定时间拉取镜像后才能正常运行。
+
+:::

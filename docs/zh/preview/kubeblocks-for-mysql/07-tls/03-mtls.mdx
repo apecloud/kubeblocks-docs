@@ -1,0 +1,314 @@
+---
+description: 了解如何在KubeBlocks上为MySQL集群配置双向TLS（mTLS）加密。本指南将逐步介绍证书生成、集群部署、mTLS用户设置以及安全连接验证的全过程。
+keywords:
+- KubeBlocks
+- MySQL
+- Kubernetes
+- mTLS
+- Mutual TLS
+- Secure Communication
+sidebar_label: 支持mTLS的MySQL集群
+sidebar_position: 3
+title: 在KubeBlocks上部署支持mTLS的MySQL集群
+---
+# 在 KubeBlocks 上创建支持 mTLS 的 MySQL 集群
+
+本指南说明如何使用 KubeBlocks 配置支持**双向 TLS (mTLS)** 加密的 MySQL 集群。mTLS 确保服务器和客户端在建立连接时相互认证，为您的数据库基础设施提供增强的安全性。本指南涵盖证书生成、集群部署、mTLS 用户配置以及安全连接验证等内容。
+
+
+
+## 什么是 mTLS？  
+双向 TLS（mTLS）是一种增强的安全协议，确保服务器和客户端在建立连接时相互验证身份。与传统 TLS 仅由客户端验证服务器身份不同，mTLS 通过要求双方提供由可信证书颁发机构（CA）签发的有效证书，额外增加了一层安全防护。
+
+## 前提条件
+
+在继续之前，请确保满足以下条件：
+- 环境准备：
+    - 已启动并运行一个 Kubernetes 集群。
+    - 已配置 kubectl CLI 工具以与集群通信。
+    - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处提供的安装说明进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 生成证书
+
+要启用TLS加密，您需要提供证书颁发机构(CA)、服务器证书和私钥。按照以下步骤使用OpenSSL生成这些文件：
+
+1. 生成根证书(CA)
+
+```bash
+# Create the CA private key (password optional)
+openssl genrsa -aes256 -out ca-key.pem 4096
+
+# Generate a self-signed root certificate (valid for 10 years)
+openssl req -x509 -new -nodes -key ca-key.pem -sha256 -days 3650 -out ca.pem
+# Enter the required information (e.g., Common Name can be "MySQL Root CA")
+```
+
+2. 生成服务器证书和密钥
+
+```bash
+# Generate the server private key
+openssl genrsa -out server-key.pem 4096
+
+# Create a Certificate Signing Request (CSR)
+openssl req -new -key server-key.pem -out server-req.pem
+# Enter server identification details, such as:
+# Common Name (CN) = Server domain name or IP (must match the MySQL server address!)
+
+# Sign the server certificate with the CA (valid for 10 years)
+openssl x509 -req -in server-req.pem -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out server-cert.pem -days 3650 -sha256
+```
+
+3. 生成客户端证书和密钥
+
+```bash
+# Generate the client private key
+openssl genrsa -out client-key.pem 4096
+
+# Create a Certificate Signing Request (CSR)
+openssl req -new -key client-key.pem -out client-req.pem
+# Enter client identification details, such as:
+# Common Name (CN) = Client username (e.g., "mysql_client_1")
+
+# Sign the client certificate with the CA (valid for 1 year)
+openssl x509 -req -in client-req.pem -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out client-cert.pem -days 365 -sha256
+```
+
+4. 验证证书  
+验证服务器证书是否有效且由CA签发：
+
+```bash
+# Verify the server certificate
+openssl verify -CAfile ca.pem server-cert.pem
+```
+
+预期输出：
+
+```bash
+server-cert.pem: OK
+```
+
+
+
+
+
+```bash
+# Verify the client certificate
+openssl verify -CAfile ca.pem client-cert.pem
+```
+
+预期输出：
+
+```bash
+client-cert.pem: OK
+```
+
+
+
+
+## 创建 Kubernetes Secret  
+将生成的证书和密钥存储在 Kubernetes Secret 中，以便您的 MySQL 集群可以访问它们。
+
+```bash
+kubectl create secret generic mysql-tls-secret \
+  --namespace=demo \
+  --from-file=ca.crt=ca.pem \
+  --from-file=tls.crt=server-cert.pem \
+  --from-file=tls.key=server-key.pem \
+  --type=kubernetes.io/tls
+```
+
+此 Secret 包含在 MySQL 集群上启用 mTLS 所需的 CA、服务器证书和私钥。
+
+## 部署 MySQL 半同步集群
+
+KubeBlocks 采用声明式方法管理 MySQL 集群。以下是一个配置示例，用于部署包含 2 个节点（1 个主节点，1 个副本节点）的半同步模式 MySQL 集群，并使用用户提供的 TLS 证书：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      tls: true
+      issuer:
+        name: UserProvided
+        secretRef:
+          name: mysql-tls-secret
+          namespace: demo
+          ca: ca.crt
+          cert: tls.crt
+          key: tls.key
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+
+
+
+## 验证部署
+
+检查集群状态直至其达到 Running 状态：
+
+```bash
+kubectl get cluster -n demo
+```
+
+预期输出：
+
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Running   11m
+```
+
+
+
+
+## 在 MySQL 中配置 mTLS 用户
+
+### 获取 MySQL root 凭据
+
+KubeBlocks 会自动创建一个包含 MySQL root 凭据的 Secret。通过以下命令获取凭据：
+
+1. 获取 root 用户名：
+
+```bash
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
+```
+
+预期输出：
+
+```bash
+root
+```
+
+2. 获取 root 密码：
+
+```bash
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+```
+
+预期输出：
+
+```bash
+D0o5P43S8G
+```
+
+### 使用 root 账户连接
+
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pD0o5P43S8G
+```
+
+### 创建 mTLS 用户
+
+在 MySQL shell 中执行以下命令来创建一个需要客户端证书认证的用户：
+
+```sql
+mysql> CREATE USER 'mtls_user'@'%' IDENTIFIED BY 'kni676X2W1' REQUIRE X509;
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> GRANT ALL PRIVILEGES ON *.* TO 'mtls_user'@'%';
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> FLUSH PRIVILEGES;
+Query OK, 0 rows affected (0.01 sec)
+```
+
+
+
+
+## 通过 mTLS 连接 MySQL 集群
+
+使用 `kubectl port-forward` 命令将 MySQL 集群主副本的 3306 端口映射到本地机器的 3306 端口：
+
+```bash
+kubectl port-forward svc/mysql-cluster-mysql 3306:3306 -n default
+Forwarding from 127.0.0.1:3306 -> 3306
+Forwarding from [::1]:3306 -> 3306
+```
+
+然后，打开另一个 shell 并使用 mysql 命令行工具连接到本地端口 3306。
+
+如果未使用客户端证书连接，您将看到错误：
+
+```bash
+mysql -h 127.0.0.1 -umtls_user -pkni676X2W1 --ssl-mode=REQUIRED
+```
+
+预期输出：
+
+```bash
+ERROR 1045 (28000): Access denied for user 'mtls_user'@'127.0.0.1' (using password: YES)
+```
+
+要成功连接，需提供客户端证书和密钥：
+
+```bash
+mysql -h 127.0.0.1 -umtls_user -pkni676X2W1 --ssl-mode=REQUIRED --ssl-ca=/path/to/ca.pem --ssl-cert=/path/to/client-cert.pem --ssl-key=/path/to/client-key.pem
+```
+
+验证 MySQL shell 中的 TLS 连接状态：
+
+```sql
+mysql> STATUS;
+--------------
+
+SSL:			Cipher in use is TLS_AES_256_GCM_SHA384
+```
+
+
+
+
+## 清理
+删除本教程中创建的所有资源：
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete secret mysql-tls-secret -n demo
+kubectl delete ns demo
+```
+
+
+
+
+## 总结
+
+在本指南中，您学习了如何：
+1. 使用 OpenSSL 生成自签名的 CA、服务器和客户端证书。
+2. 在 KubeBlocks 上部署启用 mTLS 的 MySQL 集群。
+3. 配置 mTLS 用户并验证安全连接。
+
+mTLS 通过确保客户端和服务器的双向认证，提供了额外的信任和安全层。通过遵循本指南，您可以使用 KubeBlocks 在 Kubernetes 上安全地部署和管理支持 mTLS 的 MySQL 集群。

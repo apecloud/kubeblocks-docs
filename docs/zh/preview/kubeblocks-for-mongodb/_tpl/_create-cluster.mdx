@@ -1,0 +1,41 @@
+KubeBlocks 采用声明式方法来管理 MongoDB 复制集群。
+以下是一个部署 MongoDB 副本集集群的配置示例，包含一个主副本和两个从副本。
+
+应用以下 YAML 配置来部署集群：
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: mongo-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: mongodb
+  topology: replicaset
+  componentSpecs:
+    - name: mongodb
+      serviceVersion: "6.0.16"
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+**配置关键点:**
+  - `terminationPolicy: Delete` 表示删除集群时会清理所有资源
+  - `replicas: 3` 指定了 1 个主节点 + 2 个从节点的副本集架构
+  - 存储配置中 `storageClassName: ""` 表示使用默认存储类

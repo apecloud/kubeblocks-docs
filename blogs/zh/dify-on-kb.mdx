@@ -1,0 +1,373 @@
+---
+authors:
+  image_url: https://avatars.githubusercontent.com/u/1765402?v=4
+  name: iziang
+  url: https://github.com/iziang
+date: 2024-07-19
+description: 本博客介绍如何利用KubeBlocks（面向PostgreSQL、Redis和Qdrant的K8s Operator）与Dify，在Kubernetes上部署生产就绪的AIGC应用。
+image: /img/blogs/thumbnails/blog-dify.png
+slug: deploy-aigc-applications-using-kubeblocks-and-dify
+tags:
+- Kubernetes
+- operator
+- PostgreSQL
+- Qdrant
+- Redis
+- KubeBlocks
+- Dify
+- AIGC
+title: 使用KubeBlocks（适用于PostgreSQL、Redis和Qdrant的K8s Operator）与Dify在Kubernetes上部署生产就绪的AIGC应用
+---
+# 使用 KubeBlocks（PostgreSQL、Redis 和 Qdrant 的 K8s Operator）与 Dify 在 Kubernetes 上部署生产级 AIGC 应用
+
+##  简介
+
+AI生成内容（AIGC）技术正以前所未有的速度改变着我们的世界。AIGC不仅为内容创作者提供了强大的工具，也为企业带来了前所未有的商业机遇。通过AIGC，应用可以自动生成文本、图像、音频甚至视频，极大提升了内容生产的效率和质量。更重要的是，AIGC能够根据用户的特定需求实时生成定制化内容，显著改善用户体验。
+
+然而，要充分发挥AIGC的潜力，开发者面临着一系列挑战，如高技术门槛、复杂的模型集成以及困难的运维管理等。正是在这样的背景下，Dify应运而生。Dify是一个开源的大语言模型（LLM）应用开发平台，它巧妙融合了Backend as Service和LLMOps的理念，旨在为开发者提供从创意到产品的快速通道。Dify提供了一系列LLM、直观的提示词设计工具、强大的Agent框架以及灵活的流程编排能力，所有这些都通过友好的用户界面和API呈现，大幅降低了技术门槛，使得没有技术背景的人也能参与构建AI应用。
+
+尽管Dify极大简化了AI应用的开发过程，但如何高效管理这些应用所依赖的基础设施，在部署和运维阶段仍是重要课题。AIGC应用通常会使用多种数据库，例如用PostgreSQL等关系型数据库存储应用元数据，用Redis等内存数据库保存会话历史，用Qdrant等向量数据库实现RAG召回。确保这些关键组件的稳定运行、数据一致性与安全性，并满足快速增长的业务需求，对任何团队来说都是不小的挑战。
+
+这正是KubeBlocks大显身手的领域。KubeBlocks是一个基于Kubernetes的数据基础设施管理平台，提供完整的解决方案，帮助自动化管理和调度数据基础设施。无论是OLTP、OLAP、NoSQL、消息队列、流引擎，还是新兴的向量数据库和LLM，KubeBlocks都能轻松管理，大幅提升有状态工作负载的管理效率。KubeBlocks支持多云环境，提供一键部署、无缝扩缩容和自动故障恢复，确保生产级应用的高性能、高弹性和可观测性。
+
+通过将Dify快速应用开发和迭代的能力与KubeBlocks保障基础设施稳定可管理的能力相结合，本方案不仅能提高开发效率，还能保证应用的可靠性和可扩展性。本篇博客将演示如何基于KubeBlocks + Dify方案构建生产级AIGC应用。
+
+## 要求
+
+- Kubernetes 集群，版本 >= 1.21
+- 已安装 Ingress Controller 的 Kubernetes 集群
+
+## 部署
+
+### 安装 KubeBlocks
+
+1. 安装最新版本的 kbcli。
+
+   kbcli 是 KubeBlocks 提供的命令行工具，可以直观且高效地管理 KubeBlocks 相关资源。
+
+   对于 KubeBlocks 用户，kbcli 提供了更直接和高效的操作选项，使 Kubernetes 新手能够快速上手。
+
+```bash
+   curl -fsSL https://kubeblocks.io/installer/install_cli.sh
+   ```
+
+2. 安装最新版本的 KubeBlocks。
+
+```bash
+   kbcli kubeblocks install
+   ```
+
+3. 运行 `kbcli addon list` 命令查看已启用的数据库。
+
+   KubeBlocks 默认会安装一些常见数据库，例如 MySQL、PostgreSQL、Redis 和 MongoDB。
+
+```bash
+   kbcli addon list
+   >
+   NAME                           VERSION         PROVIDER    STATUS     AUTO-INSTALL
+   llm                            0.9.0           community   Disabled   false
+   minio                          12.8.12         community   Disabled   false
+   prometheus                     15.16.1         community   Disabled   false
+   qdrant                         0.9.0           community   Disabled   false
+   apecloud-mysql                 0.9.0-beta.10   apecloud    Enabled    true
+   elasticsearch                  0.9.0           community   Enabled    true
+   kafka                          0.9.0           community   Enabled    true
+   mongodb                        0.9.0           apecloud    Enabled    true
+   mysql                          0.9.1           community   Enabled    true
+   postgresql                     0.9.0           community   Enabled    true
+   pulsar                         0.9.0           community   Enabled    true
+   redis                          0.9.0           community   Enabled    true
+   ```
+
+4. 运行以下命令启用 Qdrant 插件。
+
+   Dify 依赖的向量数据库（如 Qdrant）默认未启用。
+
+```bash
+   kbcli addon enable qdrant
+   ```
+
+5. 运行 `kbcli addon describe qdrant` 并等待状态变为 "Enabled"。
+
+```bash
+   kbcli addon describe qdrant
+   >
+   Name:               qdrant
+   Description:        Qdrant is an open source (Apache-2.0 licensed), vector similarity search engine and vector database.
+   Labels:             addon.kubeblocks.io/model=vector,addon.kubeblocks.io/name=qdrant,addon.kubeblocks.io/provider=community,addon.kubeblocks.io/version=0.9.0
+   Type:               Helm
+   Status:             Enabled
+   Auto-install:       false
+
+   Installed Info:
+
+   NAME   REPLICAS   STORAGE   CPU (REQ/LIMIT)   MEMORY (REQ/LIMIT)   STORAGE-CLASS   TOLERATIONS   PV-ENABLED
+   main                        /                 /
+   ```
+
+默认情况下，KubeBlocks 中的 Qdrant 插件使用官方 Docker Hub 镜像 docker.io/qdrant/qdrant。如果从官方 Docker Hub 拉取镜像时遇到问题，您可以在启用插件时改用从 KubeBlocks 官方仓库同步的镜像。
+
+```bash
+   kbcli addon enable qdrant --set image.registry=apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com --set image.repository=apecloud/qdrant
+   ```
+
+除了安装 KubeBlocks 外，kbcli 还提供了一套丰富的数据库集群操作功能。您可以通过简单的命令轻松创建数据库集群、检查集群状态、执行水平和垂直扩缩容、扩展存储卷，以及启动、停止或重启集群。这显著降低了用户的学习曲线。对于希望快速部署和测试 KubeBlocks 的用户，kbcli 提供了 [Playground](https://kubeblocks.io/docs/preview/user_docs/try-out-on-playground/try-kubeblocks-on-your-laptop)，使其成为学习和实验场景的理想选择。
+
+对于熟悉 Kubernetes 并希望深入了解 KubeBlocks 与 Kubernetes 集成细节的高级用户，KB 提供了声明式 API。您可以使用 kubectl 像管理 Kubernetes 原生资源一样管理数据库，为观察和操作数据库集群提供了更全面和底层的视角。
+
+### 为元数据创建 PostgreSQL 集群
+
+Dify 将其元数据存储在 PostgreSQL 中。这里我们首先创建一个 PostgreSQL 复制集群。该集群由两个副本组成，每个副本配置为 1C2G 和 20 GiB 存储。
+
+```bash
+# kbcli
+kbcli cluster create postgresql postgresql --cpu=1 --memory=2 --storage=20 --mode=replication --version=postgresql-14.8.0
+
+# or kubectl
+kubectl apply -f https://kubeblocks.io/yamls/dify/postgresql.yaml
+```
+
+### 创建用于向量的 Qdrant 集群
+
+Dify 使用向量数据库来存储用户上传的文档及其对应的特征向量。KubeBlocks 支持多种向量数据库，包括专用向量数据库如 Qdrant、Milvus 和 Weaviate，以及具备向量能力的传统数据库如带有 pgvector 插件的 PostgreSQL。本文演示如何通过 Qdrant 创建向量数据库。我们将创建一个具有三个副本的 Qdrant 集群，每个副本配置为 1核2G 内存和 20 GiB 存储空间。
+
+```bash
+# kbcli
+kbcli cluster create qdrant --cluster-definition=qdrant --cluster-version=qdrant-1.8.4  --set cpu=1,memory=2Gi,storage=20Gi,replicas=3
+
+# or kubectl
+kubectl apply -f https://kubeblocks.io/yamls/dify/qdrant.yaml
+```
+
+### 为存储创建 Redis 集群
+
+Dify 使用 Redis 存储用户会话历史。这里我们创建一个高可用性的 Redis 集群，包含 Redis 和 Sentinel 组件。
+
+- Redis 组件配置为 2 个副本（一个主节点，一个从节点），每个副本分配 2 个 CPU、1 GiB 内存和 20 GiB 存储空间。
+- Sentinel 组件配置为 3 个副本，每个副本分配 0.2 个 CPU、0.2 GiB 内存和 20 GiB 存储空间。
+
+```bash
+# kbcli
+kbcli cluster create redis redis --version=redis-7.0.6 --mode=replication --cpu=2 --memory=1 --storage=20 --replicas=2 --sentinel.cpu=0.2 --sentinel.memory=0.2 --sentinel.replicas=3 --sentinel.storage=20
+
+# or kubectl
+kubectl apply -f https://kubeblocks.io/yamls/dify/redis.yaml
+```
+
+### 部署 Dify
+
+在部署 Dify 之前，请先运行 `kubectl get cluster` 并等待 PostgreSQL、Redis 和 Qdrant 集群全部处于 "Running" 状态。
+
+```bash
+kubectl get cluster
+>
+NAME         CLUSTER-DEFINITION   VERSION             TERMINATION-POLICY   STATUS    AGE
+postgresql   postgresql           postgresql-14.8.0   Delete               Running   20m
+qdrant       qdrant               qdrant-1.8.4        Delete               Running   11m
+redis        redis                redis-7.0.6         Delete               Running   73s
+```
+
+我们还需要手动初始化 Dify 元数据。
+
+1. 连接到 PostgreSQL 集群。
+
+```bash
+   kbcli cluster connect postgresql
+   ```
+
+
+
+```bash
+   create database dify;
+   ```
+
+3. 获取默认 Redis 账户的密码，稍后将其配置到 Dify 中。
+
+```bash
+   # Get the Redis password
+   kubectl get secret redis-redis-account-default -o jsonpath="{.data.password}" |base64 -d
+   ```
+
+:::注意
+
+在本博客中，我们使用 Kubernetes 的流行包管理器 Helm 来部署 Dify。
+
+:::
+
+4. 添加相关的 Helm 仓库。
+
+```bash
+   helm repo add douban https://douban.github.io/charts/
+   ```
+
+5. 将以下内容保存到 `values.yaml` 文件中，该文件设置了相关数据库的访问信息，包括连接地址、用户名和密码。
+
+    - `global.host` 是访问 Dify 的域名。如果该域名无法公开访问，后续需要配置本地静态解析。为了方便起见，请禁用 TLS。
+    - KubeBlocks 保存了 PostgreSQL 集群的账号和密码，`values.yaml` 文件直接通过 `env` 引用这些信息，因此无需修改。
+    - Dify 使用 Redis 作为 Celery 的消息代理。由于代理连接地址是动态构建的，无法通过引用 Secret 来配置。因此，请先运行 `kubectl get secret redis-redis-account-default -o jsonpath="{.data.password}" | base64 -d` 命令获取 Redis 的默认账号和密码，并将 `values.yaml` 文件中的 `${REDIS_PASSWORD}` 替换为从该命令获取的密码。
+    - 将 `ingress.className` 替换为 Kubernetes 集群实际的 Ingress 类别。可以通过运行 `kubectl get ingressclass` 查看集群中可用的 Ingress 类别。
+    - `env.SECRET_KEY` 用于登录认证和加密敏感信息。出于安全考虑，请替换为足够强度的密钥，可以使用 `openssl rand -base64 42` 生成。
+
+```yaml
+   global:
+     host: "mydify.example.com"
+     enableTLS: false
+
+     image:
+       # Set to the latest version of dify
+       # Check the version here: https://github.com/langgenius/dify/releases
+       # If not set, Using the default value in Chart.yaml
+       tag: "0.6.11"
+     extraBackendEnvs:
+       - name: CELERY_BROKER_URL
+         value: redis://default:${REDIS_PASSWORD}@redis-redis-redis:6379/1
+       - name: REDIS_USERNAME
+         value: default
+       - name: REDIS_PASSWORD
+         value: ${REDIS_PASSWORD}
+       - name: REDIS_HOST
+         value: redis-redis-redis
+       - name: REDIS_PORT
+         value: "6379"
+       - name: REDIS_DB
+         value: "0"
+       - name: DB_USERNAME
+         valueFrom:
+           secretKeyRef:
+             name: postgresql-conn-credential
+             key: username
+       - name: DB_PASSWORD
+         valueFrom:
+           secretKeyRef:
+             name: postgresql-conn-credential
+             key: password
+       - name: DB_HOST
+         value: postgresql-postgresql
+       - name: DB_PORT
+         value: "5432"
+       - name: DB_DATABASE
+         value: dify
+       - name: VECTOR_STORE
+         value: "qdrant"
+       - name: QDRANT_URL
+         value: "http://qdrant-qdrant:6333"
+       - name: SECRET_KEY
+         value: "PleaseReplaceThisToYourSecretOrUse"
+
+   ingress:
+     enabled: true
+     className: "nginx"
+
+   minio:
+     embedded: true
+
+   redis:
+     embedded: false
+
+   postgresql:
+     embedded: false
+
+   api:
+     envs:
+     - name: "MIGRATION_ENABLED"
+       value: "true"
+   ```
+
+6. 部署 Dify。
+
+```bash
+   helm upgrade -i dify douban/dify -f values.yaml
+   ```
+
+7. 查看 Pod 状态，等待所有与 Dify 相关的 Pod 都处于 "Running" 状态。
+
+```bash
+   kubectl get pods -l app.kubernetes.io/name=dify
+   >
+   NAME                            READY   STATUS    RESTARTS   AGE
+   dify-worker-5f5f99b7b7-p6qk8    1/1     Running   0          97s
+   dify-sandbox-7bf987566c-2fj6w   1/1     Running   0          97s
+   dify-frontend-c9df5ddb4-4v8jp   1/1     Running   0          97s
+   dify-api-7c98b9847c-4tgjx       1/1     Running   0          97s
+   ```
+
+### 访问 Dify
+
+1. 运行以下命令确认 Dify Ingress 的访问地址，因为 Dify 通过 Ingress 对外暴露服务。
+
+```bash
+   kubectl get ingress -l app.kubernetes.io/name=dify
+   >
+   NAME   CLASS   HOSTS                ADDRESS        PORTS   AGE
+   dify   nginx   mydify.example.com   10.43.65.209   80      2m48s
+   ```
+
+如果 Ingress 域名无法公开解析（例如自定义私有域名），您需要在访问 Dify 的客户端上配置域名 `mydify.example.com` 的静态解析。
+
+   - 将 10.43.65.209 替换为您环境中 Dify Ingress 的实际 IP 地址。
+
+（严格保持原文格式、间距和换行，包括代码块前的缩进和空行）
+
+```bash
+   sudo echo '10.43.65.209 mydify.example.com' >> /etc/hosts
+   ```
+
+2. 在浏览器中输入 `http://mydify.example.com` 打开 Dify 控制台。
+
+   ![Figure 1](/img/blogs/blog-dify-1.png)
+
+3. 注册管理员账号。登录后即可看到 Dify 操作界面。
+
+   ![Figure 2](/img/blogs/blog-dify-2.png)
+
+## 基础设施运维
+
+随着业务扩展，您需要对数据库执行各种运维操作。KubeBlocks 为升级、扩缩容和重启等日常运维（Day-2 Operations）提供全面支持。以下是一些示例。
+
+### 扩缩容
+
+当知识库中用户上传的文件数量增加时，现有三个副本的 Qdrant 集群可能无法处理负载。此时有两种选择：
+
+- **垂直扩展**集群，为每个 Qdrant 节点增加更多 CPU 和内存。
+- **水平扩展**集群，添加更多 Qdrant Pod 以将负载分布到更多 Pod 上。
+
+KubeBlocks 支持这两种扩缩容方式。
+
+以垂直扩展为例，您可以将 CPU 增加到 8 核，内存增加到 32 GiB。
+
+```bash
+kbcli cluster vscale qdrant --components qdrant --cpu 8 --memory 32Gi
+```
+
+对于水平扩展，您可以添加更多 Pod。
+
+（严格保持原文的换行和间距）
+
+```bash
+kbcli cluster hscale qdrant --replicas 5
+```
+
+如果业务需求下降，例如用户删除了大量文档，您也可以同时进行垂直和水平缩容。
+
+### 存储卷扩容
+
+如果注册用户数量增加且 PostgreSQL 元数据数据库存储不足，您可以扩展存储空间，例如扩容至 50 GiB。
+
+```bash
+kbcli cluster volume-expand postgresql --components postgresql --storage=50Gi --volume-claim-templates=data
+```
+
+### 重启
+
+如果 PostgreSQL 集群出现异常，可以尝试重启集群来解决问题。
+
+```bash
+kbcli cluster restart postgresql
+```
+
+
+
+
+## 概述
+
+本篇博客展示了如何利用 KubeBlocks 和 Dify 构建生产级 AIGC 应用。KubeBlocks 在数据基础设施管理方面的强大能力与 Dify 在 AIGC 应用开发方面的功能相结合，显著提升了 AIGC 应用的开发和部署效率，其高度灵活的架构提供了强大的可扩展性，并降低了生产环境中的运维复杂度。

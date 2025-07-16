@@ -1,0 +1,412 @@
+---
+description: 了解如何开始使用KubeBlocks MySQL插件，包括先决条件、启用MySQL插件、创建MySQL集群以及有效管理集群的方法。
+keywords:
+- Kubernetes
+- MySQL
+- KubeBlocks
+- Helm
+- Cluster Management
+- QuickStart
+sidebar_label: 快速入门
+sidebar_position: 2
+title: 快速入门
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 快速入门
+
+本指南将带您快速上手 **KubeBlocks MySQL 插件**，包括准备工作、启用插件、创建 MySQL 集群以及轻松管理集群的全过程。
+
+## 前提条件
+
+本教程假设您已安装并运行 Kubernetes 集群，并且已在路径中安装 `kubectl` 命令行工具和 `helm`。请参阅 [Kubernetes 入门指南](https://kubernetes.io/docs/setup/) 和 [Helm 安装文档](https://helm.sh/docs/intro/install/) 获取各平台的安装说明。
+
+此外，本示例要求已安装并运行 KubeBlocks。请参阅 [安装 KubeBlocks](../user_docs/overview/install-kubeblocks) 完成安装。
+
+
+### 启用 MySQL 插件
+
+验证 MySQL 插件是否已安装。默认情况下，MySQL 插件会随 KubeBlocks Helm Chart 一同安装。
+
+```bash
+helm list -A
+NAME                        	NAMESPACE  	REVISION	UPDATED                                	STATUS  	CHART                       	APP VERSION
+...
+kb-addon-mysql              	kb-system  	1       	2024-12-16 00:28:52.78819557 +0000 UTC 	deployed	mysql-1.0.0                 	5.7.44
+```
+
+如果 MySQL 插件未启用，您可以按照以下步骤启用它。
+
+```bash
+# Add Helm repo
+helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
+# For users in Mainland China, if github is not accessible or very slow for you, please use following repo instead
+#helm repo add kubeblocks-addons https://jihulab.com/api/v4/projects/150246/packages/helm/stable
+
+# Update helm repo
+helm repo update
+# Search versions of the Addon
+helm search repo kubeblocks/mysql --versions
+# Install the version you want (replace $version with the one you need)
+helm upgrade -i mysql kubeblocks-addons/mysql --version $version -n kb-system
+```
+
+
+
+
+## 创建 MySQL 集群
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/mysql/cluster.yaml
+```
+
+
+
+
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: mysql-cluster
+  namespace: demo
+spec:
+  # Specifies the behavior when a Cluster is deleted.
+  # Valid options are: [DoNotTerminate, Delete, WipeOut] (`Halt` is deprecated since KB 0.9)
+  # - `DoNotTerminate`: Prevents deletion of the Cluster. This policy ensures that all resources remain intact.
+  # - `Delete`: Extends the `Halt` policy by also removing PVCs, leading to a thorough cleanup while removing all persistent data.
+  # - `WipeOut`: An aggressive policy that deletes all Cluster resources, including volume snapshots and backups in external storage. This results in complete data removal and should be used cautiously, primarily in non-production environments to avoid irreversible data loss.
+  terminationPolicy: Delete
+  # Specifies a list of ClusterComponentSpec objects used to define the
+  # individual Components that make up a Cluster.
+  # This field allows for detailed configuration of each Component within the Cluster
+  componentSpecs:
+    - name: mysql
+      # Specifies the ComponentDefinition custom resource (CR) that defines the
+      # Component's characteristics and behavior.
+      # Supports three different ways to specify the ComponentDefinition:
+      # - the regular expression - recommended
+      # - the full name - recommended
+      # - the name prefix
+      componentDef: "mysql-8.0"  # match all CMPD named with 'mysql-8.0-'
+      # ServiceVersion specifies the version of the Service expected to be
+      # provisioned by this Component.
+      # When componentDef is "mysql-8.0",
+      # Valid options are: [8.0.30,8.0.31,8.0.32,8.0.33,8.0.34,8.0.35,8.0.36,8.0.37,8.0.38,8.0.39]
+      serviceVersion: 8.0.35
+      # Determines whether metrics exporter information is annotated on the
+      # Component's headless Service.
+      # Valid options are [true, false]
+      disableExporter: false
+      # Specifies the desired number of replicas in the Component
+      replicas: 2
+      # Specifies the resources required by the Component.
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      # Specifies a list of PersistentVolumeClaim templates that define the storage
+      # requirements for the Component.
+      volumeClaimTemplates:
+        # Refers to the name of a volumeMount defined in
+        # `componentDefinition.spec.runtime.containers[*].volumeMounts
+        - name: data
+          spec:
+            # The name of the StorageClass required by the claim.
+            # If not specified, the StorageClass annotated with
+            # `storageclass.kubernetes.io/is-default-class=true` will be used by default
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                # Set the storage size as needed
+                storage: 20Gi
+```
+
+如果你想创建指定版本的集群，在应用 YAML 文件前设置 `spec.componentSpecs.componentDef`（主版本）和 `spec.componentSpecs.serviceVersion`（主次版本）字段，例如：
+
+<Tabs>
+  <TabItem value="MySQL 5" label="MySQL 5.7">
+
+```yaml
+  componentSpecs:
+    - name: mysql
+      # componentDef is "mysql-5.7" means the major version is 5.7
+      componentDef: "mysql-5.7"
+      # Valid options are: [5.7.44]
+      serviceVersion: 5.7.44
+```
+
+</TabItem>
+
+ <TabItem value="MySQL 8.0" label="MySQL 8.0" default>
+
+```yaml
+  componentSpecs:
+    - name: mysql
+      # componentDef is "mysql-8.0" means the major version is 8.0
+      componentDef: "mysql-8.0"
+      # Valid options are: [8.0.30,8.0.31,8.0.32,8.0.33,8.0.34,8.0.35,8.0.36,8.0.37,8.0.38,8.0.39]
+      serviceVersion: 8.0.35
+```
+
+</TabItem>
+
+ <TabItem value="MySQL 8.4" label="MySQL 8.4">
+
+```yaml
+  componentSpecs:
+    - name: mysql
+      # componentDef is "mysql-8.4" means the major version is 8.4
+      componentDef: "mysql-8.4"
+      # Valid options are: [8.4.0, 8.4.1, 8.4.2]
+      serviceVersion: 8.4.2
+```
+
+</TabItem>
+
+</Tabs>
+
+
+可通过以下命令查看可用的 componentDef 列表：
+
+```bash
+kubectl get cmpd -l app.kubernetes.io/name=mysql
+```
+
+支持的版本列表可通过以下命令查看：
+
+```bash
+kubectl get cmpv mysql
+```
+
+创建 MySQL 集群时，KubeBlocks 会自动创建一个包含一个主节点副本和一个从节点副本的 MySQL 集群。主节点和从节点之间通过半同步复制保持同步。
+
+当集群的 status.phase 状态变为 Running 时，表示集群已成功创建，且主节点和从节点副本均已启动。
+
+```bash
+kubectl get cluster mysql-cluster
+NAME            CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+mysql-cluster                        Delete               Running   22m
+
+kubectl get pods -l app.kubernetes.io/instance=mysql-cluster
+NAME                    READY   STATUS    RESTARTS   AGE
+mysql-cluster-mysql-0   4/4     Running   0          31m
+mysql-cluster-mysql-1   4/4     Running   0          31m
+```
+
+如果已安装 `kbcli`，您可以使用 `kbcli` 工具快速查看与集群相关的重要信息。
+
+```bash
+kbcli cluster describe mysql-cluster
+Name: mysql-cluster	 Created Time: Dec 16,2024 08:37 UTC+0800
+NAMESPACE   CLUSTER-DEFINITION   VERSION   STATUS    TERMINATION-POLICY
+default                                    Running   Delete
+
+Endpoints:
+COMPONENT   MODE        INTERNAL                                             EXTERNAL
+mysql       ReadWrite   mysql-cluster-mysql.default.svc.cluster.local:3306   <none>
+
+Topology:
+COMPONENT   INSTANCE                ROLE        STATUS    AZ                NODE                                                       CREATED-TIME
+mysql       mysql-cluster-mysql-0   secondary   Running   ap-southeast-1b   ip-10-0-2-243.ap-southeast-1.compute.internal/10.0.2.243   Dec 16,2024 08:37 UTC+0800
+mysql       mysql-cluster-mysql-1   primary     Running   ap-southeast-1a   ip-10-0-1-215.ap-southeast-1.compute.internal/10.0.1.215   Dec 16,2024 08:37 UTC+0800
+
+Resources Allocation:
+COMPONENT   DEDICATED   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+mysql       false       500m / 500m          512Mi / 512Mi           data:20Gi      <none>
+
+Images:
+COMPONENT   TYPE   IMAGE
+mysql              docker.io/apecloud/mysql:8.0.35
+
+Data Protection:
+BACKUP-REPO   AUTO-BACKUP   BACKUP-SCHEDULE   BACKUP-METHOD   BACKUP-RETENTION   RECOVERABLE-TIME
+
+Show cluster events: kbcli cluster list-events -n default mysql-cluster
+```
+
+
+
+
+## 连接到 MySQL 集群
+
+创建 MySQL 集群时，KubeBlocks 会创建一个名为 "mysql-cluster-mysql-account-root" 的 Secret 来存储 MySQL root 用户名和密码。
+
+```bash
+kubectl get secret -l app.kubernetes.io/instance=mysql-cluster
+NAME                                           TYPE     DATA   AGE
+mysql-cluster-mysql-account-kbadmin            Opaque   2      61s
+mysql-cluster-mysql-account-kbdataprotection   Opaque   2      61s
+mysql-cluster-mysql-account-kbmonitoring       Opaque   2      61s
+mysql-cluster-mysql-account-kbprobe            Opaque   2      61s
+mysql-cluster-mysql-account-kbreplicator       Opaque   2      61s
+mysql-cluster-mysql-account-proxysql           Opaque   2      61s
+mysql-cluster-mysql-account-root               Opaque   2      61s
+```
+
+您可以通过以下两条命令从 Secret 'mysql-cluster-mysql-account-root' 中获取 MySQL 的 root 用户名和密码：
+
+
+
+```bash
+kubectl get secret mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 --decode
+
+kubectl get secret mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 --decode
+```
+
+KubeBlocks 默认会创建一个名为 "mysql-cluster-mysql" 的 ClusterIP 类型服务，用于访问 MySQL 集群。
+
+```bash
+kubectl get svc  -l app.kubernetes.io/instance=mysql-cluster
+NAME                  TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
+mysql-cluster-mysql   ClusterIP   172.20.253.119   <none>        3306/TCP   153m
+```
+
+您可以通过登录到 Kubernetes 集群中的 Pod（例如 MySQL 集群的主副本），并通过该服务访问数据库。在同一个 Kubernetes 集群内，ClusterIP 是可访问的。
+
+
+
+```bash
+kubectl exec -ti -n default mysql-cluster-mysql-0 -- mysql -h mysql-cluster-mysql -uroot -pkni676X2W1
+```
+
+或者，您可以使用 `kubectl port-forward` 命令将 MySQL 集群主副本的 3306 端口映射到本地机器的 3306 端口：
+
+```bash
+kubectl port-forward svc/mysql-cluster-mysql 3306:3306 -n default
+Forwarding from 127.0.0.1:3306 -> 3306
+Forwarding from [::1]:3306 -> 3306
+```
+
+然后，打开另一个 shell 并使用 mysql 命令行工具连接到本地端口 3306：
+
+
+
+```bash
+mysql -h 127.0.0.1 -P3306 -uroot -pkni676X2W1
+```
+
+使用 `kubectl exec` 和 `kubectl port-forward` 是用于快速测试 Operator 功能的方法，不应在生产环境中使用。在生产环境中，应通过服务（Service）访问 MySQL 集群。若需从 Kubernetes 外部访问数据库，则需要配置提供 EXTERNAL-IP 的 LoadBalancer 或 NodePort 类型服务。请参考[访问 MySQL 集群](./04-operations/05-manage-loadbalancer)在您的环境中配置服务。
+
+## 停止 MySQL 集群
+
+停止集群会释放该集群的所有 Pod，但 PVC、Secret、ConfigMap 和服务资源将被保留。当您希望节省集群成本时，此操作非常有用。
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/mysql/stop.yaml
+```
+
+
+
+
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: mysql-stop
+  namespace: demo
+spec:
+  # Specifies the name of the Cluster resource that this operation is targeting.
+  clusterName: mysql-cluster
+  type: Stop
+```
+
+或者，您也可以通过将 `spec.componentSpecs.stop` 字段设置为 true 来停止集群。
+
+（严格保持原文格式与换行）
+
+```bash
+kubectl edit cluster mysql-cluster
+```
+
+
+
+
+
+```yaml
+spec:
+  componentSpecs:
+    - name: mysql
+      stop: true  # set stop `true` to stop the component
+      replicas: 2
+```
+
+
+
+
+## 启动已停止的 MySQL 集群
+
+启动已停止的集群
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/mysql/start.yaml
+```
+
+
+
+
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: mysql-start
+  namespace: demo
+spec:
+  # Specifies the name of the Cluster resource that this operation is targeting.
+  clusterName: mysql-cluster
+  type: Start
+```
+
+或者，您也可以通过将 `spec.componentSpecs.stop` 字段设置为 false 来启动已停止的集群。
+
+（严格保持原文格式与换行）
+
+```bash
+kubectl edit cluster mysql-cluster
+```
+
+
+
+
+
+```yaml
+spec:
+  componentSpecs:
+    - name: mysql
+      stop: false  # set to `false` (or remove this field) to start the component
+      replicas: 2
+```
+
+
+
+
+## 销毁 MySQL 集群
+
+您可以使用以下命令删除集群：
+
+```bash
+kubectl delete cluster mysql-cluster
+```
+
+删除 Cluster 时的行为取决于 terminationPolicy 字段的值：
+- 如果 terminationPolicy 值为 DoNotTerminate，删除 Cluster 不会移除与该 Cluster 相关的任何资源。
+- 如果 terminationPolicy 值为 Delete，删除 Cluster 会移除与该 Cluster 相关的所有资源，包括 PVC、Secret、ConfigMap 和 Service。
+- 如果 terminationPolicy 值为 WipeOut，删除 Cluster 会移除与该 Cluster 相关的所有资源，包括 PVC、Secret、ConfigMap 和 Service，以及外部存储中的快照和备份。
+
+在测试环境中，您可以使用以下命令删除 Cluster 以释放所有资源。
+
+```bash
+kubectl patch cluster mysql-cluster -p '{"spec":{"terminationPolicy":"WipeOut"}}' --type="merge"
+kubectl delete cluster mysql-cluster
+```
+
+

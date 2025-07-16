@@ -1,0 +1,189 @@
+---
+description: 版本说明 v1.0.0
+keywords:
+- kubeblocks
+- release notes
+sidebar_position: 1
+title: v1.0.0
+---
+# KubeBlocks 1.0.0 (2025-05-28)
+
+我们很高兴宣布 KubeBlocks 1.0.0 版本正式发布。
+
+KubeBlocks 1.0.0 标志着一个重要里程碑，其核心 API 已升级至稳定版本（v1），并在集群管理、数据保护和运行稳定性方面实现了重大改进，为生产环境带来了更高的灵活性和可靠性。
+
+## 核心亮点
+
+### API 进入稳定阶段
+
+KubeBlocks 0.9 版本引入了灵活的拓扑结构、高级 Pod 管理（InstanceSet）和生命周期钩子功能。这些特性现已**正式进入稳定阶段**。
+
+以下 CRD 已升级至 **`v1` 版本并视为稳定**，将获得长期支持：
+
+**`apps.kubeblocks.io` API 组：**
+
+* `ClusterDefinition`
+* `Cluster`
+* `ComponentDefinition`
+* `Component`
+* `ComponentVersion`
+* `ServiceDescriptor`
+* `ShardingDefinition`
+* `SidecarDefinition`
+
+**`workloads.kubeblocks.io` API 组：**
+
+* `InstanceSet`
+
+### KubeBlocks 功能特性
+
+* **滚动更新**：通过 Cluster API 支持滚动升级，最大程度减少更新期间的停机时间
+* **增量备份**：新增增量备份支持，提升性能并降低存储消耗
+
+### KubeBlocks 插件亮点
+
+* **MySQL 增强**：新增 TLS 支持、通过 ProxySQL 实现的组复制以及基于 WAL-G 的时间点恢复（PITR），显著提升安全性和恢复能力
+* **MongoDB PITR 与多版本支持**：为 MongoDB 引入时间点恢复功能并新增多版本支持
+* **Kafka 改进**：支持外部 ZooKeeper、自定义 Prometheus 指标以及多网络访问，提升灵活性和可观测性
+* **Redis 增强**：新增集群切换、实例重建和外部配置支持，强化运维健壮性
+
+--- 
+
+
+
+## 变更内容
+
+### KubeBlocks
+
+#### 集群管理
+
+* **滚动升级**：通过Cluster API实现零停机升级 [#8973](https://github.com/apecloud/kubeblocks/pull/8973)
+* **动态镜像仓库**：支持动态替换镜像仓库以实现更灵活的部署 [#8018](https://github.com/apecloud/kubeblocks/pull/8018)
+* **分片Pod反亲和性**：为分片组件添加反亲和性规则 [#8705](https://github.com/apecloud/kubeblocks/pull/8705)
+* **Pod元数据更新**：允许更新底层Pod的标签和注解 [#8571](https://github.com/apecloud/kubeblocks/pull/8571)
+* **PVC存储卷属性**：支持为PVC设置volumeAttributesClass [#8783](https://github.com/apecloud/kubeblocks/pull/8783)
+* **组件定义策略规则**：添加细粒度的策略控制 [#8328](https://github.com/apecloud/kubeblocks/pull/8328)
+* **组件角色重构**：改进组件管理的角色定义 [#8416](https://github.com/apecloud/kubeblocks/pull/8416)
+
+#### 数据保护
+
+* **增量备份**：新增高效增量备份支持 [#8693](https://github.com/apecloud/kubeblocks/pull/8693)
+* **备份/恢复参数**：确保备份/恢复过程中的配置一致性 [#8472](https://github.com/apecloud/kubeblocks/pull/8472)
+* **保留最新备份**：新增保留最新备份的选项 [#9088](https://github.com/apecloud/kubeblocks/pull/9088)
+
+#### 运维
+
+* **OpsRequest验证**：引入验证策略以确保操作正确性 [#8232](https://github.com/apecloud/kubeblocks/pull/8232)
+
+---
+
+### KubeBlocks 插件
+
+#### MySQL
+
+* **TLS支持**：添加TLS安全连接支持 [#1462](https://github.com/apecloud/kubeblocks-addons/pull/1462)
+* **ProxySQL组复制**：通过ProxySQL集成增强高可用性 [#1467](https://github.com/apecloud/kubeblocks-addons/pull/1467)
+* **时间点恢复(PITR)**：支持使用WAL-G进行时间点恢复 [#1451](https://github.com/apecloud/kubeblocks-addons/pull/1451)
+* **持续与增量备份**：使用WAL-G改进备份策略 [#1456](https://github.com/apecloud/kubeblocks-addons/pull/1456)
+
+#### Redis
+
+* **集群切换与Sentinel优化**：增强故障转移能力 [#1414](https://github.com/apecloud/kubeblocks-addons/pull/1414)
+* **实例重建**：支持重建Redis实例 [#1417](https://github.com/apecloud/kubeblocks-addons/pull/1417)
+
+#### MongoDB
+
+* **时间点恢复(PITR)**：新增时间点恢复支持 [#1487](https://github.com/apecloud/kubeblocks-addons/pull/1487)
+* **新版本支持**：新增MongoDB 8.0.8和8.0.6版本支持 [#1431](https://github.com/apecloud/kubeblocks-addons/pull/1431), [#1590](https://github.com/apecloud/kubeblocks-addons/pull/1590)
+
+#### Kafka
+
+* **外部ZooKeeper**：为Kafka 2.7添加外部ZooKeeper支持 [#1297](https://github.com/apecloud/kubeblocks-addons/pull/1297)
+* **自定义Prometheus指标**：支持配置自定义指标 [#1544](https://github.com/apecloud/kubeblocks-addons/pull/1544)
+* **跳过广告端口解析**：使用Pod IP时避免解析 [#1569](https://github.com/apecloud/kubeblocks-addons/pull/1569)
+* **自定义安全上下文**：支持自定义安全设置 [#1337](https://github.com/apecloud/kubeblocks-addons/pull/1337)
+
+#### RabbitMQ
+
+* **新版本支持**：新增RabbitMQ 4.0.9版本支持 [#1596](https://github.com/apecloud/kubeblocks-addons/pull/1596)
+
+#### ClickHouse
+
+* **22.9.4支持**：新增ClickHouse 22.9.4兼容性 [#1376](https://github.com/apecloud/kubeblocks-addons/pull/1376)
+
+#### TiDB
+
+* **8.4版本支持**：新增TiDB 8.4支持 [#1384](https://github.com/apecloud/kubeblocks-addons/pull/1384)
+* **升级至6.5.12**：将TiDB 6更新至v6.5.12 [#1664](https://github.com/apecloud/kubeblocks-addons/pull/1664)
+
+---
+
+### API版本演进、弃用与移除
+
+#### 正式发布(v1)API晋升
+
+以下CRD现已**晋升至`v1`版本并视为稳定**，将获得长期支持：
+
+**`apps.kubeblocks.io` API组**
+
+- `ClusterDefinition`
+- `Cluster`
+- `ComponentDefinition`
+- `Component`
+- `ComponentVersion`
+- `ServiceDescriptor`
+- `ShardingDefinition`
+- `SidecarDefinition`
+
+**`workloads.kubeblocks.io` API组**
+
+- `InstanceSet`
+
+> 这些资源的`v1alpha1`和`v1beta1`版本现已弃用，可能在未来的版本中移除。
+
+#### 弃用声明
+
+以下CRD已被弃用，将在**后续版本中移除**，请相应迁移您的配置：
+
+* `ConfigConstraint`
+* `Configuration`
+
+> 这些资源不再维护或接收更新。
+
+#### 新Alpha API(实验性)
+
+新的**`parameters.kubeblocks.io`** API组引入了细粒度配置API：
+
+* `ComponentParameter`
+* `ParamConfigRenderer`
+* `Parameter`
+* `ParametersDefinition`
+
+> 这些API旨在替代已弃用的`ConfigConstraint`和`Configuration`。
+
+#### API组重组
+
+部分API已迁移至新组以更好地体现其领域职责，请相应更新您的清单：
+
+| 资源                          | 原API组               | 新API组                      |
+| ----------------------------- | --------------------- | ---------------------------- |
+| `OpsDefinition`/`OpsRequest`  | `apps.kubeblocks.io`  | `operations.kubeblocks.io`   |
+| `BackupPolicyTemplate`        | `apps.kubeblocks.io`  | `dataprotection.kubeblocks.io` |
+
+## 升级公告
+
+:::note
+请注意，目前**不支持**从 0.9 版本直接升级到 1.0 版本。
+:::
+
+我们正在积极开发一个经过充分测试的可靠升级方案，该方案将包含在即将发布的版本中。
+
+## 致谢
+
+在庆祝 KubeBlocks 1.0.0 发布之际，我们要向所有帮助塑造这一项目的工程师、贡献者和合作伙伴致以诚挚的谢意。
+
+特别感谢快手、中国移动云、唯品会、腾讯和 360 的技术贡献、深度反馈及真实场景用例，这些极大地推动了项目架构、性能和生产就绪度的进步。
+
+我们同样深切感激社区贡献者们——你们的代码提交、问题报告、讨论和评审，对推动项目在质量与创新方面的发展起到了关键作用。
+
+1.0.0 版本标志着我们在构建健壮的云原生数据库平台道路上迈出了重要一步。期待与各位继续携手同行——共同扩展生态、应对新挑战、突破数据基础设施的边界。

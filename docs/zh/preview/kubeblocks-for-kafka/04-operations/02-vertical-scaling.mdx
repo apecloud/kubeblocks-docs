@@ -1,0 +1,178 @@
+---
+description: 了解如何在KubeBlocks管理的Kafka集群中执行垂直扩展，以优化资源利用率并提升性能。
+keywords:
+- KubeBlocks
+- Kafka
+- Vertical Scaling
+- Kubernetes
+- Resources
+sidebar_label: 垂直扩展
+sidebar_position: 2
+title: Kafka 集群中的垂直扩展
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# 使用KubeBlocks对Kafka集群进行垂直扩缩容
+
+本指南演示如何通过调整计算资源（CPU和内存）对KubeBlocks管理的Kafka集群进行垂直扩缩容，同时保持副本数量不变。
+
+垂直扩缩容会修改Kafka实例的计算资源（CPU和内存）但保持副本数不变。主要特点：
+
+- **无中断性**：正确配置时，可在扩缩容期间保持可用性
+- **精细化**：可独立调整CPU、内存或两者
+- **可逆性**：根据需要可随时扩容或缩容
+
+KubeBlocks通过遵循受控的、角色感知的更新策略确保扩缩操作影响最小化：
+
+**角色感知副本（主/从副本）**
+- 从副本优先更新 - 先升级非领导者Pod以最小化影响
+- 主副本最后更新 - 仅当所有从副本健康后才重启主Pod
+- 集群状态在所有副本稳定后从"更新中"转为"运行中"
+
+**无角色副本（基于序号的扩缩容）**
+若副本未定义角色，则按Kubernetes Pod序号顺序更新：
+- 从最高序号开始（如pod-2 → pod-1 → pod-0）以确保确定性滚动更新
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署Kafka集群
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+## 验证部署
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+## 垂直扩缩容
+
+**预期工作流程**：
+
+1. Pod按序号从高到低顺序更新（如pod-2 → pod-1 → pod-0）
+1. 集群状态从"更新中"转为"运行中"
+
+<Tabs>
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+  选项1：使用VerticalScaling OpsRequest
+
+  应用以下YAML为kafka-broker组件扩容资源：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: kafka-separated-cluster-vscale-ops
+    namespace: demo
+  spec:
+    clusterName: kafka-separated-cluster
+    type: VerticalScaling
+    verticalScaling:
+    - componentName: kafka-broker
+      requests:
+        cpu: '1'
+        memory: 1Gi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+  ```
+
+  可通过以下命令查看扩缩容进度：
+
+  ```bash
+  kubectl -n demo get ops kafka-separated-cluster-vscale-ops -w
+  ```
+
+  预期结果：
+
+  ```bash
+  NAME                                 TYPE              CLUSTER                   STATUS    PROGRESS   AGE
+  kafka-separated-cluster-vscale-ops   VerticalScaling   kafka-separated-cluster   Running   0/1        12s
+  kafka-separated-cluster-vscale-ops   VerticalScaling   kafka-separated-cluster   Running   1/1        13s
+  kafka-separated-cluster-vscale-ops   VerticalScaling   kafka-separated-cluster   Running   1/1        13s
+  kafka-separated-cluster-vscale-ops   VerticalScaling   kafka-separated-cluster   Succeed   1/1        13s
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  选项2：直接更新Cluster API
+
+  也可通过更新`spec.componentSpecs.resources`字段直接调整资源：
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: kafka-broker
+        replicas: 1
+        resources:
+          requests:
+            cpu: "1"       # 按需调整资源
+            memory: "1Gi"   # 按需调整资源
+          limits:
+            cpu: "1"       # 按需调整资源
+            memory: "1Gi"  # 按需调整资源
+    ...
+    ```
+  </TabItem>
+</Tabs>
+
+## 最佳实践与注意事项
+
+**规划阶段：**
+- 选择维护窗口或低流量时段进行扩缩容
+- 确认Kubernetes集群有足够资源
+- 开始前检查是否有其他操作正在进行
+
+**执行阶段：**
+- 保持CPU与内存的平衡比例
+- 设置相同的requests/limits以保证QoS
+
+**扩缩后：**
+- 监控资源利用率和应用性能
+- 根据需要调整Kafka参数
+
+## 验证
+通过检查集群配置或Pod详情验证更新后的资源：
+```bash
+kbcli cluster describe kafka-separated-cluster -n demo
+```
+
+预期输出：
+```bash
+资源分配:
+组件          实例模板          CPU(请求/限制)     内存(请求/限制)      存储大小       存储类
+kafka-broker                  1 / 1              1Gi / 1Gi          data:20Gi     <none>
+```
+
+## KubeBlocks垂直扩缩容的核心优势
+- 无缝扩缩容：按特定顺序重建Pod确保最小影响
+- 动态资源调整：根据工作负载需求灵活调整CPU和内存
+- 灵活性：可选择OpsRequest动态扩缩或直接API更新精确控制
+- 高可用性：扩缩过程中集群保持可操作状态
+
+## 清理
+删除Kafka集群及其命名空间以释放所有资源：
+```bash
+kubectl delete cluster kafka-separated-cluster -n demo
+kubectl delete ns demo
+```
+
+## 总结
+本指南中您学会了如何：
+1. 部署由KubeBlocks管理的Kafka集群
+2. 通过增减kafka组件资源进行垂直扩缩容
+3. 使用OpsRequest和直接Cluster API两种方式调整资源分配
+
+垂直扩缩容是优化资源利用率和适应工作负载变化的强大工具，可确保您的Kafka集群保持高性能和弹性。

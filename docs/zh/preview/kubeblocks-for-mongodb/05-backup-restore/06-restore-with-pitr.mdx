@@ -1,0 +1,182 @@
+---
+description: 了解如何在KubeBlocks上使用完整备份和持续binlog备份实现MongoDB集群的时间点恢复（PITR）。
+keywords:
+- MongoDB
+- Full Backup
+- PITR
+- KubeBlocks
+sidebar_label: 使用 PITR 恢复
+sidebar_position: 6
+title: 在KubeBlocks上通过时间点恢复(PITR)从备份还原MongoDB集群
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 在KubeBlocks上通过时间点恢复(PITR)从备份还原MongoDB集群
+
+本指南演示如何在KubeBlocks中为MongoDB集群执行时间点恢复(PITR)，使用以下要素：
+1. 完整基础备份
+2. 持续的WAL(预写日志)备份
+3. 两种恢复方法：
+   - 集群注解(声明式方法)
+   - OpsRequest API(操作控制)
+
+PITR支持恢复到指定`timeRange`时间范围内的任意时间点。
+
+## 先决条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 准备PITR恢复
+执行PITR恢复需要同时具备完整备份和持续备份。如果尚未配置，请参考相关文档进行设置。
+
+- 已完成的完整备份
+- 活跃的持续WAL备份
+- 可访问的备份存储库
+- 新集群的充足资源
+
+可通过以下步骤确认备份列表：
+
+### 1. 验证持续备份
+确认存在正在运行或已完成的持续WAL备份：
+
+```bash
+# 每个集群应有且仅有一个持续备份
+kubectl get backup -n demo -l dataprotection.kubeblocks.io/backup-type=Continuous,app.kubernetes.io/instance=mongo-cluster
+```
+
+### 2. 检查备份时间范围
+获取有效恢复时间窗口：
+
+```bash
+kubectl get backup <continuous-backup-name> -n demo -o yaml | yq '.status.timeRange'
+```
+
+预期输出：
+```text
+start: "2025-05-07T09:12:47Z"
+end: "2025-05-07T09:22:50Z"
+```
+
+### 3. 识别完整备份
+查找符合条件的完整备份：
+- 状态：已完成
+- 完成时间在持续备份开始时间之后
+
+```bash
+# 应存在一个或多个完整备份
+kubectl get backup -n demo -l dataprotection.kubeblocks.io/backup-type=Full,app.kubernetes.io/instance=mongo-cluster
+```
+
+:::tip
+KubeBlocks会自动选择最近符合条件的完整备份作为基础。
+确保存在满足条件的完整备份：其`stopTime`/`completionTimestamp`必须**晚于**持续备份的`startTime`，否则PITR恢复将失败。
+:::
+
+## 方案一：集群注解恢复
+
+### 步骤1：创建恢复集群
+在集群注解中配置PITR参数：
+
+关键参数：
+- `name`: 持续备份名称
+- `restoreTime`: 目标恢复时间(需在备份`timeRange`范围内)
+
+应用以下YAML配置：
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: mongo-cluster-restore-pitr
+  namespace: demo
+  annotations:
+    # 注意：将<CONTINUOUS_BACKUP_NAME>替换为持续备份名称
+    # 注意：将<RESTORE_POINT_TIME>替换为备份时间范围内的有效时间
+    kubeblocks.io/restore-from-backup: '{"mongodb":{"name":"<CONTINUOUS_BACKUP_NAME>","namespace":"demo","restoreTime":"<RESTORE_POINT_TIME>","volumeRestorePolicy":"Parallel"}}'
+spec:
+  terminationPolicy: Delete
+  clusterDef: mongodb
+  topology: replicaset
+  componentSpecs:
+    - name: mongodb
+      serviceVersion: "6.0.16"
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+### 步骤2：监控恢复过程
+通过以下命令跟踪恢复进度：
+
+```bash
+# 查看恢复状态
+kubectl get restore -n demo -w
+
+# 查看集群状态
+kubectl get cluster -n demo -w
+```
+
+## 方案二：OpsRequest API恢复
+
+如需操作控制和监控，可使用OpsRequest API：
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: mongo-cluster-restore
+  namespace: demo
+spec:
+  clusterName: mongo-cluster-restore
+  force: false
+  restore:
+    backupName: <CONTINUOUS_BACKUP_NAME>
+    backupNamespace: demo
+    restorePointInTime: <RESTORE_POINT_TIME>
+  type: Restore
+```
+
+### 监控恢复过程
+通过以下命令跟踪进度：
+
+```bash
+# 查看恢复操作
+kubectl get restore -n demo -w
+
+# 验证集群状态
+kubectl get cluster -n demo -w
+```
+
+## 清理资源
+删除所有创建的资源，包括MongoDB集群及其命名空间：
+
+```bash
+kubectl delete cluster mongo-cluster -n demo
+kubectl delete cluster mongo-cluster-restore -n demo
+kubectl delete ns demo
+```
+
+## 总结
+本指南演示了如何在KubeBlocks中使用完整备份和持续备份对MongoDB集群执行时间点恢复(PITR)。关键步骤包括：
+- 验证可用备份
+- 提取加密的系统账户凭证
+- 创建带有恢复配置的新MongoDB集群
+- 监控恢复过程
+
+通过此方法，您可以将MongoDB集群恢复到特定时间点，确保数据损失最小化和业务连续性。

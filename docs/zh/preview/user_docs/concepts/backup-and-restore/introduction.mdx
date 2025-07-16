@@ -1,0 +1,33 @@
+---
+description: KubeBlocks 备份与恢复功能简介
+keywords:
+- introduction
+- backup
+- restore
+sidebar_label: 简介
+sidebar_position: 1
+title: 简介
+---
+# 简介
+
+KubeBlocks 提供数据备份与恢复功能，确保您的数据安全可靠。KubeBlocks 的备份恢复功能依赖于 BackupRepo，在使用全量备份恢复功能前，您需要[先配置 BackupRepo](./backup/backup-repo.md)。
+
+KubeBlocks 采用物理备份方式，以数据库中的物理文件作为备份对象。您可以根据需求选择以下备份方案，按需或定时备份集群数据：
+
+* [按需备份](./backup/on-demand-backup.md)：根据备份方式不同，可分为备份工具和快照备份两种类型。
+  * 备份工具：您可以使用对应数据产品的专用备份工具，例如 MySQL 的 XtraBackup 和 PostgreSQL 的 pg_basebackup。KubeBlocks 支持为不同数据产品配置专属备份工具。
+  * 快照备份：若您的数据存储在支持快照的云盘上，可通过创建快照实现数据备份。快照备份通常比备份工具更快速，因此推荐使用。
+
+* [定时备份](./backup/scheduled-backup.md)：您可以指定保留时间、备份方法、执行时间等参数来自定义备份计划。
+
+在数据恢复方面，KubeBlocks 支持从备份集中恢复数据：
+
+* 数据恢复
+  * [从备份集恢复数据](./restore/restore-data-from-backup-set.md)
+
+请按以下步骤操作实现集群备份与恢复：
+
+1. [配置 BackupRepo](./backup/backup-repo.md)
+2. [配置 BackupPolicy](./backup/configure-backuppolicy.md)
+3. 选择[按需](./backup/on-demand-backup.md)或[定时](./backup/scheduled-backup.md)方式备份集群
+4. 通过[时间点恢复(PITR)](./restore/pitr.md)或从[备份集](./restore/restore-data-from-backup-set.md)恢复数据

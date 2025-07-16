@@ -1,0 +1,92 @@
+---
+description: KubeBlocks 已知问题
+keywords:
+- KubeBlocks
+- Known Issues
+sidebar_label: 已知问题
+sidebar_position: 2
+title: 已知问题
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 已知问题
+
+## 问题1：KubeBlocks 创建大量 Secret
+
+### 问题描述
+KubeBlocks 持续为每个集群创建大量 Secret 且不会停止。您可能在 **KubeBlocks** 日志中看到以下信息：
+
+```bash
+INFO reconcile object *v1.ServiceAccount with action UPDATE OK
+```
+
+### 受影响版本
+- KubeBlocks v1.0.0 及 Kubernetes 版本 ≤ 1.24
+
+### 根本原因
+在 Kubernetes 1.24 版本之前，Kubernetes 会自动为 ServiceAccount 生成基于 Secret 的令牌，详见 [Kubernetes 服务账户令牌文档](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/)。
+
+### 解决方案
+将 KubeBlocks 升级至 `v1.0.1-beta.3` 或更高版本。
+
+---
+
+## 问题2：PostgreSQL 因密码含特殊字符启动失败
+
+### 问题描述
+当密码包含某些特殊字符时，PostgreSQL 可能启动失败。通过检查 Pod 日志可见：
+```bash
+File "/usr/lib/python3/dist-packages/yaml/scanner.py", line 116, in check_token
+    self.fetch_more_tokens()
+  File "/usr/lib/python3/dist-packages/yaml/scanner.py", line 231, in fetch_more_tokens
+    return self.fetch_anchor()
+  File "/usr/lib/python3/dist-packages/yaml/scanner.py", line 621, in fetch_anchor
+    self.tokens.append(self.scan_anchor(AnchorToken))
+  File "/usr/lib/python3/dist-packages/yaml/scanner.py", line 929, in scan_anchor
+    raise ScannerError("while scanning an %s" % name, start_mark,
+yaml.scanner.ScannerError: while scanning an anchor
+  in "<unicode string>", line 45, column 17:
+          password: &amp;JgE#F5x&amp;eNwis*2dW!7&amp ...
+                    ^
+```
+
+### 受影响版本
+- KubeBlocks v0.9.4 及之前版本
+- KubeBlocks v1.0.0
+
+### 解决方案
+
+升级 KubeBlocks 至 `v1.0.1-beta.6` 或 `v0.9.5-beta.4` 及以上版本。
+
+可通过显式设置密码生成策略中允许的符号列表来解决此问题：
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+spec:
+  componentSpecs:
+    - name: postgresql
+      systemAccounts:
+        - name: postgres
+          passwordConfig:
+            length: 20           # 密码长度：20个字符
+            numDigits: 4         # 至少4位数字
+            numSymbols: 2        # 至少2个符号
+            letterCase: MixedCases # 大小写字母混合
+            symbolCharacters: '!' # 设置生成密码时允许使用的符号
+# 为简洁起见，省略了Cluster清单中的其他字段
+```
+
+## 如何报告问题
+
+您可以通过以下方式报告问题：
+
+1. 在 [KubeBlocks GitHub 仓库](https://github.com/apecloud/kubeblocks/issues/) 创建 issue
+2. [可选] 提供通过 `kbcli report` 命令生成的压缩文件：
+```bash
+kbcli report cluster <clusterName>  --with-logs --mask # 打包集群清单、版本和日志
+kbcli report kubeblocks --with-logs --mask # 打包kubeblocks日志
+```
+其中 `clusterName` 是您要报告问题的集群名称，`--mask` 参数会对 Secret 和 ConfigMap 中的敏感信息进行脱敏处理。

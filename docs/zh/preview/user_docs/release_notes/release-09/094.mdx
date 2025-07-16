@@ -1,0 +1,71 @@
+---
+description: 版本说明 v0.9.4
+keywords:
+- kubeblocks
+- release notes
+sidebar_position: 6
+title: v0.9.4
+---
+# KubeBlocks 0.9.4 版本发布 (2025-06-30)
+
+我们很高兴地宣布 KubeBlocks v0.9.4 版本正式发布。本次更新包含多项新功能、错误修复及各类改进。以下是详细的更新内容。
+
+## KubeBlocks 核心功能
+
+### 新增特性
+
+* **集群支持指定 PVC 注解和标签** 通过为不同类型的 PVC 应用不同的注解/标签，CSI 驱动可以为不同存储卷设置不同的 IO 配额 [(#8799)](https://github.com/apecloud/kubeblocks/pull/8799)
+
+* **新增跳过预终止操作的注解键** 注解键：`apps.kubeblocks.io/skip-pre-terminate` [(#9121)](https://github.com/apecloud/kubeblocks/pull/9121)
+
+* **支持分片组件水平扩缩容时重新渲染配置** 在分片组件水平扩展后重新渲染配置文件 [(#9195)](https://github.com/apecloud/kubeblocks/pull/9195)
+
+## KubeBlocks 插件生态
+
+### MySQL
+
+* 更新 `innodb_redo_log_capacity` 和 `secure_file_priv` 参数的适用范围 [(#1510)](https://github.com/apecloud/kubeblocks-addons/pull/1510) [(#1585)](https://github.com/apecloud/kubeblocks-addons/pull/1585)
+
+### PostgreSQL
+
+* 修复 PostgreSQL 15 & 16 版本缺失 `backupPolicy` 的问题 [(#1546)](https://github.com/apecloud/kubeblocks-addons/pull/1546)
+
+### Redis
+
+* 优化 Redis 集群的停止-启动流程 [(#1554)](https://github.com/apecloud/kubeblocks-addons/pull/1554)
+* 改进成员退出逻辑（不再依赖公告地址） [(#1548)](https://github.com/apecloud/kubeblocks-addons/pull/1548)
+* 完善 Redis 主机网络变量配置 [(#1603)](https://github.com/apecloud/kubeblocks-addons/pull/1603)
+
+### MongoDB
+
+* 新增对 MongoDB 导出器的支持 [(#1721)](https://github.com/apecloud/kubeblocks-addons/pull/1721)
+
+### RabbitMQ
+
+* 修复 RabbitMQ 启动失败问题 [(#1479)](https://github.com/apecloud/kubeblocks-addons/pull/1479)
+* 解决 RabbitMQ 成员退出异常 [(#1657)](https://github.com/apecloud/kubeblocks-addons/pull/1657)
+
+### ZooKeeper
+
+* 为 ZooKeeper 新增 CMPD 定义 [(#1514)](https://github.com/apecloud/kubeblocks-addons/pull/1514)
+* 修复快照日志丢失问题 [(#1509)](https://github.com/apecloud/kubeblocks-addons/pull/1509)
+* 新增 `minSessionTimeout` 参数支持 [(#1535)](https://github.com/apecloud/kubeblocks-addons/pull/1535)
+* 修复备份恢复逻辑 [(#1550)](https://github.com/apecloud/kubeblocks-addons/pull/1550)
+* 优化 ZooKeeper 角色探测机制 [(#1542)](https://github.com/apecloud/kubeblocks-addons/pull/1542)
+* 增强 ZooKeeper 跟踪日志 [(#1693)](https://github.com/apecloud/kubeblocks-addons/pull/1693)
+
+### VictoriaMetrics
+
+* 支持创建 VictoriaMetrics 集群时配置环境变量 [(#1622)](https://github.com/apecloud/kubeblocks-addons/pull/1622)
+
+### ClickHouse
+
+* 持久化 ClickHouse 和 Keeper 的日志文件 [(#1560)](https://github.com/apecloud/kubeblocks-addons/pull/1560)
+
+## 升级至 v0.9.4
+
+请参考[升级至 KubeBlocks v0.9.x 指南](https://kubeblocks.io/docs/preview/user_docs/upgrade/upgrade-to-v09-version)。
+
+## 完整变更日志
+
+您可以通过[完整变更日志](https://github.com/apecloud/kubeblocks/compare/v0.9.3...v0.9.4)查看所有变更细节。

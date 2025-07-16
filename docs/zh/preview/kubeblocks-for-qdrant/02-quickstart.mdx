@@ -1,0 +1,443 @@
+---
+description: 使用KubeBlocks部署和管理Qdrant ReplicaSet集群的完整指南，涵盖安装、配置及运维最佳实践。
+keywords:
+- Kubernetes
+- Qdrant
+- KubeBlocks
+- Helm
+- Cluster Management
+- QuickStart
+sidebar_label: 快速入门
+sidebar_position: 2
+title: Qdrant 快速入门
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Qdrant 快速入门
+
+本指南提供了使用 **KubeBlocks Qdrant 插件** 部署和管理 Qdrant ReplicaSet 集群的完整流程，内容包括：
+- 系统前提条件与插件安装
+- 集群创建与配置
+- 启停操作等运维管理
+- 连接方式与集群监控
+
+## 前置条件
+
+### 系统要求
+
+开始前请确保您的环境满足以下要求：
+
+- 可用的 Kubernetes 集群（推荐 v1.21+ 版本）
+- 已安装并配置好集群访问权限的 `kubectl` v1.21+ 工具
+- 已安装 Helm（[安装指南](https://helm.sh/docs/intro/install/)）
+- 已安装 KubeBlocks（[安装指南](../user_docs/overview/install-kubeblocks)）
+
+### 验证 Qdrant 插件
+
+Qdrant 插件默认包含在 KubeBlocks 中。检查其状态：
+
+```bash
+helm list -n kb-system | grep qdrant
+```
+
+<details open>
+<summary>示例输出：</summary>
+
+```bash
+NAME                NAMESPACE   REVISION    UPDATED                     STATUS      CHART
+kb-addon-qdrant     kb-system   1           2025-05-21                  deployed    qdrant-1.0.0
+```
+</details>
+
+如果插件未启用，请选择安装方式：
+
+<Tabs>
+
+  <TabItem value="helm" label="helm" default>
+  ```bash
+  # 添加 Helm 仓库
+  helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
+  # 中国大陆用户如果 GitHub 访问困难或缓慢，可使用以下镜像仓库：
+  #helm repo add kubeblocks-addons https://jihulab.com/api/v4/projects/150246/packages/helm/stable
+
+  # 更新 Helm 仓库
+  helm repo update
+  # 搜索可用插件版本
+  helm search repo kubeblocks/qdrant --versions
+  # 安装指定版本（将 <VERSION> 替换为您选择的版本号）
+  helm upgrade -i kb-addon-qdrant kubeblocks-addons/qdrant --version <VERSION> -n kb-system
+  ```
+  </TabItem>
+
+  <TabItem value="kbcli" label="kbcli">
+
+  ```bash
+  # 添加索引（kubeblocks 默认已添加）
+  kbcli addon index add kubeblocks https://github.com/apecloud/block-index.git
+  # 更新索引
+  kbcli addon index update kubeblocks
+  # 更新所有索引
+  kbcli addon index update --all
+  ```
+
+  搜索并安装插件：
+
+  ```bash
+  # 搜索插件
+  kbcli addon search qdrant
+  # 安装指定版本插件（将 <VERSION> 替换为您选择的版本号）
+  kbcli addon install qdrant --version <VERSION>
+  ```
+  **示例输出：**
+  ```bash
+  ADDON   VERSION         INDEX
+  qdrant   0.9.0           kubeblocks
+  qdrant   0.9.1           kubeblocks
+  qdrant   1.0.0           kubeblocks
+  ```
+  启用或禁用插件：
+
+  ```bash
+  # 启用插件
+  kbcli addon enable qdrant
+  # 禁用插件
+  kbcli addon disable qdrant
+  ```
+
+  </TabItem>
+</Tabs>
+
+:::note
+**版本兼容性说明**
+
+请始终确保 Qdrant 插件版本与您的 KubeBlocks 主版本匹配，以避免兼容性问题。
+
+:::
+
+### 验证支持的 Qdrant 版本
+
+**列出可用 Qdrant 版本：**
+
+```bash
+kubectl get cmpv qdrant
+```
+<details open>
+<summary>示例输出</summary>
+```text
+NAME     VERSIONS                                STATUS      AGE
+qdrant   1.14.0,1.10.0,1.8.4,1.8.1,1.7.3,1.5.0   Available   26d
+```
+</details>
+
+**检查 ComponentDefinitions 的版本兼容性**
+
+**步骤 1.** 获取与指定 `ComponentVersion` 关联的 `ComponentDefinition` 列表
+
+```bash
+kubectl get cmpv qdrant -ojson | jq -r '.metadata.annotations."componentversion.kubeblocks.io/compatible-definitions"' | tr ',' '\n'
+```
+
+<details>
+<summary>示例输出</summary>
+```text
+qdrant-1.0.0
+```
+</details>
+
+**步骤 2.** 获取与指定 `ComponentVersion` 关联的 `ComponentDefinition` 列表
+
+```bash
+kubectl get cmpv qdrant -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("^qdrant"))) | .releases[]'
+```
+
+该命令返回与名为 `qdrant` 的 `ComponentDefinition` 兼容的版本：
+
+<details open>
+<summary>示例输出</summary>
+```text
+1.5.0
+1.7.3
+1.8.1
+1.8.4
+1.10.0
+1.14.0
+```
+</details>
+
+### 存储配置
+
+Qdrant 需要持久化存储。验证可用选项：
+
+```bash
+kubectl get storageclass
+```
+
+推荐的存储特性：
+- 最小 20Gi 容量
+- ReadWriteOnce 访问模式
+- 支持存储卷扩容
+- 满足工作负载的性能需求
+
+## 部署 Qdrant 集群
+
+使用默认配置部署基础版 Qdrant 集群：
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/qdrant/cluster.yaml
+```
+
+该操作将创建：
+- 包含 3 个副本的 Qdrant 集群
+- 默认资源分配（0.5 CPU，0.5Gi 内存）
+- 20Gi 持久化存储
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: qdrant-cluster
+  namespace: demo
+spec:
+  # 指定集群删除时的行为策略
+  # 可选值: [DoNotTerminate, Delete, WipeOut] (KB 0.9 起弃用 `Halt`)
+  # - `DoNotTerminate`: 阻止集群删除，确保所有资源保留完整
+  # - `Delete`: 在 `Halt` 策略基础上同时移除 PVC，实现包括持久化数据在内的彻底清理
+  # - `WipeOut`: 激进策略，将删除所有集群资源（包括外部存储中的卷快照和备份）。该操作会导致数据完全清除，应谨慎使用（建议仅在非生产环境使用以避免不可逆数据丢失）
+  terminationPolicy: Delete
+  # 指定创建集群时使用的 ClusterDefinition 名称
+  # 注意：请勿修改此字段
+  # 必须设置为 `qdrant` 才能创建 Qdrant 集群
+  clusterDef: qdrant
+  # 指定创建集群时使用的 ClusterTopology 名称
+  # 可选值: [cluster]
+  topology: cluster
+  componentSpecs:
+    - name: qdrant
+      # 指定该组件需要部署的服务版本
+      # 可选值: [1.10.0,1.5.0,1.7.3,1.8.1,1.8.4]
+      serviceVersion: 1.10.0
+      # 按需调整副本数
+      # 推荐值: [3,5,7]
+      replicas: 3
+      # 指定组件所需的计算资源
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      # 定义组件存储需求的持久卷声明模板列表
+      volumeClaimTemplates:
+        # 引用 componentDefinition.spec.runtime.containers[*].volumeMounts 中定义的挂载卷名称
+        - name: data
+          spec:
+            # 声明所需的存储类名称
+            # 若未指定，默认使用标注了 `storageclass.kubernetes.io/is-default-class=true` 的存储类
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                # 按需设置存储容量
+                storage: 20Gi
+```
+
+更多 API 字段说明请参阅 [API 参考文档](../user_docs/references/api-reference/cluster)。
+
+### 创建指定版本的 Qdrant 集群
+
+在应用配置前，通过设置 `spec.componentSpecs.serviceVersion` 字段（主版本.次版本格式）可创建特定版本的集群：
+
+<Tabs>
+  <TabItem value="qdrant" label="Qdrant">
+  ```yaml
+    componentSpecs:
+      - name: qdrant
+        serviceVersion: 1.10.0    # 可选值: [1.10.0,1.5.0,1.7.3,1.8.1,1.8.4]
+  ```
+  </TabItem>
+</Tabs>
+
+## 验证集群状态
+
+当部署一个包含3个副本的Qdrant集群时，请通过以下方式确认部署成功：
+
+1. 集群阶段显示为`Running`（运行中）
+2. 所有Pod均处于正常运行状态
+
+可通过以下任一方式检查状态：
+
+<Tabs>
+  <TabItem value='kubectl' label='kubectl' default>
+```bash
+kubectl get cluster qdrant-cluster -n demo -w
+NAME             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+qdrant-cluster   qdrant               Delete               Creating   27s
+qdrant-cluster   qdrant               Delete               Running    64s
+
+kubectl get pods -l app.kubernetes.io/instance=qdrant-cluster -n demo
+qdrant-cluster-qdrant-0   2/2     Running   0          92s
+qdrant-cluster-qdrant-1   2/2     Running   0          77s
+qdrant-cluster-qdrant-2   2/2     Running   0          63s
+```
+  </TabItem>
+
+  <TabItem value='kbcli' label='kbcli'>
+
+  若已安装`kbcli`，可查看完整的集群信息：
+
+```bash
+kbcli cluster describe qdrant-cluster -n demo
+
+名称: qdrant-cluster	 创建时间: 2025年5月18日 23:05 UTC+0800
+命名空间   集群定义        拓扑结构   状态      终止策略
+demo      qdrant          cluster   运行中     Delete
+
+访问端点:
+组件    内部地址                                                  外部地址
+qdrant  qdrant-cluster-qdrant-qdrant.demo.svc.cluster.local:6333   <无>
+        qdrant-cluster-qdrant-qdrant.demo.svc.cluster.local:6334
+
+拓扑信息:
+组件    服务版本   实例名称                 角色     状态     可用区    节点    创建时间
+qdrant  1.10.0    qdrant-cluster-qdrant-0   <无>    运行中   zone-x   x.y.z   2025年5月18日 23:05 UTC+0800
+qdrant  1.10.0    qdrant-cluster-qdrant-1   <无>    运行中   zone-x   x.y.z   2025年5月18日 23:06 UTC+0800
+qdrant  1.10.0    qdrant-cluster-qdrant-2   <无>    运行中   zone-x   x.y.z   2025年5月18日 23:06 UTC+0800
+
+资源分配:
+组件    实例模板    CPU(请求/限制)    内存(请求/限制)     存储大小     存储类
+qdrant              500m / 500m       512Mi / 512Mi      data:20Gi   <无>
+
+镜像信息:
+组件    组件定义        镜像
+qdrant  qdrant-1.0.0   docker.io/qdrant/qdrant:v1.10.0
+                       docker.io/apecloud/curl-jq:0.1.0
+
+数据保护:
+备份仓库   自动备份   备份计划   备份方法   备份保留期   可恢复时间
+
+查看集群事件: kbcli cluster list-events -n demo qdrant-cluster
+```
+
+  </TabItem>
+</Tabs>
+
+## 停止 Qdrant 集群
+
+停止集群会暂时暂停运行，同时保留所有数据和配置：
+
+**关键影响：**
+- 计算资源（Pod）将被释放
+- 持久化存储（PVC）保持完整
+- 服务定义得以保留
+- 集群配置不会丢失
+- 运营成本降低
+
+<Tabs>
+  <TabItem value="OpsRequest" label="OpsRequest API" default>
+  ```bash
+  kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/qdrant/stop.yaml
+  ```
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: qdrant-stop
+    namespace: demo
+  spec:
+    clusterName: qdrant-cluster
+    type: Stop
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+  也可以通过设置 `spec.componentSpecs.stop` 为 true 来停止集群：
+
+  ```bash
+  kubectl patch cluster qdrant-cluster -n demo --type='json' -p='[
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/0/stop",
+    "value": true
+  }
+  ]'
+  ```
+
+  ```yaml
+  spec:
+    componentSpecs:
+      - name: qdrant
+        stop: true  # 设置为 true 停止组件
+        replicas: 3
+  ```
+  </TabItem>
+</Tabs>
+
+## 启动 Qdrant 集群
+
+重启已停止的集群可恢复运行，所有数据和配置将保持完整。
+
+**关键影响：**
+- 计算资源（Pod）会被重新创建
+- 服务将再次可用
+- 集群将恢复到之前的状态
+
+<Tabs>
+  <TabItem value="OpsRequest" label="OpsRequest API" default>
+  ```bash
+  kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/qdrant/start.yaml
+  ```
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: qdrant-start
+    namespace: demo
+  spec:
+    clusterName: qdrant-cluster
+    type: Start
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+  通过将 `spec.componentSpecs.stop` 设为 false 来重启集群：
+
+  ```bash
+  kubectl patch cluster qdrant-cluster -n demo --type='json' -p='[
+  {
+    "op": "remove",
+    "path": "/spec/componentSpecs/0/stop"
+  }
+  ]'
+  ```
+  </TabItem>
+</Tabs>
+
+## 删除 Qdrant 集群
+
+请根据数据保留需求谨慎选择删除策略：
+
+| 策略类型        | 删除的资源范围      | 数据清除情况       | 适用场景               |
+|-----------------|---------------------|--------------------|------------------------|
+| DoNotTerminate  | 不删除任何资源      | 保留所有数据       | 关键生产环境集群       |
+| Delete          | 删除所有资源        | 清除PVC数据        | 非关键环境             |
+| WipeOut         | 删除所有资源        | 彻底清除所有数据*  | 仅限测试环境           |
+
+*包含外部存储中的快照和备份
+
+**删除前检查清单：**
+1. 确认没有应用正在使用该集群
+2. 确保存在必要的备份
+3. 验证terminationPolicy设置正确
+4. 检查是否存在依赖资源
+
+对于测试环境，可使用以下命令进行完整清理：
+
+```bash
+kubectl patch cluster qdrant-cluster -p '{"spec":{"terminationPolicy":"WipeOut"}}' --type="merge" -n demo
+kubectl delete cluster qdrant-cluster -n demo
+```

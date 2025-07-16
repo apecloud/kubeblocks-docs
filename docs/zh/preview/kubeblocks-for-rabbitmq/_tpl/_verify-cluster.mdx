@@ -1,0 +1,33 @@
+监控集群状态直至其转为 Running（运行中）状态：
+```bash
+kubectl get cluster rabbitmq-cluster -n demo -w
+```
+
+预期输出：
+
+```bash
+kubectl get cluster rabbitmq-cluster -n demo
+NAME               CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+rabbitmq-cluster   rabbitmq             Delete               Creating   15s
+rabbitmq-cluster   rabbitmq             Delete               Running    83s
+```
+
+检查 Pod 状态及其角色：
+```bash
+kubectl get pods -l app.kubernetes.io/instance=rabbitmq-cluster -n demo
+```
+
+预期输出：
+```bash
+NAME                          READY   STATUS    RESTARTS   AGE
+rabbitmq-cluster-rabbitmq-0   2/2     Running   0          106s
+rabbitmq-cluster-rabbitmq-1   2/2     Running   0          82s
+rabbitmq-cluster-rabbitmq-2   2/2     Running   0          47s
+```
+
+当集群状态显示为 Running 时，表示您的 RabbitMQ 集群已准备就绪可供使用。
+
+:::tip
+如果是首次创建集群，可能需要一定时间拉取镜像后才能正常运行。
+
+:::

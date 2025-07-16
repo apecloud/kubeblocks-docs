@@ -1,0 +1,570 @@
+---
+authors:
+  image_url: https://avatars.githubusercontent.com/u/1765402?v=4
+  name: iziang
+  url: https://github.com/iziang
+date: 2023-09-21
+description: 使用KubeBlocks在Amazon EKS上构建您的AIGC基础设施
+image: /img/blogs/thumbnails/blog-aigc.png
+slug: Use-KubeBlocks-to-build-your-AIGC-infrastructure-on-Amazon-EKS
+tags:
+- KubeBlocks
+- AIGC
+- Amazon EKS
+title: 使用KubeBlocks在Amazon EKS上构建您的AIGC基础设施
+---
+# 使用 KubeBlocks 在 Amazon EKS 上构建 AIGC 基础设施
+
+## 前言  
+生成式 AI 引发了广泛关注，也将向量数据库市场推向了风口浪尖。众多向量数据库开始崭露头角并吸引公众目光。  
+
+根据 IDC 预测，到 2025 年，超过 80% 的业务数据将是非结构化的，以文本、图像、音频、视频或其他格式存储。然而，处理大规模非结构化数据的存储和查询仍面临巨大挑战。  
+
+在生成式 AI 和深度学习中，通常会将非结构化数据转换为向量进行存储，并利用向量相似性搜索技术实现语义关联检索。嵌入（embedding）的快速存储、索引和搜索是向量数据库的核心功能。  
+
+那么，什么是嵌入？简而言之，嵌入是由浮点数组成的向量表示。两个向量之间的距离代表它们的相关性。距离越近，相关性越高；距离越远，相关性越低。如果两个嵌入向量相似，则意味着它们代表的原始数据也相似，这与传统的关键字搜索不同。  
+
+然而，向量数据库的管理十分复杂，因为本质上它是一种有状态工作负载。在生产环境中使用时，它会面临与传统 OLTP 和 OLAP 数据库相同的问题，例如数据安全、高可用性、垂直/水平扩展性、监控与告警、备份与恢复等。由于向量数据库相对较新，大多数用户缺乏必要的知识，这给实现 LLMs + 向量数据库技术栈带来了巨大挑战。**用户更关注 LLMs 和向量数据库为业务带来的价值，而不是在管理上投入过多精力。**  
+
+为了解决这些问题，KubeBlocks 利用 K8s 的声明式 API，以统一的方式抽象各类数据库，并通过 Operator 和一套 API 来管理数据库，极大地减轻了管理负担。此外，**基于 K8s 构建的 KubeBlocks 支持多云，避免了云厂商锁定的风险。**  
+
+EKS 是 AWS 提供的托管 K8s 服务，它提供了一种简单的方式来在 AWS 上运行、扩展和管理 K8s 集群，无需担心节点的部署、升级和维护。EKS 本身也支持多可用区部署以实现高可用性，确保在节点故障或可用区中断时集群仍保持可用。此外，借助 AWS 强大的资源池，您可以在业务高峰和低谷时按需添加或移除节点，保证弹性和可扩展性。  
+
+本文主要讨论如何基于 Amazon EKS 通过 KubeBlocks 轻松部署和管理向量数据库。
+
+## 架构
+Kubernetes 已成为容器编排的事实标准。它利用 ReplicaSet 提供的可扩展性和可用性，以及 Deployment 提供的滚动更新和回滚能力，来管理日益增长的无状态工作负载。然而，管理有状态工作负载对 Kubernetes 提出了重大挑战。尽管 StatefulSet 提供了稳定的持久化存储和唯一的网络标识符，但这些能力对于复杂的有状态工作负载仍显不足。为了应对这些挑战并简化复杂性，KubeBlocks 引入了 ReplicationSet 和 ConsensusSet，它们具有以下功能：
+
+- 基于角色的更新排序，减少因升级、扩缩容和重启导致的停机时间。
+- 维护数据复制状态，自动修复复制错误或延迟。
+
+凭借 Kubernetes 强大的容器编排能力和对数据库引擎的统一抽象，KubeBlocks 具有以下优势：
+
+- 兼容 AWS、GCP、Azure 等多个云平台。
+- 提供生产级性能、弹性、可扩展性和可观测性。
+- 简化日常运维操作，如升级、扩缩容、监控、备份和恢复。
+- 包含强大直观的命令行工具，帮助您在几分钟内搭建全栈、生产就绪的数据基础设施。
+
+上述能力使我们能够以便捷快速的方式在 KubeBlocks 上构建 AIGC 基础设施，例如大语言模型（LLMs）和向量数据库。新数据库也能快速接入，您只需定义 ClusterDefinition 和 ClusterVersion 等少量 CR，并配置操作脚本、参数和监控面板，即可在 KubeBlocks 上创建数据库集群，同时支持参数配置、垂直/水平扩缩容、升级降级、备份恢复等能力。
+![KubeBlocks 架构](/img/blogs/use-kubeblocks-to-build1.png)
+
+以下说明以 Qdrant 为例，介绍如何通过 KubeBlocks 在 AWS EKS 上搭建向量数据库。
+
+Qdrant 是一个开源的向量数据库，专为高效存储和查询高维向量数据而设计。Qdrant 的架构可描述如下：
+![Qdrant 架构](/img/blogs/use-kubeblocks-to-build2.png)
+
+**Qdrant 的关键特性：**
+
+1. 存储引擎：Qdrant 使用 RocksDB 作为存储引擎。RocksDB 是基于 LSM（Log-Structured Merge）树结构的高性能键值存储引擎，具有卓越的写入和查询性能。
+
+2. 索引结构：Qdrant 采用基于 MVP（Most Valuable Point）概念的 HNSW（Hierarchical Navigable Small World）索引结构。该索引结构通过构建多层图结构来组织向量数据，实现快速的近似最近邻搜索。
+
+3. 向量编码：Qdrant 支持多种向量编码方法，包括 L2、IP、Cosine 等。这些编码技术用于将高维向量映射到低维空间，以便在索引结构中进行高效的相似性计算和搜索。
+
+4. 查询处理：Qdrant 使用多线程和并行计算处理查询请求。其工作原理是将查询向量与索引结构进行比较，并利用近似最近邻算法查找最相似的向量。
+
+5. 分布式部署：Qdrant 支持水平扩展和分布式部署。它可以在多个节点上进行数据分片和负载均衡，以提高存储容量和查询吞吐量。
+
+总体而言，Qdrant 的架构旨在提供高效的向量存储和查询能力。通过利用存储引擎、索引结构、向量编码和查询处理技术，Qdrant 实现了快速准确的近似最近邻搜索，非常适合涉及高维向量数据处理的各种应用场景。
+
+### ClusterDefinition
+
+该CR定义了Qdrant的ClusterDefinition，包含与引擎密切相关的参数，例如Qdrant服务的访问方式、监控指标的收集方式以及可用性探测方式。
+
+```yaml
+---
+apiVersion: apps.kubeblocks.io/v1alpha1
+kind: ClusterDefinition
+metadata:
+  name: qdrant
+  labels:
+    {{- include "qdrant.labels" . | nindent 4 }}
+spec:
+  type: qdrant
+  connectionCredential:
+    username: root
+    password: "$(RANDOM_PASSWD)"
+    endpoint: "$(SVC_FQDN):$(SVC_PORT_tcp-qdrant)"
+    host: "$(SVC_FQDN)"
+    port: "$(SVC_PORT_tcp-qdrant)"
+  componentDefs:
+    - name: qdrant
+      workloadType: Stateful
+      characterType: qdrant
+      probes:
+      monitor:
+        builtIn: false
+        exporterConfig:
+          scrapePath: /metrics
+          scrapePort: 6333
+      logConfigs:
+      scriptSpecs:
+      - name: qdrant-scripts
+        templateRef: qdrant-scripts
+        namespace: {{ .Release.Namespace }}
+        volumeName: scripts
+        defaultMode: 0555
+      configSpecs:
+        - name: qdrant-config-template
+          templateRef: qdrant-config-template
+          volumeName: qdrant-config
+          namespace: {{ .Release.Namespace }}
+      service:
+        ports:
+          - name: tcp-qdrant
+            port: 6333
+            targetPort: tcp-qdrant
+          - name: grpc-qdrant
+            port: 6334
+            targetPort: grpc-qdrant
+      volumeTypes:
+        - name: data
+          type: data
+      podSpec:
+        securityContext:
+          fsGroup: 1001
+        initContainers:
+        - name: qdrant-tools
+          command:
+          - /bin/sh
+          - -c
+          - |
+            cp /bin/jq /qdrant/tools/jq
+            cp /bin/curl /qdrant/tools/curl
+          imagePullPolicy: {{default .Values.images.pullPolicy "IfNotPresent"}}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /qdrant/tools
+            name: tools
+        containers:
+          - name: qdrant
+            imagePullPolicy: {{default .Values.images.pullPolicy "IfNotPresent"}}
+            securityContext:
+              runAsUser: 0
+            livenessProbe:
+              failureThreshold: 3
+              httpGet:
+                path: /
+                port: tcp-qdrant
+                scheme: HTTP
+              periodSeconds: 15
+              successThreshold: 1
+              timeoutSeconds: 10
+            readinessProbe:
+              exec:
+                command:
+                - /bin/sh
+                - -c
+                - |
+                  consensus_status=`/qdrant/tools/curl -s http://localhost:6333/cluster | /qdrant/tools/jq -r .result.consensus_thread_status.consensus_thread_status`
+                  if [ "$consensus_status" != "working" ]; then
+                    echo "consensus stopped"
+                    exit 1
+                  fi
+              failureThreshold: 2
+              initialDelaySeconds: 5
+              periodSeconds: 15
+              successThreshold: 1
+              timeoutSeconds: 3
+            startupProbe:
+              failureThreshold: 18
+              httpGet:
+                path: /
+                port: tcp-qdrant
+                scheme: HTTP
+              periodSeconds: 10
+              successThreshold: 1
+              timeoutSeconds: 3
+            lifecycle:
+              preStop:
+                exec:
+                  command: ["/qdrant/scripts/pre-stop.sh"]
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+            volumeMounts:
+              - mountPath: /qdrant/config/
+                name: qdrant-config
+              - mountPath: /qdrant/storage
+                name: data
+              - mountPath: /qdrant/scripts
+                name: scripts
+              - mountPath: /etc/annotations
+                name: annotations
+              - mountPath: /qdrant/tools
+                name: tools
+            dnsPolicy: ClusterFirst
+            enableServiceLinks: true
+            ports:
+              - name: tcp-qdrant
+                containerPort: 6333
+              - name: grpc-qdrant
+                containerPort: 6334
+              - name: tcp-metrics
+                containerPort: 9091
+              - name: p2p
+                containerPort: 6335
+            command: ["/bin/sh", "-c"]
+            args: ["/qdrant/scripts/setup.sh"]
+            env:
+            - name: QDRANT__TELEMETRY_DISABLED
+              value: "true"
+        volumes:
+        - name: annotations
+          downwardAPI:
+            items:
+            - path: "component-replicas"
+              fieldRef:
+                fieldPath: metadata.annotations['apps.kubeblocks.io/component-replicas']
+        - emptyDir: {}
+          name: tools
+```
+
+### ClusterVersion
+该CR（自定义资源）定义了Qdrant的特定版本。若存在多个版本，请确保每个版本都对应一个ClusterVersion。
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1alpha1
+kind: ClusterVersion
+metadata:
+  name: qdrant-{{ default .Chart.AppVersion .Values.clusterVersionOverride }}
+  labels:
+    {{- include "qdrant.labels" . | nindent 4 }}
+spec:
+  clusterDefinitionRef: qdrant
+  componentVersions:
+    - componentDefRef: qdrant
+      versionsContext:
+        initContainers:
+        - name: qdrant-tools
+          image: {{ .Values.images.registry | default "docker.io" }}/{{ .Values.images.tools.repository }}:{{ default .Chart.AppVersion .Values.images.tools.tag }}
+        containers:
+          - name: qdrant
+            image:  {{ .Values.images.registry | default "docker.io" }}/{{ .Values.images.repository}}:{{ default .Chart.AppVersion .Values.images.tag }}
+```
+
+
+
+
+## 演示
+
+### 准备工作
+- 准备一个 EKS 集群。
+- 安装 kubectl 和 Helm 客户端。
+
+### 安装 kbcli 和 KubeBlocks
+
+1. 安装 kbcli。
+
+```bash
+   curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash
+   ```
+
+2. 安装 KubeBlocks。
+
+```bash
+   kbcli kubeblocks install
+   ```
+
+3. 启用 Qdrant 插件。
+
+```bash
+   kbcli addon enable qdrant
+   ```
+
+
+
+
+## 创建集群
+
+1. 创建一个单机模式 Qdrant 集群。
+
+```bash
+   kbcli cluster create qdrant --cluster-definition=qdrant
+   ```
+
+如果数据量较大，可以设置 `replicas` 参数来创建一个 RaftGroup Qdrant 集群。
+
+```bash
+   kbcli cluster create qdrant --cluster-definition=qdrant --set replicas=3
+   ```
+
+2. 查看集群状态，当状态显示为 running 时，表示集群已成功创建。
+
+```bash
+   # View the cluster list
+   kbcli cluster list
+   >
+   NAME     NAMESPACE   CLUSTER-DEFINITION   VERSION        TERMINATION-POLICY   STATUS    CREATED-TIME
+   qdrant   default     qdrant               qdrant-1.1.0   Delete               Running   Aug 15,2023 23:03 UTC+0800
+   ```
+
+您也可以查看集群详情。
+
+```bash
+    # View the cluster information
+    kblci cluster describe qdrant
+    >
+    Name: qdrant         Created Time: Aug 15,2023 23:03 UTC+0800
+    NAMESPACE   CLUSTER-DEFINITION   VERSION        STATUS    TERMINATION-POLICY
+    default     qdrant               qdrant-1.1.0   Running   Delete
+
+    Endpoints:
+    COMPONENT   MODE        INTERNAL                                       EXTERNAL
+    qdrant      ReadWrite   qdrant-qdrant.default.svc.cluster.local:6333   <none>
+                        qdrant-qdrant.default.svc.cluster.local:6334
+
+    Topology:
+    COMPONENT   INSTANCE          ROLE     STATUS    AZ       NODE                   CREATED-TIME
+    qdrant      qdrant-qdrant-0   <none>   Running   <none>   x-worker3/172.20.0.3   Aug 15,2023 23:03 UTC+0800
+    qdrant      qdrant-qdrant-1   <none>   Running   <none>   x-worker2/172.20.0.5   Aug 15,2023 23:03 UTC+0800
+    qdrant      qdrant-qdrant-2   <none>   Running   <none>   x-worker/172.20.0.2    Aug 15,2023 23:04 UTC+0800
+
+    Resources Allocation:
+    COMPONENT   DEDICATED   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+    qdrant      false       1 / 1                1Gi / 1Gi               data:20Gi      standard
+
+    Images:
+    COMPONENT   TYPE     IMAGE
+    qdrant      qdrant   docker.io/qdrant/qdrant:latest
+
+    Data Protection:
+    AUTO-BACKUP   BACKUP-SCHEDULE   TYPE     BACKUP-TTL   LAST-SCHEDULE   RECOVERABLE-TIME
+    Disabled      <none>            <none>   7d           <none>          <none>
+
+    Show cluster events: kbcli cluster list-events -n default qdrant
+    ```
+
+### 连接到集群
+Qdrant 分别通过端口 6333 和 6334 提供 HTTP 和 gRPC 协议供客户端访问。根据客户端所在位置，提供不同的连接选项来连接到 Qdrant 集群。
+
+
+:::note
+
+如果您的集群在 AWS 上，请先安装 AWS 负载均衡控制器。
+
+:::
+
+- 如果您的客户端位于 K8s 集群内部，运行 `kbcli cluster describe qdrant` 获取集群的 ClusterIP 地址或对应的 K8s 集群域名。
+- 如果您的客户端位于 K8s 集群外部但与服务器在同一 VPC 中，运行 `kbcli cluster expose qdant --enable=true --type=vpc` 获取数据库集群的 VPC 负载均衡器地址。
+- 如果您的客户端位于 VPC 外部，运行 `kbcli cluster expose qdant --enable=true --type=internet` 为数据库集群开放一个可公开访问的地址。
+
+### 测试
+1. 要向 Qdrant 集群插入数据，首先创建一个名为 `test_collection` 的 Collection，向量维度为 4，并使用余弦距离计算相似性。
+
+```bash 
+    curl -X PUT 'http://localhost:6333/collections/test_collection' \
+        -H 'Content-Type: application/json' \
+        --data-raw '{
+            "vectors": {
+                "size": 4,
+                "distance": "Cosine"
+            }
+        }'
+   ```
+
+**结果**
+
+```json
+   {"result":true,"status":"ok","time":0.173516958}
+   ```
+
+2. 查看已创建 Collection 的信息。
+
+```bash
+   curl 'http://localhost:6333/collections/test_collection'
+   ```
+
+**结果**
+
+```sql
+   {
+     "result": {
+       "status": "green",
+       "optimizer_status": "ok",
+       "vectors_count": 0,
+       "indexed_vectors_count": 0,
+       "points_count": 0,
+       "segments_count": 2,
+       "config": {
+         "params": {
+           "vectors": {
+             "size": 4,
+             "distance": "Cosine"
+           },
+           "shard_number": 1,
+           "replication_factor": 1,
+           "write_consistency_factor": 1,
+           "on_disk_payload": true
+         },
+         "hnsw_config": {
+           "m": 16,
+           "ef_construct": 100,
+           "full_scan_threshold": 10000,
+           "max_indexing_threads": 0,
+           "on_disk": false
+         },
+         "optimizer_config": {
+           "deleted_threshold": 0.2,
+           "vacuum_min_vector_number": 1000,
+           "default_segment_number": 0,
+           "max_segment_size": null,
+           "memmap_threshold": null,
+           "indexing_threshold": 20000,
+           "flush_interval_sec": 5,
+           "max_optimization_threads": 1
+         },
+         "wal_config": {
+           "wal_capacity_mb": 32,
+           "wal_segments_ahead": 0
+         },
+         "quantization_config": null
+       },
+       "payload_schema": {}
+     },
+     "status": "ok",
+     "time": 1.9708e-05
+   }
+   ```
+
+3. 向 Collection 中插入数据。
+
+```bash
+    curl -L -X PUT 'http://localhost:6333/collections/test_collection/points?wait=true' \
+        -H 'Content-Type: application/json' \
+        --data-raw '{
+            "points": [
+              {"id": 1, "vector": [0.05, 0.61, 0.76, 0.74], "payload": {"city": "Berlin" }},
+              {"id": 2, "vector": [0.19, 0.81, 0.75, 0.11], "payload": {"city": ["Berlin", "London"] }},
+              {"id": 3, "vector": [0.36, 0.55, 0.47, 0.94], "payload": {"city": ["Berlin", "Moscow"] }},
+              {"id": 4, "vector": [0.18, 0.01, 0.85, 0.80], "payload": {"city": ["London", "Moscow"] }},
+              {"id": 5, "vector": [0.24, 0.18, 0.22, 0.44], "payload": {"count": [0] }},
+              {"id": 6, "vector": [0.35, 0.08, 0.11, 0.44]}
+            ]
+        }'
+    ```
+
+**结果**
+
+```json
+    {
+      "result": {
+        "operation_id": 0,
+        "status": "completed"
+      },
+      "status": "ok",
+      "time": 0.040477833
+    }
+    ```
+
+4. 搜索之前插入的数据，例如与向量 [0.2,0.1,0.9,0.7] 相似的数据。
+
+```bash
+    curl -L -X POST 'http://localhost:6333/collections/test_collection/points/search' \
+        -H 'Content-Type: application/json' \
+        --data-raw '{
+            "vector": [0.2,0.1,0.9,0.7],
+            "limit": 3
+        }'
+   ```
+
+**结果**
+
+```json
+     {
+       "result": [
+         {
+           "id": 4,
+           "version": 0,
+           "score": 0.99248314,
+           "payload": null,
+           "vector": null
+         },
+         {
+           "id": 1,
+           "version": 0,
+           "score": 0.89463294,
+           "payload": null,
+           "vector": null
+         },
+         {
+           "id": 5,
+           "version": 0,
+           "score": 0.8543979,
+           "payload": null,
+           "vector": null
+         }
+       ],
+       "status": "ok",
+       "time": 0.003061
+     }
+     ```
+
+您还可以添加额外的元数据过滤条件，例如在 city 等于 London 的点中查找与向量 [0.2,0.1,0.9,0.7] 相似的数据。
+
+```bash
+     curl -L -X POST 'http://localhost:6333/collections/test_collection/points/search' \
+         -H 'Content-Type: application/json' \
+         --data-raw '{
+           "filter": {
+               "should": [
+                   {
+                       "key": "city",
+                       "match": {
+                           "value": "London"
+                       }
+                   }
+               ]
+           },
+           "vector": [0.2, 0.1, 0.9, 0.7],
+           "limit": 3
+       }'
+      ```
+
+**结果**
+
+```json
+    {
+      "result": [
+        {
+          "id": 4,
+          "version": 0,
+          "score": 0.99248314,
+          "payload": null,
+          "vector": null
+        },
+        {
+          "id": 2,
+          "version": 0,
+          "score": 0.66603535,
+          "payload": null,
+          "vector": null
+        }
+      ],
+      "status": "ok",
+      "time": 0.012462584
+    }
+    ```
+
+
+
+
+## 扩缩容集群
+
+KubeBlocks 同时支持垂直扩展和水平扩展。如果您最初创建的是单机模式集群，但后续发现容量不足需要进行扩缩容，您可以对集群进行垂直或水平扩展。
+
+垂直扩展会增加 CPU 和内存资源。
+
+```bash
+kbcli cluster vscale qdrant --components qdrant --cpu 8 --memory 32Gi
+```
+
+如果垂直扩展已达到机器的上限，您可以通过垂直扩展集群来添加节点，例如从单机模式扩展到 RaftGroup 模式。
+
+）
+
+```bash
+kbcli cluster hscale qdrant --replicas 3
+```
+
+

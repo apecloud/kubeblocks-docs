@@ -1,0 +1,118 @@
+---
+description: 如何执行时间点恢复 (PITR)
+keywords:
+- backup and restore
+- restore
+- PITR
+- postgresql
+sidebar_label: 时间点恢复
+sidebar_position: 2
+title: PITR -> 时间点恢复 (Point-in-Time Recovery)
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 时间点恢复 (PITR)
+
+## 什么是时间点恢复 (PITR)
+
+时间点恢复 (Point-in-Time Recovery) 是关系型数据库管理系统 (RDBMS) 中常用的备份恢复技术，它允许将数据变更恢复到特定时间点，使数据库回退到该时间点之前的状态。在 PITR 中，数据库系统会定期创建完整备份，之后记录所有事务日志，包括插入、更新和删除操作。恢复时，系统先还原最近的完整备份，再应用备份后记录的事务日志，使数据库回到所需状态。
+
+KubeBlocks 支持 MySQL 和 PostgreSQL 等数据库的 PITR 功能。本文档以 PostgreSQL 的 PITR 为例，更多细节请参考 [PostgreSQL 备份与恢复](../../../../kubeblocks-for-postgresql/05-backup-restore/06-restore-with-pitr)。
+
+## 如何执行时间点恢复？
+
+**步骤 1. 查看集群可恢复的时间点**
+
+<Tabs>
+
+<TabItem value="kubectl" label="kubectl" default>
+
+```bash
+# 获取持续备份的时间范围
+kubectl get backup -l app.kubernetes.io/instance=pg-cluster -l dataprotection.kubeblocks.io/backup-type=Continuous -oyaml
+...
+status:
+  timeRange:
+  end: "2024-05-07T10:47:14Z"
+  start: "2024-05-07T10:07:45Z"
+```
+
+可见当前备份时间范围为 `2024-05-07T10:07:45Z ~2024-05-07T10:47:14Z`。但数据恢复仍需依赖完整备份，且该完整备份必须完成于日志备份的时间范围内。
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+```bash
+kbcli cluster describe pg-cluster
+>
+...
+数据保护:
+备份仓库   自动备份    备份计划      备份方法       备份保留期      可恢复时间范围
+minio     已启用     */5 * * * *   archive-wal    8d            May 07,2024 15:29:46 UTC+0800 ~ May 07,2024 15:48:47 UTC+0800
+```
+
+`可恢复时间范围` 表示集群可恢复的时间区间。
+
+可见当前备份时间范围为 `May 07,2024 15:29:46 UTC+0800 ~ May 07,2024 15:48:47 UTC+0800`。但数据恢复仍需依赖完整备份，且该完整备份必须完成于日志备份的时间范围内。
+
+</TabItem>
+
+</Tabs>
+
+**步骤 2. 将集群恢复到指定时间点**
+
+<Tabs>
+
+<TabItem value="kubectl" label="kubectl" default>
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+name:  pg-cluster-pitr
+spec:
+  clusterName:  pg-cluster-pitr
+  restore:
+    backupName: 818aa0e0-pg-kubeblocks-cloud-n-archive-wal
+    restorePointInTime: "2024-05-07T10:07:45Z"
+    volumeRestorePolicy: Parallel
+  type: Restore
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+```bash
+kbcli cluster restore pg-cluster-pitr --restore-to-time 'May 07,2024 15:48:47 UTC+0800' --backup <continuousBackupName>
+```
+
+</TabItem>
+
+</Tabs>
+
+**步骤 3. 检查新集群状态**
+
+<Tabs>
+
+<TabItem value="kubectl" label="kubectl" default>
+
+```bash
+kubectl get cluster pg-cluster-pitr
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+```bash
+kbcli cluster list pg-cluster-pitr
+```
+
+</TabItem>
+
+</Tabs>
+
+当状态变为 `Running` 时，表示操作成功。

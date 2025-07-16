@@ -1,0 +1,115 @@
+---
+description: 升级至 KubeBlocks v0.8：操作指南、技巧与注意事项
+keywords:
+- upgrade
+- 0.8
+title: 升级至 v0.8 版本
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 升级至 KubeBlocks v0.8
+
+本教程将指导您如何升级至 KubeBlocks v0.8 版本。
+
+:::note
+
+执行 `helm -n kb-system list | grep kubeblocks` 或 `kbcli version` 命令可查看当前运行的 KubeBlocks 版本，再进行升级操作。
+
+:::
+
+## 从 KubeBlocks v0.7 升级
+
+<Tabs>
+
+<TabItem value="Helm" label="Helm" default>
+
+1. 设置 keepAddons 参数
+
+    KubeBlocks v0.8 精简了默认安装的数据库引擎，并将 greptime、influxdb、neon、oracle-mysql、orioledb、tdengine、mariadb、nebula、risingwave、starrocks、tidb 和 zookeeper 等插件从 KubeBlocks Operator 分离至 KubeBlocks-Addons 仓库。为避免升级过程中删除正在使用的插件资源，请执行以下操作：
+
+- 检查当前 KubeBlocks 版本
+
+    ```bash
+    helm -n kb-system list | grep kubeblocks
+    ```
+
+- 将 keepAddons 参数设为 true
+
+    ```bash
+    helm repo add kubeblocks https://apecloud.github.io/helm-charts
+    helm repo update kubeblocks
+    helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version \{VERSION\} --set keepAddons=true
+    ```
+
+    请将 \{VERSION\} 替换为您当前的 KubeBlocks 版本号（例如 0.7.2）。
+
+- 验证插件配置
+
+    执行以下命令确保插件注解中包含 `"helm.sh/resource-policy": "keep"` 标记。
+
+    ```bash
+    kubectl get addon -o json | jq '.items[] | {name: .metadata.name, annotations: .metadata.annotations}'
+    ```
+
+2. 安装 CRD
+
+    为减小 Helm Chart 体积，KubeBlocks v0.8 移除了 Chart 中的 CRD 定义。升级前需手动安装 CRD：
+
+    ```bash
+    kubectl replace -f https://github.com/apecloud/kubeblocks/releases/download/v0.8.1/kubeblocks_crds.yaml
+    ```
+
+3. 执行升级
+
+    ```bash
+    helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version 0.8.1 --set dataProtection.image.datasafed.tag=0.1.0
+    ```
+
+:::note
+
+为避免影响现有数据库集群，升级至 KubeBlocks v0.8 时默认不会升级已安装插件的版本。如需将插件升级至 v0.8 内置版本，可执行以下命令。请注意此操作可能导致集群重启并影响服务可用性，请谨慎操作。
+
+```bash
+helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version 0.8.1 --set upgradeAddons=true
+```
+
+:::
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+1. 下载 kbcli v0.8
+
+    ```bash
+    curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash -s 0.8.1
+    ```
+
+2. 执行升级
+
+    ```bash
+    kbcli kb upgrade --version 0.8.1 --set dataProtection.image.datasafed.tag=0.1.0
+    ```
+
+    kbcli 会自动添加 `"helm.sh/resource-policy": "keep"` 注解，确保升级过程中不会删除现有插件。
+
+</TabItem>
+
+</Tabs>
+
+## 从 KubeBlocks v0.6 升级
+
+若当前运行的是 KubeBlocks v0.6 版本，请先升级至 v0.7.2 版本。
+
+1. 下载 kbcli v0.7.2
+
+    ```shell
+    curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash -s 0.7.2
+    ```
+
+2. 升级至 KubeBlocks v0.7.2
+
+    ```shell
+    kbcli kb upgrade --version 0.7.2
+    ```

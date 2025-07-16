@@ -1,0 +1,207 @@
+---
+description: 使用自定义TLS证书在KubeBlocks上部署PostgreSQL集群的逐步指南。涵盖证书生成、集群部署及连接验证，确保通信安全。
+keywords:
+- KubeBlocks
+- PostgreSQL
+- Kubernetes
+- TLS
+- Security
+- Custom Certificates
+sidebar_label: 使用自定义TLS的PostgreSQL集群
+sidebar_position: 2
+title: 在KubeBlocks上部署带自定义TLS证书的PostgreSQL集群
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 在 KubeBlocks 上部署使用自定义 TLS 证书的 PostgreSQL 集群
+
+本指南演示如何使用 KubeBlocks 部署带有**自定义 TLS 证书**的 PostgreSQL 集群。通过提供自有证书，您可以完全控制客户端-服务端加密通信的安全配置。
+
+## 先决条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 生成证书
+
+使用 OpenSSL 生成所需证书：
+
+1. **根证书 (CA)**
+```bash
+# 生成受密码保护的CA私钥
+openssl genrsa -aes256 -out ca-key.pem 4096
+
+# 创建自签名根证书（10年有效期）
+openssl req -x509 -new -nodes -key ca-key.pem -sha256 -days 3650 -out ca.pem
+# 输入证书信息（如 Common Name = "PostgreSQL Root CA"）
+```
+
+2. **服务器证书**
+```bash
+# 生成服务器私钥
+openssl genrsa -out server-key.pem 4096
+
+# 创建证书签名请求
+openssl req -new -key server-key.pem -out server-req.pem
+# 输入服务器信息（Common Name必须匹配PostgreSQL服务地址）
+
+# 使用CA签发服务器证书（10年有效期）
+openssl x509 -req -in server-req.pem -CA ca.pem -CAkey ca-key.pem \
+  -CAcreateserial -out server-cert.pem -days 3650 -sha256
+```
+
+:::重要提示
+
+Common Name (CN) 必须与 PostgreSQL 服务地址匹配（例如服务名称 `pg-cluster-postgresql-postgresql`）。
+
+:::
+
+3. **验证证书**
+```bash
+openssl verify -CAfile ca.pem server-cert.pem
+# 示例输出：server-cert.pem: OK
+```
+
+## 创建 Kubernetes Secret
+
+将证书存入 Kubernetes Secret 供集群访问：
+
+```bash
+kubectl create secret generic postgresql-tls-secret \
+  --namespace=demo \
+  --from-file=ca.crt=ca.pem \
+  --from-file=tls.crt=server-cert.pem \
+  --from-file=tls.key=server-key.pem \
+  --type=kubernetes.io/tls
+```
+
+## 部署 PostgreSQL 集群
+
+部署启用 TLS 的 2 节点 PostgreSQL 集群（1 主节点，1 副本）：
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: pg-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: postgresql
+  topology: replication
+  componentSpecs:
+    - name: postgresql
+      serviceVersion: 16.4.0
+      tls: true
+      issuer:
+        name: UserProvided
+        secretRef:
+          name: postgresql-tls-secret
+          namespace: demo
+          ca: ca.crt
+          cert: tls.crt
+          key: tls.key
+      labels:
+        apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
+      disableExporter: true
+      replicas: 2
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+**关键配置**：
+- `tls: true`：启用 TLS 加密
+- `issuer.name: UserProvided`：指定使用自定义证书
+- `issuer.secretRef`：关联证书 Secret
+
+## 验证部署
+
+监控集群状态直至变为 Running：
+
+```bash
+kubectl get cluster pg-cluster -n demo -w
+```
+
+在副本节点验证 SSL 配置：
+
+```sql
+postgres=# show ssl;
+ ssl
+-----
+ on
+
+postgres=# show ssl_ca_file;
+     ssl_ca_file
+---------------------
+ /etc/pki/tls/ca.pem
+
+postgres=# show ssl_cert_file;
+     ssl_cert_file
+----------------------
+ /etc/pki/tls/cert.pem
+
+postgres=# show ssl_key_file;
+     ssl_key_file
+----------------------
+ /etc/pki/tls/key.pem
+```
+
+## 访问 PostgreSQL 集群
+
+### 获取凭据
+
+```bash
+NAME=$(kubectl get secret -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.username}' | base64 --decode)
+PASSWD=$(kubectl get secret -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.password}' | base64 --decode)
+```
+
+### 安全连接
+
+<Tabs>
+<TabItem value="require" label="sslmode=require" default>
+
+```bash
+kubectl port-forward svc/pg-cluster-postgresql-postgresql 5432:5432 -n demo
+
+psql "host=127.0.0.1 dbname=postgres user=${NAME} password=${PASSWD} sslmode=require"
+# 输出显示SSL连接详情
+```
+
+</TabItem>
+
+<TabItem value="verify-full" label="sslmode=verify-full">
+
+```bash
+kubectl exec -it -n demo pg-cluster-postgresql-0 -c postgresql -- \
+  env PGUSER=${NAME} PGPASSWORD=${PASSWD} \
+  psql 'host=pg-cluster-postgresql-postgresql sslmode=verify-full sslrootcert=/etc/pki/tls/ca.pem'
+# 输出显示SSL连接详情
+```
+
+</TabItem>
+</Tabs>
+
+## 总结
+
+本指南中您完成了：
+1. 生成自签名CA和服务器证书
+2. 将证书存入Kubernetes Secret
+3. 部署启用TLS的PostgreSQL集群
+4. 验证安全连接
+
+使用自定义TLS证书可确保PostgreSQL客户端与服务端之间的通信加密，保护传输中的敏感数据。

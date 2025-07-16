@@ -1,0 +1,310 @@
+---
+description: 了解如何通过OpsRequest和直接Cluster API更新，对KubeBlocks管理的PostgreSQL集群执行水平扩缩容（横向扩展与收缩）。
+keywords:
+- KubeBlocks
+- PostgreSQL
+- Horizontal Scaling
+- Scale-Out
+- Scale-In
+- Kubernetes
+sidebar_label: 水平扩展
+sidebar_position: 3
+title: 使用KubeBlocks实现PostgreSQL集群的水平扩展
+---
+请翻译以下内容：
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# 使用KubeBlocks实现PostgreSQL集群的水平扩展
+
+本指南将介绍如何对由KubeBlocks管理的PostgreSQL集群执行水平扩展（扩容和缩容）。您将学习如何通过**OpsRequest**和直接修改**Cluster API**两种方式来实现这一操作。
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+
+
+## 部署 PostgreSQL 集群
+
+import CreatePGCluster from '../_tpl/_create-pg-replication-cluster.mdx'
+
+<CreatePGCluster />
+
+
+
+## 验证部署
+
+import VerifyPGCluster from '../_tpl/_verify-pg-replication-cluster.mdx'
+
+<VerifyPGCluster />
+
+
+
+## 水平扩展（增加副本）
+
+**预期工作流程**：
+
+1. 新 Pod 被创建，状态从 `Pending` 转变为 `Running`，角色为 `secondary`
+2. 数据从主节点同步至新副本
+3. 集群状态从 `Updating` 变为 `Running`
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  选项1：使用水平扩展运维请求
+
+  通过增加1个副本来扩展 PostgreSQL 集群：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: pg-cluster-scale-out-ops
+    namespace: demo
+  spec:
+    clusterName: pg-cluster
+    type: HorizontalScaling
+    horizontalScaling:
+    - componentName: postgresql
+      # 指定组件扩缩容的副本变更
+      scaleOut:
+        # 指定组件的副本变更数量
+        # 当前组件增加1个副本
+        replicaChanges: 1
+  ```
+
+  监控扩展操作进度：
+
+  ```bash
+  kubectl get ops pg-cluster-scale-out-ops -n demo -w
+  ```
+
+  预期结果：
+  ```bash
+  NAME           TYPE                CLUSTER      STATUS    PROGRESS   AGE
+  pg-scale-out   HorizontalScaling   pg-cluster   Running   0/1        8s
+  pg-scale-out   HorizontalScaling   pg-cluster   Running   1/1        24s
+  pg-scale-out   HorizontalScaling   pg-cluster   Succeed   1/1        24s
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  选项2：直接修改集群API
+
+  您也可以直接更新 Cluster 资源中的 `replicas` 字段：
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  metadata:
+    name: pg-cluster
+    namespace: demo
+  spec:
+    terminationPolicy: Delete
+    clusterDef: postgresql
+    topology: replication
+    componentSpecs:
+      - name: postgresql
+        serviceVersion: 16.4.0
+        labels:
+          apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
+        disableExporter: true
+        replicas: 3 # 增加副本数实现扩展
+        resources:
+          requests:
+            cpu: "1"
+            memory: "1Gi"
+          limits:
+            cpu: "1"
+            memory: "1Gi"
+        volumeClaimTemplates:
+          - name: data
+            spec:
+              storageClassName: ""
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 20Gi
+  ```
+
+  或者使用命令直接修改集群CR：
+
+  ```bash
+  kubectl patch cluster pg-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 3}]'
+  ```
+  </TabItem>
+</Tabs>
+
+### 验证扩展结果
+
+操作完成后，您将看到新创建的 Pod，PostgreSQL 集群状态从 `Updating` 变为 `Running`，且新建 Pod 的角色为 `secondary`。
+
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster
+```
+
+示例输出（3个Pod）：
+```bash
+NAME                      READY   STATUS    RESTARTS   AGE
+pg-cluster-postgresql-0   4/4     Running   0          13m
+pg-cluster-postgresql-1   4/4     Running   0          12m
+pg-cluster-postgresql-2   4/4     Running   0          5m5s
+```
+
+新增副本会自动加入为从节点。
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster -L kubeblocks.io/role
+```
+
+示例输出：
+```bash
+NAME                      READY   STATUS    RESTARTS   AGE     ROLE
+pg-cluster-postgresql-0   4/4     Running   0          13m     primary
+pg-cluster-postgresql-1   4/4     Running   0          12m     secondary
+pg-cluster-postgresql-2   4/4     Running   0          5m54s   secondary
+```
+
+## 缩容（移除副本）
+
+**预期工作流程**：
+
+1. 选定的副本（序号最大的那个）被移除
+2. 如果移除的是主副本，会先进行自动切换
+3. Pod 被优雅终止
+4. 集群状态从 `Updating` 变为 `Running`
+
+:::note
+如果被缩容的副本恰好是主副本，KubeBlocks 会触发切换操作。该 Pod 只有在切换操作成功后才会被终止。
+:::
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  选项1：使用水平扩缩容 OpsRequest
+
+  通过移除一个副本对 PostgreSQL 集群进行缩容：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: pg-cluster-scale-in-ops
+    namespace: demo
+  spec:
+    clusterName: pg-cluster
+    type: HorizontalScaling
+    horizontalScaling:
+    - componentName: postgresql
+      # 指定缩容组件的副本变更
+      scaleIn:
+        # 指定组件的副本变更
+        # 从当前组件移除一个副本
+        replicaChanges: 1
+  ```
+
+  监控进度：
+  ```bash
+  kubectl get ops pg-cluster-scale-in-ops -n demo -w
+  ```
+
+  预期结果：
+  ```bash
+  NAME           TYPE                CLUSTER      STATUS    PROGRESS   AGE
+  pg-scale-in   HorizontalScaling   pg-cluster   Running   0/1        8s
+  pg-scale-in   HorizontalScaling   pg-cluster   Running   1/1        24s
+  pg-scale-in   HorizontalScaling   pg-cluster   Succeed   1/1        24s
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  选项2：直接更新 Cluster API
+
+  或者，您可以直接更新 Cluster 资源中的 `replicas` 字段：
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  metadata:
+    name: pg-cluster
+    namespace: demo
+  spec:
+    terminationPolicy: Delete
+    clusterDef: postgresql
+    topology: replication
+    componentSpecs:
+      - name: postgresql
+        serviceVersion: 16.4.0
+        labels:
+          apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
+        disableExporter: true
+        replicas: 1 # 减少副本数量以缩容
+        resources:
+          requests:
+            cpu: "1"
+            memory: "1Gi"
+          limits:
+            cpu: "1"
+            memory: "1Gi"
+        volumeClaimTemplates:
+          - name: data
+            spec:
+              storageClassName: ""
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 20Gi
+  ```
+
+  您也可以通过命令修补集群 CR：
+
+  ```bash
+  kubectl patch cluster pg-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 1}]'
+  ```
+  </TabItem>
+
+</Tabs>
+
+### 验证缩容
+
+示例输出（一个 Pod）：
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster
+NAME                      READY   STATUS    RESTARTS   AGE
+pg-cluster-postgresql-0   4/4     Running   0          16m
+```
+
+## 最佳实践
+
+在进行水平扩展时：
+- 尽可能选择低流量时段执行扩展操作
+- 在扩展过程中持续监控集群健康状况
+- 在横向扩容前确保有足够的资源可用
+- 考虑新增副本所需的存储需求
+
+
+
+## 清理资源
+要删除所有已创建的资源，请执行以下命令删除 PostgreSQL 集群及其所在的命名空间：
+```bash
+kubectl delete cluster pg-cluster -n demo
+kubectl delete ns demo
+```
+
+## 总结
+在本指南中，您学习了如何：
+- 执行水平扩展操作，向 PostgreSQL 集群添加副本。
+- 执行水平收缩操作，从 PostgreSQL 集群移除副本。
+- 通过 OpsRequest 和直接修改 Cluster API 两种方式实现水平扩缩容。
+
+KubeBlocks 确保扩缩容过程无缝衔接，对数据库业务的影响降至最低。

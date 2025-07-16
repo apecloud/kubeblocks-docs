@@ -1,0 +1,91 @@
+---
+authors:
+  image_url: https://avatars.githubusercontent.com/u/1814084?v=4
+  name: Thomas
+  url: https://github.com/realzyy
+date: 2024-05-28
+description: 将Redis这一与容器技术同期诞生的数据库容器化，现在时机成熟了吗？
+image: /img/blogs/thumbnails/blog-redis-containerization.png
+slug: redis-containerization
+tags:
+- redis
+- containerization
+title: Redis容器化——准备好了吗？
+---
+# Redis 容器化——准备好了吗？
+
+在 Kubernetes 主导的时代，数据库容器化对云原生团队来说是一个极具吸引力却又常常令人望而生畏的挑战。
+
+像 MySQL 和 PostgreSQL 这样的开源数据库诞生于 PC 服务器时代，通常用于存储关键业务数据。将它们迁移到 Kubernetes 可能需要更多的努力和勇气。然而，对于 Redis 这样一个与容器技术同期诞生、主要用作缓存的数据库来说，容器化是否变得更容易？**许多云原生团队确实这么认为，但实践表明 Redis 并不像看起来那么容易驾驭。**
+
+## 太简单了，对吧？但是...
+
+使用 Redis 容器化确实轻而易举。借助官方的 Redis Docker 镜像，只需几秒钟就能拉起 Redis 服务。将应用与 Redis 部署在同一个 Kubernetes 集群中可以极大简化入门流程，但存在两个"小"问题：
+
+- Redis 服务不具备高可用性  
+  一旦 Redis 容器被重新调度，其 IP 地址就会变更，导致应用端的连接池配置失效。为适应容器环境的易变性，Redis 容器的 IP 不能直接暴露给应用，需要增加 VIP（虚拟 IP）或 DNS 域名来提供固定连接地址。
+
+- Redis 服务不具备高可靠性  
+  若运行 Redis 容器的主机发生宕机，Redis 容器的持久卷可能损坏，导致应用数据丢失。虽然很多开发者将 Redis 用作易失性内存数据库，但也有不少人将其用于持久化键值存储。因此 Redis 容器化必然涉及分布式块存储或本地磁盘同步的解决方案，以确保数据持久性。
+
+## 如果不出意外的话，就要出意外了
+
+有追求的云原生团队不会满足于玩具级的 Redis 服务。很自然地，他们会研究如何编排多个 Redis 容器的高级方案。在这些高级方案中，Redis 服务由分布在多个宿主机上的多个 Redis 容器（副本）组成，能够应对一个或多个容器故障，从而提供持续可靠的服务。
+
+Redis 内核本身并不支持分布式能力，因此需要外部组件来处理 Redis 容器的角色分配和复制配置。在这方面久经考验的 Sentinel 组件，社区也提供了相应的容器编排方案。使用 Bitnami 提供的 Redis Helm Chart，你可以轻松部署一个带有 Sentinel 组件的 Redis 主从集群。通过正确配置副本数、规格参数，并对内核参数稍作调整，Redis 服务的质量就能得到显著提升。如果应用负载相对稳定，这个方案效果不错。但一旦涉及故障或扩缩场景，就会暴露出几个不那么容易解决的问题：
+
+- Redis 服务能力永久性降级
+
+  云原生团队往往没有现成的分布式块存储可用，而本地磁盘资源则相对常见。当 Redis 容器被分配到本地磁盘宿主机时，这些容器实际上就被"固定"在了这些宿主机上。如果发生硬件故障，宿主机若能快速恢复，其上的 Redis 容器也能快速恢复。否则，Redis 容器将一直处于 pending 状态，无法被重新调度到其他健康的宿主机上。虽然 Redis 服务依然可靠可用，但其容量将永久性降级，而 pending 的容器状态对强迫症工程师来说简直是噩梦。
+
+- Redis 服务能力的天花板低
+
+  在 Redis 使用本地磁盘的场景下，Redis 服务能力的天花板较低。被"固定"在宿主机后，Redis 容器的内存使用上限就受限于该宿主机。宿主机上运行的容器越多，Redis 容器能使用的内存就越少。同样的问题也存在于 Redis 容器可用的存储容量上。由于被"固定"在宿主机，存储容量的上限就是宿主机本地磁盘被其他容器瓜分后的剩余空间。CPU 资源的问题倒不明显，因为 Redis 不需要多核处理，对 CPU 的用量相对不敏感。
+
+- Redis 服务的扩缩容问题
+  
+  业务高峰期时，Redis 服务的扩缩容在所难免。根据面临的容量挑战，扩缩容方式分为垂直扩缩容和水平扩缩容。如果业务整体数据量不变，只是需要缓存的热点数据量增加，那么垂直扩容 Redis 容器的内存即可。但一旦业务整体数据量增加，需要垂直扩容存储容量时，云原生团队就无法通过 Helm 修改 StatefulSet 配置来实现重配，需要人工介入劫持底层 PVC。劫持的代价会在后续需要水平扩容时显现。新增的 Redis 容器会沿用旧的配置，使得原本同质化、自动化的 Redis 服务变成异质化、人工缝合的拼凑品。
+
+## 潜藏的挑战
+
+高可用性和可靠性问题可以从架构设计和拓扑图中发现，通常云原生团队会在 Day 1 解决。但特定场景下的服务能力挑战更为隐蔽，取决于真实的业务场景和云原生团队的经验，往往要到 Day 2 才会注意到。**一个谨慎的云原生团队应该避免使用原生 Kubernetes 工作负载在生产环境中运行容器化数据库——这就像在海上航行纸船一样危险**。
+
+Kubernetes 提供了可以更好地聚合存储、计算和网络资源的自定义资源，通过 API 提供"声明式"的数据库服务。目前，几个知名的 Redis Operator 提供了高级解决方案，帮助云原生团队解决常见的 Day 2 问题，包括：
+
+- RedisLabs 的 Redis Enterprise Operator
+- AppsCode 的 KubeDB
+- ApeCloud 的 KubeBlocks
+- Spotahome 的 Redis Operator
+- OpsTree 的 Redis Operator
+
+RedisLabs、AppsCode 和 ApeCloud 提供的 Operator 是企业级的，提供更全面的能力。而 Spotahome 和 OpsTree 提供的 Redis Operator 是完全开源的，功能较少但更简单易懂。根据发布说明和变更日志，Spotahome 的最后一次发布是在 2022 年 1 月 19 日，OpsTree 的是在 2022 年 11 月 10 日，这表明对问题的响应时间可能较慢，需要特别注意。
+
+无论选择哪个 Redis Operator，云原生团队都应该预见到真实业务场景中的网络环境高度复杂，这可能会挑战 Redis 服务支持的网络解决方案。当跨 Kubernetes 部署的新应用需要读写现有 Redis 集群时，这种挑战经常出现。如果没有精心规划的计划，这可能会阻碍业务部署效率。考虑到业务端各种 SDK 的使用方式，Redis 服务需要支持以下部署模型以满足长期需求：
+
+- 单节点（客户端仅访问主节点）
+  - Redis Server 通过 NodePort 暴露主节点地址
+  - Redis Server 通过 LoadBalancer 暴露主节点地址
+- 双节点（客户端仅访问主节点）
+  - Redis Server 通过 NodePort 暴露主节点地址
+  - Redis Server 通过 LoadBalancer 暴露主节点地址
+- 双节点或多节点（客户端访问 Sentinel 实现读写分离）
+  - Redis Server 和 Sentinel 组件通过 HostNetwork 暴露 Redis 和 Sentinel 副本地址
+  - Redis Server 和 Sentinel 组件通过 NodePort 暴露 Redis 和 Sentinel 副本地址
+  - Redis Server 和 Sentinel 组件通过 LoadBalancer 暴露 Redis 和 Sentinel 副本地址
+- 分片
+  - Redis Server 通过 HostNetwork 暴露副本地址
+- 分片 + 代理
+  - Proxy Server 通过 NodePort 暴露连接地址
+  - Proxy Server 通过 LoadBalancer 暴露连接地址
+
+等等，为什么 Redis 分片与其他形式不同，只能使用 HostNetwork？这涉及到 Redis 与云厂商之间的各种博弈。简而言之，Redis 希望将分片作为付费功能，但代码是在 BSD 许可下的。为了防止云厂商利用这一点，Redis 故意没有实现 announce-ip 功能，使得原生 Redis 分片无法在云网络环境中运行。然而，云厂商并没有放弃，而是"帮助"Redis 填补了 announce-ip 功能空白，使他们能够以最小的成本继续大量销售。不幸的是，Redis 和云厂商之间的拉锯战意味着容器环境中的 Redis 分片只能使用 HostNetwork 暴露地址，这给云原生团队带来了额外的障碍。**这些商业利益是 Redis 容器化过程中持续关注的问题**。
+
+## 我还是想试试
+
+**觉得容器化 Redis 没那么容易，公有云全托管服务的溢价似乎很合理？**
+
+这种感觉没错，但先别放弃。公有云厂商最重要的数据库技术方向之一就是容器化，而容器化挑战的起点就是保障弹性以及支持多种网络方案。在块存储、对象存储、VPC 网络和 4 层负载均衡的支持下，公有云厂商更容易实现数据库容器化，技术方案也往往更精巧（如固定容器 IP、不重启升级 Kubernetes 等）。而大多数云原生团队在没有 SDS（软件定义存储）和 SDN（软件定义网络）支持的情况下，实现数据库容器化面临的挑战更大。
+
+幸运的是，大多数云原生团队需要支撑的业务场景没有公有云厂商那么复杂。如果选对方向、收窄需求并逐步积累生产经验，数据库容器化的挑战并不会扑面而来。业界有不少实践分享了容器化 Redis 的经验，有的显著降低了成本，有的让业务团队实现了自助服务。
+
+**冲着提升资源利用率和研发效率的好处，容器化 Redis 值得一试，哪怕有点难。**

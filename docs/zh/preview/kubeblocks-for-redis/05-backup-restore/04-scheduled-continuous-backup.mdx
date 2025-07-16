@@ -1,0 +1,163 @@
+---
+description: 了解如何在KubeBlocks中设置Redis集群，并启用定时全量备份与持续增量备份功能。
+keywords:
+- Redis
+- Backup
+- PITR
+- KubeBlocks
+- Kubernetes
+sidebar_label: 定时持续备份
+sidebar_position: 4
+title: 在KubeBlocks中设置支持定时持续备份的Redis集群
+---
+# 在KubeBlocks中配置支持定时持续备份的Redis集群
+
+本指南将演示如何在KubeBlocks上配置Redis集群，实现以下功能：
+- 定时全量备份（基础备份）
+- 持续WAL（预写日志）归档
+- 时间点恢复（PITR）能力
+
+这种组合方案能提供全面的数据保护，并实现最小的恢复点目标（RPO）。
+
+## 什么是PITR？
+时间点恢复（PITR）允许您通过结合全量备份和持续的binlog/wal/归档日志备份，将数据库恢复到特定时间点。
+
+有关从全量备份和持续binlog备份恢复数据的详细信息，请参阅[从PITR恢复](restore-with-pitr.mdx)指南。
+
+## 前提条件
+
+开始前请确保：
+- 环境准备：
+    - Kubernetes集群已启动并运行
+    - kubectl CLI工具已配置可连接集群
+    - 已安装[KubeBlocks CLI](../../user_docs/references/install-kbcli)和[KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处说明进行安装。
+- 命名空间准备：为保持资源隔离，请为本教程创建专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## 备份前提条件
+
+1. 备份仓库配置：
+   - 已配置`BackupRepo`
+   - 集群与仓库间网络连通，`BackupRepo`状态为`Ready`
+
+2. 集群运行状态：
+   - 集群必须处于`Running`状态
+   - 无进行中的操作（扩缩容、升级等）
+
+## 备份方法列表
+
+KubeBlocks Redis支持以下备份方法：
+
+| 功能           | 方法          | 描述 |
+|-------------|--------|------------|
+| 全量备份 | datafile  | 使用`redis-cli BGSAVE`命令备份数据 |
+| 持续备份 | aof | 通过归档仅追加文件(AOF)实现持续增量备份 |
+
+## 部署Redis集群
+
+import CreateCluster from '../_tpl/_create-redis-replication-cluster.mdx'
+
+<CreateCluster />
+
+## 验证部署
+
+import VerifyCluster from '../_tpl/_verify-redis-replication-cluster.mdx'
+
+<VerifyCluster />
+
+## 启用持续备份
+
+### 准备工作：设置`aof-timestamp-enabled`为`yes`
+Redis仅追加文件(AOF)按处理顺序记录服务器接收的每个写操作，使Redis能通过重放这些命令重建数据集。
+KubeBlocks通过归档仅追加文件(AOF)支持Redis组件的持续备份。它将处理增量AOF文件，更新基础AOF文件，清理过期文件并保存备份状态（将备份过程的元数据如总大小和时间戳记录到`Backup`资源中）。
+
+启用持续备份前，必须将变量`aof-timestamp-enabled`设为`yes`。
+
+```yaml
+# cat examples/redis/reconfigure-aof.yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: redis-reconfigure-aof
+  namespace: demo
+spec:
+  clusterName: redis-replication
+  reconfigures:
+  - componentName: redis
+    parameters:
+      # 表示要更新的参数名称
+    - key: aof-timestamp-enabled
+      value: 'yes'
+  type: Reconfiguring
+```
+
+:::注意
+一旦启用`aof-timestamp-enabled`，Redis将在AOF文件中包含时间戳。
+可能产生以下副作用：存储开销、性能开销（写入延迟）。
+当您有高写入吞吐量或存储空间有限时，不建议启用此功能。
+:::
+
+### 更新BackupSchedule
+
+更新`BackupSchedule`以计划启用(`enabled`)备份方法并按需设置时间(`cronExpression`)：
+
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: BackupSchedule
+spec:
+  backupPolicyName: redis-replication-redis-backup-policy
+  schedules:
+  - backupMethod: datafile
+    # ┌───────────── 分钟 (0-59)
+    # │ ┌───────────── 小时 (0-23)
+    # │ │ ┌───────────── 月份中的天 (1-31)
+    # │ │ │ ┌───────────── 月份 (1-12)
+    # │ │ │ │ ┌───────────── 星期中的天 (0-6) (周日=0)
+    # │ │ │ │ │
+    # 0 18 * * *
+    # 每天下午6点(18:00)执行此任务
+    cronExpression: 0 18 * * * # 根据需要更新cronExpression
+    enabled: true # 设为`true`以定期调度基础备份
+    retentionPeriod: 7d # 根据需要设置保留期
+  - backupMethod: aof
+    cronExpression: '*/30 * * * *'
+    enabled: true   # 设为`true`启用持续备份
+    name: aof
+    retentionPeriod: 8d # 默认情况下，持续备份的保留期比全量备份多1天
+```
+
+1. **全量备份** (datafile):
+  - 使用redis `BGSAVE`命令执行全量备份
+  - 按配置的计划运行（默认每天）
+  - 作为PITR的基础
+
+2. **持续备份** (archive-oplog):
+  - 持续处理增量AOF文件，更新基础AOF文件，清理过期文件
+  - 维护备份元数据包括大小和时间范围
+
+## 监控持续备份
+
+使用以下命令验证持续备份操作：
+```bash
+# 获取持续备份
+kubectl get backup -l app.kubernetes.io/instance=redis-replication,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
+# 获取处理持续备份的pod
+kubectl get pod -l app.kubernetes.io/instance=redis-replication,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
+```
+
+## 总结
+
+本指南涵盖：
+1. 使用pg-basebackup配置定时全量备份
+2. 使用wal-g-archive启用持续WAL归档
+3. 设置时间点恢复(PITR)能力
+4. 监控备份操作
+
+关键优势：
+- 定时全量备份确保定期恢复点
+- 持续WAL归档最小化潜在数据丢失
+- PITR支持恢复到任意时间点

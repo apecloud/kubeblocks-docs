@@ -1,0 +1,231 @@
+---
+description: 了解如何在KubeBlocks上部署一个使用用户提供的TLS证书的MySQL集群，以实现安全通信。本指南涵盖证书生成、集群部署及安全连接验证的全过程。
+keywords:
+- KubeBlocks
+- MySQL
+- Kubernetes
+- TLS
+- Secure Communication
+- User-Provided Certificates
+sidebar_label: 使用用户提供TLS的MySQL集群
+sidebar_position: 2
+title: 在KubeBlocks上部署用户提供TLS的MySQL集群
+---
+# 在 KubeBlocks 上部署使用用户提供 TLS 的 MySQL 集群
+
+本指南说明如何使用 KubeBlocks 部署一个带有**用户提供 TLS 证书**的 MySQL 集群。通过提供自己的证书，您可以完全控制 MySQL 客户端与服务器之间加密通信的安全配置。本指南涵盖证书生成、集群部署和安全连接验证。
+
+## 前提条件
+
+在继续之前，请确保满足以下条件：
+- 环境设置：
+    - 已启动并运行一个 Kubernetes 集群。
+    - 已配置 kubectl CLI 工具以与集群通信。
+    - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处的安装说明进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 生成证书
+
+要启用TLS加密，您需要提供证书颁发机构（CA）、服务器证书和私钥。按照以下步骤使用OpenSSL生成这些文件：
+
+1. 生成根证书（CA）
+
+```bash
+# Create the CA private key (password optional)
+openssl genrsa -aes256 -out ca-key.pem 4096
+
+# Generate a self-signed root certificate (valid for 10 years)
+openssl req -x509 -new -nodes -key ca-key.pem -sha256 -days 3650 -out ca.pem
+# Enter the required information (e.g., Common Name can be "MySQL Root CA")
+```
+
+2. 生成服务器证书和密钥
+
+```bash
+# Generate the server private key
+openssl genrsa -out server-key.pem 4096
+
+# Create a Certificate Signing Request (CSR)
+openssl req -new -key server-key.pem -out server-req.pem
+# Enter server identification details, such as:
+# Common Name (CN) = Server domain name or IP (must match the MySQL server address!)
+
+# Sign the server certificate with the CA (valid for 10 years)
+openssl x509 -req -in server-req.pem -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out server-cert.pem -days 3650 -sha256
+```
+
+3. 验证证书
+验证服务器证书是否有效且由CA签发：
+
+
+
+```bash
+# Verify the server certificate
+openssl verify -CAfile ca.pem server-cert.pem
+```
+
+预期输出：
+
+```bash
+server-cert.pem: OK
+```
+
+
+
+
+## 创建 Kubernetes Secret
+将生成的证书和密钥存储在 Kubernetes Secret 中，以便您的 MySQL 集群可以访问它们：
+
+```bash
+kubectl create secret generic mysql-tls-secret \
+  --namespace=demo \
+  --from-file=ca.crt=ca.pem \
+  --from-file=tls.crt=server-cert.pem \
+  --from-file=tls.key=server-key.pem \
+  --type=kubernetes.io/tls
+```
+
+此 Secret 包含在 MySQL 集群上启用 mTLS 所需的 CA、服务器证书和私钥。
+
+## 部署 MySQL 半同步集群
+
+KubeBlocks 采用声明式方法管理 MySQL 集群。以下是一个配置示例，用于部署包含 2 个节点（1 个主节点，1 个副本节点）的半同步模式 MySQL 集群，并使用用户提供的 TLS 证书：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      tls: true
+      issuer:
+        name: UserProvided
+        secretRef:
+          name: mysql-tls-secret
+          namespace: demo
+          ca: ca.crt
+          cert: tls.crt
+          key: tls.key
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+**配置亮点：**
+- `tls: true`：启用TLS加密以确保通信安全。
+- `issuer.name: UserProvided`：指定使用用户提供的证书。
+- `secretRef`：将集群链接至包含证书的Kubernetes Secret。
+
+## 验证部署
+监控集群状态直到其转为 Running 状态：
+
+```bash
+kubectl get cluster -n demo -w
+```
+
+预期输出：
+
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Running   11m
+```
+
+
+
+
+## 连接到 MySQL 集群
+
+KubeBlocks 会自动创建一个包含 MySQL root 凭据的 Secret。通过以下命令获取凭据：
+
+1. 获取 root 用户名：
+
+```bash
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
+```
+
+预期输出：
+
+```bash
+root
+```
+
+2. 获取 root 密码：
+
+```bash
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+```
+
+预期输出：
+
+```bash
+D0o5P43S8G
+```
+
+使用 MySQL 客户端时，通过添加 '--ssl-mode=REQUIRED' 选项强制启用 TLS 连接：
+
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pD0o5P43S8G --ssl-mode=REQUIRED
+```
+
+连接后，通过在 MySQL shell 中运行 STATUS 命令验证是否正在使用 TLS：
+
+```sql
+mysql> STATUS;
+--------------
+
+SSL:			Cipher in use is TLS_AES_256_GCM_SHA384
+```
+
+如果输出中显示 SSL 信息，则表示连接已成功通过 TLS 加密。
+
+## 清理
+测试完成后移除所有资源：
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete secret mysql-tls-secret -n demo
+kubectl delete ns demo
+```
+
+
+
+
+## 总结
+在本指南中，您学习了如何：
+- 使用 OpenSSL 生成自签名的 CA 和服务器证书。
+- 将证书存储在 Kubernetes Secret 中。
+- 使用 KubeBlocks 部署启用 TLS 加密的 MySQL 集群。
+- 通过 TLS 安全连接 MySQL 集群并验证连接。
+
+使用 TLS 可以确保 MySQL 客户端与服务器之间的通信安全，保护传输中的敏感数据。通过遵循这些步骤，您可以轻松地使用 KubeBlocks 在 Kubernetes 上设置和管理安全的 MySQL 集群。

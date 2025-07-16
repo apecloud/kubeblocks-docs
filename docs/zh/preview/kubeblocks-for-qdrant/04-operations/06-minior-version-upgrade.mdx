@@ -1,0 +1,275 @@
+---
+description: 了解如何通过KubeBlocks部署和升级Qdrant集群，实现最小化停机时间。
+keywords:
+- KubeBlocks
+- Qdrant
+- Upgrade
+- Rolling Upgrade
+- Kubernetes
+sidebar_label: 次版本升级
+sidebar_position: 6
+title: 在KubeBlocks中升级Qdrant集群的次版本
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 在KubeBlocks中升级Qdrant集群的次版本
+
+本指南将带您完成由KubeBlocks管理的Qdrant集群的部署和次版本升级过程，确保升级期间服务中断最小化。
+
+## 前提条件
+
+开始前请确保：
+- 环境准备：
+    - Kubernetes集群已就绪并正常运行
+    - kubectl CLI工具已配置可访问集群
+    - 已安装[KubeBlocks CLI](../../user_docs/references/install-kbcli)和[KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)，安装指引见链接
+- 命名空间准备：为隔离资源，请先创建专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## 部署Qdrant集群
+
+KubeBlocks采用声明式方式管理Qdrant集群。以下是部署3副本Qdrant集群的配置示例。
+
+应用以下YAML配置部署集群：
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: qdrant-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: qdrant
+  topology: cluster
+  componentSpecs:
+    - name: qdrant
+      serviceVersion: 1.10.0
+      replicas: 3
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+## 验证部署
+监控集群状态直至转为Running状态：
+```bash
+kubectl get cluster qdrant-cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+qdrant-cluster   qdrant               Delete               Creating   49s
+qdrant-cluster   qdrant               Delete               Running    62s
+```
+当集群状态变为Running时，Qdrant集群即可使用。
+
+:::tip
+如果是首次创建集群，可能需要等待镜像拉取完成后才会运行。
+
+:::
+
+## 列出所有可用Qdrant版本
+
+使用以下命令查看当前KubeBlocks支持的Qdrant版本：
+```bash
+kubectl get cmpv qdrant
+```
+预期输出：
+```bash
+NAME     VERSIONS                                STATUS      AGE
+qdrant   1.14.0,1.10.0,1.8.4,1.8.1,1.7.3,1.5.0   Available   26d
+```
+
+注意：实际支持的版本列表可能因KubeBlocks版本而异。
+
+## 升级Qdrant版本
+
+### 检查相同ComponentDefinition下的兼容版本
+
+**步骤1.** 获取与给定ComponentVersion关联的ComponentDefinition列表
+
+```bash
+kubectl get cmpv qdrant -ojson | jq -r '.metadata.annotations."componentversion.kubeblocks.io/compatible-definitions"' | tr ',' '\n'
+```
+
+<details>
+<summary>示例输出</summary>
+```text
+qdrant-1.0.0
+```
+</details>
+
+**步骤2.** 获取与qdrant ComponentDefinition兼容的版本列表
+
+```bash
+kubectl get cmpv qdrant -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("^qdrant"))) | .releases[]'
+```
+
+这将返回与名为qdrant的ComponentDefinition兼容的版本：
+
+<details open>
+<summary>示例输出</summary>
+```text
+1.5.0
+1.7.3
+1.8.1
+1.8.4
+1.10.0
+1.14.0
+```
+</details>
+
+### 执行升级
+
+要升级Qdrant版本，需修改Cluster资源中的serviceVersion字段。本示例将Qdrant版本从1.10.0升级至1.14.0
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  选项1：使用OpsRequest
+
+  可通过OpsRequest升级集群：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: qdrant-upgrade
+    namespace: demo
+  spec:
+    # 指定操作目标Cluster资源名称
+    clusterName: qdrant-cluster
+    type: Upgrade
+    upgrade:
+      components:
+      - componentName: qdrant
+        # 指定组件目标服务版本
+        serviceVersion: "1.14.0"
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+  选项2：使用声明式Cluster API
+
+  也可通过直接修改集群配置中的spec.componentSpecs.serviceVersion字段实现升级：
+
+  ```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: qdrant-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: qdrant
+  topology: cluster
+  componentSpecs:
+    - name: qdrant
+      serviceVersion: 1.14.0  # 升级目标版本设为1.14.0
+      replicas: 3
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+  ```
+  </TabItem>
+</Tabs>
+
+## 验证过程
+
+
+### 监控升级进度
+
+检查OpsRequest进度：
+```bash
+kubectl get ops -n demo qdrant-upgrade -w
+```
+
+示例输出：
+```
+NAME             TYPE      CLUSTER          STATUS    PROGRESS   AGE
+qdrant-upgrade   Upgrade   qdrant-cluster   Succeed   3/3        8m13s
+```
+
+检查Pod状态：
+```
+kubectl get pods -n demo -l app.kubernetes.io/instance=qdrant-cluster
+```
+
+预期输出：
+```bash
+NAME                      READY   STATUS    RESTARTS        AGE
+qdrant-cluster-qdrant-0   2/2     Running   1 (7m23s ago)   13m
+qdrant-cluster-qdrant-1   2/2     Running   1 (7m49s ago)   12m
+qdrant-cluster-qdrant-2   2/2     Running   1 (7m59s ago)   12m
+```
+
+**关键观察点：**
+- Pod未被重建，RESTARTS计数器增加1
+- Pod按序号从高到低依次更新
+
+
+### 检查集群状态
+确认集群处于Running状态：
+```bash
+kubectl get cluster qdrant-cluster -n demo -w
+```
+预期输出：
+```bash
+NAME             CLUSTER-DEFINITION   TERMINATION-POLICY    STATUS    AGE
+qdrant-cluster   qdrant               Delete               Running   17m
+```
+
+### 验证Qdrant版本
+
+连接到升级后的实例验证版本：
+```bash
+kubectl exec -ti -n demo qdrant-cluster-qdrant-0 -c kbagent -- \
+   curl http://127.0.0.1:6333
+```
+
+预期输出：
+```
+curl http://127.0.0.1:6333
+{"title":"qdrant - vector search engine","version":"1.14.0","commit":"3617a0111fc8590c4adcc6e88882b63ca4dda9e7"}%
+```
+
+## 总结
+通过本指南您学会了：
+- 使用KubeBlocks部署Qdrant集群
+- 以最小停机时间完成Qdrant次版本的滚动升级
+- 验证升级是否成功

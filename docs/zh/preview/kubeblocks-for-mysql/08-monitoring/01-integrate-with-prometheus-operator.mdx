@@ -1,0 +1,286 @@
+---
+description: 了解如何在KubeBlocks中通过Prometheus Operator为MySQL集群配置可观测性。设置监控并通过Grafana实现指标可视化。
+keywords:
+- KubeBlocks
+- MySQL
+- Prometheus
+- Grafana
+- Observability
+- Metrics
+sidebar_label: MySQL 集群可观测性
+sidebar_position: 2
+title: 使用 Prometheus Operator 实现 MySQL 集群可观测性
+---
+# 使用 Prometheus Operator 实现 MySQL 集群的可观测性
+
+（保持原始 Markdown 格式与空行不变）
+
+## 前提条件
+
+在继续之前，请确保满足以下条件：
+- 环境设置：
+    - 已启动并运行一个 Kubernetes 集群。
+    - 已配置 kubectl CLI 工具以与集群通信。
+    - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处提供的安装说明进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 安装 Prometheus Operator
+
+如果尚未安装 Prometheus Operator，可以使用 Helm 进行安装：
+
+```bash
+kubectl create namespace monitoring
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm install prometheus prometheus-community/kube-prometheus-stack -n monitoring --create-namespace
+```
+
+或者，您可以按照[如何安装 Prometheus Operator](../docs/install-prometheus.md)中的步骤来安装 Prometheus Operator。
+
+检查已部署 Pod 的状态：
+
+```bash
+kubectl get pods -n monitoring
+```
+
+预期输出：
+
+```bash
+NAME                                                     READY   STATUS    RESTARTS   AGE
+alertmanager-prometheus-kube-prometheus-alertmanager-0   2/2     Running   0          114s
+prometheus-grafana-75bb7d6986-9zfkx                      3/3     Running   0          2m
+prometheus-kube-prometheus-operator-7986c9475-wkvlk      1/1     Running   0          2m
+prometheus-kube-state-metrics-645c667b6-2s4qx            1/1     Running   0          2m
+prometheus-prometheus-kube-prometheus-prometheus-0       2/2     Running   0          114s
+prometheus-prometheus-node-exporter-47kf6                1/1     Running   0          2m1s
+prometheus-prometheus-node-exporter-6ntsl                1/1     Running   0          2m1s
+prometheus-prometheus-node-exporter-gvtxs                1/1     Running   0          2m1s
+prometheus-prometheus-node-exporter-jmxg8                1/1     Running   0          2m1s
+```
+
+
+
+
+
+## 部署 MySQL 半同步集群
+
+KubeBlocks 采用声明式方法管理 MySQL 集群。以下是一个配置示例，用于部署包含 2 个节点（1 个主节点，1 个副本节点）的半同步模式 MySQL 集群。
+
+应用以下 YAML 配置来部署集群：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+
+
+
+## 验证部署
+
+监控集群状态直到其转变为 Running 状态：
+
+```bash
+kubectl get cluster example-mysql-cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Creating   34s
+example-mysql-cluster   mysql                Delete               Running   36m
+```
+
+
+
+
+
+## 配置 PodMonitor 实现指标采集
+
+Prometheus 通过 PodMonitor 资源从 Pod 中抓取指标。请按照以下步骤配置指标采集：
+
+### 步骤 1. 识别 Exporter 端点
+
+要查找 MySQL exporter 的指标端点，请运行以下命令：
+
+```bash
+kubectl get po example-mysql-cluster-mysql-0 -n demo -oyaml | yq '.spec.containers[] | select(.name=="mysql-exporter") | .ports '
+```
+
+示例输出：
+
+```yaml
+- containerPort: 9104
+  name: http-metrics  # <-- Port name for PodMonitor
+  protocol: TCP
+```
+
+### 步骤 2. 部署 PodMonitor
+
+定义一个 PodMonitor 来配置 Prometheus 从 MySQL exporter 抓取指标。根据需要更新以下参数：
+- `namespaceSelector` 必须匹配您的 MySQL 集群所在命名空间（'demo'）
+- `port` 名称必须与 exporter 的端口名称（'http-metrics'）一致
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: example-mysql-cluster-pod-monitor
+  namespace: monitoring # Note: this is namespace for prometheus operator
+  labels:               # this is labels set in 'prometheus.spec.podMonitorSelector'
+    release: prometheus
+spec:
+  jobLabel: app.kubernetes.io/managed-by
+  # defines the labels which are transferred from the
+  # associated Kubernetes 'Pod' object onto the ingested metrics
+  # set the lables w.r.t you own needs
+  podTargetLabels:
+  - app.kubernetes.io/instance
+  - app.kubernetes.io/managed-by
+  - apps.kubeblocks.io/component-name
+  - apps.kubeblocks.io/pod-name
+  podMetricsEndpoints:
+    - path: /metrics
+      port: http-metrics
+      scheme: http
+  namespaceSelector:
+    matchNames:
+      - demo
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: example-mysql-cluster
+      apps.kubeblocks.io/component-name: mysql
+EOF
+```
+
+
+
+
+## 验证指标收集
+
+### 验证 Prometheus 目标
+要确认 Prometheus 正在抓取指标，请将 Prometheus 服务转发到本地机器：
+
+```bash
+kubectl port-forward svc/prometheus-kube-prometheus-prometheus -n monitoring 9090:9090
+```
+
+请打开浏览器并访问：
+http://localhost:9090/targets
+
+检查是否存在与 PodMonitor 对应的抓取任务（任务名称为 'monitoring/example-mysql-cluster-pod-monitor'）。
+
+预期状态：
+- 目标的状态应为 UP。
+- 目标的标签应包含 podTargetLabels 中定义的标签（例如 'app_kubernetes_io_instance'）。
+
+![mysql-monitoring-prometheus-dashboard.png](/img/docs/en/mysql-monitoring-prometheus-dashboard.png)
+
+### 查询示例指标
+运行以下查询以确认指标正在被采集：
+
+```bash
+curl -sG "http://localhost:9090/api/v1/query" --data-urlencode 'query=mysql_up' | jq
+```
+
+示例输出：
+
+```json
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "__name__": "mysql_up",
+          "app_kubernetes_io_instance": "example-mysql-cluster",
+          ...
+        },
+        "value": [
+          1737816600.215,
+          "1"
+        ]
+      },
+      ...
+    ]
+  }
+}
+```
+
+## 在 Grafana 中可视化指标
+
+### 访问 Grafana
+将 Grafana 服务转发到本地机器：
+
+```bash
+kubectl port-forward svc/prometheus-grafana -n monitoring 3000:80
+```
+
+打开浏览器并访问 http://localhost:3000。使用以下默认凭据登录：
+- 用户名：'admin'
+- 密码：'prom-operator'（默认值）
+
+在 Grafana 中导入一个 MySQL 指标仪表板，并确认您的指标已正确可视化。
+
+![mysql-monitoring-grafana-dashboard.png](/img/docs/en/mysql-monitoring-grafana-dashboard.png)
+
+:::note
+请确保 `PodMonitor` 文件中的标签设置正确，以匹配仪表板的要求。
+:::
+
+
+## 删除
+要删除所有已创建的资源，请运行以下命令：
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete ns demo
+
+kubectl delete podmonitor example-mysql-cluster-pod-monitor -n monitoring
+```
+
+
+
+
+## 摘要
+在本教程中，我们使用 Prometheus Operator 为 KubeBlocks 中的 MySQL 集群配置了可观测性。通过配置 `PodMonitor`，我们使 Prometheus 能够从 MySQL exporter 抓取指标。最后，我们在 Grafana 中将这些指标可视化。此设置为监控 MySQL 数据库的健康状态和性能提供了宝贵的洞察。
+

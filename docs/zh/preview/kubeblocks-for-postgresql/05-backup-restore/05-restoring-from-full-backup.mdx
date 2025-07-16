@@ -1,0 +1,132 @@
+---
+description: 了解如何通过Cluster Annotation或OpsRequest API，在KubeBlocks中从现有备份恢复一个新的PostgreSQL集群。
+keywords:
+- PostgreSQL
+- Restore
+- Backup
+- KubeBlocks
+- Kubernetes
+sidebar_label: 恢复 PostgreSQL 集群
+sidebar_position: 5
+title: 从备份恢复 PostgreSQL 集群
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 从备份恢复 PostgreSQL 集群
+
+本指南演示在 KubeBlocks 中从备份恢复 PostgreSQL 集群的两种方法：
+
+1. **集群注解法** - 使用 YAML 注解的声明式简单方法
+2. **OpsRequest API 法** - 支持进度监控的高级操作控制
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 恢复准备：定位完整备份
+开始恢复前，请确保存在可用的完整备份。恢复过程将使用该备份创建新的 PostgreSQL 集群。
+
+- 新集群可访问的备份仓库
+- 状态为 `Completed` 的有效完整备份
+- 充足的 CPU/内存资源
+- 足够的存储容量
+
+查找可用完整备份：
+
+```bash
+kubectl get backup -n demo -l dataprotection.kubeblocks.io/backup-type=Full,app.kubernetes.io/instance=pg-cluster # 获取完整备份列表
+```
+
+选择状态为 `Completed` 的任意一个备份。
+
+### 步骤1：创建恢复集群
+通过恢复配置创建新集群：
+
+关键参数：
+- `kubeblocks.io/restore-from-backup` 注解
+- 从上一步获取的备份名称和命名空间
+
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: pg-restored
+  namespace: demo
+  annotations:
+    # 注意：将 <FULL_BACKUP_NAME> 替换为实际备份名称
+    kubeblocks.io/restore-from-backup: '{"postgresql":{"name":"<FULL_BACKUP_NAME>","namespace":"demo","volumeRestorePolicy":"Parallel"}}'
+spec:
+  terminationPolicy: Delete
+  clusterDef: postgresql
+  topology: replication
+  componentSpecs:
+    - name: postgresql
+      serviceVersion: 16.4.0
+      disableExporter: true
+      labels:
+        apps.kubeblocks.postgres.patroni/scope: pg-restored-postgresql
+      replicas: 2
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+### 步骤3：监控恢复进度
+通过以下命令跟踪恢复进度：
+
+```bash
+# 观察恢复状态
+kubectl get restore -n demo -w
+
+# 观察集群状态
+kubectl get cluster -n demo -w
+```
+
+:::note
+目前不支持通过 `kbcli` 或 `OpsRequest` 恢复 PostgreSQL 集群。
+
+您可以按照上述步骤通过 `kubectl` 恢复 PostgreSQL 集群。
+
+:::
+
+
+## 清理资源
+删除所有已创建的资源，包括 PostgreSQL 集群及其命名空间：
+
+```bash
+kubectl delete cluster pg-cluster -n demo
+kubectl delete cluster pg-cluster-restored -n demo
+kubectl delete ns demo
+```
+
+## 总结
+
+本指南涵盖两种恢复方法：
+
+1. **集群注解法** - 基于 YAML 的简单方法
+   - 获取系统凭证
+   - 创建带恢复注解的集群
+   - 监控进度
+
+2. **OpsRequest API 法** - 增强的操作控制
+   - 创建恢复请求
+   - 跟踪操作状态
+   - 验证完成情况

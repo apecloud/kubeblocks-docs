@@ -1,0 +1,55 @@
+---
+description: KubeBlocks集群管理之MinIO安装完整指南
+keywords:
+- MinIO
+- installation
+- configuration
+- command-line
+sidebar_label: 安装 MinIO
+sidebar_position: 10
+title: 安装 MinIO
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# 安装 MinIO
+
+如果您没有云服务商提供的对象存储服务，可以在 Kubernetes 中部署开源服务 MinIO 并用于配置 BackupRepo。
+
+1. 在 `kb-system` 命名空间安装 MinIO。
+
+   ```bash
+   helm install minio oci://registry-1.docker.io/bitnamicharts/minio --namespace kb-system --create-namespace --set "extraEnvVars[0].name=MINIO_BROWSER_LOGIN_ANIMATION" --set "extraEnvVars[0].value=off" --version 14.10.5
+   ```
+
+   获取初始用户名和密码：
+
+   ```bash
+   # 初始用户名
+   echo $(kubectl get secret --namespace kb-system minio -o jsonpath="{.data.root-user}" | base64 -d)
+
+   # 初始密码
+   echo $(kubectl get secret --namespace kb-system minio -o jsonpath="{.data.root-password}" | base64 -d)
+   ```
+
+2. 生成访问凭证。
+
+   执行 `kubectl port-forward --namespace kb-system svc/minio 9001:9001` 后访问 `127.0.0.1:9001` 进入登录页面。
+
+   登录仪表板后，可以生成 `access key` 和 `secret key`。
+
+   ![backup-and-restore-backup-repo-1](/img/docs/en/backup-and-restore-backup-repo-1.png)
+
+3. 创建存储桶。
+
+   为测试创建一个名为 `test-minio` 的存储桶。
+
+   ![backup-and-restore-backup-repo-2](/img/docs/en/backup-and-restore-backup-repo-2.png)
+   ![backup-and-restore-backup-repo-3](/img/docs/en/backup-and-restore-backup-repo-3.png)
+
+  :::note
+
+  安装的 MinIO 访问地址（endpoint）为 `http://minio.kb-system.svc.cluster.local:9000`。其中 `kb-system` 是安装 MinIO 的命名空间名称。
+
+  :::

@@ -1,0 +1,58 @@
+---
+description: 版本说明 v0.9.2
+keywords:
+- kubeblocks
+- release notes
+sidebar_position: 8
+title: v0.9.2
+---
+# KubeBlocks 0.9.2 (2024-12-03)
+
+我们很高兴地宣布 KubeBlocks v0.9.2 版本正式发布。本次更新包含多项新功能、错误修复以及各类改进。
+
+阅读完整发布说明并[升级至 KubeBlocks v0.9.2](../upgrade/upgrade-to-v09-version) 以探索更多功能！v0.9.2 的升级流程与 v0.9.1 完全一致，只需按照 v0.9.1 的教程操作，在需要时更新版本号即可完成升级至 v0.9.2。
+
+## KubeBlocks 核心功能
+
+- 新增容器镜像滚动更新支持，实现最小停机时间的无缝更新 ([#8389](https://github.com/apecloud/kubeblocks/pull/8389))
+- 引入组件级停止/启动能力，实现对集群组件的细粒度控制 ([#8480](https://github.com/apecloud/kubeblocks/pull/8480))
+- 增强分片集群的主机网络支持 ([#8517](https://github.com/apecloud/kubeblocks/pull/8517), [#8502](https://github.com/apecloud/kubeblocks/pull/8502))
+- 改进分片集群的水平扩缩容 OpeRequest 操作 ([#8530](https://github.com/apecloud/kubeblocks/pull/8530))
+- 新增 Pod 重建更新策略支持，增强更新策略灵活性 ([#8466](https://github.com/apecloud/kubeblocks/pull/8466))
+- KubeBlocks 安装优化：支持定义额外注解和环境变量 ([#8454](https://github.com/apecloud/kubeblocks/pull/8454))
+
+## 插件增强
+
+### MySQL
+
+- 新增 Jemalloc 支持以优化内存管理 ([#1158](https://github.com/apecloud/kubeblocks-addons/pull/1158))
+
+### Redis
+
+- 为 Redis Sentinel 新增 NodePort 通告模式支持 ([#1227](https://github.com/apecloud/kubeblocks-addons/pull/1227))
+- 引入固定 Pod IP、自定义主节点名称和完整 FQDN 域名支持 ([#1222](https://github.com/apecloud/kubeblocks-addons/pull/1222))
+- 优化 PITR 备份中的用户 ACL 备份频率 ([#1180](https://github.com/apecloud/kubeblocks-addons/pull/1180))
+
+### RabbitMQ
+
+- 新增成员移除操作支持，实现集群缩容场景 ([#1229](https://github.com/apecloud/kubeblocks-addons/pull/1229))
+- 通过配置约束和基于文件的日志增强 RabbitMQ 配置管理 ([#1199](https://github.com/apecloud/kubeblocks-addons/pull/1199))
+
+### MongoDB
+
+- 新增主机网络支持 ([#1152](https://github.com/apecloud/kubeblocks-addons/pull/1152))
+
+### PostgreSQL
+
+- 增强原生 PostgreSQL 集成并新增 PostgreSQL 15 支持 ([#1092](https://github.com/apecloud/kubeblocks-addons/pull/1092))
+- 新增 Supabase PostgreSQL 支持 ([#1154](https://github.com/apecloud/kubeblocks-addons/pull/1154))
+
+### Xinference
+
+- 新增 Xinference v0.15.4 支持 ([#1248](https://github.com/apecloud/kubeblocks-addons/pull/1248))
+
+您可以查看[完整变更日志](https://github.com/apecloud/kubeblocks/compare/v0.9.1...v0.9.2)。
+
+## 升级至 v0.9.2
+
+请参考[升级至 KubeBlocks v0.9.x](../upgrade/upgrade-to-v09-version)指南。

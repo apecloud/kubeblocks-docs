@@ -1,0 +1,246 @@
+---
+description: 了解如何通过KubeBlocks中的rollingUpdate策略为MySQL集群配置并执行渐进式滚动更新，确保更新期间服务影响最小化。
+keywords:
+- KubeBlocks
+- MySQL
+- Rolling Update
+- Kubernetes
+- Cluster Management
+sidebar_label: 渐进式滚动更新
+sidebar_position: 5
+title: 在KubeBlocks中配置支持渐进式滚动更新的MySQL集群
+---
+# 在 KubeBlocks 中配置 MySQL 集群的渐进式滚动更新
+
+本指南演示如何在 KubeBlocks 中使用 rollingUpdate 策略为 MySQL 集群配置渐进式滚动更新。渐进式滚动更新允许您控制每次更新的 Pod 数量，确保更新过程中的影响最小化。
+
+**关键参数：**
+- `rollingUpdate.replicas`：指定滚动更新每个步骤中要更新的实例数量，其余实例不受影响。
+  - 该值可以是绝对数字（例如 5）或所需实例的百分比（例如 10%）。
+  - 绝对数字通过向上取整百分比计算得出。
+  - 默认值为副本总数，意味着所有实例都会被更新。
+- `rollingUpdate.maxUnavailable`：限制更新期间可能不可用的最大实例数量。
+  - 该值同样可以是绝对数字（例如 5）或百分比（例如 10%）。
+  - 此值不能为 0，默认值为 1。
+
+## 前提条件
+
+在继续之前，请确保满足以下要求：
+- 环境准备：
+    - 已启动并运行一个 Kubernetes 集群。
+    - 已配置 kubectl CLI 工具以与集群通信。
+    - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处提供的安装说明进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 部署 MySQL 半同步集群
+
+使用以下 YAML 配置部署一个 2 节点的 MySQL 半同步复制集群（1 个主节点，1 个从节点）：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+
+
+
+## 验证部署
+监控集群状态直到其转为 Running 状态：
+
+```bash
+kubectl get cluster example-mysql-cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Creating   6s
+example-mysql-cluster   mysql                Delete               Running    3m47s
+```
+
+当集群状态变为 Running 时，您的 MySQL 集群即可投入使用。
+
+（严格保持原文格式与换行）
+
+## 执行渐进式滚动更新
+本节演示如何在 MySQL 集群中逐步更新 Pod。
+
+### 步骤 1. 触发资源更新
+更新 MySQL 集群的资源请求和限制，同时将 `rollingUpdate.replicas` 设置为 1。这确保每次仅更新一个 Pod。
+
+```bash
+kubectl patch cluster example-mysql-cluster -n demo --type='json' -p='[
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/0/instanceUpdateStrategy",
+    "value": {
+      "rollingUpdate": {
+        "replicas": 1
+      }
+    }
+  },
+  {
+    "op": "replace",
+    "path": "/spec/componentSpecs/0/resources/limits/cpu",
+    "value": "1.0"
+  },
+  {
+    "op": "replace",
+    "path": "/spec/componentSpecs/0/resources/limits/memory",
+    "value": "1.0Gi"
+  },
+  {
+    "op": "replace",
+    "path": "/spec/componentSpecs/0/resources/requests/cpu",
+    "value": "1.0"
+  },
+  {
+    "op": "replace",
+    "path": "/spec/componentSpecs/0/resources/requests/memory",
+    "value": "1.0Gi"
+  }
+]'
+```
+
+### 步骤 2. 观察更新过程
+应用补丁后检查集群状态：
+
+```bash
+kubectl get cluster example-mysql-cluster -n demo
+```
+
+示例输出：
+
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster   mysql                Delete               Updating   5m57s
+```
+
+集群状态显示为"更新中"，将有一个 Pod 重启以应用变更。
+
+监控 Pod 更新过程：
+
+```bash
+kubectl get pods -n demo -w
+```
+
+示例输出：
+
+```
+NAME                            READY   STATUS     RESTARTS   AGE
+example-mysql-cluster-mysql-0   4/4     Running    0          3m3s
+example-mysql-cluster-mysql-1   0/4     Init:1/6   0          10s
+example-mysql-cluster-mysql-1   0/4     Init:2/6   0          24s
+example-mysql-cluster-mysql-1   0/4     Init:3/6   0          25s
+example-mysql-cluster-mysql-1   0/4     Init:4/6   0          26s
+example-mysql-cluster-mysql-1   0/4     Init:5/6   0          27s
+example-mysql-cluster-mysql-1   0/4     PodInitializing   0          28s
+example-mysql-cluster-mysql-1   3/4     Running           0          29s
+example-mysql-cluster-mysql-1   4/4     Running           0          34s
+```
+
+### 步骤 3. 逐步更新剩余 Pod
+
+当第一个 Pod 更新完成后，将 `rollingUpdate.replicas` 增加到 2 以更新下一个 Pod。
+
+```bash
+kubectl patch cluster example-mysql-cluster -n demo --type='json' -p='[
+  {
+    "op": "replace",
+    "path": "/spec/componentSpecs/0/instanceUpdateStrategy/rollingUpdate/replicas",
+    "value": 2
+  }
+]'
+```
+
+监控剩余 Pod 是否已更新：
+
+```bash
+kubectl get pods -n demo  -w
+```
+
+示例输出：
+
+```
+example-mysql-cluster-mysql-0   4/4     Terminating       0          8m7s
+example-mysql-cluster-mysql-0   0/4     Pending           0          0s
+example-mysql-cluster-mysql-0   0/4     Init:0/6          0          0s
+example-mysql-cluster-mysql-0   0/4     Init:1/6          0          7s
+example-mysql-cluster-mysql-0   0/4     Init:1/6          0          8s
+example-mysql-cluster-mysql-0   0/4     Init:2/6          0          20s
+example-mysql-cluster-mysql-0   0/4     Init:3/6          0          21s
+example-mysql-cluster-mysql-0   0/4     Init:4/6          0          22s
+example-mysql-cluster-mysql-0   0/4     Init:5/6          0          23s
+example-mysql-cluster-mysql-0   0/4     PodInitializing   0          24s
+example-mysql-cluster-mysql-0   3/4     Running           0          25s
+example-mysql-cluster-mysql-0   4/4     Running           0          26s
+```
+
+当所有 Pod 都处于运行状态时，集群状态将更新为 'Running'：
+
+```bash
+kubectl get cluster example-mysql-cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Running   9m26s
+```
+
+
+
+
+## 清理
+要删除所有已创建的资源，请连同其命名空间一起删除 MySQL 集群：
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete ns demo
+```
+
+
+
+
+## 概述
+在本指南中，我们演示了如何在 KubeBlocks 中为 MySQL 集群配置和执行渐进式滚动更新。通过自定义 `rollingUpdate.replicas` 参数，您可以控制每次更新的 Pod 数量，从而确保更新过程平稳进行，将对工作负载的影响降至最低。
+
