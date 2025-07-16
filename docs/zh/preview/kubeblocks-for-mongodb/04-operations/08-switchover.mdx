@@ -1,0 +1,186 @@
+---
+description: 使用KubeBlocks对MongoDB集群执行计划内角色切换，实现最短停机时间和可控维护
+keywords:
+- MongoDB
+- KubeBlocks
+- Switchover
+- High Availability
+- Role Transition
+- Kubernetes
+sidebar_label: MongoDB 主从切换
+sidebar_position: 8
+title: MongoDB 集群切换
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# MongoDB 集群切换
+
+**切换（Switchover）** 是一项有计划的操作，用于将主节点角色从一个 MongoDB 实例转移到另一个实例。与故障转移（failover）不同，切换操作具有以下特点：
+- 可控的角色转换
+- 极短的中断时间（通常仅数百毫秒）
+- 可预测的维护窗口
+
+切换操作适用于以下场景：
+- 节点维护/升级
+- 工作负载重新平衡
+- 测试高可用性
+- 有计划的基础设施变更
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署 MongoDB 集群
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+## 验证部署
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+## 检查角色状态
+列出 Pod 及其角色（主节点或从节点）：
+
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=mongo-cluster,apps.kubeblocks.io/component-name=mongodb -L kubeblocks.io/role
+```
+
+示例输出：
+
+```text
+NAME                      READY   STATUS    RESTARTS   AGE   ROLE
+mongo-cluster-mongodb-0   2/2     Running   0          20m   primary
+mongo-cluster-mongodb-1   2/2     Running   0          21m   secondary
+mongo-cluster-mongodb-2   2/2     Running   0          19m   secondary
+```
+
+## 执行计划内切换
+
+要发起计划内切换，请创建如下 OpsRequest 资源：
+
+<Tabs>
+  <TabItem value="Automatic Switchover" label="自动切换" default>
+  选项1：自动切换（不指定候选节点）
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: mongodb-switchover-ops
+    namespace: demo
+  spec:
+    clusterName: mongo-cluster
+    type: Switchover
+    switchover:
+    - componentName: mongodb
+      instanceName: mongo-cluster-mongodb-0
+  ```
+ **关键参数：**
+  - `instanceName`：指定切换操作前作为主节点（leader）的实例（Pod）。
+
+  </TabItem>
+  <TabItem value="Targeted Switchover" label="定向切换" >
+  选项2：定向切换（指定候选节点）
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: mongodb-switchover-targeted
+    namespace: demo
+  spec:
+    clusterName: mongo-cluster
+    type: Switchover
+    switchover:
+    - componentName: mongodb
+      # 指定需要转移角色的实例
+      # 典型用法是在共识系统中转移 leader 角色
+      instanceName: mongo-cluster-mongodb-0
+      # 如果指定 candidateName，角色将转移到该实例
+      # 名称必须匹配组件中的某个 Pod
+      # 详情请参考 ComponentDefinition 的 Switchover 生命周期操作
+      candidateName: mongo-cluster-mongodb-1
+  ```
+
+  **关键参数：**
+  - `instanceName`：指定切换操作前作为主节点（leader）的实例（Pod）。
+  - `candidateName`：如果指定候选节点名称，角色将转移到该实例。
+  </TabItem>
+</Tabs>
+
+## 监控切换过程
+
+监控切换进度：
+
+```bash
+kubectl get ops mongodb-switchover-ops -n demo -w
+```
+
+预期结果：
+```bash
+NAME                     TYPE         CLUSTER         STATUS    PROGRESS   AGE
+mongodb-switchover-ops   Switchover   mongo-cluster   Succeed   1/1        33s
+```
+
+## 验证切换结果
+
+切换完成后，指定的实例将被提升为主节点角色，而原先的主节点实例将转为从节点角色。
+
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=mongo-cluster -L kubeblocks.io/role
+```
+
+预期输出：
+
+```text
+NAME                      READY   STATUS    RESTARTS   AGE   ROLE
+mongo-cluster-mongodb-0   2/2     Running   0          23m   secondary
+mongo-cluster-mongodb-1   2/2     Running   0          24m   primary
+mongo-cluster-mongodb-2   2/2     Running   0          23m   secondary
+```
+
+在本示例中：
+- Pod 'mongo-cluster-mongodb-1' 已被提升为主节点角色
+- Pod 'mongo-cluster-mongodb-0' 已转为从节点角色
+
+## 故障排查
+
+### 常见切换问题
+
+如果切换操作卡住，请检查以下资源：
+```bash
+# 检查当前主节点和候选节点的 agent 日志
+kubectl logs -n demo <primary-pod> -c kbagent
+kubectl logs -n demo <candidate-pod> -c kbagent
+
+# 检查集群事件中的错误信息
+kubectl get events -n demo --field-selector involvedObject.name=mongo-cluster
+
+# 检查 kubeblocks 日志
+kubectl -n kb-system logs deploy/kubeblocks
+```
+
+## 总结
+
+本指南演示了如何：
+1. 部署 MongoDB 高可用集群
+2. 执行自动和定向两种切换操作
+3. 验证角色转换
+
+**关键要点：**
+- 切换操作可实现可控维护，中断时间极短（约100-500毫秒）
+- KubeBlocks 提供声明式操作实现可靠的角色转换
+- 切换后务必验证：
+  - 集群状态
+  - 应用连接性
+  - 复制健康状况
+- 排查问题时检查以下日志：
+  - KubeBlocks operator（位于 kb-system 命名空间）
+  - 数据库 Pod 上的 kbagent

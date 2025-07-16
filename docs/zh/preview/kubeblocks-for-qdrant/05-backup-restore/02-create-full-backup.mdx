@@ -1,0 +1,222 @@
+---
+description: KubeBlocks 中利用 Backup API 和 OpsRequest API 创建与验证 Qdrant 集群完整备份的逐步指南
+keywords:
+- Qdrant
+- Full Backup
+- KubeBlocks
+- Kubernetes
+- Database Backup
+- XtraBackup
+sidebar_label: 创建完整备份
+sidebar_position: 2
+title: 在KubeBlocks上为Qdrant集群创建完整备份
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# 在 KubeBlocks 上为 Qdrant 创建全量备份
+
+本指南演示如何通过以下两种方式在 KubeBlocks 上为 Qdrant 集群创建和验证全量备份：
+- 直接使用 Backup API（直接备份操作）
+- 使用 OpsRequest API（带增强监控的托管备份操作）
+
+我们将在[从全量备份恢复](./05-restoring-from-full-backup)指南中介绍如何从备份恢复数据。
+
+## 先决条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署 Qdrant 集群
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+## 验证部署
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+## 备份前提条件
+
+创建备份前请确保：
+1. 备份仓库已配置：
+   - 存在 `BackupRepo` 资源
+   - 集群与仓库之间网络连通
+   - `BackupRepo` 状态显示为 "Ready"
+
+2. 集群准备就绪：
+   - 集群状态为 "Running"
+   - 没有正在进行的操作（扩缩容、升级等）
+
+## 查看备份配置
+
+检查可用的备份策略和计划：
+
+```bash
+# 列出备份策略
+kubectl get backuppolicy -n demo -l app.kubernetes.io/instance=qdrant-cluster
+
+# 列出备份计划
+kubectl get backupschedule -n demo -l app.kubernetes.io/instance=qdrant-cluster
+```
+
+预期输出：
+```bash
+NAME                                  BACKUP-REPO   STATUS      AGE
+qdrant-cluster-qdrant-backup-policy                 Available   36m
+
+NAME                                    STATUS      AGE
+qdrant-cluster-qdrant-backup-schedule   Available   36m
+```
+
+查看 BackupPolicy CR 'qdrant-cluster-qdrant-backup-policy' 中支持的备份方法：
+
+```bash
+kubectl get backuppolicy qdrant-cluster-qdrant-backup-policy -n demo -oyaml | yq '.spec.backupMethods[].name'
+```
+**备份方法列表**
+
+KubeBlocks Qdrant 支持以下备份方法：
+
+| 特性           | 方法          | 描述 |
+|-------------|--------|------------|
+| 全量备份 | datafile | 使用 HTTP API `snapshot` 为所有集合创建快照。 |
+
+## 通过 Backup API 备份
+
+### 1. 创建按需备份
+
+`datafile` 方法会备份数据库的数据文件
+
+应用以下清单创建备份：
+
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: Backup
+metadata:
+  name: qdrant-backup-datafile
+  namespace: demo
+spec:
+  # 指定备份策略中定义的备份方法名称
+  # - datafile
+  backupMethod: datafile
+  # 指定应用于此备份的备份策略
+  backupPolicyName: qdrant-cluster-qdrant-backup-policy
+  # 决定当备份自定义资源(CR)被删除时，是否应删除备份仓库中的备份内容。支持的值是 `Retain` 和 `Delete`
+  # - `Retain` 表示保留备份内容及其在备份仓库中的物理快照
+  # - `Delete` 表示删除备份内容及其在备份仓库中的物理快照
+  deletionPolicy: Delete
+```
+
+### 2. 监控备份并验证完成状态
+
+跟踪进度直到状态显示为 "Completed"：
+
+```bash
+kubectl get backup qdrant-backup-datafile  -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                     POLICY                                METHOD     REPO            STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
+qdrant-backup-datafile   qdrant-cluster-qdrant-backup-policy   datafile   <BACKUP_REPO>   Completed   0            10s        Delete            2025-05-18T15:43:53Z   2025-05-18T15:44:02Z
+```
+
+### 3. 验证备份
+
+通过以下方式确认备份成功完成：
+- 备份状态显示为 "Completed"
+- 备份大小符合预期
+- 检查 BackupRepo 中的文件
+
+`Backup` 资源记录以下详细信息：
+- 存储路径
+- 时间范围
+- 备份文件大小
+
+
+## 通过 OpsRequest API 备份
+
+### 1. 创建按需备份
+
+使用 OpsRequest API 执行 'pg-basebackup' 方法备份：
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: qdrant-cluster-backup
+  namespace: demo
+spec:
+  clusterName: qdrant-cluster
+  force: false
+  backup:
+    backupPolicyName: qdrant-cluster-qdrant-backup-policy
+    backupMethod: datafile
+    deletionPolicy: Delete
+    retentionPeriod: 1mo
+  type: Backup
+```
+
+### 2. 监控备份进度
+
+#### 1. 监控操作状态
+
+实时跟踪备份进度：
+```bash
+kubectl get ops qdrant-cluster-backup  -n demo -w
+```
+
+预期输出：
+```bash
+NAME                    TYPE     CLUSTER          STATUS    PROGRESS   AGE
+qdrant-cluster-backup   Backup   qdrant-cluster   Running   -/-        5s
+qdrant-cluster-backup   Backup   qdrant-cluster   Succeed   -/-        10s
+```
+
+- 状态显示为 'Succeed' 表示备份操作成功完成。
+
+#### 2. 验证完成状态
+
+检查最终备份状态：
+
+```bash
+kubectl get backup -n demo -l operations.kubeblocks.io/ops-name=qdrant-cluster-backup
+```
+
+示例输出：
+```bash
+NAME                                        POLICY                                METHOD     REPO            STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
+backup-demo-qdrant-cluster-20250518154515   qdrant-cluster-qdrant-backup-policy   datafile   <BACKUP_REPO>   Completed   0            10s        Delete            2025-05-18T15:45:15Z   2025-05-18T15:45:25Z   2025-06-17T15:45:25Z
+```
+
+- 备份状态应显示为 'Completed'。
+
+### 3. 验证备份
+
+通过以下方式确认备份成功完成：
+- 备份状态显示为 "Completed"
+- 备份大小符合预期
+- 检查 BackupRepo 中的文件
+
+`Backup` 资源记录以下详细信息：
+- 存储路径
+- 时间范围
+- 其他元数据
+
+## 总结
+
+本指南涵盖：
+1. 部署 Qdrant 集群
+2. 使用以下方式创建全量备份：
+   - 直接 Backup API
+   - 托管 OpsRequest API
+3. 监控和验证备份
+
+您的 Qdrant 数据现已安全备份，可在需要时进行恢复。

@@ -1,0 +1,33 @@
+监控集群状态直至其转为 Running（运行中）状态：
+```bash
+kubectl get cluster qdrant-cluster -n demo -w
+```
+
+预期输出：
+
+```bash
+kubectl get cluster qdrant-cluster -n demo
+NAME             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+qdrant-cluster   qdrant              Delete               Creating   49s
+qdrant-cluster   qdrant              Delete               Running    62s
+```
+
+检查 Pod 状态及其角色：
+```bash
+kubectl get pods -l app.kubernetes.io/instance=qdrant-cluster -n demo
+```
+
+预期输出：
+```bash
+NAME                      READY   STATUS    RESTARTS   AGE
+qdrant-cluster-qdrant-0   2/2     Running   0          1m43s
+qdrant-cluster-qdrant-1   2/2     Running   0          1m28s
+qdrant-cluster-qdrant-2   2/2     Running   0          1m14s
+```
+
+当集群状态显示为 Running 时，您的 Qdrant 集群即准备就绪可供使用。
+
+:::tip
+如果是首次创建集群，可能需要一定时间拉取镜像后才能正常运行。
+
+:::

@@ -1,0 +1,95 @@
+---
+description: 了解如何使用KubeBlocks部署Redis单机模式集群。本指南涵盖配置、验证、故障转移测试及超时设置等内容。
+keywords:
+- KubeBlocks
+- Redis
+- Kubernetes
+- High Availability
+sidebar_label: Redis 单机模式集群
+sidebar_position: 1
+title: 使用KubeBlocks部署Redis单机集群
+---
+# 使用 KubeBlocks 部署 Redis 单机集群
+
+Redis 单机部署模式由独立运行的单个 Redis 服务器实例组成，不涉及任何复制或集群功能。这是最简单且最轻量级的部署模型。
+
+**适用场景**
+- 开发与测试环境
+- 低流量的小型应用
+
+## 先决条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署 Redis 单机集群
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: redis-standalone
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: redis    # 设置为 redis
+  topology: standalone # 设置拓扑为 standalone
+  componentSpecs:
+  - name: redis
+    replicas: 1       # 设置副本数为 1
+    serviceVersion: 7.2.4
+    resources:
+      limits:
+        cpu: "0.5"
+        memory: "0.5Gi"
+      requests:
+        cpu: "0.5"
+        memory: "0.5Gi"
+    volumeClaimTemplates:
+      - name: data
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 20Gi
+```
+
+**关键配置说明**：
+- `clusterDef: redis`：指定集群使用的 ClusterDefinition CR
+- `topology: standalone`：配置集群使用单机拓扑
+- `componentSpecs`：定义集群中的组件：
+  - 'redis' 组件：
+    - `serviceVersion: 7.2.4`：指定要部署的 Redis 服务版本
+
+## 验证部署
+
+### 检查集群状态
+集群部署完成后，检查其状态：
+```bash
+kubectl get cluster redis-standalone  -n demo -w
+```
+预期输出：
+```bash
+NAME               CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+redis-standalone   redis                Delete               Running   34s
+```
+
+### 验证组件状态
+```bash
+kubectl get component redis-standalone-redis -n demo
+```
+预期输出：
+```bash
+NAME                     DEFINITION              SERVICE-VERSION   STATUS    AGE
+redis-standalone-redis   redis-7-1.0.0           7.2.4             Running   90s
+```
+
+## 清理资源
+删除本教程中创建的所有资源：
+
+```bash
+kubectl delete cluster redis-standalone -n demo
+kubectl delete ns demo
+```

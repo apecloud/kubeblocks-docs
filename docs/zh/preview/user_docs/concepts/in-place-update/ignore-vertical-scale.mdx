@@ -1,0 +1,13 @@
+---
+description: 启用原地更新
+keywords:
+- in-place update
+sidebar_label: 启用原地更新
+sidebar_position: 2
+title: 启用原地更新
+---
+# 启用原地更新功能
+
+在 Kubernetes 1.27 之前的版本中，我们已经看到许多 Kubernetes 发行版支持对 Resources 进行原地更新。不同的发行版可能采用不同的方式来实现这一特性。
+
+为了适配这些 Kubernetes 发行版，KubeBlocks 引入了 `IgnorePodVerticalScaling` 功能开关。当启用此功能时，KubeBlocks 会在实例更新过程中忽略对 Resources 中 CPU 和 Memory 的修改，确保最终渲染出的 Pod 的 Resources 配置与当前运行中的 Pod 的 Resources 配置保持一致。

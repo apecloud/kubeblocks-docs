@@ -1,0 +1,195 @@
+---
+description: 了解如何使用KubeBlocks在MySQL集群中执行计划内切换，以确保最短停机时间和无缝角色转换。
+keywords:
+- KubeBlocks
+- MySQL
+- Switchover
+- High Availability
+- Kubernetes
+sidebar_label: MySQL 计划内切换
+sidebar_position: 8
+title: MySQL 集群中的计划内切换
+---
+# MySQL 集群中的计划性切换
+
+**切换（switchover）** 是一项计划性操作，指 MySQL 集群中的主实例主动将其角色转移给从实例。与意外故障时触发的非计划性故障转移（failover）不同，切换能确保以可控且可预测的方式完成角色转换，同时将服务中断降至最低。
+
+## **切换操作的优势**
+1. **最小化停机时间**：主实例主动将其角色转移至从实例，服务中断时间极短（通常仅数百毫秒）
+2. **可控的过渡**：相比需要检测故障并恢复的故障转移（通常导致数秒或更长的延迟），能确保更平滑且可预测的角色变更
+3. **维护友好**：非常适合计划内的维护任务（如节点升级或下线），同时保障服务不中断
+
+
+## **切换（Switchover）与故障转移（Failover）对比**
+
+| **对比维度**              | **切换（Switchover）**                    | **故障转移（Failover）**             |
+|---------------------------|-------------------------------------------|---------------------------------------|
+| **触发方式**              | 计划内手动触发                            | 意外故障自动触发                     |
+| **停机时间**              | 数百毫秒级                                | 数秒或更长时间                        |
+| **主节点角色转换**        | 主动移交                                  | 被动晋升                              |
+| **适用场景**              | 计划维护（如升级）                        | 处理突发故障                          |
+
+使用切换（Switchover）可以确保平滑过渡和最小化服务中断，是计划维护活动的首选方案。
+
+## 前提条件
+
+在继续之前，请确保满足以下条件：
+- 环境设置：
+  - 已启动并运行一个 Kubernetes 集群。
+  - 已配置 kubectl CLI 工具以与集群通信。
+  - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处的安装说明进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 部署 MySQL 半同步集群
+
+部署一个 2 节点的半同步 MySQL 集群（1 个主节点，1 个从节点）：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+
+
+
+## 验证部署
+
+在创建 MySQL 集群时监控其状态：
+
+```bash
+kubectl get cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster   mysql                Delete               Creating   4s
+example-mysql-cluster   mysql                Delete               Running    62s
+```
+
+
+
+
+## 检查角色
+列出 Pod 及其角色（主节点或从节点）：
+
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+```
+
+示例输出：
+
+```
+example-mysql-cluster-mysql-0	primary
+example-mysql-cluster-mysql-1	secondary
+```
+
+
+
+
+
+## 执行计划内切换
+
+要发起计划内切换，请按如下方式创建 OpsRequest 资源：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-switchover-ops
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  type: Switchover
+  switchover:
+  - componentName: mysql
+    instanceName: example-mysql-cluster-mysql-0
+EOF
+```
+
+关键参数：
+- `instanceName`：指定切换操作前作为主节点（Primary）或领导者（Leader）的实例（Pod）。
+
+## 监控切换过程
+
+您可以通过以下命令查看扩缩容操作的进度：
+
+```bash
+kubectl describe ops example-mysql-switchover-ops -n demo
+```
+
+预期结果：
+
+```bash
+Status:
+  Phase:            Succeed
+  Progress:         1/1
+  ...
+```
+
+## 验证切换操作
+
+切换执行完成后，指定的实例（'example-semisync-mysql-mysql-0'）将被提升为主节点角色，而原先的主节点实例（'example-semisync-mysql-mysql-1'）将转为从节点角色。
+
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+example-mysql-cluster-mysql-0	secondary
+example-mysql-cluster-mysql-1	primary
+```
+
+在此示例中：
+- Pod 'example-mysql-cluster-mysql-1' 已被提升为主节点角色。
+- Pod 'example-mysql-cluster-mysql-0' 已转换为从节点角色。
+
+## 概述
+计划性切换（Planned Switchover）的核心优势：
+1. **最小化停机时间**：操作可在数百毫秒内完成，确保服务连续性。
+2. **可控的过渡**：与被动触发且耗时较长的故障转移不同，切换能实现可预测的无缝角色转换。
+3. **维护场景的理想选择**：支持升级、节点下线或再平衡等任务，且不影响应用可用性。
+
+本指南涵盖以下内容：
+- 部署由 KubeBlocks 管理的 MySQL 集群
+- 执行计划性切换，将主节点角色从一个实例转移到另一个实例
+- 验证切换操作的成功性及 Pod 角色更新状态
+
+计划性切换是高可用性系统中执行维护任务的关键操作，既能最大限度减少服务中断，又可确保过渡过程的可预测性。
+

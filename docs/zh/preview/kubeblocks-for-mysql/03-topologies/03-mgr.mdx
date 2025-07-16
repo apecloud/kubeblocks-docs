@@ -1,0 +1,254 @@
+---
+description: 了解如何使用KubeBlocks部署和管理MySQL组复制（MGR）集群。本指南涵盖配置、验证、故障转移测试及清理操作。
+keywords:
+- KubeBlocks
+- MySQL
+- Group Replication
+- Kubernetes
+- High Availability
+sidebar_label: MySQL 组复制集群
+sidebar_position: 3
+title: 使用KubeBlocks部署MySQL组复制集群
+---
+# 使用 KubeBlocks 部署 MySQL 组复制集群
+
+**MySQL 组复制 (MGR)** 通过跨多个 MySQL 实例同步数据，提供高可用性和可扩展性。它确保集群中的所有节点无缝参与复制，具备自动故障转移和自我修复能力。本指南将引导您使用 **KubeBlocks** 部署 MySQL 组复制集群，该工具简化了 Kubernetes 中 MySQL 集群的管理和部署。
+
+## 前提条件
+
+在继续之前，请确保满足以下要求：
+- 环境准备：
+    - 已启动并运行一个 Kubernetes 集群。
+    - 已配置 kubectl CLI 工具以与集群通信。
+    - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处提供的安装说明进行操作。
+- 命名空间准备：为了保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 部署 MySQL 组复制集群
+
+KubeBlocks 采用声明式方法管理 MySQL 集群。以下是一个部署三节点 MySQL 组复制集群的配置示例。
+
+应用以下 YAML 配置来部署 MySQL 组复制（MGR）集群：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: mgr
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+**关键字段说明**：
+- `clusterDef: mysql`：指定 MySQL 集群的 ClusterDefinition CR。ClusterDefinition 'mysql' 包含多种拓扑结构，例如 'semisync'、'semisync-proxysql'、'mgr'、'mgr-proxysql'、'orc'、'orc-proxysql'。
+- `topology: mgr`：配置集群使用 MySQL Group Replication（组复制）。
+- `replicas: 3`：部署三个 MySQL 实例（一个主节点和两个从节点）。
+- 资源限制：
+  - 每个 MySQL 实例分配 500m CPU 和 512Mi 内存。
+  - 每个 MySQL 实例配置 20Gi 持久卷。
+
+## 验证部署
+### 1. 检查集群状态
+监控 MySQL 集群创建过程中的状态：
+
+```bash
+kubectl get cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster   mysql                Delete               Creating   2s
+example-mysql-cluster   mysql                Delete               Running    96s
+```
+
+### 2. 集群详细信息
+要获取已部署集群的详细信息，请使用以下命令：
+
+```bash
+kbcli cluster describe example-mysql-cluster -n demo
+```
+
+示例输出：
+
+```bash
+Name: example-mysql-cluster	 Created Time: Feb 10,2025 22:23 UTC+0800
+NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY   STATUS    TERMINATION-POLICY
+demo        mysql                mgr        Running   Delete
+
+Endpoints:
+COMPONENT   INTERNAL                                                  EXTERNAL
+mysql       example-mysql-cluster-mysql.demo.svc.cluster.local:3306   <none>
+
+Topology:
+COMPONENT   SERVICE-VERSION   INSTANCE                        ROLE        STATUS    AZ                NODE                                                       CREATED-TIME
+mysql       8.0.35            example-mysql-cluster-mysql-0   primary     Running   ap-southeast-1c   ip-10-0-3-155.ap-southeast-1.compute.internal/10.0.3.155   Feb 10,2025 22:23 UTC+0800
+mysql       8.0.35            example-mysql-cluster-mysql-1   secondary   Running   ap-southeast-1c   ip-10-0-3-204.ap-southeast-1.compute.internal/10.0.3.204   Feb 10,2025 22:23 UTC+0800
+mysql       8.0.35            example-mysql-cluster-mysql-2   secondary   Running   ap-southeast-1c   ip-10-0-3-75.ap-southeast-1.compute.internal/10.0.3.75     Feb 10,2025 22:23 UTC+0800
+
+Resources Allocation:
+COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+mysql                           500m / 500m          512Mi / 512Mi           data:20Gi      <none>
+
+Images:
+COMPONENT   COMPONENT-DEFINITION          IMAGE
+mysql       mysql-mgr-8.0-1.0.0           docker.io/apecloud/mysql:8.0.35
+                                          docker.io/apecloud/mysqld-exporter:0.15.1
+                                          apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.0
+
+Show cluster events: kbcli cluster list-events -n demo example-mysql-cluster
+```
+
+
+
+
+## 检查集群角色
+要验证 MySQL 实例的角色（'主节点' 和 '从节点'），请使用以下命令：
+
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+```
+
+示例输出：
+
+```bash
+example-mysql-cluster-mysql-0	primary
+example-mysql-cluster-mysql-1	secondary
+example-mysql-cluster-mysql-2	secondary
+```
+
+
+
+
+## 连接到 MySQL 集群
+KubeBlocks 会自动创建一个包含 MySQL root 凭据的 Secret。通过以下命令获取凭据：
+
+```bash
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
+root
+
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+q95G8nd87K
+```
+
+### 连接到主节点
+要连接到集群的主节点，请使用 MySQL 客户端：
+
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pq95G8nd87K
+```
+
+
+
+
+## 检查组复制状态
+
+运行以下查询来检查组复制集群的状态：
+
+```sql
+mysql> SELECT * FROM performance_schema.replication_group_members;
+```
+
+示例输出：
+
+```sql
++---------------------------+--------------------------------------+--------------------------------------------------------------------+-------------+--------------+-------------+----------------+----------------------------+
+| CHANNEL_NAME              | MEMBER_ID                            | MEMBER_HOST                                                        | MEMBER_PORT | MEMBER_STATE | MEMBER_ROLE | MEMBER_VERSION | MEMBER_COMMUNICATION_STACK |
++---------------------------+--------------------------------------+--------------------------------------------------------------------+-------------+--------------+-------------+----------------+----------------------------+
+| group_replication_applier | a17c375d-e7ba-11ef-8b01-3aa4e0d3963f | example-mysql-cluster-mysql-1.example-mysql-cluster-mysql-headless |        3306 | ONLINE       | SECONDARY   | 8.0.35         | XCom                       |
+| group_replication_applier | a99688a7-e7ba-11ef-be5b-de475d052d4a | example-mysql-cluster-mysql-0.example-mysql-cluster-mysql-headless |        3306 | ONLINE       | PRIMARY     | 8.0.35         | XCom                       |
+| group_replication_applier | c4403516-e7ba-11ef-8f11-8a79c903edf0 | example-mysql-cluster-mysql-2.example-mysql-cluster-mysql-headless |        3306 | ONLINE       | SECONDARY   | 8.0.35         | XCom                       |
++---------------------------+--------------------------------------+--------------------------------------------------------------------+-------------+--------------+-------------+----------------+----------------------------+
+3 rows in set (0.00 sec)
+```
+
+输出中的角色应与 kubectl 输出中显示的角色保持一致。
+
+## 故障转移测试
+### 触发故障转移
+要测试 MySQL 组复制故障转移机制，请删除主节点：
+
+```bash
+kubectl delete pod example-mysql-cluster-mysql-0 -n demo
+pod "example-mysql-cluster-mysql-0" deleted
+```
+
+这将触发故障转移，其中一个从节点将被提升为主节点角色。
+
+### 验证新角色
+运行以下命令检查更新后的角色：
+
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+```
+
+示例输出：
+
+```bash
+example-mysql-cluster-mysql-0
+example-mysql-cluster-mysql-1	secondary
+example-mysql-cluster-mysql-2	primary
+```
+
+当被删除的 Pod（'example-mysql-cluster-mysql-0'）被重新创建后，它将作为从节点重新加入集群：
+
+```bash
+example-mysql-cluster-mysql-0	secondary
+example-mysql-cluster-mysql-1	secondary
+example-mysql-cluster-mysql-2	primary
+```
+
+这展示了故障转移机制如何通过在主节点故障时自动将一个从节点提升为主节点角色来确保高可用性。
+
+## 清理
+要删除所有已创建的资源，请连同其命名空间一起删除 MySQL 集群：
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete ns demo
+```
+
+
+
+
+## 总结
+在本指南中，您学习了如何：
+- 使用 KubeBlocks 部署 MySQL 组复制集群。
+- 验证集群状态和角色分配。
+- 连接到主节点并检查复制状态。
+- 测试故障转移机制以确保高可用性。
+
+通过利用 KubeBlocks，在 Kubernetes 中管理 MySQL 组复制集群变得高效且简单，使您能够为数据库工作负载实现高可用性和可扩展性。

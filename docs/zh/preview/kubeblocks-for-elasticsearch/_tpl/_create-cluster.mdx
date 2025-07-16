@@ -1,0 +1,65 @@
+KubeBlocks 采用声明式方式管理 Elasticsearch 集群。  
+以下是一个部署多角色副本 Elasticsearch 集群的配置示例：
+
+应用以下 YAML 配置来部署集群：
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: es-multinode
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: dit
+      componentDef: elasticsearch-8
+      serviceVersion: 8.8.2
+      configs:
+        - name: es-cm
+          variables:
+            # 使用 `roles` 键指定该组件承担的角色
+            roles: data,ingest,transform
+      replicas: 3
+      disableExporter: false
+      resources:
+        limits:
+          cpu: "1"
+          memory: "2Gi"
+        requests:
+          cpu: "1"
+          memory: "2Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+    - name: master
+      componentDef: elasticsearch-8
+      serviceVersion: 8.8.2
+      configs:
+        - name: es-cm
+          variables:
+            # 使用 `roles` 键指定该组件承担的角色
+            roles: master
+      replicas: 3
+      disableExporter: false
+      resources:
+        limits:
+          cpu: "1"
+          memory: "2Gi"
+        requests:
+          cpu: "1"
+          memory: "2Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```

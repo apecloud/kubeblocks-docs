@@ -1,0 +1,153 @@
+---
+description: 了解如何使用KubeBlocks部署PostgreSQL集群，并配置在S3存储库中保留的自动化定时备份。
+keywords:
+- PostgreSQL
+- Backup
+- KubeBlocks
+- Scheduled Backup
+- Kubernetes
+sidebar_label: 定时备份
+sidebar_position: 3
+title: 在KubeBlocks中设置带定时备份的PostgreSQL集群
+---
+# 在 KubeBlocks 中设置带定时备份的 PostgreSQL 集群
+
+本指南演示如何使用 KubeBlocks 部署 PostgreSQL 集群，并配置保留到 S3 存储库的定时备份。
+
+## 先决条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署 PostgreSQL 集群
+
+import CreatePGCluster from '../_tpl/_create-pg-replication-cluster.mdx'
+
+<CreatePGCluster />
+
+## 验证部署
+
+import VerifyPGCluster from '../_tpl/_verify-pg-replication-cluster.mdx'
+
+<VerifyPGCluster />
+
+## 备份前提条件
+
+1. 已配置备份存储库：
+   - 配置好 `BackupRepo`
+   - 集群与存储库之间网络连通，`BackupRepo` 状态为 `Ready`
+
+2. 集群运行正常：
+   - 集群必须处于 `Running` 状态
+   - 没有正在进行的操作（扩缩容、升级等）
+
+## 配置定时备份
+
+KubeBlocks 在创建集群时会自动创建 `BackupSchedule` 资源。按照以下步骤启用和配置定时备份：
+
+1. 验证默认备份计划配置：
+
+```bash
+kubectl get backupschedule pg-cluster-postgresql-backup-schedule  -n demo -oyaml
+```
+
+示例输出：
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: BackupSchedule
+spec:
+  backupPolicyName: pg-cluster-postgresql-backup-policy
+  schedules:
+  - backupMethod: pg-basebackup
+    # ┌───────────── 分钟 (0-59)
+    # │ ┌───────────── 小时 (0-23)
+    # │ │ ┌───────────── 月份中的天 (1-31)
+    # │ │ │ ┌───────────── 月 (1-12)
+    # │ │ │ │ ┌───────────── 星期中的天 (0-6) (0=周日)
+    # │ │ │ │ │
+    # 0 18 * * *
+    # 每天18:00(UTC时间)执行此任务
+    cronExpression: 0 18 * * * # 根据需要更新cron表达式
+    enabled: false # 设置为`true`以定期执行基础备份
+    retentionPeriod: 7d # 根据需要设置保留期限
+```
+
+2. 启用并自定义备份计划：
+```bash
+kubectl edit backupschedule pg-cluster-postgresql-backup-schedule -n demo
+```
+
+更新以下关键参数：
+- `enabled`：设置为 `true` 以激活定时备份
+- `cronExpression`：使用 cron 语法配置备份频率
+- `retentionPeriod`：设置备份保留时长（如 `7d`、`1mo`）
+
+每日 UTC 时间 18:00 备份并保留 7 天的示例配置：
+```yaml
+schedules:
+- backupMethod: pg-basebackup
+  enabled: true
+  cronExpression: "0 18 * * *"
+  retentionPeriod: 7d
+```
+
+3. 验证计划配置：
+```bash
+# 检查计划状态
+kubectl get backupschedule pg-cluster-postgresql-backup-schedule -n demo -w
+
+# 查看详细配置
+kubectl describe backupschedule pg-cluster-postgresql-backup-schedule -n demo
+```
+
+## 监控和管理备份
+
+启用定时备份后，监控其执行情况并管理备份保留：
+
+1. 查看所有备份：
+```bash
+kubectl get backup -n demo -l app.kubernetes.io/instance=pg-cluster
+```
+
+2. 检查备份详情：
+```bash
+kubectl describe backup <backup-name> -n demo
+```
+
+3. 验证备份文件：
+- 状态应显示为 "Completed"
+- 检查备份大小是否符合预期
+- 确认保留期限已应用
+- 验证存储库中存在备份文件
+
+4. 管理备份保留：
+- 手动删除旧备份：
+```bash
+kubectl delete backup <backup-name> -n demo
+```
+- 修改保留期限：
+```bash
+kubectl edit backupschedule pg-cluster-postgresql-backup-schedule -n demo
+```
+
+## 清理
+要删除所有创建的资源，删除 PostgreSQL 集群及其命名空间：
+
+```bash
+kubectl delete cluster pg-cluster -n demo
+kubectl delete ns demo
+```
+
+## 总结
+
+本指南演示了：
+1. PostgreSQL 自动备份配置
+2. 使用 cron 语法自定义计划
+3. 保留策略管理
+4. 备份验证流程
+
+您的 PostgreSQL 集群现在具备：
+- 定期自动备份
+- 可配置的保留策略
+- 完整的备份历史记录跟踪

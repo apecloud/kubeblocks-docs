@@ -1,0 +1,89 @@
+---
+description: 如何按计划备份数据库
+keywords:
+- backup and restore
+- schedule
+- automatic backup
+- scheduled backup
+sidebar_label: 定时备份
+sidebar_position: 3
+title: 定时备份
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 定时备份
+
+KubeBlocks 支持为集群配置定时备份功能。
+
+<Tabs>
+
+<TabItem value="kubectl" label="kubectl" default>
+
+通过 kubectl 修改备份配置字段如下。
+
+```bash
+kubectl edit cluster -n default mycluster
+```
+
+编辑集群 YAML 文件。
+
+```yaml
+spec:
+  ...
+  backup:
+    # 是否启用自动备份
+    enabled: true
+    # UTC 时区，以下示例表示每周一凌晨2点
+    cronExpression: 0 18 * * *
+    # 使用 xtrabackup 进行备份。若存储支持快照，可改为 volume-snapshot
+    method: xtrabackup
+    # 是否启用 PITR（时间点恢复）
+    pitrEnabled: false
+    # 备份集的保留期限
+    retentionPeriod: 7d
+    # 备份仓库名称
+    repoName: my-repo
+```
+
+在上述 YAML 文件中，您可以根据需要设置是否启用自动备份和 PITR，同时指定备份方法、仓库名称、保留期限等参数。
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+```bash
+kbcli cluster update mycluster --backup-enabled=true \
+--backup-method=xtrabackup --backup-repo-name=my-repo \
+--backup-retention-period=7d --backup-cron-expression="0 18 * * *"
+```
+
+- `--backup-enabled` 表示是否启用定时备份
+- `--backup-method` 指定备份方法，可通过 `kbcli cluster describe-backup-policy mycluster` 命令查看支持的备份方法
+- `--backup-repo-name` 指定备份仓库名称
+- `--backup-retention-period` 指定备份保留期限，示例中为7天
+- `--backup-cron-expression` 使用 UTC 时区的 cron 表达式指定备份计划，表达式格式参考 [cron](https://en.wikipedia.org/wiki/Cron)
+
+</TabItem>
+
+</Tabs>
+
+启用定时备份后，执行以下命令检查是否已创建 CronJob 对象：
+
+```bash
+kubectl get cronjob
+>
+NAME                                        SCHEDULE     SUSPEND   ACTIVE   LAST SCHEDULE   AGE
+96523399-mycluster-default-xtrabackup       0 18 * * *   False     0        <none>          57m
+```
+
+也可执行以下命令查看集群信息，其中 `Data Protection:` 部分会显示自动备份的配置详情。
+
+```bash
+kbcli cluster describe mycluster
+>
+...
+数据保护：
+备份仓库     自动备份     备份计划       备份方法       保留期限
+my-repo     已启用      0 18 * * *    xtrabackup    7d
+```

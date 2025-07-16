@@ -1,0 +1,77 @@
+---
+description: 版本说明 v0.9.3
+keywords:
+- kubeblocks
+- release notes
+sidebar_position: 7
+title: v0.9.3
+---
+# KubeBlocks 0.9.3 (2025-02-19)
+
+## KubeBlocks 核心功能
+
+### 新特性
+
+- **成员加入动作**：生命周期动作新增支持 `memberjoin` 操作。
+- **增量备份**：数据保护功能现支持增量备份 ([#8757](https://github.com/apecloud/kubeblocks/pull/8757))。
+- **分片集群优化**
+  - 支持从备份重建分片集群实例 ([#8777](https://github.com/apecloud/kubeblocks/pull/8777))。
+  - 在运维请求(OpsRequest)中支持分片组件切换 ([#8786](https://github.com/apecloud/kubeblocks/pull/8786))。
+
+## KubeBlocks 插件生态
+
+### MySQL
+
+- **功能增强**
+  - 支持配置 MySQL 的 `lower_case_table_names` 参数 ([#1335](https://github.com/apecloud/kubeblocks-addons/pull/1335))。
+  - 更新 MySQL 配置以支持 `default_time_zone` 参数动态更新 ([#1377](https://github.com/apecloud/kubeblocks-addons/pull/1377))。
+- **问题修复**
+  - 修复 MySQL 备份策略未生效的问题 ([#1310](https://github.com/apecloud/kubeblocks-addons/pull/1310))。
+
+### PostgreSQL
+
+- **问题修复**
+  - 修复因 WAL 日志备份缺失导致的 PITR(时间点恢复)失败问题 ([#1280](https://github.com/apecloud/kubeblocks-addons/pull/1280))。
+  - 解决 PITR 恢复失败问题 ([#1290](https://github.com/apecloud/kubeblocks-addons/pull/1290))。
+  - 优化 WAL 日志归档机制。
+
+### Redis
+
+- **功能增强**
+  - 更新 Redis 版本以修复 [CVE-2024-46981](https://access.redhat.com/security/cve/cve-2024-46981) 漏洞 ([#1405](https://github.com/apecloud/kubeblocks-addons/pull/1405))。
+  - 支持 Redis 自定义密钥密码 ([#1406](https://github.com/apecloud/kubeblocks-addons/pull/1406))。
+  - 为 Redis Sentinel 支持 `storageClassName` 参数配置 ([#1418](https://github.com/apecloud/kubeblocks-addons/pull/1418))。
+- **问题修复**
+  - 修复 Redis 集群分片扩容时的 FQDN 解析问题 ([#1283](https://github.com/apecloud/kubeblocks-addons/pull/1283))。
+
+### MongoDB
+
+- **功能增强**
+  - 新增 MongoDB 版本支持：v5.0.30/6.0.20/7.0.16/8.0.4 ([#1431](https://github.com/apecloud/kubeblocks-addons/pull/1431))。
+  - 更新 MongoDB 集群创建示例 ([#1363](https://github.com/apecloud/kubeblocks-addons/pull/1363))。
+
+### ClickHouse
+
+- **功能增强**
+  - 新增 ClickHouse 重配置示例 ([#1401](https://github.com/apecloud/kubeblocks-addons/pull/1401))。
+  - 修复 ClickHouse 分片初始化问题 ([#1402](https://github.com/apecloud/kubeblocks-addons/pull/1402))。
+  - 新增存储配置，修复水平扩展失败问题，并禁用分片功能 ([#1450](https://github.com/apecloud/kubeblocks-addons/pull/1450))。
+- **问题修复**
+  - 解决分布式表跨分片查询失败的问题 ([#1411](https://github.com/apecloud/kubeblocks-addons/pull/1411))。
+
+### Zookeeper
+
+- **功能增强**
+  - 使用 `nc` 工具替代 Java 实现 Zookeeper 健康检查探针。
+
+- **问题修复**
+  - 修复备份大小显示异常问题。
+  - 解决数据恢复失败问题。
+  - 修复快照日志挂载错误。
+
+### TiDB
+
+- **功能增强**
+  - 新增 TiDB v8.4 版本支持 ([#1275](https://github.com/apecloud/kubeblocks-addons/pull/1275))。
+
+## 升级至 v0.9.3

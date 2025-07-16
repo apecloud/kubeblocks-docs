@@ -1,0 +1,127 @@
+---
+authors:
+  image_url: https://avatars.githubusercontent.com/u/1701782?v=4
+  name: Lei Zhang
+  url: https://github.com/resouer
+date: 2024-09-26
+description: 以“Kubernetes是数据库吗？”这一问题为切入点，本文揭示了K8s背后的核心概念，例如声明式应用管理和基础设施即数据（IaD）。
+image: /img/blogs/thumbnails/blog-k8s-database.png
+slug: is-k8s-a-database
+tags:
+- Kubernetes
+- database
+- declarative application management
+- Infrastructure as Data
+title: Kubernetes 是数据库吗？
+---
+# Kubernetes 是数据库吗？
+
+> 本文最初由张磊于2020年发表，但四年后的今天，这篇文章依然发人深省。"Kubernetes 是数据库吗？"这个问题值得深思。张磊以这个问题为切入点，揭示了 K8s 背后的核心概念，如声明式应用管理和基础设施即数据（IaD）。通过将 K8s 与数据库进行类比，本文引导我们从数据库的角度重新解读 K8s。阅读本文后，您将对 K8s 以及"Kubernetes 是数据库吗？"这个问题有全新的理解。
+>
+> 希望您享受阅读！
+
+*作者：张磊，CNCF TOC 成员（2021-2023），Kubernetes 维护者*
+
+最近，关于"Kubernetes 就是新型数据库"的言论在 Kubernetes 社区引起了广泛关注。更准确地说，这个观点是指 Kubernetes 的运行方式与数据库类似，而不是建议您将 Kubernetes 当作数据库使用。
+
+![](/img/blogs/k8s-as-database-twitter.png)
+
+乍看之下，将 Kubernetes 与数据库相提并论有些牵强。毕竟，Kubernetes 的典型工作方式，如控制器模式、声明式 API 等，似乎与数据库没有直接关联。然而，这个说法背后蕴含着一个基本概念，可以追溯到 Kubernetes 采用的核心理论之一。
+
+## Kubernetes 声明式应用管理基础
+
+当谈及 Kubernetes 时，声明式应用管理的概念经常被提及。实际上，这种设计正是 Kubernetes 区别于其他基础设施项目的关键所在，因为这是 Kubernetes 独有的能力。但你是否思考过，在 Kubernetes 中究竟什么是声明式应用管理？
+
+### 1. 声明式应用管理不仅仅是声明式 API
+
+如果我们审视 Kubernetes 的核心原则，会发现 Kubernetes 中的大多数功能——无论是运行容器的 kubelet、应用 iptables 规则的 kube-proxy、管理 Pod 调度的 kube-scheduler，还是处理 ReplicaSets 的 Deployment——都遵循我们强调的 Controller 模式。这意味着你可以通过 YAML 文件定义期望的最终状态（无论是网络、存储等），而 Kubernetes 中的组件会努力使集群状态与期望状态保持一致，最终实现完全对齐。这个实际状态逐步与期望状态对齐的过程，被称为调和（reconciliation）。这也是 Operator 和自定义 Controller 运作的根本方式。
+
+通过声明式描述驱动 Controller 进行实际状态与期望状态调和的方式，直观地展现了声明式应用管理。这个过程包含两个关键方面：
+
+- **声明的期望状态**：这种描述必须代表你想要的最终状态。如果你声明了一个中间状态，或期望动态调整期望状态，可能会破坏这种声明式语义的精确执行。
+- **调和驱动的对齐过程**：调和过程理论上确保系统状态与期望状态保持一致。具体来说，调和持续执行"检查 -> 差异分析 -> 执行"的循环，使系统能够检测当前状态与期望状态之间的差异，然后采取必要行动。仅有声明式描述是不够的。这很容易理解：即使系统在首次应用描述时达到了期望状态，也不能保证一小时后仍保持该状态。许多人将"声明式应用管理"与"声明式 API"混淆，很大程度上是因为他们没有认识到调和的重要性。
+
+你可能想知道，这种声明式应用管理模式为 Kubernetes 带来了哪些好处。
+
+### 2. 声明式应用管理的本质：基础设施即数据
+
+实际上，声明式应用管理系统背后的理论基础是一个被称为"基础设施即数据"（Infrastructure as Data，IaD）的概念。这一理念认为，基础设施管理不应绑定任何特定编程语言或配置方法，而应表示为纯粹的、结构化的、系统可读的数据，完整捕获用户期望的系统状态。
+
+> 注意：
+>
+> 基础设施即数据有时也被称为配置即数据（Configuration as Data），但它们共享相同的核心理念。
+
+这种方法的优势在于，对基础设施的任何操作最终都变成了对数据的操作——无论是创建、读取、更新还是删除（CRUD）。更重要的是，管理数据的方式与基础设施本身无关。因此，与基础设施交互不会将你束缚于特定的编程语言、特定的远程过程调用协议或 SDK。只要你能生成正确格式的数据，就可以自由使用任何你喜欢的方法与基础设施交互。
+
+在 Kubernetes 中，这意味着如果你想执行任何操作，只需提交一个 YAML 文件并根据需要进行修改。你不需要使用 Kubernetes 的 RESTful API 或 SDK。**这个 YAML 文件的内容，实际上就是 Kubernetes IaD 系统中的数据。**
+
+因此，Kubernetes 将其所有功能都定义为 API，这些 API 本质上就是结构化的数据。这使得 Kubernetes 用户可以通过管理数据而非绑定特定语言或 SDK 来实现目标。更重要的是，与专用的命令式 API 或 SDK 相比，由 YAML 表示的声明式数据更易于抽象并与现有基础设施能力集成。这正是 Kubernetes 生态能够爆发式增长的关键原因之一：IaD（Infrastructure as Data）、声明式 API 和 Controller 模式的结合，让社区开发插件和集成各种能力变得容易得多。此外，这些插件和能力具有高度的可移植性和可复用性，这使得 Kubernetes 与 Mesos、OpenStack 等项目区分开来。本质上，IaD 赋予了 Kubernetes 成为"平台的平台"的能力。
+
+现在更清晰的是，Kubernetes 的 IaD 设计中的数据表现为声明式 API，而 Kubernetes 的控制循环确保系统始终遵循这些数据描述的状态。**从这个意义上说，Kubernetes 本质上是一个协调系统（Reconciliation system），它将目标状态表达为数据，并通过控制器使系统与该目标状态保持一致。**
+
+等等。这种将系统维持在目标状态的理念听起来很熟悉，不是吗？
+
+没错。Kubernetes 背后的基础概念，大多数有工程背景的读者可能都学习过：它被称为现代控制系统（Modern Control Systems）。
+
+![](/img/blogs/modern-control-systems.png)
+
+现在，这篇博客开头的陈述似乎更有道理了？
+
+理解了 Kubernetes 的本质后，一些原本难以理解的概念突然变得清晰起来。
+
+例如，我们在使用 Kubernetes 时需要编写大量 YAML 文件，是因为我们需要向 Kubernetes 控制系统提交数据。在这个过程中，YAML 只是定义数据的一种人类可读格式。YAML 就像我们小时候用来练字的方格纸，而方格内实际书写的内容才是 Kubernetes 真正关心的数据——整个系统运作的核心。
+
+一些读者可能已经意识到：既然 Kubernetes 需要处理数据，那么数据本身是否需要固定格式以便 Kubernetes 解析？确实如此。Kubernetes 中的这种格式被称为 API 的 Schema（模式）。如果你经常编写自定义控制器，可能会在实践中熟悉这个 Schema：CRD（Custom Resource Definition）就是一种用于定义 Schema 的特殊 API。
+
+## YAML工程师？不！你是数据库工程师！
+
+我们已得出结论：Kubernetes的本质是IaD（基础设施即数据），这决定了其工作原理更像数据库而非传统分布式系统。这种差异可能是Kubernetes学习曲线陡峭的根本原因。
+
+从这个视角看，Kubernetes暴露给你的各种API本质上就是预定义的Schema表。我们精心编写的YAML文件，不过是对这些表中数据的操作——增删改查（CRUD）。YAML本身就像SQL，是帮助你管理数据库中数据的工具。与传统数据库唯一的区别在于，Kubernetes并不旨在持久化接收到的数据，而是利用这些数据驱动Controller执行特定操作，逐步使系统状态与Data中声明的期望状态对齐——这又回到了我们之前讨论的控制系统。
+
+正是因为Kubernetes以Data为核心实体，编写和管理YAML文件几乎成了Kubernetes工程师的日常全部工作。但通过本文介绍的IaD理念，你完全可以开始将自己视为数据库工程师——这个头衔可比YAML工程师贴切得多。
+
+## Kubernetes 的视图层
+
+如前所述，如果你从数据库的视角重新审视 Kubernetes 的设计，会发现许多概念背后都蕴含着优雅的思考。例如，
+
+- **数据模型** – Kubernetes API 及 CRD 机制  
+- **数据拦截与校验** – Kubernetes Admission Hooks  
+- **数据驱动机制** – Kubernetes Controller/Operator  
+- **数据变更监听与索引** – Kubernetes Informer 机制  
+- ......
+
+另一方面，随着 Kubernetes 基础设施日趋复杂以及第三方插件和能力的增加，社区注意到 Kubernetes 内部表（API 资源）的规模和复杂度呈现爆发式增长。这促使 Kubernetes 社区早期就展开了关于为 Kubernetes 设计视图（类似数据库视图）的讨论，目标是：
+
+`CREATE VIEW <K8s 原生对象> AS <K8s 视图对象>`
+
+在 Kubernetes 内置 API 资源之上引入视图层，能获得与数据库视图相似的收益。例如：
+
+1. **简化数据格式与表达**  
+  Kubernetes 视图层应向开发者和运维工程师暴露更简单、抽象的应用层 API，而非原始的基础设施层 API。用户应能自由定义这些视图层对象，而不受底层 Kubernetes 对象 Schema 的约束。  
+2. **简化复杂数据操作（简化版 SQL）**  
+  视图层对象不仅应在 UI 层面更简单，还应定义和管理底层的复杂资源拓扑，从而降低管理 Kubernetes 应用的操作复杂度。  
+3. **保护底层表结构**  
+  由于开发者和运维工程师仅与视图层对象交互，底层 Kubernetes 对象得到了保护。这使得 Kubernetes 对象可以在用户无感知的情况下演进或升级。  
+4. **复用数据操作（可重用的 SQL）**  
+  因为视图层与基础设施完全解耦，通过视图层声明的应用或操作可以在任意 Kubernetes 集群间迁移，而无需担心支持能力的差异。  
+5. **视图仍是表——支持标准表操作**  
+  Kubernetes 视图层对象必须仍是标准的 Kubernetes 对象，这样所有 Kubernetes 的 API 操作和原语都适用于视图层对象。我们不应为 Kubernetes API 模型引入额外的认知负担。  
+
+虽然 Kubernetes 视图层的构想尚未在上游实现，但已成为大规模用户的普遍实践。例如 Pinterest 设计了 `PinterestService` CRD 来描述和定义他们的应用，本质上就是一个视图层对象。不过对大多数企业而言，这种方式仍较为原始。需要注意的是，视图不仅仅是数据的简单抽象或转译。要在生产环境中大规模使用视图，还需解决几个关键挑战：
+
+- 如何定义和管理视图层对象与底层 K8s 对象间的映射关系？请记住这不是简单的一对一映射，因为一个视图层对象可能对应多个 K8s 对象。  
+- 如何建模和抽象运维能力？真实应用不仅是一个简单的 Deployment 或 Operator，而是运行程序与关联运维能力（如容器化应用及其水平扩展策略）的组合。这些运维能力如何体现在应用定义中？将所有内容定义为注解是否可行？  
+- 如何管理运维能力与运行程序间的绑定关系？如何将此绑定映射到 K8s 内的实际执行关系？  
+- 如何通过视图层对象标准化云资源定义（例如阿里云 RDS 实例）？  
+- ……
+
+这些正是阻碍 Kubernetes 上游实现视图层的关键挑战，也是 [Open Application Model (OAM)](https://github.com/oam-dev/spec) 等应用层开源项目重点关注的领域。需要注意的是，仅靠 OAM 作为规范本身并不足以解决所有这些挑战。创建 Kubernetes 视图层需要标准化视图层依赖库的支持来确保其实现。只有这样，我们才能真正享受到 Kubernetes 中数据视图带来的优势和便利。目前社区中最健壮的 Kubernetes 视图层库来自 Crossplane 团队，名为 [oam-kubernetes-runtime](https://github.com/crossplane/oam-kubernetes-runtime)。
+
+## 总结
+
+Kubernetes 以 IaD（Infrastructure-as-Database）为核心的设计理念及其类数据库架构，一直是其社区蓬勃发展的关键理论基础。但 IaD 理念是一把双刃剑：一方面它催生了繁荣的生态，另一方面也导致了无数独立的 Controller 和 Operator 的诞生，以及由这些 Controller 拼凑而成的高度复杂的 Kubernetes 集群。这个生产级别的 Kubernetes 集群以其巨大的复杂性，距离成为真正受开发者和运维人员喜爱的云原生应用管理平台仍有很长的路要走。
+
+过去五年间，Kubernetes 的巨大成功实际上是一个将基础设施能力（如网络、存储、容器等）通过声明式 API 进行标准化和统一的过程。随着 OAM（Open Application Model）等 Kubernetes 应用层技术被更广泛地采用，我们现在正看到一个标准化应用层生态的崛起。越来越多的团队正在努力通过更易用的数据视图层（Data View Layer）暴露用户友好的 API，同时为基础设施工程师提供具备横向连通性和模块化能力的更强大平台能力。
+
+与此同时，类数据库 Kubernetes 的其他缺失部分也将继续从社区中涌现。例如，如今快速成熟的 Open Policy Agent（OPA）项目可以被视为数据拦截、校验和修改机制的演进成果。同样地，阿里巴巴万级节点集群中控制平面的性能调优，其底层理论和实践与现代数据库性能优化有着惊人的相似性。

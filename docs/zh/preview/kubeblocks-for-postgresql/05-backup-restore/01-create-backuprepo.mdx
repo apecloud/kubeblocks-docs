@@ -1,0 +1,166 @@
+---
+description: 了解如何创建并配置一个使用S3存储桶保存备份数据的KubeBlocks BackupRepo。
+keywords:
+- KubeBlocks
+- Backup
+- BackupRepo
+- S3
+- Kubernetes
+sidebar_label: 创建备份仓库
+sidebar_position: 1
+title: 为KubeBlocks创建备份存储库
+---
+# 为 KubeBlocks 创建备份仓库（BackupRepo）
+
+本指南将引导您通过使用 S3 存储桶创建和配置 KubeBlocks 的备份仓库（BackupRepo）来存储备份数据。
+
+## 前提条件
+- 已配置具有创建 S3 存储桶权限的 AWS CLI
+- 拥有 Kubernetes 集群的 kubectl 访问权限
+- 已安装 KubeBlocks（[安装指南](../user_docs/overview/install-kubeblocks）并在 kb-system 命名空间中运行
+
+## 步骤 1：创建 S3 存储桶
+
+使用 AWS CLI 在目标区域创建 S3 存储桶。将 `<your-region>` 替换为您所需的 AWS 区域（例如 `us-east-1`、`ap-southeast-1`）。
+
+```bash
+ aws s3api create-bucket --bucket kubeblocks-backup-repo --region <your-region> --create-bucket-configuration LocationConstraint=<your-region>
+```
+
+示例（us-west-1 区域）：
+```bash
+aws s3api create-bucket \
+  --bucket kubeblocks-backup-repo \
+  --region us-west-1 \
+  --create-bucket-configuration LocationConstraint=us-west-1
+```
+
+示例输出：
+
+```json
+{
+"Location": "http://kubeblocks-backup-repo.s3.amazonaws.com/"
+}
+```
+
+验证：
+通过列出存储桶内容确认创建成功（初始应为空）：
+
+```bash
+aws s3 ls s3://kubeblocks-backup-repo
+```
+
+## 步骤 2：为 AWS 凭证创建 Kubernetes Secret
+
+将您的 AWS 凭证安全地存储在 Kubernetes Secret 中。将 `<ACCESS_KEY>` 和 `<SECRET_KEY>` 替换为实际的 AWS 凭证：
+
+```bash
+# 创建 secret 保存访问密钥
+kubectl create secret generic s3-credential-for-backuprepo \
+  --from-literal=accessKeyId=<ACCESS KEY> \
+  --from-literal=secretAccessKey=<SECRET KEY> \
+  -n kb-system
+```
+
+## 步骤 3：配置备份仓库
+
+BackupRepo 是用于定义备份存储仓库的自定义资源。本步骤将通过创建 BackupRepo 资源将您的 S3 存储桶与 KubeBlocks 集成。
+
+应用以下 YAML 创建 BackupRepo。请替换字段值（如存储桶名称、区域）为您的具体配置。
+
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: BackupRepo
+metadata:
+  name: s3-repo
+  annotations:
+    # 将此备份仓库标记为默认仓库
+    dataprotection.kubeblocks.io/is-default-repo: 'true'
+spec:
+  # 当前 KubeBlocks 支持配置多种对象存储服务作为备份仓库
+  # - s3 (Amazon Simple Storage Service)
+  # - oss (阿里云对象存储服务)
+  # - cos (腾讯云对象存储)
+  # - gcs (Google 云存储)
+  # - obs (华为云对象存储)
+  # - minio 及其他 S3 兼容服务
+  storageProviderRef: s3
+  # 指定备份仓库的访问方式
+  # - Tool
+  # - Mount
+  accessMethod: Tool
+  # 指定此备份仓库创建的 PV 回收策略
+  pvReclaimPolicy: Retain
+  # 指定此备份仓库创建的 PVC 容量
+  volumeCapacity: 100Gi
+  # 存储 StorageProvider 的非敏感配置参数
+  config:
+    bucket: kubeblocks-backup-repo
+    endpoint: ''
+    mountOptions: --memory-limit 1000 --dir-mode 0777 --file-mode 0666
+    region: us-west-1
+  # 引用存储 StorageProvider 凭证的 secret
+  credential:
+    # name 是在命名空间内引用 secret 资源的唯一标识
+    name: s3-credential-for-backuprepo
+    # namespace 定义了 secret 名称必须唯一的空间范围
+    namespace: kb-system
+```
+
+:::note
+
+注解 `dataprotection.kubeblocks.io/is-default-repo: 'true'` 将此 BackupRepo 标记为默认仓库。创建备份时，如果未指定特定 BackupRepo，KubeBlocks 将使用标记为默认的仓库。
+
+:::
+
+## 步骤 4：验证备份仓库状态
+
+检查 BackupRepo 状态以确保其正确初始化：
+
+```bash
+kubectl get backuprepo s3-repo -w
+```
+
+预期状态变化：
+```bash
+NAME      STATUS        STORAGEPROVIDER   ACCESSMETHOD   DEFAULT   AGE
+s3-repo   PreChecking   s3                Tool           true      5s
+s3-repo   Ready         s3                Tool           true      35s
+```
+
+**故障排除**
+
+创建新 BackupRepo 时，KubeBlocks 会运行预检查作业来测试连接和读写能力。如果 BackupRepo 状态显示 `Failed`，请按照以下步骤排查：
+
+1. 检查 BackupRepo 状态和错误详情：
+   ```bash
+   kubectl describe backuprepo <BACKUP_REPO_NAME>
+   ```
+
+2. 验证您的配置：
+   - 确认存储桶名称和区域与 S3 设置匹配
+   - 再次检查 Secret 中的 AWS 凭证是否有效
+   - 确保 KubeBlocks 与 AWS S3 之间存在网络连接
+
+预检查作业必须成功完成，BackupRepo 才能变为 `Ready` 状态可供使用。
+
+## 如何为其他存储提供商配置 BackupRepo
+
+KubeBlocks 支持以下存储提供商作为备份仓库：
+
+| 存储提供商 | 描述 |
+|-----------------|-------------|
+| OSS | 阿里云对象存储服务 |
+| S3 | Amazon 简单存储服务 |
+| COS | 腾讯云对象存储 |
+| GCS | Google 云存储 |
+| OBS | 华为云对象存储 |
+| MinIO | 自托管对象存储 |
+| S3-compatible | 其他 S3 兼容存储服务 |
+
+获取已安装的 `StorageProvider` 完整列表：
+```bash
+kubectl get storageproviders.dataprotection.kubeblocks.io
+```
+
+有关为其他存储提供商配置 BackupRepo 的详细说明，请参阅[备份仓库介绍](../../user_docs/backup-restore/backuprepo)。

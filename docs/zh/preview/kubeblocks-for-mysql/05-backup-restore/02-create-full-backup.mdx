@@ -1,0 +1,285 @@
+---
+description: 使用KubeBlocks中的Backup API和Ops API为MySQL集群创建及验证完整备份的逐步指南
+keywords:
+- MySQL
+- Full Backup
+- KubeBlocks
+- Kubernetes
+- Database Backup
+- XtraBackup
+sidebar_label: 创建完整备份
+sidebar_position: 2
+title: 在KubeBlocks上为MySQL集群创建完整备份
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# 在 KubeBlocks 上为 MySQL 集群创建全量备份
+
+本指南演示如何通过 Backup API 和 Ops API 两种方式，使用 XtraBackup 为部署在 KubeBlocks 上的 MySQL 集群创建并验证全量备份。
+Ops API 本质上是 Backup API 的封装，为备份操作提供了增强的控制和进度监控能力。
+
+我们将在[从全量备份恢复](restoring-from-full-backup.md)指南中介绍如何从备份恢复数据。
+
+## 前提条件
+
+在继续之前，请确保满足以下要求：
+- 环境准备：
+    - 已启动并运行一个 Kubernetes 集群。
+    - 已配置 kubectl CLI 工具以与集群通信。
+    - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处的安装说明进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 部署 MySQL 半同步集群
+
+KubeBlocks 采用声明式方法管理 MySQL 集群。以下是一个配置示例，用于部署包含 2 个节点（1 个主节点，1 个副本节点）的半同步模式 MySQL 集群。
+
+集群配置
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: WipeOut
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+**关键说明：**
+- `terminationPolicy: WipeOut`：
+  - 当设置为'WipeOut'时，删除集群会同时删除所有关联数据（包括备份）。
+  - 对于生产环境，建议使用`terminationPolicy: Delete`，该策略会在删除集群后保留备份数据。
+
+## 验证部署
+
+监控集群状态直到其转为 Running 状态：
+
+```bash
+kubectl get cluster example-mysql-cluster -n demo
+```
+
+示例输出：
+
+```bash
+NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Running   36m
+```
+
+
+
+
+## 识别备份策略
+
+列出集群可用的备份策略和计划：
+
+```bash
+# List backup policies
+kubectl get backuppolicy -n demo
+
+# List backup schedules
+kubectl get backupschedule -n demo
+```
+
+预期输出：
+
+```bash
+NAME                                            BACKUP-REPO   STATUS      AGE
+example-mysql-cluster-mysql-backup-policy                      Available   58m
+
+NAME                                              STATUS      AGE
+example-mysql-cluster-mysql-backup-schedule        Available   60m
+```
+
+查看 BackupPolicy CR 'example-mysql-cluster-mysql-backup-policy' 中支持的备份方法：
+
+```bash
+kubectl get backuppolicy example-mysql-cluster-mysql-backup-policy -n demo -oyaml
+```
+
+可用方法：
+- 'xtrabackup'：使用 Percona XtraBackup 进行全量数据库备份
+- 'volume-snapshot'：存储级快照
+- 'archive-binlog'：持续二进制日志归档
+
+以下章节演示如何使用 'xtrabackup' 方法执行全量备份。
+
+## 通过备份API执行备份
+
+### 1. 发起全量备份
+
+使用备份策略中定义的'xtrabackup'方法执行全量备份：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: Backup
+metadata:
+  name: example-mysql-cluster-backup
+  namespace: demo
+spec:
+  # Specifies the backup method name that is defined in the backup policy.
+  # - xtrabackup
+  # - volume-snapshot
+  backupMethod: xtrabackup
+  backupPolicyName: example-mysql-cluster-mysql-backup-policy
+  # Determines whether the backup contents stored in the backup repository should be deleted when the backup custom resource(CR) is deleted. Supported values are 'Retain' and 'Delete'.
+  # - 'Retain' means that the backup content and its physical snapshot on backup repository are kept.
+  # - 'Delete' means that the backup content and its physical snapshot on backup repository are deleted.
+  deletionPolicy: Delete
+EOF
+```
+
+### 2. 监控备份进度
+
+持续检查备份状态，直到显示为"Completed"（已完成）：
+
+```bash
+kubectl get backup example-mysql-cluster-backup  -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                           POLICY                                      METHOD       REPO      STATUS    TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME   EXPIRATION-TIME
+example-mysql-cluster-backup   example-mysql-cluster-mysql-backup-policy   xtrabackup   s3-repo   Running                           Delete            2025-03-07T01:39:05Z
+example-mysql-cluster-backup   example-mysql-cluster-mysql-backup-policy   xtrabackup   s3-repo   Completed   1524515      18s        Delete            2025-03-07T01:39:05Z   2025-03-07T01:39:23Z
+```
+
+### 3. 验证备份文件
+
+检查配置的 S3 存储桶中的备份文件：
+
+```bash
+aws s3 ls s3://kubeblocks-backup-repo/ --recursive
+```
+
+示例输出：
+
+```bash
+2025-03-07 09:39:10    1524515 demo/example-mysql-cluster-cb1b0f47-e310-4f63-9537-dacb6cbac499/mysql/example-mysql-cluster-backup/example-mysql-cluster-backup.xbstream.zst
+2025-03-07 09:39:20       5642 demo/example-mysql-cluster-cb1b0f47-e310-4f63-9537-dacb6cbac499/mysql/example-mysql-cluster-backup/kubeblocks-backup.json
+```
+
+
+
+
+
+## 通过运维API执行备份
+
+### 1. 发起全量备份
+
+使用备份策略中定义的'xtrabackup'方法执行全量备份：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-cluster-backup
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  force: false
+  backup:
+    backupPolicyName: example-mysql-cluster-mysql-backup-policy
+    backupMethod: xtrabackup
+    deletionPolicy: Delete
+    retentionPeriod: 1mo
+  type: Backup
+EOF
+```
+
+
+
+```bash
+kubectl get ops example-mysql-cluster-backup  -n demo -w
+```
+
+预期输出：
+
+```bash
+NAME                           TYPE     CLUSTER                 STATUS    PROGRESS   AGE
+example-mysql-cluster-backup   Backup   example-mysql-cluster   Succeed   -/-        3m34s
+```
+
+- 状态为 'Succeed' 表示备份操作已成功完成。
+
+#### 步骤 2：确认备份完成
+
+通过以下命令检查最终备份状态：
+
+```bash
+kubectl get backup  -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                                               POLICY                                      METHOD           REPO      STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
+backup-demo-example-mysql-cluster-20250307013939   example-mysql-cluster-mysql-backup-policy   xtrabackup   s3-repo   Completed   1549449      18s        Delete            2025-03-07T01:39:39Z   2025-03-07T01:39:57Z   2025-04-06T01:39:57Z
+```
+
+- 备份状态应显示为“已完成”。
+
+### 3. 验证备份文件
+
+检查配置的 S3 存储桶中的备份文件：
+
+```bash
+aws s3 ls s3://kubeblocks-backup-repo/ --recursive
+```
+
+示例输出：
+
+```bash
+2025-03-07 09:39:44    1549449 demo/example-mysql-cluster-cb1b0f47-e310-4f63-9537-dacb6cbac499/mysql/backup-demo-example-mysql-cluster-20250307013939/backup-demo-example-mysql-cluster-20250307013939.xbstream.zst
+2025-03-07 09:39:54       5529 demo/example-mysql-cluster-cb1b0f47-e310-4f63-9537-dacb6cbac499/mysql/backup-demo-example-mysql-cluster-20250307013939/kubeblocks-backup.json
+```
+
+
+
+
+
+## 摘要
+本指南演示了如何：
+- 在 KubeBlocks 上部署一个半同步 MySQL 集群。
+- 使用 'xtrabackup' 方法创建完整备份。
+- 监控并验证备份文件。
+
+通过遵循本指南，您可以确保 MySQL 集群数据安全备份且易于恢复。
+

@@ -263,22 +263,17 @@ class MDXTranslator:
             return f"""You are a professional technical documentation translation assistant. Please translate the following {source_name} text to {dest_name} with these requirements:
 1. This is frontmatter metadata, so keep it concise and clear
 2. Maintain technical term accuracy
-3. For technical terms, use standard {dest_name} translations if available, otherwise keep {source_name}
-4. The result should be natural and fluent {dest_name}
-5. Do not add any extra formatting or markdown{glossary_prompt}
+3. The result should be natural and fluent {dest_name}
+4. For technical terms, use standard {dest_name} translations if available, otherwise keep {source_name}. If you don't know the translation, use the given glossary{glossary_prompt}
 """
         else:
             return f"""You are a professional technical documentation translation assistant. Please translate the following {source_name} technical documentation to {dest_name} with these requirements:
 1. Maintain technical term accuracy
-2. Keep Markdown formatting unchanged, including line breaks and spacing
-3. Do not translate content in import statements
-4. Do not touch the code block content
-5. Do not translate links or images
-6. Preserve all formatting, spacing, and line breaks exactly as in the original
-7. Translation should be natural and fluent, conforming to {dest_name} expression habits
-8. For technical terms, use standard {dest_name} translations if available, otherwise keep {source_name} and add {dest_name} explanations on first occurrence{glossary_prompt}
-
-IMPORTANT: Preserve exact spacing and line breaks between text and code blocks."""
+2. Keep Markdown structure unchanged
+3. Do not translate content in import statements, code blocks, links, images, etc.
+4. Translation should be natural and fluent, conforming to {dest_name} expression habits
+5. For technical terms, use standard {dest_name} translations if available, otherwise keep {source_name}. If you don't know the translation, use the given glossary{glossary_prompt}
+"""
 
     def translate_frontmatter_field(self, text: str) -> str:
         """

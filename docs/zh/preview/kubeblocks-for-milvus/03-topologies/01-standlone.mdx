@@ -1,0 +1,137 @@
+---
+description: 了解如何使用KubeBlocks部署Milvus单机集群。本指南涵盖配置、验证、故障转移测试及超时设置。
+keywords:
+- KubeBlocks
+- Redis
+- Kubernetes
+- High Availability
+sidebar_label: Milvus 单机模式集群
+sidebar_position: 1
+title: 使用KubeBlocks部署Milvus单机集群
+---
+# 使用 KubeBlocks 部署 Milvus 单机集群
+
+单机模式是一种轻量级部署方案，适用于开发和测试环境，包含以下组件：
+
+- **Milvus 核心**：提供向量搜索和数据库功能
+- **元数据存储 (ETCD)**：存储集群元数据和配置信息
+- **对象存储 (MinIO/S3)**：持久化向量数据和索引
+
+## 先决条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署 Milvus 单机集群
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: milvus-standalone
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  # 该值必须为 `milvus` 以创建 Milvus 集群
+  clusterDef: milvus
+  # 有效选项为: [standalone,cluster]
+  topology: standalone
+  componentSpecs:
+    - name: etcd
+      replicas: 1
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 10Gi
+    - name: minio
+      replicas: 1
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 10Gi
+    - name: milvus
+      replicas: 1
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 10Gi
+```
+
+**关键配置说明**：
+- `clusterDef: milvus`：指定集群的 ClusterDefinition CR
+- `topology: standalone`：配置集群使用单机拓扑
+- `componentSpecs`：定义集群中的组件
+
+## 验证部署
+
+### 检查集群状态
+集群部署完成后，检查其状态：
+```bash
+kubectl get cluster milvus-standalone  -n demo -w
+```
+预期输出：
+```bash
+NAME                CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+milvus-standalone   milvus               Delete               Creating   40s
+milvus-standalone   milvus               Delete               Creating   71s
+milvus-standalone   milvus               Delete               Creating   71s
+milvus-standalone   milvus               Delete               Updating   71s
+milvus-standalone   milvus               Delete               Running    2m55s
+```
+
+### 验证组件状态
+```bash
+kubectl get component -n demo -l app.kubernetes.io/instance=milvus-standalone
+```
+预期输出：
+```bash
+NAME                       DEFINITION                        SERVICE-VERSION   STATUS    AGE
+milvus-standalone-etcd     etcd-3-1.0.0                      3.5.15            Running   3m5s
+milvus-standalone-milvus   milvus-standalone-1.0.0           v2.3.2            Running   114s
+milvus-standalone-minio    milvus-minio-1.0.0                8.0.17            Running   3m5s
+```
+
+## 清理资源
+要删除本教程中创建的所有资源：
+
+```bash
+kubectl delete cluster milvus-standalone -n demo
+kubectl delete ns demo
+```

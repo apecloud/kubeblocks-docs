@@ -1,0 +1,56 @@
+---
+description: 简介
+keywords:
+- in-place update
+- overview
+sidebar_label: 简介
+sidebar_position: 1
+title: 简介
+---
+# 概述
+
+在早期版本中，KubeBlocks 最终生成的 Workload 都是 StatefulSet。对于 StatefulSet 而言，PodTemplate 部分的任何变更都可能导致所有 Pod 的更新，且更新方式为 `Recreate`，即删除当前所有 Pod 并创建新的 Pod。这对于可用性要求极高的数据库管理显然不是最佳实践。
+
+为解决这个问题，KubeBlocks 从 0.9 版本开始引入了实例原地更新特性，降低实例更新对系统可用性的影响。
+
+## 实例的哪些字段支持原地更新？
+
+原则上，KubeBlocks 实例原地更新利用了 [Kubernetes Pod API 的原地更新能力](https://kubernetes.io/docs/concepts/workloads/pods/#pod-update-and-replacement)。因此具体支持的字段如下：
+
+* `annotations`
+* `labels`
+* `spec.activeDeadlineSeconds`
+* `spec.initContainers[*].image`
+* `spec.containers[*].image`
+* `spec.tolerations`（仅支持添加 Toleration）
+
+从 Kubernetes 1.27 版本开始，可以通过 `InPlacePodVerticalScaling` 特性开关进一步支持 CPU 和 Memory 的原地更新。KubeBlocks 也支持 `InPlacePodVerticalScaling` 特性开关，从而进一步支持以下能力：
+
+对于 Kubernetes 版本 >= 1.27 且启用了 InPlacePodVerticalScaling 的情况，支持以下字段的原地更新：
+
+* `spec.containers[*].resources.requests["cpu"]`
+* `spec.containers[*].resources.requests["memory"]`
+* `spec.containers[*].resources.limits["cpu"]`
+* `spec.containers[*].resources.limits["memory"]`
+
+需要注意的是，资源调整成功后，部分应用可能需要重启才能识别新的资源配置。此时需要在 ClusterDefinition 或 ComponentDefinition 中进一步配置容器的 `restartPolicy`。
+
+对于 PVC，KubeBlocks 同样利用了 PVC API 的能力，仅支持存储卷扩容。如果扩容因某些原因失败，支持回退到原容量。但 StatefulSet 中的 VolumeClaimTemplate 一旦声明就无法修改。目前 Kubernetes 社区正在[开发该能力](https://github.com/kubernetes/enhancements/pull/4651)，但至少要到 Kubernetes 1.32 版本才会提供。
+
+## 从上层 API 角度看，哪些字段变更后会利用原地更新？
+
+KubeBlocks 上层与实例相关的 API 包括 Cluster、ClusterDefinition、ClusterVersion、ComponentDefinition 和 ComponentVersion。这些 API 中有若干字段最终会被直接或间接用于渲染实例对象，从而可能触发实例的原地更新。
+
+这些 API 中的字段众多。下表简要说明。
+
+:::note
+
+API 中标记为 deprecated 或 immutable 的字段未包含在列表中。
+
+:::
+
+| API |   字段    |   描述   |
+|:-----|:-------|:-----------|
+|Cluster| `annotations`, <p>`labels`, </p><p>`spec.tolerations`, </p><p>`spec.componentSpecs[*].serviceVersion`, </p><p>`spec.componentSpecs[*].tolerations`, </p><p>`spec.componentSpecs[*].resources`, </p><p>`spec.componentSpecs[*].volumeClaimTemplates`, </p><p>`spec.componentSpecs[*].instances[*].annotations`, </p><p>`spec.componentSpecs[*].instances[*].labels`, </p><p>`spec.componentSpecs[*].instances[*].image`, </p><p>`spec.componentSpecs[*].instances[*].tolerations`, </p><p>`spec.componentSpecs[*].instances[*].resources`, </p><p>`spec.componentSpecs[*].instances[*].volumeClaimTemplates`, </p><p>`spec.shardingSpecs[*].template.serviceVersion`, </p><p>`spec.shardingSpecs[*].template.tolerations`, </p><p>`spec.shardingSpecs[*].template.resources`, </p><p>`spec.shardingSpecs[*].template.volumeClaimTemplates`</p> | 资源相关字段指：<p>`requests["cpu"]`,</p><p>`requests["memory"]`,</p><p>`limits["cpu"]`,</p>`limits["memory"]` |
+|   ComponentVersion  | `spec.releases[*].images`   | 是否触发原地更新取决于对应镜像是否变更            |
+| KubeBlocks 内置 |  `annotations`, `labels` |    |

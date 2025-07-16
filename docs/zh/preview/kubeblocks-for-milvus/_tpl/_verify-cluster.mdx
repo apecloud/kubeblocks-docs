@@ -1,0 +1,48 @@
+监控集群状态直至其转为运行中状态：
+```bash
+kubectl get cluster milvus-cluster -n demo -w
+```
+
+预期输出：
+
+```bash
+NAME                CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+milvus-standalone   milvus               Delete               Creating   40s
+milvus-standalone   milvus               Delete               Creating   71s
+milvus-standalone   milvus               Delete               Creating   71s
+milvus-standalone   milvus               Delete               Updating   71s
+milvus-standalone   milvus               Delete               Running    2m55s
+```
+
+检查组件和Pod状态：
+
+```bash
+kubectl get component -n demo -l app.kubernetes.io/instance=milvus-standalone
+```
+预期输出：
+```bash
+NAME                       DEFINITION                        SERVICE-VERSION   STATUS    AGE
+milvus-standalone-etcd     etcd-3-1.0.0                      3.5.15            Running   3m5s
+milvus-standalone-milvus   milvus-standalone-1.0.0           v2.3.2            Running   114s
+milvus-standalone-minio    milvus-minio-1.0.0                8.0.17            Running   3m5s
+```
+
+
+```bash
+kubectl get pods -l app.kubernetes.io/instance=milvus-standalone -n demo
+```
+
+预期输出：
+```bash
+NAME                         READY   STATUS    RESTARTS   AGE
+milvus-standalone-etcd-0     2/2     Running   0          4m31s
+milvus-standalone-milvus-0   1/1     Running   0          3m20s
+milvus-standalone-minio-0    1/1     Running   0          4m31s
+```
+
+当集群状态显示为Running时，您的Milvus集群即可投入使用。
+
+:::tip
+如果是首次创建集群，可能需要花费一些时间拉取镜像后才能正常运行。
+
+:::

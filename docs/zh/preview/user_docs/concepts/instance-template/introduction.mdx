@@ -1,0 +1,27 @@
+---
+description: 简介
+keywords:
+- instance template
+sidebar_label: 简介
+sidebar_position: 1
+title: 简介
+---
+# 简介
+
+## 什么是实例模板
+
+在KubeBlocks中，*实例*（instance）是最基础的运行单元，它由一个Pod和若干辅助对象组成。简单来说，你可以先将其理解为一个Pod，后文我们将统一称之为"实例"。
+
+从0.9版本开始，我们能够为集群中的特定组件定义多个实例模板。这些模板包含名称（Name）、副本数（Replicas）、注解（Annotations）、标签（Labels）、环境变量（Env）、容忍度（Tolerations）、节点选择器（NodeSelector）等多个字段。这些字段最终会覆盖默认模板（源自ClusterDefinition和ComponentDefinition）中的对应字段，生成用于渲染实例的最终模板。
+
+## 为何引入实例模板
+
+在KubeBlocks架构中，一个*集群*（Cluster）由多个*组件*（Component）构成，而每个*组件*最终会管理多个*Pod*及其辅助对象。
+
+在0.9版本之前，这些Pod都是通过共享的PodTemplate渲染生成的，该模板定义在ClusterDefinition或ComponentDefinition中。但这种设计无法满足以下需求：
+
+ - 对于通过相同插件渲染的集群，需要设置独立的调度配置，如*节点名称*（NodeName）、*节点选择器*（NodeSelector）或*容忍度*（Tolerations）
+ - 对于通过相同插件渲染的组件，需要为其管理的Pod添加自定义*注解*（Annotations）、*标签*（Labels）或环境变量（ENV）
+ - 对于同一组件管理的Pod，需要配置不同的*CPU*、*内存*等*资源请求*（Resource Requests）与*限制*（Limits）
+
+随着各类相似需求的涌现，Cluster API从0.9版本开始引入了实例模板功能来满足这些需求。

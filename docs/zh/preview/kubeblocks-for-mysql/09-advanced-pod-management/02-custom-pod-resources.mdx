@@ -1,0 +1,338 @@
+---
+description: 了解如何使用KubeBlocks自定义MySQL集群中的Pod资源配置和标签，以满足特定工作负载需求。
+keywords:
+- KubeBlocks
+- MySQL
+- Pod Resource Configuration
+- Kubernetes
+- Cluster Management
+sidebar_label: 自定义 Pod 资源
+sidebar_position: 2
+title: 在KubeBlocks管理的MySQL集群中自定义Pod资源配置与标签
+---
+# 在 KubeBlocks 管理的 MySQL 集群中自定义 Pod 资源配置和标签
+
+在某些场景下，同一个数据库集群中的不同 Pod 可能需要不同的资源分配。例如：
+- 专用于报表生成的某些副本可能需要额外资源来高效处理分析查询。
+
+通过 KubeBlocks，您可以自定义 Pod 资源配置和标签，使每个实例都能满足其独特需求。
+本指南演示如何部署一个 MySQL 集群，其中包含一个配置了更高 CPU 和内存资源的自定义副本。
+
+## 前提条件
+
+在继续之前，请确保满足以下要求：
+- 环境准备：
+    - 已启动并运行一个 Kubernetes 集群。
+    - 已配置 kubectl CLI 工具以与集群通信。
+    - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处提供的安装说明进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 部署 MySQL 半同步集群
+
+部署一个 2 节点的半同步 MySQL 集群（1 主节点，1 从节点）：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+
+
+
+## 验证部署
+
+监控集群状态，直到 STATUS 变为 Running：
+
+```bash
+kubectl get cluster example-mysql-cluster -n demo -w
+```
+
+预期输出：
+
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Creating   17s
+example-mysql-cluster   mysql                Delete               Running   2m33s
+```
+
+
+
+
+
+## 添加具有不同资源配置的自定义副本  
+要为集群添加一个具有更高CPU和内存分配的新副本，请按以下方式更新集群规范：  
+
+
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+      instances:
+        - name: custom
+          replicas: 1
+          labels:
+            custom-resource-config: "true"
+          resources:
+            limits:
+              cpu: 1
+              memory: 1Gi
+            requests:
+              cpu: 1
+              memory: 1Gi
+EOF
+```
+
+**说明：**
+- 默认资源配置：每个 mysql 组件的 Pod 配置为 0.5 CPU 和 0.5Gi 内存。
+- 自定义资源配置：单个实例（自定义）配置为 1 CPU 和 1Gi 内存。
+
+## 验证部署
+监控集群状态直至返回 Running：
+
+```bash
+kubectl get cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster   mysql                Delete               Updating   79s
+example-mysql-cluster   mysql                Delete               Running   2m44s
+```
+
+列出集群中的所有 Pod：
+
+```bash
+kubectl get pods -n demo
+```
+
+预期输出：
+
+```bash
+NAME                                   READY   STATUS    RESTARTS   AGE
+example-mysql-cluster-mysql-0          4/4     Running   0          2m49s
+example-mysql-cluster-mysql-1          4/4     Running   0          2m49s
+example-mysql-cluster-mysql-custom-0   4/4     Running   0          97s
+```
+
+**观察结果**：
+- 自定义 Pod 名称中间包含 "-custom"（例如 'example-mysql-cluster-mysql-custom-0'），反映了实例模板名称为 "custom"。
+
+使用 KubeBlocks CLI 检查集群并验证资源配置：
+
+```bash
+kbcli cluster describe example-mysql-cluster -n demo
+```
+
+预期输出：
+
+```bash
+Resources Allocation:
+COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+mysql       custom              1 / 1                1Gi / 1Gi               data:20Gi      <none>
+mysql                           500m / 500m          512Mi / 512Mi           data:20Gi      <none>
+```
+
+**观察结果**：
+- 默认副本配置为 0.5 CPU 和 0.5Gi 内存。
+- 自定义副本配置为 1 CPU 和 1Gi 内存。
+
+## 将自定义 Pod 暴露为服务
+要通过独立服务暴露自定义 Pod，请使用以下配置：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  # expose a service
+  services:
+    - name: custom-pod
+      componentSelector: mysql
+      serviceName: custom-pod
+      spec:
+        selector:
+          custom-resource-config: "true"
+        ipFamilyPolicy: PreferDualStack
+        ports:
+          - name: tcp-mysql
+            port: 3306
+            protocol: TCP
+            targetPort: mysql
+        type: ClusterIP
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+      instances:
+        - name: custom
+          replicas: 1
+          labels:
+            custom-resource-config: "true"
+          resources:
+            limits:
+              cpu: 1
+              memory: 1Gi
+            requests:
+              cpu: 1
+              memory: 1Gi
+EOF
+```
+
+### 验证更新
+检查集群状态：
+
+```bash
+kubectl get cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster   mysql                Delete               Updating   16m
+example-mysql-cluster   mysql                Delete               Running    17m
+```
+
+然后列出服务：
+
+```bash
+kubectl get svc -n demo
+```
+
+示例输出：
+
+```bash
+NAME                                   TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                                                 AGE
+example-mysql-cluster-custom-pod       ClusterIP   172.20.202.249   <none>        3306/TCP                                                12m
+example-mysql-cluster-mysql            ClusterIP   172.20.11.166    <none>        3306/TCP                                                12m
+example-mysql-cluster-mysql-headless   ClusterIP   None             <none>        3306/TCP,3601/TCP,9104/TCP,3501/TCP,3502/TCP,9901/TCP   12m
+```
+
+### 通过服务访问自定义Pod  
+获取根凭据：
+
+```bash
+kubectl get secrets -n demo  example-semisync-mysql-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
+
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+```
+
+预期输出：
+
+```bash
+root
+
+uk263gR24s
+```
+
+从 MySQL 容器内部连接到自定义 Pod：
+
+```bash
+kubectl exec -it example-mysql-cluster-mysql-0 -n demo -- mysql -hexample-mysql-cluster-custom-pod -uroot -puk263gR24s
+```
+
+此自定义 Pod 预配置了额外资源，非常适合运行复杂查询或分析型工作负载。
+
+## 清理
+要删除所有已创建的资源，请连同其命名空间一起删除 MySQL 集群：
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete ns demo
+```
+
+
+
+
+
+## 结论
+通过 KubeBlocks 自定义 Pod 资源配置和标签，您可以构建灵活且资源高效的 MySQL 环境。无论您需要强大的主实例还是专用于报表生成的副本，KubeBlocks Operator 都能让您根据工作负载需求精细调整每个 Pod 的 CPU、内存和存储配置。

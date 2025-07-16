@@ -1,0 +1,167 @@
+---
+description: 了解如何在KubeBlocks上部署支持TLS加密的MySQL集群以实现安全通信。本指南涵盖部署配置、安全连接及资源清理操作。
+keywords:
+- KubeBlocks
+- MySQL
+- Kubernetes
+- TLS
+- Secure Communication
+sidebar_label: 启用TLS的MySQL集群
+sidebar_position: 1
+title: 在KubeBlocks上部署支持TLS的MySQL集群
+---
+# 在 KubeBlocks 上部署启用 TLS 的 MySQL 集群
+
+本指南演示如何使用 KubeBlocks 部署一个支持 **TLS 加密** 的 MySQL 集群。TLS 通过加密传输中的数据来确保 MySQL 客户端与服务器之间的通信安全，从而保护敏感信息。您将学习如何部署集群、使用 TLS 安全连接以及在测试后清理资源。
+
+
+
+## 前提条件
+
+在继续之前，请确保满足以下要求：
+- 环境准备：
+    - 已启动并运行一个 Kubernetes 集群。
+    - 已配置 kubectl CLI 工具以与集群通信。
+    - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处的安装说明进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 部署 MySQL 半同步集群
+
+KubeBlocks 采用声明式方式管理 MySQL 集群。以下是一个配置示例，用于部署包含 2 个节点（1 个主节点，1 个副本节点）的半同步模式 MySQL 集群，并启用 TLS。
+
+应用以下 YAML 配置：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      tls: true
+      issuer:
+        name: KubeBlocks
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+### 说明：
+- `tls: true`：启用 TLS 加密以确保通信安全。
+- `issuer: KubeBlocks`：使用 KubeBlocks 默认内置的证书颁发机构进行 TLS 加密。
+
+## 验证部署
+
+监控集群状态直到其转为 Running 状态：
+
+```bash
+kubectl get cluster -n demo
+```
+
+预期输出：
+
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Running   11m
+```
+
+
+
+
+## 连接到 MySQL 集群
+
+### 步骤 1：获取 Root 凭据
+KubeBlocks 会自动创建一个包含 MySQL root 凭据的 Secret。通过以下命令获取凭据：
+
+1. 获取 root 用户名：
+
+```bash
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
+```
+
+预期输出：
+
+```bash
+root
+```
+
+2. 获取 root 密码：
+
+```bash
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+```
+
+预期输出：
+
+```bash
+43Rysk6w10
+```
+
+### 步骤 2：使用 TLS 安全连接 MySQL  
+使用 MySQL 客户端启用 TLS 进行安全连接。'--ssl-mode=REQUIRED' 选项强制要求使用 TLS 加密。
+
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -p43Rysk6w10 --ssl-mode=REQUIRED
+```
+
+### 步骤 3：验证 TLS 连接  
+在 MySQL shell 中验证 TLS 连接状态：
+
+```sql
+mysql> STATUS;
+--------------
+
+SSL:			Cipher in use is TLS_AES_256_GCM_SHA384
+```
+
+如果 SSL 字段显示加密套件，则表示连接已成功通过 TLS 加密。
+
+## 清理
+要删除本教程中创建的所有资源，请运行以下命令：
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete ns demo
+```
+
+
+
+
+## 概述  
+在本指南中，您学习了如何：  
+- 使用 KubeBlocks 部署 MySQL 集群，并启用 TLS 加密以确保 MySQL 客户端与服务器之间的安全通信。  
+- 建立基于 TLS 的安全 MySQL 连接。  
+- 使用 MySQL shell 验证安全连接。  
+
+TLS 加密通过加密传输中的数据来确保通信安全，保护敏感信息。按照这些步骤，您可以轻松地使用 KubeBlocks 在 Kubernetes 上部署安全的 MySQL 集群。  
+

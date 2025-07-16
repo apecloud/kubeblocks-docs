@@ -1,0 +1,99 @@
+---
+description: KubeBlocks 核心术语解析
+keywords:
+- terminology
+sidebar_label: 术语
+sidebar_position: 2
+title: 术语
+---
+# 术语表
+
+### 插件（Addon）
+
+插件是一种高效开放的扩展机制。通过KubeBlocks插件，开发者可以快速将新的数据库引擎添加到KubeBlocks中，并获取该数据库引擎特定的基础管理功能，包括但不限于生命周期管理、数据备份恢复、指标与日志采集等。
+
+### 操作集（ActionSet）
+
+操作集声明了一组使用特定工具执行备份和恢复操作的命令，例如使用xtrabackup备份MySQL的命令，以及从备份中恢复数据的命令。
+
+### 备份策略（BackupPolicy）
+
+备份策略表示集群的备份方案，包含备份仓库（BackupRepo）、备份目标和备份方法等详细信息。一个备份策略中可以定义多种备份方法，每种方法引用对应的操作集。创建备份时，可以指定备份策略和备份方法进行备份操作。
+
+### 备份仓库（BackupRepo）
+
+备份仓库是备份数据的存储库，其原理是使用CSI驱动将备份数据上传到各类存储系统，例如S3、GCS等对象存储系统，以及FTP、NFS等存储服务器。
+
+### 备份计划（BackupSchedule）
+
+备份计划声明了集群自动备份的配置，包括备份频率、保留期限、备份策略和备份方法。备份计划控制器（BackupSchedule Controller）会根据自定义资源（CR）中的配置创建CronJob来自动备份集群。
+
+### 集群（Cluster）
+
+集群由[组件](#component-is-the-fundamental-assembly-component-used-to-build-a-data-storage-and-processing-system-a-component-utilizes-a-statefulset-either-native-to-kubernetes-or-specified-by-the-customer-such-as-openkruise-to-manage-one-to-multiple-pods)构成。
+
+### 组件（Component）
+
+组件是构建数据存储和处理系统的基础组装单元。一个组件使用StatefulSet（可以是Kubernetes原生的，也可以是客户指定的，如OpenKruise）来管理一个到多个Pod。
+
+### 组件引用（ComponentRef）
+
+组件引用用于选择要引用的组件及其字段。
+
+### 配置约束（ConfigConstraint）
+
+KubeBlocks将引擎配置文件抽象为配置约束，以更好地支持配置变更。配置约束中抽象的信息包括以下内容：
+ - 配置文件格式；
+ - 动态参数和静态参数以及不可变参数；
+ - 动态变化的参数；
+ - 参数校验规则。
+
+### 自定义资源定义（CRD）
+
+自定义资源定义（CRD）扩展了Kubernetes API，使开发者能够引入称为自定义资源的新数据类型和对象。
+
+### 操作器（Operator）
+
+操作器是一种自定义资源，可自动化通常由人工操作员在管理一个或多个应用或服务时执行的任务。通过确保资源的定义状态始终与其观察状态一致，操作器支持Kubernetes履行其管理职责。
+
+### 运维定义（OpsDefinition）
+
+运维（Ops）是"Operations"的缩写，代表数据库维护操作。它定义了与数据库管理相关的运维任务，指定集群和组件支持哪些操作。
+
+### 运维请求（OpsRequest）
+
+运维请求表示单个操作请求。
+
+### 基于角色的访问控制（RBAC）
+
+基于角色的访问控制（RBAC），也称为基于角色的安全，是计算机系统安全中用于限制对系统网络和资源的访问仅限授权用户的方法。Kubernetes内置了用于管理命名空间和集群中角色的API，支持将其与特定资源和个体关联。
+
+### 服务描述符（ServiceDescriptor）
+
+服务描述符是用于描述引用存储服务的API对象的自定义资源（CR）对象。它允许用户抽象出由Kubernetes或非Kubernetes环境提供的服务，使其可供KubeBlocks中的其他集群对象引用。"服务描述符"可用于解决KubeBlocks中的服务依赖、组件依赖和组件共享等问题。
+
+KubeBlocks对容器化分布式数据库的管理映射为四个层次的对象：集群（Cluster）、组件（Component）、实例集（InstanceSet）和实例（Instance），形成分层架构：
+
+### 集群层
+
+集群对象代表一个完整的分布式数据库集群。集群是顶层抽象，包含数据库的所有组件和服务。
+
+### 组件层
+
+组件代表构成集群对象的逻辑组件，如元数据管理、数据存储、查询引擎等。每个组件对象都有其特定的任务和功能。一个集群对象包含一个或多个组件对象。
+
+### 实例集层
+
+实例集对象管理组件对象内部多个副本所需的工作负载，感知副本的角色。一个组件对象包含一个实例集对象。
+
+### 实例层
+
+实例对象代表实例集对象中实际运行的实例，对应Kubernetes中的一个Pod。一个实例集对象可以管理零到多个实例对象。
+
+### 组件定义（ComponentDefinition）
+
+组件定义是用于定义分布式数据库组件的API，描述组件的实现细节和行为。通过组件定义，可以定义组件的关键信息，如容器镜像、配置模板、启动脚本、存储卷等。还可以设置组件对不同事件（例如节点加入、节点离开、组件添加、组件移除、角色切换等）的行为和逻辑。每个组件可以有自己的独立组件定义，也可以共享相同的组件定义。
+
+### 集群定义（ClusterDefinition）
+
+集群定义是用于定义分布式数据库集群整体结构和拓扑的API。在集群定义中，可以引用其包含组件的组件定义，并定义组件之间的依赖和引用关系。

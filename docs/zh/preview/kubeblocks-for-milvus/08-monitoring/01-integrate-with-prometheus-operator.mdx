@@ -1,0 +1,227 @@
+---
+description: 了解如何在KubeBlocks中通过Prometheus Operator为Milvus集群配置可观测性。设置监控并通过Grafana实现指标可视化。
+keywords:
+- KubeBlocks
+- Milvus
+- Prometheus
+- Grafana
+- Observability
+- Metrics
+sidebar_label: Milvus 集群可观测性
+sidebar_position: 2
+title: 使用 Prometheus Operator 实现 Milvus 集群的可观测性
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 使用 Prometheus Operator 监控 Milvus
+
+本指南演示如何在 KubeBlocks 中为 Milvus 集群配置全面的监控方案，包括：
+
+1. 使用 Prometheus Operator 进行指标采集
+2. 通过内置的 Milvus Exporter 暴露指标
+3. 使用 Grafana 实现可视化展示
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 安装监控组件栈
+
+### 1. 安装 Prometheus Operator
+使用 Helm 部署 kube-prometheus-stack：
+
+```bash
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm install prometheus prometheus-community/kube-prometheus-stack \
+  -n monitoring \
+  --create-namespace
+```
+
+### 2. 验证安装
+检查所有组件是否正常运行：
+```bash
+kubectl get pods -n monitoring
+```
+
+预期输出：
+```bash
+NAME                                                     READY   STATUS    RESTARTS   AGE
+alertmanager-prometheus-kube-prometheus-alertmanager-0   2/2     Running   0          114s
+prometheus-grafana-75bb7d6986-9zfkx                      3/3     Running   0          2m
+prometheus-kube-prometheus-operator-7986c9475-wkvlk      1/1     Running   0          2m
+prometheus-kube-state-metrics-645c667b6-2s4qx            1/1     Running   0          2m
+prometheus-prometheus-kube-prometheus-prometheus-0       2/2     Running   0          114s
+prometheus-prometheus-node-exporter-47kf6                1/1     Running   0          2m1s
+prometheus-prometheus-node-exporter-6ntsl                1/1     Running   0          2m1s
+prometheus-prometheus-node-exporter-gvtxs                1/1     Running   0          2m1s
+prometheus-prometheus-node-exporter-jmxg8                1/1     Running   0          2m1s
+```
+
+## 部署 Milvus 集群
+
+请参考[使用 KubeBlocks 部署 Milvus 集群](../03-topologies/02-cluster)完成部署。
+
+## 配置指标采集
+
+### 1. 验证 Exporter 端点
+
+```bash
+kubectl -n demo exec -it pods/milvus-cluster-proxy-0 -- \
+  curl -s http://127.0.0.1:9091/metrics | head -n 50
+```
+
+需要对所有 Milvus 副本执行验证，包括：
+- milvus-cluster-datanode
+- milvus-cluster-indexnode
+- milvus-cluster-mixcoord
+- milvus-cluster-proxy
+- milvus-cluster-querynode
+
+### 2. 创建 PodMonitor
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: milvus-cluster-pod-monitor
+  namespace: demo
+  labels:               # 必须与 'prometheus.spec.podMonitorSelector' 中的设置匹配
+    release: prometheus
+spec:
+  podMetricsEndpoints:
+    - path: /metrics
+      port: metrics
+      scheme: http
+      relabelings:
+        - targetLabel: app_kubernetes_io_name
+          replacement: milvus
+  namespaceSelector:
+    matchNames:
+      - demo               # 目标命名空间
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: milvus-cluster
+```
+**PodMonitor 配置指南**
+
+| 参数 | 必填 | 说明 |
+|-----------|----------|-------------|
+| `port` | 是 | 必须与 exporter 端口名称('http-metrics')匹配 |
+| `namespaceSelector` | 是 | 指定 Milvus 运行的命名空间 |
+| `labels` | 是 | 必须与 Prometheus 的 podMonitorSelector 匹配 |
+| `path` | 否 | 指标端点路径(默认: /metrics) |
+| `interval` | 否 | 采集间隔(默认: 30s) |
+
+该配置创建了一个 `PodMonitor` 来监控 Milvus 集群，并从 Milvus 组件采集指标。
+
+```yaml
+  podMetricsEndpoints:
+    - path: /metrics
+      port: metrics
+      scheme: http
+      relabelings:
+        - targetLabel: app_kubernetes_io_name
+          replacement: milvus # 为目标添加标签: app_kubernetes_io_name=milvus
+```
+
+## 验证监控配置
+
+### 1. 检查 Prometheus 目标
+端口转发并访问 Prometheus UI：
+
+```bash
+kubectl port-forward svc/prometheus-kube-prometheus-prometheus -n monitoring 9090:9090
+```
+浏览器访问：
+http://localhost:9090/targets
+
+检查是否存在与 PodMonitor 对应的采集任务(任务名应为'demo/milvus-cluster-pod-monitor')。
+
+预期状态：
+- 目标状态应为 UP
+- 目标标签应包含 podTargetLabels 中定义的标签(如'app_kubernetes_io_instance')
+
+### 2. 测试指标采集
+验证指标是否被正确采集：
+```bash
+curl -sG "http://localhost:9090/api/v1/query" --data-urlencode 'query=milvus_num_node{app_kubernetes_io_name="milvus"}' | jq
+```
+
+示例输出：
+```json
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "__name__": "milvus_num_node",
+          "app_kubernetes_io_name": "milvus",
+          "container": "indexnode",
+          "endpoint": "metrics",
+          "instance": "10.244.0.149:9091",
+          "job": "demo/milvus-cluster-pod-monitor",
+          "namespace": "demo",
+          "node_id": "23",
+          "pod": "milvus-cluster-indexnode-0",
+          "role_name": "indexnode"
+        },
+        "value": [
+          1747637044.313,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "milvus_num_node",
+          "app_kubernetes_io_name": "milvus",
+          "container": "querynode",
+          "endpoint": "metrics",
+          "instance": "10.244.0.153:9091",
+          "job": "demo/milvus-cluster-pod-monitor",
+          "namespace": "demo",
+          "node_id": "27",
+          "pod": "milvus-cluster-querynode-1",
+          "role_name": "querynode"
+        },
+        "value": [
+          1747637044.313,
+          "1"
+        ]
+      },
+      ... // 更多输出省略
+```
+## Grafana 可视化
+
+### 1. 访问 Grafana
+端口转发并登录：
+
+```bash
+kubectl port-forward svc/prometheus-grafana -n monitoring 3000:80
+```
+浏览器访问 `http://localhost:3000`，使用默认凭据登录：
+- 用户名: 'admin'
+- 密码: 'prom-operator'(默认值)
+
+### 2. 导入仪表板
+导入 KubeBlocks Milvus 仪表板：
+
+1. 在 Grafana 中导航至 "+" → "Import"
+2. 从以下地址导入仪表板: [Milvus Dashboard](https://raw.githubusercontent.com/milvus-io/milvus/refs/heads/master/deployments/monitor/grafana/milvus-dashboard.json)
+   更多详情请参考 [Milvus 官网](https://milvus.io/)
+
+![milvus-monitoring-grafana-dashboard.png](/img/docs/en/milvus-monitoring-grafana-dashboard.png)
+
+## 清理资源
+执行以下命令删除所有创建的资源：
+```bash
+kubectl delete cluster milvus-cluster -n demo
+kubectl delete ns demo
+kubectl delete podmonitor milvus-cluster-pod-monitor -n demo
+```
+
+## 总结
+本教程演示了如何在 KubeBlocks 中使用 Prometheus Operator 为 Milvus 集群建立可观测性方案。通过配置 `PodMonitor`，我们实现了 Prometheus 对 Milvus Exporter 指标的采集，最终在 Grafana 中实现了指标可视化。这套方案为监控 Milvus 数据库的健康状态和性能表现提供了有力支持。

@@ -1,0 +1,188 @@
+---
+description: 了解如何在KubeBlocks上使用全量备份和持续binlog备份实现MySQL集群的时间点恢复（PITR）。
+keywords:
+- MySQL
+- Full Backup
+- PITR
+- KubeBlocks
+sidebar_label: 基于时间点恢复 (PITR)
+sidebar_position: 6
+title: 在KubeBlocks上通过时间点恢复(PITR)从备份还原MySQL集群
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 在 KubeBlocks 上通过时间点恢复(PITR)从备份还原 MySQL 集群
+
+本指南提供了在 KubeBlocks 中从现有全量备份还原 MySQL 集群的分步教程，同时结合连续的 binlog 备份实现时间点恢复（PITR）。
+
+## 前提条件
+在继续之前，请确保满足以下要求：
+- 环境准备：
+  - 已启动并运行一个 Kubernetes 集群。
+  - 已配置 kubectl CLI 工具以与集群通信。
+  - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处的安装说明进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 检查现有备份
+要执行时间点恢复（PITR），需要同时具备完整备份和连续备份。如果尚未配置这些备份，请参考相关文档进行设置。
+
+使用以下命令列出可用备份：
+
+```bash
+kubectl get backup -n demo
+```
+
+预期输出：
+
+```bash
+NAME                                               POLICY                                      METHOD           REPO      STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
+77a788fa-example-mysql-cluster-archive-binlog      example-mysql-cluster-mysql-backup-policy   archive-binlog   s3-repo   Running     2110030                 Delete            2025-03-04T02:28:55Z                          2025-04-03T02:28:55Z
+example-mysql-cluster-xtrabackup-20250305000008    example-mysql-cluster-mysql-backup-policy   xtrabackup       s3-repo   Completed   3102161      18s        Delete            2025-03-05T00:00:11Z   2025-03-05T00:00:29Z   2025-04-04T00:00:29Z
+```
+
+- '77a788fa-example-mysql-cluster-archive-binlog': 持续备份（binlog归档）。
+- 'example-mysql-cluster-xtrabackup-20250305000008': 全量备份。
+
+## 创建恢复集群
+
+通过引用备份的恢复配置创建一个新集群。
+
+应用以下 YAML 配置：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster-restored
+  namespace: demo
+  annotations:
+    kubeblocks.io/restore-from-backup: '{"mysql":{"name":"example-mysql-cluster-xtrabackup-20250305000008","namespace":"demo","volumeRestorePolicy":"Parallel",
+"restoreTime":"2025-03-05T02:00:00Z"}}'
+spec:
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      componentDef: "mysql-8.0"
+      serviceVersion: 8.0.35
+      disableExporter: false
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+## 通过 Ops API 执行恢复
+
+或者，使用 Ops API 发起恢复流程：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-cluster-restore
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster-restore
+  force: false
+  restore:
+    backupName: example-mysql-cluster-xtrabackup-20250305000008
+    backupNamespace: demo
+    restorePointInTime: 2025-03-05T02:00:00Z
+  type: Restore
+EOF
+```
+
+### 监控恢复进度
+
+#### 步骤1：观察Pod初始化
+
+```bash
+kubectl get pods -n demo -w
+```
+
+预期工作流程：
+
+1. 数据准备 Pods：
+
+```bash
+restore-preparedata-XXXXX-<hash>   0/1     Init:0/1   0          6s
+restore-preparedata-XXXXX-<hash>   1/1     Running    0          12s
+restore-preparedata-XXXXX-<hash>   0/1     Completed 0          20s
+```
+
+这些 Pod 会将备份数据复制到持久卷（PVCs）中。
+
+
+2. MySQL 集群 Pods：
+
+```bash
+example-mysql-cluster-restored-mysql-0     0/4     Pending        0          0s
+example-mysql-cluster-restored-mysql-0     4/4     Running        0          20s
+```
+
+恢复完成后，MySQL集群的Pod会使用恢复的数据进行初始化并启动MySQL服务。
+
+#### 步骤2：验证集群状态
+检查已恢复集群的状态：
+
+```bash
+kubectl get cluster example-mysql-cluster-restored -n demo
+```
+
+成功输出：
+
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster-restored                        Delete               Running   97s
+```
+
+
+
+
+## 清理
+要删除所有已创建的资源，请连同其命名空间一起删除 MySQL 集群：
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete cluster example-mysql-cluster-restored -n demo
+kubectl delete ns demo
+```
+
+
+
+
+## 总结
+本指南演示了如何在 KubeBlocks 中通过完整备份和持续的 binlog 备份实现 MySQL 集群的时间点恢复（PITR）。关键步骤包括：
+- 验证可用备份
+- 提取加密的系统账户凭证
+- 创建带有恢复配置的新 MySQL 集群
+- 监控恢复过程
+
+通过此方法，您可以将 MySQL 集群恢复到特定时间点，确保数据丢失最小化并保持业务连续性。
+

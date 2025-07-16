@@ -1,0 +1,377 @@
+---
+description: 了解如何使用KubeBlocks部署MySQL半同步复制集群。本指南涵盖配置、验证、故障转移测试及超时设置等内容。
+keywords:
+- KubeBlocks
+- MySQL
+- Semi-Synchronous Replication
+- Kubernetes
+- High Availability
+sidebar_label: MySQL 半同步集群
+sidebar_position: 1
+title: 使用KubeBlocks部署MySQL半同步集群
+---
+# 使用 KubeBlocks 部署 MySQL 半同步集群
+
+**半同步复制** 通过要求主节点在提交事务前至少等待一个副本节点的确认，从而提高了主节点与副本节点之间的数据一致性。本指南将引导您完成使用 KubeBlocks 设置 MySQL 半同步复制集群的过程。
+
+## 前提条件
+
+在继续之前，请确保满足以下要求：
+- 环境准备：
+  - 已启动并运行一个 Kubernetes 集群。
+  - 已配置 kubectl CLI 工具以与集群通信。
+  - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处提供的安装说明进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 部署 MySQL 半同步集群
+
+KubeBlocks 采用声明式方法管理 MySQL 集群。以下是一个配置示例，用于部署包含 2 个节点（1 个主节点，1 个副本节点）的半同步模式 MySQL 集群。
+
+应用以下 YAML 配置：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      env:
+        - name: SEMI_SYNC_TIMEOUT
+          value: "3000"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+**关键配置详情**：
+- `clusterDef: mysql`：指定集群的 ClusterDefinition CR。ClusterDefinition 'mysql' 包含多种拓扑结构，例如 'semisync'、'semisync-proxysql'、'mgr'、'mgr-proxysql'、'orc'、'orc-proxysql'。
+- `topology: semisync`：配置集群使用主从角色的半同步复制模式。
+- `componentSpecs`：定义集群中的组件：
+  - 组件 'mysql'：
+    - `serviceVersion: 8.0.35`：指定要部署的 MySQL 服务版本，确保集群使用 MySQL 8.0.35 版本。
+    - `replicas: 2`：部署 2 个 MySQL 实例（1 个主节点，1 个从节点）。
+    - 环境变量（`env`）：配置 'SEMI_SYNC_TIMEOUT' 为 3000 毫秒（3 秒）。该参数决定主节点在回退到异步复制前等待从节点确认的超时时间，默认值为 10000 毫秒（10 秒）。
+
+## 验证部署
+
+### 检查集群状态
+集群部署完成后，检查其状态：
+
+```bash
+kubectl get cluster example-mysql-cluster  -n demo -w
+```
+
+预期输出：
+
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Creating   11s
+example-mysql-cluster   mysql                Delete               Running   35s
+```
+
+### 集群详细信息
+要获取集群的详细信息：
+
+```bash
+kbcli cluster describe example-mysql-cluster -n demo
+```
+
+预期输出：
+
+```bash
+Name: example-mysql-cluster	 Created Time: Dec 24,2024 09:06 UTC+0800
+NAMESPACE   CLUSTER-DEFINITION   VERSION   STATUS    TERMINATION-POLICY
+default                                    Running   Delete
+
+Endpoints:
+COMPONENT   MODE        INTERNAL                                                      EXTERNAL
+mysql       ReadWrite   example-mysql-cluster-mysql.default.svc.cluster.local:3306   <none>
+
+Topology:
+COMPONENT   INSTANCE                         ROLE        STATUS    AZ                NODE                                                       CREATED-TIME
+mysql       example-mysql-cluster-mysql-0   primary     Running   ap-southeast-1a   ip-10-0-1-93.ap-southeast-1.compute.internal/10.0.1.93     Dec 24,2024 09:09 UTC+0800
+mysql       example-mysql-cluster-mysql-1   secondary   Running   ap-southeast-1b   ip-10-0-2-253.ap-southeast-1.compute.internal/10.0.2.253   Dec 24,2024 09:09 UTC+0800
+
+Resources Allocation:
+COMPONENT   DEDICATED   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+mysql       false       500m / 500m          512Mi / 512Mi           data:20Gi      <none>
+
+Images:
+COMPONENT   TYPE   IMAGE
+mysql              docker.io/apecloud/mysql:8.0.35
+
+Data Protection:
+BACKUP-REPO   AUTO-BACKUP   BACKUP-SCHEDULE   BACKUP-METHOD   BACKUP-RETENTION   RECOVERABLE-TIME
+
+Show cluster events: kbcli cluster list-events -n default example-mysql-cluster
+```
+
+### 验证组件状态
+
+```bash
+kubectl get component example-mysql-cluster-mysql -n demo
+```
+
+预期输出：
+
+```bash
+NAME                          DEFINITION                SERVICE-VERSION   STATUS    AGE
+example-mysql-cluster-mysql   mysql-8.0-1.0.0           8.0.35            Running   2m28s
+```
+
+
+
+
+## 连接到 MySQL 集群
+
+KubeBlocks 会自动创建一个包含 MySQL root 凭据的 Secret。通过以下命令获取凭据：
+
+```bash
+kubectl get secrets -n demo  example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
+root
+
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+z475N4c6ib
+```
+
+### 连接到主实例
+要连接到集群的主节点，请使用 MySQL 客户端：
+
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pz475N4c6ib
+```
+
+
+
+
+## 测试半同步复制
+
+在本节中，我们将通过验证 Pod 角色并检查其复制状态来测试 MySQL 集群的半同步复制功能。
+
+### 1. 验证 Pod 角色
+通过检查 Pod 角色来识别主节点和副本实例：
+
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+```
+
+预期输出：
+
+```bash
+example-mysql-cluster-mysql-0	primary
+example-mysql-cluster-mysql-1	secondary
+```
+
+### 2. 检查复制状态
+#### 主节点
+运行以下命令检查主节点上的半同步复制状态：
+
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-0.example-mysql-cluster-mysql-headless.demo.svc.cluster.local -uroot -pz475N4c6ib -e "show status like 'Rpl%_status';"
+```
+
+示例输出：
+
+```sql
++------------------------------+-------+
+| Variable_name                | Value |
++------------------------------+-------+
+| Rpl_semi_sync_replica_status | OFF   |
+| Rpl_semi_sync_source_status  | ON    |
++------------------------------+-------+
+```
+
+说明：
+- "Rpl_semi_sync_source_status: ON"：表示主实例已配置为半同步复制的主节点（master）。
+- "Rpl_semi_sync_replica_status: OFF"：表示主实例在当前复制架构中不作为从节点运行。
+
+#### 从节点
+检查从节点上的半同步复制状态：
+
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-1.example-mysql-cluster-mysql-headless.demo.svc.cluster.local -uroot -pz475N4c6ib -e "show status like 'Rpl%_status';"
+```
+
+示例输出：
+
+```sql
++------------------------------+-------+
+| Variable_name                | Value |
++------------------------------+-------+
+| Rpl_semi_sync_replica_status | ON    |
+| Rpl_semi_sync_source_status  | OFF   |
++------------------------------+-------+
+```
+
+说明：
+- "Rpl_semi_sync_replica_status: ON"：表示该从实例正在作为半同步副本运行，并持续接收并确认来自主实例的变更。
+- "Rpl_semi_sync_source_status: OFF"：表示该从实例在复制架构中不作为源（或主）节点运行。
+
+## 检查与配置超时设置
+
+以下是一个检查 'rpl_semi_sync_source_timeout' 变量当前值的示例命令。
+该值通常通过 'SEMI_SYNC_TIMEOUT' 环境变量设置。
+如果未显式设置 'SEMI_SYNC_TIMEOUT' 环境变量，则 'rpl_semi_sync_source_timeout' 的默认值为 10000 毫秒（10 秒）。
+
+### 检查当前超时值
+
+在以下示例中，可以看到该值已被配置为 3000 毫秒：
+
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pz475N4c6ib -e "show variables like 'rpl_semi_sync_source_timeout';"
+```
+
+预期输出：
+
+```sql
++------------------------------+-------+
+| Variable_name                | Value |
++------------------------------+-------+
+| rpl_semi_sync_source_timeout | 3000  |
++------------------------------+-------+
+```
+
+### 更新超时时间
+要更新超时时间，请修改集群配置并重新应用 YAML 文件。例如：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      env:
+        - name: SEMI_SYNC_TIMEOUT
+          value: "1000"   # Set timeout to 1000 ms
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+注意：重新应用 YAML 文件将重启 Pod，因为此修改需要更新容器的环境变量。
+
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pz475N4c6ib -e "show variables like 'rpl_semi_sync_source_timeout';"
+```
+
+示例输出：
+
+```sql
++------------------------------+-------+
+| Variable_name                | Value |
++------------------------------+-------+
+| rpl_semi_sync_source_timeout | 1000  |
++------------------------------+-------+
+```
+
+
+
+
+## 故障转移测试
+### 触发故障转移
+要测试故障转移，请删除主节点 Pod：
+
+```bash
+kubectl delete pod example-mysql-cluster-mysql-0 -n demo
+pod "example-mysql-cluster-mysql-0" deleted
+```
+
+### 验证更新后的角色
+这将触发故障转移，将副本节点提升为主节点。验证更新后的角色：
+
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+```
+
+预期输出：
+
+```
+example-mysql-cluster-mysql-0
+example-mysql-cluster-mysql-1	primary
+```
+
+当被删除的 Pod 重新创建后，它会作为副本重新加入。
+
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+example-mysql-cluster-mysql-0	secondary
+example-mysql-cluster-mysql-1	primary
+```
+
+
+
+
+## 清理
+要删除本教程中创建的所有资源：
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete ns demo
+```
+
+
+
+
+## 总结
+
+在本指南中，您学习了如何：
+- 使用 KubeBlocks 部署 MySQL 半同步复制集群。
+- 验证集群角色和复制状态。
+- 配置超时设置以优化复制性能。
+- 模拟并验证故障转移场景。
+
+KubeBlocks 简化了 Kubernetes 中 MySQL 集群的管理，通过半同步复制提供了增强的数据一致性和高可用性。

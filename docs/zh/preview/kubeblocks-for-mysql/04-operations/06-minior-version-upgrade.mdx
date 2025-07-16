@@ -1,0 +1,257 @@
+---
+description: 了解如何以最短停机时间部署和升级由KubeBlocks管理的MySQL集群。
+keywords:
+- KubeBlocks
+- MySQL
+- Upgrade
+- Rolling Upgrade
+- Kubernetes
+sidebar_label: 次版本升级
+sidebar_position: 6
+title: 在KubeBlocks中升级MySQL集群的次版本
+---
+# 在 KubeBlocks 中升级 MySQL 集群的次版本
+
+本指南将引导您完成由 KubeBlocks 管理的 MySQL 集群的部署和次版本升级过程，确保升级期间实现最小化停机时间。
+
+为了最大限度减少对数据库可用性的影响，升级过程会优先从副本（从节点实例）开始。待所有副本升级完成后，系统会执行主从切换操作，将其中一个已升级的副本提升为主节点。该切换过程非常迅速，通常可在几百毫秒内完成。切换完成后，系统会对原主节点实例进行升级，从而确保对应用程序的影响降至最低。
+
+## 前提条件
+
+在继续之前，请确保满足以下要求：
+- 环境准备：
+    - 已启动并运行一个 Kubernetes 集群。
+    - 已配置 kubectl CLI 工具以与集群通信。
+    - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处提供的安装说明进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 部署 MySQL 半同步集群
+
+部署一个 2 节点的半同步 MySQL 集群（1 个主节点，1 个从节点）：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+
+
+
+## 验证部署
+监控集群状态直到其转变为 Running 状态：
+
+```bash
+kubectl get cluster example-mysql-cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Creating   8s
+example-mysql-cluster   mysql                Delete               Running    2m41s
+```
+
+当集群状态变为 Running 时，您的 MySQL 集群即可投入使用。
+
+## 列出所有可用的 MySQL 版本
+
+使用以下命令显示当前 KubeBlocks 安装所支持的 MySQL 版本：
+
+```bash
+kubectl get cmpv mysql
+```
+
+预期输出：
+
+```bash
+NAME    VERSIONS                                                                                         STATUS      AGE
+mysql   8.4.2,8.4.1,8.4.0,8.0.39,8.0.38,8.0.37,8.0.36,8.0.35,8.0.34,8.0.33,8.0.32,8.0.31,8.0.30,5.7.44   Available   11d
+```
+
+注意：支持的版本列表可能因您使用的 KubeBlocks 版本而异。
+
+## 升级 MySQL 版本
+
+### 识别当前主从实例
+运行以下命令识别集群实例的角色：
+
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+```
+
+预期输出：
+
+```bash
+example-mysql-cluster-mysql-0	primary
+example-mysql-cluster-mysql-1	secondary
+```
+
+### 应用升级
+要升级 MySQL 版本，需修改 Cluster 资源中的 serviceVersion 字段。本示例中，我们将 MySQL 版本从 8.0.35 升级至 8.0.39：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.39      # Update version from 8.0.35 to 8.0.39
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+### 监控升级过程
+在升级过程中，观察集群 Pod 的变化：
+
+```bash
+kubectl get pods -n demo -w
+```
+
+预期输出：
+
+```bash
+NAME                            READY   STATUS    RESTARTS   AGE
+example-mysql-cluster-mysql-0   4/4     Running   0          97s
+example-mysql-cluster-mysql-1   4/4     Running   0          50s
+example-mysql-cluster-mysql-1   3/4     Running   2 (2s ago)   68s
+example-mysql-cluster-mysql-0   4/4     Running   2 (6s ago)   2m6s
+```
+
+**关键观察：**
+- 副本节点（'example-mysql-cluster-mysql-1'）首先被升级。
+- 执行切换操作，使该副本成为新的主节点。
+- 最后，原主节点（'example-mysql-cluster-mysql-0'）被升级。
+
+升级完成后，角色发生切换：
+
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+```
+
+更新后的角色：
+
+```bash
+example-mysql-cluster-mysql-0	secondary
+example-mysql-cluster-mysql-1	primary
+```
+
+
+
+
+## 验证
+
+### 检查集群状态
+确保集群处于 Running 状态：
+
+```bash
+kubectl get cluster example-mysql-cluster -n demo -w
+```
+
+预期输出：
+
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Running   17m
+```
+
+### 验证 MySQL 版本  
+获取 MySQL root 凭据：
+
+```bash
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+```
+
+预期输出：
+
+```bash
+79vJW1Vg43
+```
+
+连接到升级后的实例并验证 MySQL 版本：
+
+```bash
+kubectl exec -ti -n demo example-mysql-cluster-mysql-1 -- mysql -uroot -p79vJW1Vg43 -e "SELECT VERSION();"
+```
+
+示例输出：
+
+```sql
++-----------+
+| VERSION() |
++-----------+
+| 8.0.39    |
++-----------+
+```
+
+
+
+
+## 概述
+在本指南中，您学习了如何：
+- 使用 KubeBlocks 部署 MySQL 半同步集群。
+- 以最小停机时间执行 MySQL 次版本滚动升级。
+- 验证升级是否成功。
+
+这种滚动升级策略通过先升级副本节点、执行主从切换，再升级原主节点的方式确保高可用性。
+ strategy ensures high availability by upgrading the replicas first, performing a switchover, and then upgrading the original primary instance.

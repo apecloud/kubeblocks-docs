@@ -1,0 +1,330 @@
+---
+description: 了解如何在KubeBlocks中通过负载均衡器（LoadBalancer）及其他服务类型配置和管理RabbitMQ服务，实现内外部访问。
+keywords:
+- KubeBlocks
+- RabbitMQ
+- LoadBalancer
+- External Service
+- Expose
+- Kubernetes
+sidebar_label: 管理RabbitMQ服务
+sidebar_position: 5
+title: 使用KubeBlocks声明式集群API创建与销毁RabbitMQ服务
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# 使用 KubeBlocks 声明式集群 API 管理 RabbitMQ 服务
+
+本指南提供了逐步操作说明，指导如何对外部和内部暴露由 KubeBlocks 管理的 RabbitMQ 服务。您将学习如何：
+- 使用云服务提供商的 LoadBalancer 服务配置外部访问
+- 管理内部服务
+- 在不再需要时正确禁用外部暴露功能
+
+
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+
+
+## 部署 RabbitMQ 集群
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+
+
+## 验证部署
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+
+
+## 查看网络服务
+列出为 RabbitMQ 集群创建的服务：
+```bash
+kubectl get service -l app.kubernetes.io/instance=rabbitmq-cluster -n demo
+```
+
+示例服务输出：
+```bash
+NAME                        TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)              AGE
+rabbitmq-cluster-rabbitmq   ClusterIP   10.96.6.67   <none>        5672/TCP,15672/TCP   33m
+```
+
+## 暴露 RabbitMQ 服务
+
+外部服务地址允许公网访问 RabbitMQ，而内部服务地址将访问限制在用户的 VPC 内。
+
+### 服务类型对比
+
+| 类型 | 使用场景 | 云成本 | 安全性 |
+|------|----------|------------|----------|
+| ClusterIP | 内部服务通信 | 免费 | 最高 |
+| NodePort | 开发测试 | 低 | 中等 |
+| LoadBalancer | 生产环境外部访问 | 高 | 通过安全组管理 |
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  选项1：使用 OpsRequest
+
+  要通过 LoadBalancer 将 RabbitMQ 服务暴露到外部，创建一个 OpsRequest 资源：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: rabbitmq-cluster-expose-enable-ops
+    namespace: demo
+  spec:
+    type: Expose
+    clusterName: rabbitmq-cluster
+    expose:
+    - componentName: rabbitmq
+      services:
+      - name: internet
+        # 决定服务如何暴露。默认为 'ClusterIP'。
+        # 有效选项为 'ClusterIP'、'NodePort' 和 'LoadBalancer'。
+        serviceType: LoadBalancer
+        ports:
+          - name: managment
+            port: 15672
+            targetPort: management
+        # 如果 ServiceType 是 LoadBalancer，则包含云提供商相关参数。
+        # 以下是 AWS EKS 的示例
+        annotations:
+          service.beta.kubernetes.io/aws-load-balancer-type: nlb
+          service.beta.kubernetes.io/aws-load-balancer-internal: "false"  # 或 "true" 表示内部 VPC IP
+      switch: Enable
+  ```
+
+  等待 OpsRequest 完成：
+  ```bash
+  kubectl get ops rabbitmq-cluster-expose-enable-ops -n demo
+  ```
+
+  示例输出：
+  ```bash
+  NAME                                 TYPE     CLUSTER            STATUS    PROGRESS   AGE
+  rabbitmq-cluster-expose-enable-ops   Expose   rabbitmq-cluster   Succeed   1/1        31s
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  选项2：使用 Cluster API
+
+  或者，更新 Cluster 资源中的 `spec.services` 部分以包含 LoadBalancer 服务：
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  metadata:
+    name: rabbitmq-cluster
+    namespace: demo
+  spec:
+    terminationPolicy: Delete
+    clusterDef: rabbitmq
+    # 暴露一个外部服务
+    services:
+      - annotations:
+          service.beta.kubernetes.io/aws-load-balancer-type: nlb  # 使用网络负载均衡器
+          service.beta.kubernetes.io/aws-load-balancer-internal: "false"  # 或 "true" 表示内部 VPC IP
+        componentSelector: rabbitmq
+        name: rabbitmq-internet
+        serviceName: rabbitmq-internet
+        spec:  # 定义 K8s 服务的行为。
+          ipFamilyPolicy: PreferDualStack
+          ports:
+          - name: tcp-rabbitmq
+            # 暴露的端口
+            port: 15672 # 端口 15672 用于 rabbitmq 管理控制台
+            protocol: TCP
+            targetPort: management
+          type: LoadBalancer
+    componentSpecs:
+    ...
+  ```
+  上述 YAML 配置在 services 部分添加了一个新的外部服务。此 LoadBalancer 服务包含 AWS 网络负载均衡器 (NLB) 的注解。
+
+  :::note
+  云提供商注解
+
+  使用 LoadBalancer 服务时，必须包含特定于云提供商的适当注解。以下是不同云提供商的常用注解列表：
+
+  - AWS
+  ```yaml
+  service.beta.kubernetes.io/aws-load-balancer-type: nlb  # 使用网络负载均衡器
+  service.beta.kubernetes.io/aws-load-balancer-internal: "true"  # 使用 "false" 表示面向互联网的 LoadBalancer
+  ```
+
+  - Azure
+  ```yaml
+  service.beta.kubernetes.io/azure-load-balancer-internal: "true" # 使用 "false" 表示面向互联网的 LoadBalancer
+  ```
+
+  - GCP
+  ```yaml
+  networking.gke.io/load-balancer-type: "Internal"  # 将 LoadBalancer 限制为仅内部 VPC 访问。默认情况下，如果未指定，则为面向互联网。
+  cloud.google.com/l4-rbs: "enabled" # 面向互联网的 LoadBalancer 的优化
+  ```
+
+  - 阿里云
+  ```yaml
+  service.beta.kubernetes.io/alibaba-cloud-loadbalancer-address-type: "internet"  # 使用 "intranet" 表示内部面向的 LoadBalancer
+  ```
+  :::
+
+
+  :::note
+  `service.beta.kubernetes.io/aws-load-balancer-internal` 注解控制 LoadBalancer 是内部还是面向互联网的。请注意，此注解在服务创建后无法动态修改。
+  ```yaml
+    service.beta.kubernetes.io/aws-load-balancer-internal: "false"  # 使用 "true" 表示内部 VPC IP
+  ```
+  如果在服务创建后将此注解从 "false" 更改为 "true"，注解可能会在服务对象中更新，但 LoadBalancer 仍将保留其公共 IP。
+
+  要正确修改此行为：
+  - 首先，删除现有的 LoadBalancer 服务。
+  - 使用更新的注解重新创建服务 (`service.beta.kubernetes.io/aws-load-balancer-internal`: "true")。
+  - 等待新的 LoadBalancer 配置正确的内部或外部 IP。
+  :::
+
+
+  使用以下命令等待 Cluster 状态变为 Running：
+  ```bash
+  kubectl get cluster rabbitmq-cluster -n demo -w
+  ```
+  ```
+  NAME            CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+  rabbitmq-cluster   rabbitmq           Delete               Running   18m
+  ```
+  </TabItem>
+
+</Tabs>
+
+### 验证暴露的服务
+检查服务详情以确认 LoadBalancer 服务已创建：
+
+```bash
+kubectl get service -l app.kubernetes.io/instance=rabbitmq-cluster -n demo
+```
+
+示例输出：
+```bash
+NAME                                 TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)              AGE
+rabbitmq-cluster-rabbitmq-internet   LoadBalancer   172.20.60.24   <EXTERNAL-IP> 15672:31243/TCP      1m
+```
+
+## 访问 RabbitMQ 管理控制台
+
+**获取凭证**
+
+KubeBlocks 会自动创建一个包含 RabbitMQ 管理员凭证的 Secret。通过以下命令获取凭证：
+```bash
+NAME=`kubectl get secrets -n demo rabbitmq-cluster-rabbitmq-account-root -o jsonpath='{.data.username}' | base64 -d`
+PASSWD=`kubectl get secrets -n demo rabbitmq-cluster-rabbitmq-account-root -o jsonpath='{.data.password}' | base64 -d`
+```
+
+**访问管理控制台**
+
+使用获取的用户名和密码，通过 `http://<endpoint>:<port>/` 地址登录 RabbitMQ 管理控制台。
+
+## 禁用外部暴露
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  选项一：使用 OpsRequest
+
+  要禁用外部访问，创建一个 OpsRequest：
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: rabbitmq-cluster-expose-disable-ops
+    namespace: demo
+  spec:
+    clusterName: rabbitmq-cluster
+    expose:
+    - componentName: rabbitmq
+      services:
+      - name: internet
+        serviceType: LoadBalancer
+      switch: Disable
+    preConditionDeadlineSeconds: 0
+    type: Expose
+  ```
+
+  等待 OpsRequest 完成：
+  ```bash
+  kubectl get ops rabbitmq-cluster-expose-disable-ops -n demo
+  ```
+  示例输出：
+  ```bash
+  NAME                                  TYPE     CLUSTER            STATUS    PROGRESS   AGE
+  rabbitmq-cluster-expose-disable-ops   Expose   rabbitmq-cluster   Succeed   1/1        24s
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  选项二：使用 Cluster API
+
+  或者，从 Cluster 资源中移除 `spec.services` 字段：
+  ```bash
+  kubectl patch cluster rabbitmq-cluster -n demo --type=json -p='[
+    {
+      "op": "remove",
+      "path": "/spec/services"
+    }
+  ]'
+  ```
+
+  监控集群状态直到变为 Running：
+  ```bash
+  kubectl get cluster rabbitmq-cluster -n demo -w
+  ```
+
+  ```bash
+  NAME               CLUSTER-DEFINITION    TERMINATION-POLICY   STATUS     AGE
+  rabbitmq-cluster   rabbitmq              Delete               Running    44m
+  ```
+  </TabItem>
+</Tabs>
+
+### 验证服务移除
+
+确保 'rabbitmq-cluster-rabbitmq-internet' 服务已被移除：
+
+```bash
+kubectl get service -l app.kubernetes.io/instance=rabbitmq-cluster -n demo
+```
+
+预期结果：'rabbitmq-cluster-rabbitmq-internet' 服务应被移除。
+
+## 清理资源
+要删除所有已创建的资源，请执行以下命令删除RabbitMQ集群及其所在的命名空间：
+```bash
+kubectl delete cluster rabbitmq-cluster -n demo
+kubectl delete ns demo
+```
+
+## 概述
+本指南演示了如何：
+- 使用 KubeBlocks 对外或对内暴露 RabbitMQ 服务
+- 通过云服务商特定注解配置负载均衡器服务
+- 通过 OpsRequest 或直接更新 Cluster API 来管理外部访问，实现服务的启用或禁用
+
+KubeBlocks 为 Kubernetes 环境中的 RabbitMQ 服务管理提供了灵活且简化的解决方案。

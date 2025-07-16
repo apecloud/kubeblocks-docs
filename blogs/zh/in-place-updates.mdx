@@ -1,0 +1,69 @@
+---
+authors:
+  image_url: https://avatars.githubusercontent.com/u/28781141?v=4
+  name: free6om
+  url: https://github.com/free6om
+date: 2024-11-19
+description: 本博客介绍KubeBlocks如何在Kubernetes中实现原地更新。
+image: /img/blogs/thumbnails/blog-in-place-update.png
+slug: in-place-update-in-k8s
+tags:
+- statefulset
+- kubernetes
+- instance
+- instanceset
+- in-place update
+- high availability
+title: 如何在Kubernetes中实现Pod原地更新？
+---
+# 如何在K8s中实现Pod原地更新？
+
+## 为什么需要原地更新？
+
+在早期版本中，如"[下线指定实例](https://kubeblocks.io/blog/take-specified-instances-offline)"所述，KubeBlocks 使用 StatefulSet 作为最终的工作负载类型，继承了其局限性。
+
+StatefulSet 的一个关键缺陷在于其更新机制：对 PodTemplate 的变更会触发所有 Pod 的更新，且采用 Recreate 策略。该过程会删除并重建 Pod，这对于数据库等需要高可用性的系统来说远非理想方案。
+
+为解决此问题，从 v0.9 版本开始，KubeBlocks 用 InstanceSet 替代了 StatefulSet，并引入了原地更新功能。该功能允许 InstanceSet 在实例模板的某些字段更新时，通过原地 Pod 更新或扩展 PVC 存储卷来更新实例，从而显著降低对系统可用性的影响。
+
+## 哪些字段支持原地更新？
+
+KubeBlocks 利用 Kubernetes 原生的 Pod API 实现原地更新功能。支持的字段包括：
+
+- `annotations`
+- `labels`
+- `spec.activeDeadlineSeconds`
+- `spec.initContainers[*].image`
+- `spec.containers[*].image`
+- `spec.tolerations`（仅支持新增 Toleration）
+
+从 Kubernetes v1.27 开始，InPlacePodVerticalScaling 特性支持对 CPU 和内存资源进行原地更新。KubeBlocks 也集成了该特性以进一步支持以下能力：
+
+对于 Kubernetes v1.27 或更高版本，且启用了 InPlacePodVerticalScaling 时，支持的字段如下：
+
+- `spec.containers[*].resources.requests["cpu"]`
+- `spec.containers[*].resources.requests["memory"]`
+- `spec.containers[*].resources.limits["cpu"]`
+- `spec.containers[*].resources.limits["memory"]`
+
+请注意，调整资源后，部分应用可能需要重启才能感知更新后的资源配置。您可以通过 ClusterDefinition 或 ComponentDefinition 中的容器 `restartPolicy` 来管理此行为。
+
+对于 PVC（持久卷声明），KubeBlocks 利用 PVC API 支持存储卷扩容。若扩容失败，PVC 可回退至原始大小。相比之下，StatefulSet 在声明后不允许修改 `VolumeClaimTemplate`。尽管 Kubernetes 计划解决此限制，但预计要到 v1.32 版本之后才会实现。
+
+## 哪些API字段会触发原地更新？
+
+KubeBlocks API（包括`Cluster`、`ClusterDefinition`、`ClusterVersion`、`ComponentDefinition`和`ComponentVersion`）中包含可能直接或间接触发原地更新的字段。这些字段用于渲染实例对象并决定更新行为。
+
+此类字段数量众多，下表提供了简明概览。注意，已弃用和不可变字段未包含在内。
+
+| API |   字段    |   描述   |
+|:-----|:-------|:-----------|
+|Cluster| `annotations`, <p>`labels`, </p><p>`spec.tolerations`, </p><p>`spec.componentSpecs[*].serviceVersion`, </p><p>`spec.componentSpecs[*].tolerations`, </p><p>`spec.componentSpecs[*].resources`, </p><p>`spec.componentSpecs[*].volumeClaimTemplates`, </p><p>`spec.componentSpecs[*].instances[*].annotations`, </p><p>`spec.componentSpecs[*].instances[*].labels`, </p><p>`spec.componentSpecs[*].instances[*].image`, </p><p>`spec.componentSpecs[*].instances[*].tolerations`, </p><p>`spec.componentSpecs[*].instances[*].resources`, </p><p>`spec.componentSpecs[*].instances[*].volumeClaimTemplates`, </p><p>`spec.shardingSpecs[*].template.serviceVersion`, </p><p>`spec.shardingSpecs[*].template.tolerations`, </p><p>`spec.shardingSpecs[*].template.resources`, </p><p>`spec.shardingSpecs[*].template.volumeClaimTemplates`</p> | 资源相关字段指：<p>`requests["cpu"]`,</p><p>`requests["memory"]`,</p><p>`limits["cpu"]`,</p>`limits["memory"]` |
+|   ComponentVersion  | `spec.releases[*].images`   | 是否触发原地更新取决于对应镜像是否发生变更。            |
+| KubeBlocks 内置 |  `annotations`, `labels` |    |
+
+## IgnorePodVerticalScaling 功能开关
+
+对原地资源更新的需求一直很高。在 v1.27 之前的 Kubernetes 版本中，许多 Kubernetes 发行版通过自定义实现提供对 Resources 的原地更新。这些方法在不同发行版中各有差异。
+
+为确保兼容性，KubeBlocks 引入了 IgnorePodVerticalScaling 开关。当启用时，KubeBlocks 会在实例更新期间忽略 Resources 中的 CPU 和内存更新，确保运行中的 Pod 的 Resources 配置保持不变。这有助于保持不同 Kubernetes 发行版之间的一致性。

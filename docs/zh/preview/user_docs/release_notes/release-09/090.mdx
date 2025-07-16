@@ -1,0 +1,126 @@
+---
+description: 版本说明 v0.9.0
+keywords:
+- kubeblocks
+- release notes
+sidebar_position: 10
+title: v0.9.0
+---
+# KubeBlocks 0.9.0 (2024-07-09)
+
+我们非常高兴地宣布 KubeBlocks v0.9.0 版本发布，这标志着我们距离备受期待的 v1.0 正式版又近了一步。该版本带来了多项重大改进和新功能，全面提升了 KubeBlocks 平台的功能性和用户体验。
+
+主要更新亮点包括：
+
+
+## API 亮点
+
+- 在 KubeBlocks v0.9 中，随着对拓扑结构的支持引入，集群构建体验变得更加灵活直观，就像用积木搭建集群一样。ClusterDefinition API 新增了 `topologies` 字段，允许开发者提供具有不同拓扑结构的多种部署模式。数据库用户可以通过 `topology` 字段在创建 Cluster 时选择拓扑结构。例如，Redis 插件提供了三种拓扑：单机模式（Standalone）、主从复制（Replication）和代理模式（Proxy）。单机拓扑仅包含 RedisServer 组件，主从复制拓扑包含 RedisServer 和 Sentinel 组件，而代理拓扑则额外添加了第三个组件（如 Twemproxy）。
+  
+- KubeBlocks 现已支持管理分布式数据库的水平扩展（Reshard）。您可以用一个组件（Component）表示一个水平分片，并通过增减组件来实现该水平分片的扩缩容。这一扩展能力也将应用于 Redis 和 Pika 的分布式部署场景。
+
+- KubeBlocks 现在使用 InstanceSet 替代 StatefulSet 来管理 Pod。InstanceSet 支持指定 Pod 下线及原地更新，在数据库主从架构中还能为主从节点采用不同的 pod 规格（这些特性是 StatefulSet 所不具备的）。
+
+- 开发者现在可以为组件添加更多自定义事件处理器！v0.8 引入的 ComponentDefinition API 包含 `lifeCycleActions` 字段，允许定义各类自定义事件处理器。在此基础上，KubeBlocks v0.9 为插件实现提供了更多处理器类型，包括角色探测（roleprobe）、节点下线（memberLeave）、组件下线前（preTerminate）和组件上线后（postProvision）。事件处理器的扩展增强了 KubeBlocks 的表达能力。例如，preTerminate 和 postProvision 可用于在分布式数据库中执行跨分片数据重平衡（Rebalance），或向 Sentinel、Orchestrator 等第三方高可用管理器发起注册。
+
+## 插件亮点
+
+- KubeBlocks 支持 Redis 集群模式（分片模式）[#5833](https://github.com/apecloud/kubeblocks/issues/5833)  
+  Redis Cluster 除了出色的故障转移能力外，还旨在提供水平写入扩展能力和智能客户端高可用策略。Redis Cluster 将数据分布在多个 Redis 节点上，显著提升了系统容量、性能和可用性。
+
+- KubeBlocks 引入 MySQL 主从复制模式 [#1330](https://github.com/apecloud/kubeblocks/issues/1330)  
+  相比 MGR 集群，MySQL 主从复制拓扑所需资源更少（仅需两个数据库副本），数据复制开销更低。当对服务可用性和数据可靠性没有极端要求时，主从复制拓扑是更具性价比的选择。您可以通过 kbcli 主动切换 MySQL 副本角色，或通过 kubectl 删除指定 Kubernetes pod 触发被动故障转移。若不存在长事务和大表 DDL 操作，故障转移通常可在 30 秒内完成。
+
+## 变更内容
+
+### 新功能
+
+**KubeBlocks**
+- ClusterDefinition API
+  - 支持拓扑API，允许开发者自定义多种拓扑结构。 [#6582](https://github.com/apecloud/kubeblocks/pull/6582)
+- Cluster API
+  - 支持ShardingSpec API。 [#6437](https://github.com/apecloud/kubeblocks/pull/6437)
+  - 支持分片扩缩容。 [#6774](https://github.com/apecloud/kubeblocks/pull/6774)
+- ComponentDefinition API
+  - lifecycleActions API支持用户自定义操作动作，包括角色探测(roleprobe)、成员离开(memberLeave)、终止前(preTerminate)、供应后(postProvision)。 [#6037](https://github.com/apecloud/kubeblocks/pull/6037) [#6582](https://github.com/apecloud/kubeblocks/pull/6582) [#6720](https://github.com/apecloud/kubeblocks/pull/6720) [#6774](https://github.com/apecloud/kubeblocks/pull/6774)
+  - 新增Vars API用于引用实例相关的动态资源和信息，包括Secret、Service和服务引用。
+    - 支持Vars API。 [#5919](https://github.com/apecloud/kubeblocks/pull/5919)
+    - 支持跨组件Vars引用。 [#7155](https://github.com/apecloud/kubeblocks/pull/7155)
+    - 优化ServiceRef引用机制。 [#7006](https://github.com/apecloud/kubeblocks/pull/7006)
+  - 支持动态配置，在垂直扩缩容或水平扩缩容后重新生成指定变量。 [#6273](https://github.com/apecloud/kubeblocks/issues/6273) [#6690](https://github.com/apecloud/kubeblocks/issues/6690)
+- 组件(Component)
+  - 支持删除组件。 [#6774](https://github.com/apecloud/kubeblocks/pull/6774)
+  - 支持ComponentVersion。 [#6582](https://github.com/apecloud/kubeblocks/pull/6582)
+- InstanceSet API
+  - InstanceSet替代StatefulSet管理Pod。 [#7084](https://github.com/apecloud/kubeblocks/pull/7084)
+  - 支持实例模板(Instance Template)。 [#5799](https://github.com/apecloud/kubeblocks/issues/5799)
+  - 支持指定实例缩容。 [#6958](https://github.com/apecloud/kubeblocks/pull/6958)
+  - 支持原地更新(In-place Update)。 [#7000](https://github.com/apecloud/kubeblocks/pull/7000)
+- OpsRequest API
+  - 支持重建故障备份实例。 [#6872](https://github.com/apecloud/kubeblocks/pull/6872)
+  - 支持通过force标志控制并发操作。 [#6828](https://github.com/apecloud/kubeblocks/pull/6828)
+  - 支持自定义多任务顺序执行。 [#6735](https://github.com/apecloud/kubeblocks/pull/6735)
+- 支持NodeCountScaler。 [#7258](https://github.com/apecloud/kubeblocks/pull/7258)
+- 支持时间点恢复(PITR)。 [#6779](https://github.com/apecloud/kubeblocks/pull/6779)
+- 支持跨命名空间恢复。 [#6778](https://github.com/apecloud/kubeblocks/pull/6778)
+
+**kbcli**
+- 支持PostgreSQL时间点恢复。 [#329](https://github.com/apecloud/kbcli/pull/329)
+- cluster命令新增rebuild-instance子命令用于重建实例。 [#285](https://github.com/apecloud/kbcli/pull/295)
+- cluster create子命令支持elasticsearch。 [#389](https://github.com/apecloud/kbcli/pull/389)
+- 支持在创建备份仓库时指定路径前缀。 [#294](https://github.com/apecloud/kbcli/pull/294)
+
+**插件(Addons)**
+*Redis*
+- 支持官方Redis Cluster拓扑结构。 [#301](https://github.com/apecloud/kubeblocks-addons/pull/301)
+- 增强Redis功能与稳定性：
+  - 适配ComponentDefinition、ComponentVersion等新API，支持多种拓扑形态。 [#501](https://github.com/apecloud/kubeblocks-addons/pull/501)
+  - 优化Redis Replication Cluster初始化逻辑，移除对DownwardAPI的依赖。 [#462](https://github.com/apecloud/kubeblocks-addons/pull/462) [#616](https://github.com/apecloud/kubeblocks-addons/pull/616)
+  - 支持Redis v7.2.4。 [#571](https://github.com/apecloud/kubeblocks-addons/pull/571)
+- Redis分片集群支持备份与恢复。 [#442](https://github.com/apecloud/kubeblocks-addons/pull/442)
+*MySQL*
+- 新增开源组件Orchestrator Addon用于管理MySQL。 [#625](https://github.com/apecloud/kubeblocks-addons/pull/625) [#567](https://github.com/apecloud/kubeblocks-addons/pull/567)
+*PostgreSQL*
+- 支持PostgreSQL时间点恢复(PITR)。 [#361](https://github.com/apecloud/kubeblocks-addons/pull/361)
+- 支持PostgreSQL v15.7。 [#361](https://github.com/apecloud/kubeblocks-addons/pull/361)
+*Qdrant*
+- Qdrant分片集群支持备份与恢复。 [#442](https://github.com/apecloud/kubeblocks-addons/pull/442)
+*MogDB*
+- 支持v5.0.5版本MogDB复制集群的创建、扩缩容、备份和切换。 [#343](https://github.com/apecloud/kubeblocks-addons/pull/343) [#350](https://github.com/apecloud/kubeblocks-addons/pull/350)
+*ElasticSearch*
+- 支持Elasticsearch v7.7.1、v7.10.1和v8.8.2版本。 [#767](https://github.com/apecloud/kubeblocks-addons/pull/767)
+*Pulsar*
+- 支持v3.0.2版本。 [#340](https://github.com/apecloud/kubeblocks-addons/pull/40)
+- 支持NodePort。 [#358](https://github.com/apecloud/kubeblocks-addons/pull/358)
+*VictoriaMetrics
+
+## 版本 0.9 的 API 弃用及其他变更说明
+
+- **ConfigConstraint API** 进入稳定阶段，从 v1alpha1 升级至 v1beta1。
+- **StorageProvider** 的组别变更，从 `storage.kubeblocks.io` 迁移至 `dataprotection.kubeblocks.io`。
+- **ClusterVersion v1alpha1 CRD** 将在版本 1.0 中移除。
+- **ComponentClassDefinition v1alpha1 CRD** 将在版本 1.0 中移除。
+- **ComponentResourceConstraint v1alpha1 CRD** 将在版本 1.0 中移除。
+- **ClusterDefinition API**  
+  - `type`、`componentDefs`、`connectionCredential` 字段将在版本 1.0 中移除。
+- **Cluster API**  
+  - **调度相关**：`tenancy` 和 `availabilityPolicy` 字段将在版本 1.0 中移除。  
+  - **API 简化**：`replicas`、`resources`、`storage` 和 `network` 字段将在版本 1.0 中移除。  
+- **ComponentDefinition API**  
+  - `switchPolicy` 字段将在版本 1.0 中移除，相同功能可通过 `componentDefinition.spec.lifecycleActions.switchover` API 实现。  
+- **ServiceRef API**  
+  - `Cluster` 字段将在版本 1.0 中移除，相同功能可通过 `serviceRef.clusterServiceSelector` 实现。  
+
+此外，所有引用上述 API 的字段均被标记为**弃用**，并将在版本 1.0 中移除：  
+- `clusterVersionRef`  
+- `componentDefRef`  
+- `classDefRef`  
+
+KubeBlocks 版本 0.9 仍保持对已弃用 API 的兼容性。  
+
+### 已弃用功能  
+**kbcli 弃用功能**  
+- 移除了 `bench`、`fault` 和 `migration` 子命令以精简功能。
+
+## 升级至 v0.9 版本
+请参阅 [升级至 KubeBlocks v0.9](../upgrade/upgrade-to-0_9_0) 文档。

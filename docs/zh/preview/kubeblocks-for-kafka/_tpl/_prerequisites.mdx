@@ -1,0 +1,11 @@
+在继续操作之前，请确保满足以下条件：
+- 环境准备：
+    - Kubernetes 集群已启动并正常运行。
+    - 已配置 kubectl CLI 工具与集群通信。
+    - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处提供的安装指南进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```

@@ -1,0 +1,176 @@
+---
+description: 了解如何使用KubeBlocks部署MySQL集群，并配置在S3存储库中保留的自动化定时备份。
+keywords:
+- MySQL
+- Backup
+- KubeBlocks
+- Scheduled Backup
+- Kubernetes
+sidebar_label: 定时备份
+sidebar_position: 3
+title: 在KubeBlocks中设置带定时备份的MySQL集群
+---
+# 在 KubeBlocks 中设置带定时备份的 MySQL 集群
+
+本指南演示如何使用 KubeBlocks 部署 MySQL 集群，并配置带保留策略的 S3 存储库定时备份。
+
+## 前提条件
+
+在继续之前，请确保满足以下条件：
+- 环境设置：
+    - 已启动并运行一个 Kubernetes 集群。
+    - 已配置 kubectl CLI 工具以与集群通信。
+    - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处的安装说明进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 部署 MySQL 半同步集群
+
+KubeBlocks 采用声明式方式管理 MySQL 集群。以下是一个配置示例，用于部署包含 2 个节点（1 个主节点，1 个副本节点）的半同步模式 MySQL 集群，并配置定时备份。
+
+集群配置
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: WipeOut
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+  backup:
+    enabled: true
+    retentionPeriod: 30d
+    method: xtrabackup
+    cronExpression: '0 0 * * *'
+    repoName: s3-repo
+EOF
+```
+
+**关键字段说明**
+- `terminationPolicy: WipeOut`:
+  - 当设置为'WipeOut'时，删除集群会同时删除所有关联数据（包括备份）。
+  - 生产环境建议使用`terminationPolicy: Delete`，该策略会在集群删除后保留备份数据。
+- `backup.enabled: true`: 启用集群的定时备份功能。
+- `method: xtrabackup`: 指定使用的备份工具（例如Percona XtraBackup）。
+- `cronExpression: '0 0 * * *'`: 配置备份计划为每天UTC时间午夜执行。
+- `retentionPeriod: 30d`: 备份保留30天。
+- `repoName: s3-repo`: 指定用于存储备份的S3仓库。
+
+## 验证部署
+
+监控集群状态直到其转为 Running 状态：
+
+```bash
+kubectl get cluster example-mysql-cluster -n demo
+```
+
+示例输出：
+
+```bash
+NAME                             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Running   38s
+```
+
+当状态显示为 Running 时，表示 MySQL 集群已成功部署。
+
+## 检查 BackupSchedule 资源
+
+当启用定时备份功能时，KubeBlocks 会自动创建一个 BackupSchedule 资源。使用以下命令验证配置：
+
+
+
+```bash
+kubectl get backupschedule example-mysql-cluster-mysql-backup-schedule  -n demo -oyaml
+```
+
+示例输出：
+
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: BackupSchedule
+...
+spec:
+  backupPolicyName: example-mysql-cluster-mysql-backup-policy
+  schedules:
+    - backupMethod: xtrabackup
+      cronExpression: 0 0 * * *
+      enabled: true
+      name: xtrabackup
+      retentionPeriod: 30d
+```
+
+这确认了 BackupSchedule 资源已正确配置保留周期和 cron 调度计划。
+
+## 验证 S3 存储库中的备份
+
+当定时备份任务执行完成后，使用以下命令在配置的 S3 存储桶中验证备份文件：
+
+```bash
+TZ=":UTC" aws s3 ls s3://kubeblocks-backup-repo/ --recursive
+```
+
+示例输出：
+
+```bash
+2025-02-06 00:00:52    3087203 demo/example-mysql-cluster-5f46be4f-c9ac-414e-9d66-2dfe0a281b83/mysql/example-mysql-cluster-xtrabackup-20250206000001/example-mysql-cluster-xtrabackup-20250206000001.xbstream.zst
+2025-02-06 00:01:03       5348 demo/example-mysql-cluster-5f46be4f-c9ac-414e-9d66-2dfe0a281b83/mysql/example-mysql-cluster-xtrabackup-20250206000001/kubeblocks-backup.json
+```
+
+**备份文件**：
+- 压缩备份数据：'example-mysql-cluster-xtrabackup-20250206000001.xbstream.zst'
+- 备份元数据：'kubeblocks-backup.json'
+
+
+
+## 清理
+要删除所有已创建的资源，请连同其命名空间一起删除 MySQL 集群：
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete ns demo
+```
+
+
+
+
+
+## 概述
+
+在本指南中：
+- 备份按照 `backup` 配置中 `cronExpression` 字段的定义，于 UTC 时间午夜（2025-02-06 00:00:52）执行。
+- 备份文件已成功存储到指定的 S3 存储库中，包括：
+  - 压缩的备份数据文件（'example-mysql-cluster-xtrabackup-20250206000001.xbstream.zst'）。
+  - 包含备份相关信息的元数据文件（'kubeblocks-backup.json'）。
+
+通过遵循本指南，您可以实现 MySQL 集群的定期自动备份，确保数据的可用性和恢复选项。

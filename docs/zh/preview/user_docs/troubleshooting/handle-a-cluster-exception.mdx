@@ -1,0 +1,197 @@
+---
+description: 如何处理集群中的异常
+keywords:
+- cluster exception
+sidebar_label: 常见问题
+sidebar_position: 1
+title: 常见问题
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 常见问题解答
+
+### 创建集群时KubeBlocks生成的K8s资源列表
+
+获取KubeBlocks为指定集群创建的所有关联资源列表：
+
+```bash
+kubectl get cmp,its,po -l app.kubernetes.io/instance=<CLUSTER_NAME> -n demo # 集群和工作负载
+kubectl get backuppolicy,backupschedule,backup -l app.kubernetes.io/instance=<CLUSTER_NAME> -n demo # 数据保护资源
+kubectl get componentparameter,parameter -l app.kubernetes.io/instance=<CLUSTER_NAME> -n demo # 配置资源
+kubectl get opsrequest -l app.kubernetes.io/instance=<CLUSTER_NAME> -n demo # 运维请求资源
+kubectl get svc,secret,cm,pvc -l app.kubernetes.io/instance=<CLUSTER_NAME> -n demo # K8s原生资源
+```
+
+故障排查时：
+
+1. 描述资源状态（如Cluster、Component等）
+```bash
+kubectl describe TYPE NAME
+```
+
+2. 检查数据库实例日志
+```bash
+kubectl logs <podName> -c <containerName>
+```
+
+3. 检查KubeBlocks日志
+```bash
+kubectl -n kb-system logs deployments/kubeblocks -f
+```
+
+### 如何获取各备份方法的详细信息
+
+每个备份方法的细节定义在KubeBlocks的`ActionSet`中。
+
+例如获取PostgreSQL中名为`wal-g-archive`的备份方法对应的`ActionSet`：
+
+```bash
+kubectl -n demo get bp pg-cluster-postgresql-backup-policy -oyaml | yq '.spec.backupMethods[] | select(.name=="wal-g-archive") | .actionSetName'
+```
+
+ActionSet定义了：
+- 备份类型
+- 备份和恢复流程
+- 流程中使用的环境变量
+
+通过查看每个ActionSet的细节可以了解具体的备份和恢复执行方式。
+
+### 如何检查兼容版本
+
+版本及其兼容性规则内置于KubeBlocks的`ComponentVersion` CR中。
+查看兼容版本列表：
+
+```bash
+kubectl get cmpv postgresql -ojson | jq '.spec.compatibilityRules'
+```
+
+<details open>
+
+<summary>示例输出</summary>
+
+```json
+[
+  {
+    "compDefs": [
+      "postgresql-12-"
+    ],
+    "releases": [
+      "12.14.0",
+      "12.14.1",
+      "12.15.0"
+    ]
+  },
+  {
+    "compDefs": [
+      "postgresql-14-"
+    ],
+    "releases": [
+      "14.7.2",
+      "14.8.0"
+    ]
+  }
+]
+```
+
+</details>
+
+版本按组件定义分组，每个组包含兼容的版本列表。
+此示例显示可以从`12.14.0`升级到`12.14.1`或`12.15.0`，以及从`14.7.2`升级到`14.8.0`。
+但不能从`12.14.0`直接升级到`14.8.0`。
+
+### ComponentDefinition状态显示不可用
+
+如果修改了ComponentDefinition，其状态可能变为`Unavailable`。
+KubeBlocks将ComponentDefinition设为`Unavailable`以防止变更影响现有集群。
+
+通过describe命令可以看到如下信息：
+
+```text
+Status:
+  Message:              不可变字段不允许更新
+  Observed Generation:  3
+  Phase:                Unavailable
+```
+
+如果是预期变更，可以通过以下命令添加注解：
+
+```bash
+kubectl annotate componentdefinition \<COMPONENT_DEFINITION_NAME\> apps.kubeblocks.io/skip-immutable-check\=true
+```
+
+### 在K8s 1.23及以下版本安装KubeBlocks失败
+
+使用K8s 1.23及以下版本时可能遇到以下错误：
+
+```bash
+unknown field "x-kubernetes-validations" .... 如需忽略此错误，请使用--validate\=false关闭验证
+```
+
+这是因为K8s 1.23及以下版本不支持`x-kubernetes-validations`字段。
+
+解决方案：
+
+```bash
+kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/v1.0.0/kubeblocks_crds.yaml --validate\=false
+```
+
+### 如何取消正在执行的运维请求
+
+KubeBlocks支持取消满足以下条件的运维请求：
+- 处于`Running`状态
+- 类型为`VerticalScaling`或`HorizontalScaling`
+
+取消命令：
+
+```bash
+kubectl patch opsrequest <OPSREQUEST_NAME> -p '{"spec":{"cancel":true}}' --type=merge
+```
+
+### 集群/组件卡在`Updating`状态
+
+排查步骤：
+1. 检查所有Pod是否处于`Running`状态
+2. 检查Pod日志是否有错误
+3. 检查各Pod是否具有预期角色（如需）：
+```bash
+kubectl get po <POD_NAME> -L kubeblocks.io/role
+```
+4. 对比Pod配置中的容器镜像与实际运行镜像是否一致：
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name:
+spec:
+  containers:
+  - image: repo/image:tag  # <==== 配置中的镜像
+    name: c1
+status:
+  containerStatuses:
+    containerID: containerd://123456
+    image: repo/image:tag # <====== 实际运行的镜像
+    imageID: repo/image:tag@sha256:123456
+    name: c1
+```
+若不一致，请检查节点上是否存在多个相同IMAGE ID但不同TAG的镜像。如有，请清理节点镜像后重建集群。
+
+### 集群卡在`Deleting`状态且日志报错"has no pods to running the pre-terminate action"
+
+删除集群时可能出现此情况，KubeBlocks日志中会显示：
+
+```bash
+kubectl -n kb-system logs deployments/kubeblocks -f
+```
+错误信息：
+```bash
+> INFO	build error: has no pods to running the pre-terminate action
+```
+
+这是因为KubeBlocks会执行`ComponentDefinition`中定义的`pre-terminate`生命周期动作。当没有Pod可执行该动作时，集群会一直处于删除状态。
+
+解决方案（跳过pre-terminate动作）：
+```bash
+kubectl annotate component <COMPONENT_NAME> apps.kubeblocks.io/skip-pre-terminate-action=true
+```
+该问题通常发生在集群创建失败（如镜像拉取失败/资源不足等）导致没有Pod生成的情况下。

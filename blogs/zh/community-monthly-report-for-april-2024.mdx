@@ -1,0 +1,73 @@
+---
+date: 2024-05-08
+description: OSPP 2024，即将发布的v0.9.0版本，了解KubeBlocks社区的最新动态。
+image: /img/blogs/thumbnails/blog-2024-04-monthly-report.png
+slug: Community-Monthly-Report-for-April-2024
+tags:
+- Monthly Report
+- v0.9.0
+- Community
+title: 2024年4月社区月度报告
+---
+# 2024年4月社区月报
+
+## 概述
+
+4月，KubeBlocks持续推进v0.9.0版本的开发工作。新版本预计将于5月发布，敬请期待 🌟。
+
+在过去的一个月里，社区参与了6场线下活动，合并了157个PR，解决了133个issue，共有27位开发者参与贡献。更令人振奋的是，KubeBlocks和WeScale已宣布参与2024年度"开源之夏"（OSPP）活动，项目现已开放学生报名通道。详情请参阅：
+- [KubeBlocks社区主页](https://summer-ospp.ac.cn/org/orgdetail/833ca537-91a2-44a8-9965-5eee8f34aceb?lang=en)
+- [WeScale社区主页](https://summer-ospp.ac.cn/org/orgdetail/5d8efb0a-7f0d-4705-b253-00bb162ef507?lang=en)
+
+截至目前，KubeBlocks已收获1.7k星标。感谢大家的支持。
+
+## 重点更新
+
+- 支持将备份CR保存至备份仓库，允许用户使用保存的文件手动恢复集群 (#7002)
+- 支持ServiceRef引用新的API对象，实现与ConnCredential的解耦 (#7006)
+- RSM支持Pod原地更新：新增Kubernetes版本获取能力，改进Pod模板版本生成算法，并支持IgnorePodVerticalScaling开关 (#7000)
+- 支持集群RuntimeClassName配置 (#7001)
+- 支持指定实例缩容，适用于节点故障、数据损坏或实例不可用等场景 (#6958)
+- 在集群API中支持可覆盖的组件服务 (#6934)
+
+## 问题修复
+
+- 修复从v0.8.2升级到v0.9后集群始终处于"Deleting"状态的问题 (#6985)
+- 修复垂直扩缩容(vscale)后集群始终处于"Updating"状态的问题 (#6971)
+- 修复v0.9版本中stop/hscale操作请求持续运行的问题 (#6972)
+
+## 新晋贡献者
+
+👏 让我们欢迎
+
+💙 @Chiwency 💙！
+
+很高兴你加入KubeBlocks大家庭。Chiwency在上月成功合并了一个PR。
+
+![2024-04-certificate](/img/blogs/2024-04-certificate.jpg)
+
+## 活动动态
+
+KubeBlocks & WeScale已加入2024开源之夏。快来和我们一起探索技术难题的解决方案！更有丰厚奖金、礼品和证书等你来拿！
+点击下方链接查看详情并联系导师：
+- 基础项目：[KubeBlocks支持etcd插件](https://summer-ospp.ac.cn/org/prodetail/248330234?lang=en&list=pro)
+- 进阶项目：[KubeBlocks支持Redis时间点恢复(PITR)及特定键值恢复](https://summer-ospp.ac.cn/org/prodetail/248330238?lang=en&list=pro)
+- 进阶项目：[基于Wescale实现表级读写一致性优化策略](https://summer-ospp.ac.cn/org/prodetail/245d80005?lang=en&list=pro)
+
+## 新手任务
+
+我们呼吁更多开发者参与KubeBlocks的协同开发。从[good first issues](https://github.com/apecloud/kubeblocks/contribute)开始，期待与您共同打造下一代数据库管理平台！立即认领 👇
+
+- [#7229 [改进] 通过名称指定备份/恢复端口](https://github.com/apecloud/kubeblocks/issues/7229)
+- [#7031 [改进] 文档化API `opsrequest.spec.restoreSpec.restoreTimeStr`](https://github.com/apecloud/kubeblocks/issues/7031)
+
+![2024-04-good-first-issues](/img/blogs/2024-04-good-first-issues.jpg)
+
+相关链接：
+- [新手任务](https://github.com/apecloud/kubeblocks/contribute)
+- [贡献指南](https://github.com/apecloud/kubeblocks/blob/main/docs/CONTRIBUTING.md)
+- [开发手册](https://github.com/apecloud/kubeblocks/blob/main/docs/00%20-%20index.md)
+
+欢迎加入GitHub讨论区或[KubeBlocks Slack群组](https://join.slack.com/t/kubeblocks/shared_invite/zt-29tx52d8n-vli24S6gtD5ODJlNUqLqbQ)！
+
+![2024-04-overview](/img/blogs/2024-04-overview.jpg)

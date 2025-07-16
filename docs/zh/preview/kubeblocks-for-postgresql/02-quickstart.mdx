@@ -1,0 +1,572 @@
+---
+description: 使用KubeBlocks部署和管理PostgreSQL集群的完整指南，涵盖安装、配置及运维最佳实践。
+keywords:
+- Kubernetes
+- PostgreSQL
+- KubeBlocks
+- Helm
+- Cluster Management
+- QuickStart
+sidebar_label: 快速入门
+sidebar_position: 2
+title: PostgreSQL 快速入门
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# PostgreSQL 快速入门
+
+本指南提供了使用 **KubeBlocks PostgreSQL 插件** 部署和管理 PostgreSQL 集群的完整流程，涵盖以下内容：
+- 系统前提条件与插件安装
+- 集群创建与配置
+- 启停操作等运维管理
+- 连接方式与集群监控
+
+## 前提条件
+
+### 系统要求
+
+开始前请确保您的环境满足以下要求：
+
+- 可用的 Kubernetes 集群（推荐 v1.21+ 版本）
+- 已安装并配置好集群访问权限的 `kubectl` v1.21+ 工具
+- 已安装 Helm（[安装指南](https://helm.sh/docs/intro/install/)）
+- 已安装 KubeBlocks（[安装指南](../user_docs/overview/install-kubeblocks)）
+
+### 验证 PostgreSQL 插件
+
+PostgreSQL 插件默认随 KubeBlocks 一同安装。检查其状态：
+
+```bash
+helm list -n kb-system | grep postgresql
+```
+
+<details open>
+<summary>示例输出：</summary>
+
+```bash
+NAME                    NAMESPACE   REVISION    UPDATED                     STATUS      CHART
+kb-addon-postgresql     kb-system   1           2025-05-21                  deployed    postgresql-1.0.0
+```
+</details>
+
+若插件未启用，请选择以下安装方式：
+
+<Tabs>
+
+  <TabItem value="helm" label="helm" default>
+  ```bash
+  # 添加 Helm 仓库
+  helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
+  # 中国大陆用户若 GitHub 访问困难或缓慢，可使用以下镜像仓库：
+  #helm repo add kubeblocks-addons https://jihulab.com/api/v4/projects/150246/packages/helm/stable
+
+  # 更新 Helm 仓库
+  helm repo update
+  # 搜索可用插件版本
+  helm search repo kubeblocks/postgresql --versions
+  # 安装指定版本（将 <VERSION> 替换为您选择的版本号）
+  helm upgrade -i kb-addon-postgresql kubeblocks-addons/postgresql --version <VERSION> -n kb-system
+  ```
+  </TabItem>
+
+  <TabItem value="kbcli" label="kbcli">
+
+  ```bash
+  # 添加索引（kubeblocks 索引默认已添加）
+  kbcli addon index add kubeblocks https://github.com/apecloud/block-index.git
+  # 更新索引
+  kbcli addon index update kubeblocks
+  # 更新所有索引
+  kbcli addon index update --all
+  ```
+
+  搜索并安装插件：
+
+  ```bash
+  # 搜索插件
+  kbcli addon search postgresql
+  # 安装指定版本插件（将 <VERSION> 替换为您选择的版本号）
+  kbcli addon install postgresql --version <VERSION>
+  ```
+  **示例输出：**
+  ```bash
+  ADDON   VERSION         INDEX
+  postgresql   0.9.1           kubeblocks
+  postgresql   0.9.2           kubeblocks
+  postgresql   0.9.3           kubeblocks
+  postgresql   1.0.0           kubeblocks
+  ```
+  启用或禁用插件：
+
+  ```bash
+  # 启用插件
+  kbcli addon enable postgresql
+  # 禁用插件
+  kbcli addon disable postgresql
+  ```
+
+  </TabItem>
+</Tabs>
+
+:::note
+**版本兼容性说明**
+
+请始终确保 PostgreSQL 插件版本与 KubeBlocks 主版本相匹配，以避免兼容性问题。
+
+:::
+
+### 验证支持的 PostgreSQL 版本
+
+**列出可用 PostgreSQL 版本：**
+
+```bash
+kubectl get cmpv postgresql
+```
+<details open>
+<summary>示例输出</summary>
+```text
+NAME         VERSIONS                                              STATUS      AGE
+postgresql   16.4.0,15.7.0,14.8.0,14.7.2,12.15.0,12.14.1,12.14.0   Available   33d
+```
+</details>
+
+**检查 ComponentDefinitions 的版本兼容性**
+
+**步骤 1.** 获取与指定 `ComponentVersion` 关联的 `ComponentDefinition` 列表
+
+```bash
+kubectl get cmpv postgresql -ojson | jq -r '.metadata.annotations."componentversion.kubeblocks.io/compatible-definitions"' | tr ',' '\n'
+```
+
+<details>
+<summary>示例输出</summary>
+```text
+postgresql-12-1.0.0
+postgresql-14-1.0.0
+postgresql-15-1.0.0
+postgresql-16-1.0.0
+```
+</details>
+
+**步骤 2.** 获取与指定 `ComponentDefinition` 兼容的版本列表
+
+```bash
+kubectl get cmpv postgresql -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("postgresql-14"))) | .releases[]'
+```
+
+此命令返回与名为 `postgresql-14` 的 `ComponentDefinition` 兼容的版本：
+
+<details open>
+<summary>示例输出</summary>
+```text
+14.7.2
+14.8.0
+```
+</details>
+
+### 存储配置
+
+PostgreSQL 需要持久化存储。检查可用选项：
+
+```bash
+kubectl get storageclass
+```
+
+推荐存储特性：
+- 最小 20Gi 容量
+- ReadWriteOnce 访问模式
+- 支持存储卷扩容
+- 满足工作负载的性能需求
+
+## 部署 PostgreSQL 集群
+
+使用默认配置部署基础 PostgreSQL 集群：
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/postgresql/cluster.yaml
+```
+
+该操作将创建：
+- 一个 2 副本的 PostgreSQL 集群
+- 默认资源分配（0.5 CPU，0.5Gi 内存）
+- 20Gi 持久化存储
+- 自动主从节点配置
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: pg-cluster
+  namespace: demo
+spec:
+  # 指定删除 Cluster 时的行为策略
+  # 有效选项：[DoNotTerminate, Delete, WipeOut]（KB 0.9 起弃用 `Halt`）
+  # - `DoNotTerminate`：阻止删除 Cluster，确保所有资源保持完整
+  # - `Delete`：在 `Halt` 策略基础上同时移除 PVC，实现彻底清理（包括持久化数据）
+  # - `WipeOut`：激进策略，删除所有 Cluster 资源（包括外部存储中的卷快照和备份）
+  #    该策略会导致数据完全删除，应谨慎使用（建议仅在非生产环境使用以避免不可逆数据丢失）
+  terminationPolicy: Delete
+  # 指定创建 Cluster 时使用的 ClusterDefinition 名称
+  # 注意：请勿修改此字段
+  # 创建 PostgreSQL Cluster 时该值必须为 `postgresql`
+  clusterDef: postgresql
+  # 指定创建 Cluster 时使用的 ClusterTopology 名称
+  # 有效选项：[replication]
+  topology: replication
+  # 定义组成 Cluster 的各个组件的详细配置列表
+  componentSpecs:
+    - name: postgresql
+      # 指定该组件期望部署的服务版本
+      # 有效选项：[12.14.0,12.14.1,12.15.0,14.7.2,14.8.0,15.7.0,16.4.0]
+      serviceVersion: "14.7.2"
+      # 是否在组件的 headless Service 上标注指标导出器信息
+      # 有效选项：[true, false]
+      disableExporter: false
+      # 为组件管理的 Pod/PVC/账户/TLS 密钥/服务添加或覆盖标签
+      labels:
+        # PostgreSQL 的 CMPD 通过环境变量指定 `KUBERNETES_SCOPE_LABEL=apps.kubeblocks.postgres.patroni/scope`
+        # 该标签用于 Patroni 识别 Kubernetes 资源的归属范围（集群）
+        #
+        # 注意：请勿移除此标签
+        # 值必须遵循格式 <cluster.metadata.name>-postgresql
+        # 本例中为 pg-cluster-postgresql
+        # 请将 `pg-cluster` 替换为您的集群名称
+        apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
+      # 按需调整副本数
+      replicas: 2
+      # 指定组件所需的计算资源
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      # 定义组件存储需求的持久卷声明模板列表
+      volumeClaimTemplates:
+        # 引用 componentDefinition.spec.runtime.containers[*].volumeMounts 中定义的挂载卷名称
+        - name: data
+          spec:
+            # 声明所需的 StorageClass 名称
+            # 若未指定，默认使用标注了 `storageclass.kubernetes.io/is-default-class=true` 的 StorageClass
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                # 按需设置存储容量
+                storage: 20Gi
+```
+
+更多 API 字段说明请参阅 [API 参考文档](../user_docs/references/api-reference/cluster)。
+
+### 创建指定版本的 PostgreSQL 集群
+
+在应用配置前，通过设置 `spec.componentSpecs.serviceVersion`（主.次版本）字段可创建特定版本的集群：
+
+<Tabs>
+  <TabItem value="PostgreSQL 12" label="PostgreSQL 12">
+  ```yaml
+    componentSpecs:
+      - name: postgresql
+        serviceVersion: 12.15.0    # 有效选项：[12.15.0,12.14.1,12.14.0]
+  ```
+    </TabItem>
+
+  <TabItem value="PostgreSQL 14" label="PostgreSQL 14" default>
+  ```yaml
+    componentSpecs:
+      - name: postgresql
+        serviceVersion: 14.7.2     # 有效选项：[14.8.0,14.7.2]
+  ```
+  </TabItem>
+
+  <TabItem value="PostgreSQL 15" label="PostgreSQL 15">
+  ```yaml
+    componentSpecs:
+      - name: postgresql
+        serviceVersion: 15.7.0
+  ```
+  </TabItem>
+
+  <TabItem value="PostgreSQL 16" label="PostgreSQL 16">
+  ```yaml
+    componentSpecs:
+      - name: postgresql
+        serviceVersion: 16.4.0
+  ```
+  </TabItem>
+</Tabs>
+
+查看可用的 `ComponentDefinition` 和 `ComponentVersion`：
+
+```bash
+kubectl get cmpd -l app.kubernetes.io/name=postgresql
+```
+
+<details open>
+<summary>示例输出</summary>
+```bash
+NAME                          SERVICE      SERVICE-VERSION   STATUS      AGE
+postgresql-12-1.0.0           postgresql   12.15.0           Available   22d
+postgresql-14-1.0.0           postgresql   14.8.0            Available   22d
+postgresql-15-1.0.0           postgresql   15.7.0            Available   22d
+postgresql-16-1.0.0           postgresql   16.4.0            Available   22d
+```
+</details>
+
+```bash
+kubectl get cmpv -l app.kubernetes.io/name=postgresql
+```
+
+<details open>
+<summary>示例输出</summary>
+```bash
+NAME         VERSIONS                                              STATUS      AGE
+postgresql   16.4.0,15.7.0,14.8.0,14.7.2,12.15.0,12.14.1,12.14.0   Available   22d
+```
+</details>
+
+## 验证集群状态
+
+当部署包含2个副本的PostgreSQL集群时，KubeBlocks会自动配置：
+- 主副本（读写操作）
+- 从副本（只读操作）
+
+通过以下检查确认部署成功：
+1. 集群状态为`Running`（运行中）
+2. 所有Pod均正常运行
+3. 副本角色配置正确
+
+可通过以下任一方式查看状态：
+
+<Tabs>
+<TabItem value='kubectl' label='kubectl' default>
+```bash
+kubectl get cluster pg-cluster -n demo
+NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+pg-cluster   postgresql           Delete               Running   107s
+
+kubectl get pods -l app.kubernetes.io/instance=pg-cluster -n demo
+NAME                    READY   STATUS    RESTARTS   AGE
+pg-cluster-postgresql-0   4/4     Running   0          31m
+pg-cluster-postgresql-1   4/4     Running   0          31m
+```
+</TabItem>
+
+<TabItem value='kbcli' label='kbcli'>
+
+安装`kbcli`后，可查看完整的集群信息：
+
+```bash
+kbcli cluster describe pg-cluster -n demo
+Name: pg-cluster	 Created Time: May 15,2025 14:23 UTC+0800
+NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY      STATUS    TERMINATION-POLICY
+demo        postgresql           replication   Running   Delete
+
+Endpoints:
+COMPONENT    INTERNAL                                                       EXTERNAL
+postgresql   pg-cluster-postgresql-postgresql.demo.svc.cluster.local:5432   <none>
+             pg-cluster-postgresql-postgresql.demo.svc.cluster.local:6432
+
+Topology:
+COMPONENT    SERVICE-VERSION   INSTANCE                  ROLE        STATUS    AZ       NODE                             CREATED-TIME
+postgresql   14.7.2            pg-cluster-postgresql-0   primary     Running   zone-1a   ip-x-y-z    Dec 16,2024 08:37 UTC+0800
+postgresql   14.7.2            pg-cluster-postgresql-1   secondary   Running   zone-1b   ip-x-y-z    Dec 16,2024 08:37 UTC+0800
+
+Resources Allocation:
+COMPONENT    INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+postgresql                       500m / 500m          512Mi / 512Mi           data:20Gi      <STORAGE_CLASS_NAME>
+
+Images:
+COMPONENT    COMPONENT-DEFINITION          IMAGE
+postgresql   postgresql-14-1.0.0           docker.io/apecloud/spilo:14.7.2-pgvector-v0.6.1
+                                           docker.io/bitnami/pgbouncer:1.19.0
+
+Data Protection:
+BACKUP-REPO   AUTO-BACKUP   BACKUP-SCHEDULE   BACKUP-METHOD   BACKUP-RETENTION   RECOVERABLE-TIME
+
+查看集群事件：kbcli cluster list-events -n demo pg-cluster
+```
+
+</TabItem>
+</Tabs>
+
+## 访问 PostgreSQL 集群
+
+KubeBlocks 自动提供以下资源：
+1. 凭证信息存储在 Secret `pg-cluster-postgresql-account-postgres` 中
+2. ClusterIP 服务 `pg-cluster-postgresql-postgresql`
+
+### 获取凭证
+```bash
+# 获取用户名
+NAME=$(kubectl get secret -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.username}' | base64 --decode)
+
+# 获取密码
+PASSWD=$(kubectl get secret -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.password}' | base64 --decode)
+```
+
+### 连接方式
+
+<Tabs>
+<TabItem value="Direct Pod Access" label="直接访问 Pod" default>
+
+直接连接到 Pod：
+```bash
+kubectl exec -ti -n demo pg-cluster-postgresql-0 -- \
+  env PGUSER=${NAME} PGPASSWORD=${PASSWD} \
+  psql -h pg-cluster-postgresql-postgresql
+```
+</TabItem>
+
+<TabItem value="Local Port Forwarding" label="本地端口转发">
+
+1. 转发服务端口：
+    ```bash
+    kubectl port-forward svc/pg-cluster-postgresql-postgresql 5432:5432 -n demo
+    ```
+
+2. 通过本地地址连接：
+    ```bash
+    psql -h 127.0.0.1 -U${NAME} -W
+    ```
+</TabItem>
+</Tabs>
+
+:::note
+**生产环境注意事项**
+
+在生产环境中，应避免使用 `kubectl exec` 和 `port-forward`，建议采用以下方案：
+- 使用 LoadBalancer 或 NodePort 服务实现外部访问
+- 配置网络策略限制访问权限
+- 启用 TLS 加密确保连接安全
+- 使用连接池提升性能
+:::
+
+## 停止 PostgreSQL 集群
+
+停止集群会暂时暂停运行，同时保留所有数据和配置：
+
+**关键影响：**
+- 计算资源（Pod）会被释放
+- 持久化存储（PVC）保持完整
+- 服务定义得以保留
+- 集群配置不会丢失
+- 运行成本降低
+
+<Tabs>
+<TabItem value="OpsRequest" label="OpsRequest API" default>
+```bash
+kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/postgresql/stop.yaml
+```
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-stop
+  namespace: demo
+spec:
+  clusterName: pg-cluster
+  type: Stop
+```
+</TabItem>
+
+<TabItem value="ClusterAPI" label="Cluster API">
+也可以通过设置 `spec.componentSpecs.stop` 为 true 来停止集群：
+
+```bash
+kubectl patch cluster pg-cluster -n demo --type='json' -p='[
+{
+  "op": "add",
+  "path": "/spec/componentSpecs/0/stop",
+  "value": true
+}
+]'
+```
+
+```yaml
+spec:
+  componentSpecs:
+    - name: postgresql
+      stop: true  # 设置为停止组件
+      replicas: 2
+```
+</TabItem>
+</Tabs>
+
+## 启动 PostgreSQL 集群
+
+重启已停止的集群可恢复运行，所有数据与配置均保持不变。
+
+**关键影响：**
+- 计算资源（Pod）会被重新创建
+- 服务将再次可用
+- 集群恢复到之前状态
+
+<Tabs>
+<TabItem value="OpsRequest" label="OpsRequest API" default>
+```bash
+kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/postgresql/start.yaml
+```
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-start
+  namespace: demo
+spec:
+  clusterName: pg-cluster
+  type: Start
+```
+</TabItem>
+
+<TabItem value="ClusterAPI" label="Cluster API">
+通过将 `spec.componentSpecs.stop` 设为 false 来启动集群：
+
+```bash
+kubectl patch cluster pg-cluster -n demo --type='json' -p='[
+{
+  "op": "remove",
+  "path": "/spec/componentSpecs/0/stop"
+}
+]'
+```
+
+```yaml
+spec:
+  componentSpecs:
+    - name: postgresql
+      stop: false  # 设为false表示启动组件
+      replicas: 2
+```
+</TabItem>
+</Tabs>
+
+## 删除 PostgreSQL 集群
+
+请根据数据保留需求谨慎选择删除策略：
+
+| 策略类型        | 删除的资源          | 数据清除情况       | 适用场景               |
+|-----------------|---------------------|--------------------|------------------------|
+| DoNotTerminate  | 无                  | 无                 | 关键生产集群           |
+| Delete          | 所有资源            | PVC存储卷被删除    | 非关键环境             |
+| WipeOut         | 所有资源            | 全部数据*          | 仅限测试环境           |
+
+*包含外部存储中的快照和备份
+
+**删除前检查清单：**
+1. 确认没有应用正在使用该集群
+2. 确保已存在必要的备份
+3. 验证terminationPolicy设置正确
+4. 检查是否存在依赖资源
+
+对于测试环境，可使用以下命令进行完整清理：
+
+```bash
+kubectl patch cluster pg-cluster -p '{"spec":{"terminationPolicy":"WipeOut"}}' --type="merge" -n demo
+kubectl delete cluster pg-cluster -n demo
+```

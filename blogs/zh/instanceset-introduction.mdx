@@ -1,0 +1,333 @@
+---
+authors:
+  image_url: https://avatars.githubusercontent.com/u/28781141?v=4
+  name: free6om
+  url: https://github.com/free6om
+date: 2024-08-28
+description: KubeBlocks 在 v0.9.0 版本中引入了 InstanceSet。本文介绍什么是 InstanceSet 及其相关特性。
+image: /img/blogs/thumbnails/blog-instanceset.png
+slug: instanceset-introduction
+tags:
+- pod
+- pods stuck in terminating
+- K8s
+title: 什么是InstanceSet？
+---
+# InstanceSet
+
+在 KubeBlocks 中，实例（instance）是最基础的单元，由一个 Pod 和其他辅助对象组成。简单来说，你可以将其视为一个 Pod，但在本文中我们统一称之为"实例"。
+
+**InstanceSet 是一个通用工作负载 API，负责管理一组实例。KubeBlocks 中的所有工作负载最终都是通过 InstanceSet 来管理的**。
+
+与 Kubernetes 原生的工作负载 API（如 StatefulSet 和 Deployment）相比，**InstanceSet 额外包含了与数据库相关的特性和设计考量，例如角色和高可用性**。**这使得它能够更好地支持像数据库这样的复杂有状态工作负载**。
+
+## 如何使用 InstanceSet？
+
+InstanceSet 为它管理的每个实例生成固定名称，并创建一个 Headless Service，为每个实例提供稳定的网络标识符。通过该标识符，同一个 InstanceSet 内的实例可以相互发现，同一个 Kubernetes 集群内的其他系统也可以发现该 InstanceSet 下的各个实例。
+
+InstanceSet 使用 VolumeClaimTemplates 为每个实例生成具有固定标识符的存储卷。其他实例或系统可以通过固定标识符定位到某个实例，并访问其存储卷中的数据。
+
+在更新方面，**InstanceSet 支持以确定性的顺序对所有实例进行滚动更新（RollingUpdate）**，并且可以配置滚动更新的各种行为。同样地，在水平扩缩容时，InstanceSet 也会以确定性的顺序添加或删除实例。
+
+基于这些基础特性，为了满足支持数据库高可用性的需求，InstanceSet 进一步支持更多特性，如**原地更新**、**实例模板**、**指定实例下线**、**基于角色的服务**以及**基于角色的更新策略**。
+
+下面我们将更详细地探讨这些特性。
+
+## 如何生成实例名称？
+
+InstanceSet 通过使用实例模板来渲染实例对象，实例数量由 `Replicas` 字段控制。
+
+```yaml
+apiVersion: workloads.kubeblocks.io/v1alpha1
+kind: InstanceSet
+metadata:
+  name: mydb
+spec:
+  replicas: 3
+  template:
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: mydb
+        image: registry.kubeblocks.io/mydb:15.1
+        ports:
+        - containerPort: 5123
+          name: db
+        volumeMounts:
+        - name: data
+          mountPath: /var/mydb/
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "my-storage-class"
+      resources:
+        requests:
+          storage: 10Gi
+```
+
+在上面的示例中，声明了一个名为 `mydb` 的 InstanceSet，由三个实例组成（`replicas=3`）。每个实例都是从由 `template` 和 `volumeClaimTemplates` 组成的实例模板渲染而来。`template` 用于渲染实例内的 Pod，而 `volumeClaimTemplates` 用于渲染实例内的 PVC。
+
+实例名称的生成模式为 `$(instanceSet.name)-$(instanceID)`。默认情况下，`instanceID` 是一个序数值。在此示例中，`instanceSet.name` 是 `mydb`，序号从 0 开始，每个实例递增。生成的实例名称为：`mydb-0`、`mydb-1` 和 `mydb-2`。当使用多实例模板功能时，`instanceID` 的生成规则扩展为 `$(template.name)-$(ordinal)`。更多详情请参阅[实例模板文档](https://kubeblocks.io/docs/preview/api_docs/instance-template/introduction)。
+
+为了提供固定的网络标识符，每个 InstanceSet 会生成一个 Headless Service 对象。该 Service 的名称模式为 `$(instanceSet.name)-headless`。在此示例中，最终的 Headless Service 名称为 `mydb-headless`。通过这种模式，该 InstanceSet 下的三个实例获得了三个固定的网络标识：`mydb-0.mydb-headless.default.local`、`mydb-1.mydb-headless.default.local` 和 `mydb-2.mydb-headless.default.local`。
+
+由于 InstanceSet 名称成为固定网络标识符的一部分，因此必须符合 [DNS 标签标准](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-label-names)。
+
+## 如何获取InstanceSet下的实例？
+
+当InstanceSet生成次级资源时，会为它们添加两个标签：`workloads.kubeblocks.io/managed-by=InstanceSet` 和 `workloads.kubeblocks.io/instance=<instanceSet.name>`。这些标签可用于获取特定InstanceSet下的所有次级资源，包括Pod和PVC。
+
+在上面的示例中，获取对应Pod的标签应为：
+
+- `workloads.kubeblocks.io/managed-by=InstanceSet`
+- `workloads.kubeblocks.io/instance=mydb`
+
+如果想自定义用于获取InstanceSet下Pod的标签，可以通过设置`spec.selector`字段来实现。例如：
+
+```yaml
+apiVersion: workloads.kubeblocks.io/v1alpha1
+kind: InstanceSet
+metadata:
+  name: mydb
+spec:
+  selector:
+    matchLabels:
+      db: mydb
+```
+
+通过 `spec.selector` 的 `MatchLabels` 设置的标签将自动添加到由 InstanceSet 生成的 Pod 中。
+
+## 创建/删除实例
+
+默认情况下，InstanceSet 会按升序创建实例。创建新实例时，必须等待前一个实例的 Pod 达到 `Ready` 状态后，才会生成下一个实例。
+
+删除实例则遵循相反的顺序。在删除实例前，其中的 Pod 必须处于 `Ready` 状态。这里主要考虑的是，如果 Pod 未处于 `Ready` 状态，其附加的 PVC 中可能存在数据问题。InstanceSet 会确保在数据问题解决前不执行进一步操作。
+
+InstanceSet 在初始设置和水平扩容时也采用相同的创建逻辑。相反地，水平缩容时则应用删除逻辑。
+
+InstanceSet 还支持通过 `spec.podManagementPolicy` 配置实例创建和删除策略。目前支持两种策略：`Ordered`（默认）和 `Parallel`。`Parallel` 策略允许同时创建或删除多个实例。
+
+### 缩容指定实例
+
+在某些场景下，您可能需要在缩容操作时删除特定的实例。
+
+例如，当某个节点因物理机故障需要卸载时，应删除该节点上的所有实例（Pod）。这可以通过指定实例缩容功能来实现。
+
+以前文提到的 `mydb` InstanceSet 为例，您可以通过删除序号为 `1` 的实例进行缩容，同时保留序号为 `0` 和 `2` 的实例：
+
+```yaml
+apiVersion: workloads.kubeblocks.io/v1alpha1
+kind: InstanceSet
+metadata:
+  name: mydb
+spec:
+  replicas: 2
+  offlineInstances: ["mydb-1"]
+# ...
+```
+
+如需更详细的说明，请参阅[卸载指定实例功能](https://kubeblocks.io/docs/preview/api_docs/maintenance/scale/horizontal-scale)。
+
+## 更新实例
+
+当实例模板中的字段更新时，InstanceSet 下的所有实例也会随之更新。
+
+默认情况下，InstanceSet 会按序号降序依次更新每个实例。在更新某个实例前，必须确保前一个实例已完成更新并达到 `Ready` 状态。
+
+如果实例被分配了角色（将在后续章节讨论），InstanceSet 会按照角色优先级从低到高的顺序更新实例。若角色优先级相同，则进一步按序号降序更新。
+
+通过配置 `spec.updateStrategy`，InstanceSet 支持更多更新行为。例如，您可以通过 `spec.updateStrategy.rollingUpdate.partition` 控制待更新实例的总数，并通过 `spec.updateStrategy.rollingUpdate.maxUnavailable` 管理更新过程中不可用实例的最大数量。更多细节请参考 [`spec.updateStrategy` API 文档](../user_docs/references/api-reference/cluster#apps.kubeblocks.io/v1alpha1.UpdateStrategy)。
+
+### 原地更新
+
+数据库应用通常对高可用性有严格要求。通常情况下，当 Pod 需要更新时，系统会采取重建操作，这需要一定时间并可能导致数据库服务暂时不可用。
+
+为了最小化更新对数据库服务可用性的影响，InstanceSet 支持**原地更新**。当实例模板中的特定字段更新时，InstanceSet 会**原地更新 Pod 或扩展 PVC**，确保对实例的干扰最小化。
+
+原则上，原地更新能力利用了 Kubernetes 原生 Pod API 的原地更新特性。具体支持的字段如下：
+
+- `spec.template.metadata.annotations`
+- `spec.template.metadata.labels`
+- `spec.template.spec.activeDeadlineSeconds`
+- `spec.template.spec.initContainers[*].image`
+- `spec.template.spec.containers[*].image`
+- `spec.template.spec.tolerations`（仅支持添加 Toleration）
+- `spec.instances[*].annotations`
+- `spec.instances[*].labels`
+- `spec.instances[*].image`
+
+从 Kubernetes v1.27 开始，启用 `PodInPlaceVerticalScaling` 特性门控可进一步支持 CPU 和内存的原地更新。InstanceSet 会自动检测 Kubernetes 版本和特性门控状态，并为以下字段提供额外支持：
+
+对于 Kubernetes 1.27 及以上版本且启用 `PodInPlaceVerticalScaling` 时，以下字段支持原地更新：
+
+- `spec.template.spec.containers[*].resources.requests["cpu"]`
+- `spec.template.spec.containers[*].resources.requests["memory"]`
+- `spec.template.spec.containers[*].resources.limits["cpu"]`
+- `spec.template.spec.containers[*].resources.limits["memory"]`
+- `spec.instances[*].resources.requests["cpu"]`
+- `spec.instances[*].resources.requests["memory"]`
+- `spec.instances[*].resources.limits["cpu"]`
+- `spec.instances[*].resources.limits["memory"]`
+
+对于 PVC，InstanceSet 同样利用 PVC API 的能力，仅支持存储卷扩容。
+
+更多细节请参阅[原地更新特性文档](https://kubeblocks.io/docs/preview/api_docs/maintenance/in-place-update/overview)。
+
+## 实例模板
+
+默认情况下，**InstanceSet 会基于单一模板生成所有实例**。
+
+在某些场景中，您可能需要同一个 InstanceSet 内的实例具有不同的配置，例如不同的资源分配或环境变量。InstanceSet **支持在默认模板基础上定义额外的实例模板**来满足这些需求。
+
+以前文提到的 `mydb` InstanceSet 为例，若需要将其配置为一个大型主实例和两个小型从实例的集群，可以按如下方式配置：
+
+```yaml
+apiVersion: workloads.kubeblocks.io/v1alpha1
+kind: InstanceSet
+metadata:
+  name: mydb
+spec:
+  replicas: 3
+  template:
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: mydb
+        image: registry.kubeblocks.io/mydb:15.1
+        ports:
+        - containerPort: 5123
+          name: db
+        volumeMounts:
+        - name: data
+          mountPath: /var/mydb/
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "my-storage-class"
+      resources:
+        requests:
+          storage: 10Gi
+  instances:
+  - name: primary
+    replicas: 1
+    resources:
+      limits:
+        cpu: 8
+        memory: 16Gi
+  - name: secondary
+    replicas: 2
+      resources:
+        limits:
+          cpu: 4
+          memory: 8Gi
+```
+
+如需更详细的说明，请参阅[实例模板功能](https://kubeblocks.io/docs/preview/api_docs/instance-template/introduction)。
+
+（严格保持原格式，包括换行和间距不变）
+
+## 角色
+
+大多数数据库系统支持多实例部署，其中每个实例承担不同的角色，通常由它们内部的数据复制关系决定。例如，在 PostgreSQL 中有 Primary 和 Secondary 角色，而在 etcd 中则有 leader、follower 和 learner 等角色。
+
+在数据库系统中，不同角色的实例通常具有不同的特性。例如，在服务能力方面，主节点通常支持读写能力，而其他节点提供只读能力。在运维操作时，遵循数据库管理的最佳实践，通常会先逐个升级从节点实例，最后升级主节点实例。在升级主节点实例前，通常会执行切换操作，以确保数据完整性并最小化服务停机时间。
+
+针对这些特性，InstanceSet 包含了若干与数据库角色相关的功能。这些角色相关功能包括**角色定义**、**角色探测**、**基于角色的服务**以及**基于角色的更新策略**。
+
+**角色定义** 描述了系统中的角色及其属性。
+
+**角色探测** 通过配置的探测方法定期检查每个实例的角色，并更新相应实例的标签。
+
+**基于角色的服务** 允许服务根据每个实例的角色标签筛选特定角色，从而提供适当的服务能力。
+
+**基于角色的更新策略** 根据角色优先级决定实例的更新顺序。
+
+### 角色定义
+
+InstanceSet 允许通过 `spec.roles` 定义所有角色信息，包括角色名称、读写能力、是否参与选举以及是否为领导者。
+
+例如，PostgreSQL 可以配置如下：
+
+```yaml
+spec:
+  roles:
+  - name: "primary"
+    accessMode: ReadWrite
+    isLeader: true
+  - name: "secondary"
+    accessMode: Readonly
+```
+
+### 角色检测
+
+InstanceSet 包含一个预配置的**角色检测 Sidecar**，该容器会定期执行配置的角色检测脚本，并与 InstanceSet Controller 协同工作，更新对应实例标签中的角色名称。
+
+![Role detection](/img/blogs/instanceset-role-detection.png)
+
+角色检测脚本可按如下方式配置：
+
+
+
+```yaml
+spec:
+  roleProbe:
+    customHandler:
+    - image: probe.kubeblocks.io/sample-probe:1.0
+      cmd: ["probe"]
+      args: ["redis"]
+    periodSeconds: 5
+    roleUpdateMechanism: DirectAPIServerEventUpdate
+```
+
+在本示例中，配置的角色探测 Sidecar 会每隔 5 秒在 `sample-probe` 镜像中运行探测命令，并将封装在 K8s Event 中的探测结果发送给 InstanceSet Controller。InstanceSet Controller 在接收到该事件后，会解析每个实例的角色信息并更新到实例的角色标签中。角色标签的格式为：`kubeblocks.io/role=<role.name>`。InstanceSet Controller 还会在标签中更新实例的读写能力，格式为：`workloads.kubeblocks.io/access-mode=<role.accessMode>`。
+
+### 基于角色的服务
+
+通过配置 Service 的选择器来匹配实例上不同的角色标签和读写能力标签，Service 可以提供不同的服务能力。
+
+例如，PostgreSQL 的读写服务可以配置如下：
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: pg-readwrite-svc
+spec:
+  selector:
+    workloads.kubeblocks.io/managed-by: InstanceSet
+    workloads.kubeblocks.io/instance: mydb
+    kubeblocks.io/role: primary
+```
+
+### 基于角色的更新策略
+
+如前所述，当更新实例时，一旦配置了角色，InstanceSet 会考虑角色优先级。
+
+具体而言，InstanceSet 通过 `spec.memberUpdateStrategy` 支持三种角色更新策略：`Serial`（串行）、`Parallel`（并行）和 `BestEffortParallel`（尽力并行）。
+
+`Serial` 按照角色优先级从低到高的顺序依次更新实例。如果两个实例具有相同的角色优先级，则按照序号降序进一步排序更新。
+
+`Parallel` 会同时更新所有实例，遵循 `spec.updateStrategy` 中指定的更新策略。
+
+`BestEffortParallel` 在确保系统可用性的前提下，按照角色优先级从低到高分批次更新实例。该策略同样遵循 `spec.updateStrategy` 中指定的更新策略。
+
+## 管理大规模实例
+
+InstanceSet 最多可管理 **10,000 个实例**。当管理大量实例时，您可以通过设置 `KUBEBLOCKS_RECONCILE_WORKERS` 环境变量来配置 InstanceSet Controller 中的并发工作节点数量，以提高处理速度。
+
+## 参考文档
+
+[1]  实例模板: https://kubeblocks.io/docs/preview/api_docs/instance-template/introduction
+
+[2]  DNS 标签: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-label-names
+
+[3]  卸载指定实例: https://kubeblocks.io/docs/preview/api_docs/maintenance/scale/scale-for-specified-instance
+
+[4]  Kubernetes Pod API 原地更新: https://kubernetes.io/docs/concepts/workloads/pods/#pod-update-and-replacement
+
+[5]  原地更新: https://kubeblocks.io/docs/preview/api_docs/maintenance/in-place-update/overview
+

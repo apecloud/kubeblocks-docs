@@ -1,0 +1,194 @@
+---
+description: 了解如何在KubeBlocks管理的PostgreSQL集群中执行垂直扩展，以优化资源利用率并提升性能。
+keywords:
+- KubeBlocks
+- PostgreSQL
+- Vertical Scaling
+- Kubernetes
+- Resources
+sidebar_label: 垂直扩展
+sidebar_position: 2
+title: PostgreSQL 集群中的垂直扩展
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# 使用KubeBlocks对PostgreSQL集群进行垂直扩缩容
+
+本指南演示如何通过调整计算资源（CPU和内存）对KubeBlocks管理的PostgreSQL集群进行垂直扩缩容，同时保持副本数量不变。
+
+垂直扩缩容会修改PostgreSQL实例的计算资源（CPU和内存）但保持副本数不变。主要特性包括：
+
+- **非中断性**：正确配置时可在扩缩容期间保持可用性
+- **精细化**：可独立调整CPU、内存或两者
+- **可逆性**：可根据需求进行扩容或缩容
+
+KubeBlocks以最小影响协调扩缩容过程：
+1. 从节点副本优先更新
+2. 主节点在所有从节点健康后最后更新
+3. 集群状态从`更新中`过渡到`运行中`
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署PostgreSQL集群
+
+import CreatePGCluster from '../_tpl/_create-pg-replication-cluster.mdx'
+
+<CreatePGCluster />
+
+## 验证部署
+
+import VerifyPGCluster from '../_tpl/_verify-pg-replication-cluster.mdx'
+
+<VerifyPGCluster />
+
+## 垂直扩缩容
+
+**预期工作流程**：
+
+1. 从节点副本优先更新（每次更新一个）
+2. 主节点在所有从节点健康后最后更新
+3. 集群状态从`更新中`过渡到`运行中`
+
+<Tabs>
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+  选项1：使用VerticalScaling OpsRequest
+
+  应用以下YAML为postgresql组件扩容资源：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: pg-cluster-vscale-ops
+    namespace: demo
+  spec:
+    clusterName: pg-cluster
+    type: VerticalScaling
+    verticalScaling:
+    - componentName: postgresql
+      requests:
+        cpu: '1'
+        memory: 1Gi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+  ```
+  垂直扩缩容期间会发生什么？
+  - 优先重建从节点Pod以确保主节点Pod保持可用
+  - 所有从节点Pod更新完成后，主节点Pod将以新资源配置重启
+
+
+  可通过以下命令查看扩缩容操作进度：
+
+  ```bash
+  kubectl -n demo get ops pg-cluster-vscale-ops -w
+  ```
+
+  预期结果：
+  ```bash
+  NAME                    TYPE              CLUSTER      STATUS    PROGRESS   AGE
+  pg-cluster-vscale-ops   VerticalScaling   pg-cluster   Running   0/2        52s
+  pg-cluster-vscale-ops   VerticalScaling   pg-cluster   Running   1/2        64s
+  pg-cluster-vscale-ops   VerticalScaling   pg-cluster   Running   2/2        2m6s
+  pg-cluster-vscale-ops   VerticalScaling   pg-cluster   Running   2/2        2m6s
+  pg-cluster-vscale-ops   VerticalScaling   pg-cluster   Succeed   2/2        2m6s
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  选项2：直接更新Cluster API
+
+  也可通过更新`spec.componentSpecs.resources`字段实现垂直扩缩容。
+
+  ```yaml
+    apiVersion: apps.kubeblocks.io/v1
+    kind: Cluster
+    metadata:
+      name: pg-cluster
+      namespace: demo
+    spec:
+      terminationPolicy: Delete
+      clusterDef: postgresql
+      topology: replication
+      componentSpecs:
+        - name: postgresql
+          serviceVersion: 16.4.0
+          labels:
+            apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
+          disableExporter: true
+          replicas: 2
+          resources:
+            requests:
+              cpu: "1"       # 按需更新资源
+              memory: "1Gi"  # 按需更新资源
+            limits:
+              cpu: "1"       # 按需更新资源
+              memory: "1Gi"  # 按需更新资源
+          volumeClaimTemplates:
+            - name: data
+              spec:
+                storageClassName: ""
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 20Gi
+    ```
+  </TabItem>
+</Tabs>
+
+## 最佳实践与注意事项
+
+**规划阶段：**
+- 在维护窗口或低流量时段进行扩缩容
+- 确认Kubernetes集群有足够资源
+- 开始前检查是否有其他正在进行的操作
+
+**执行阶段：**
+- 保持CPU与内存的平衡比例
+- 设置相同的requests/limits以保证服务质量(QoS)
+
+**扩缩容后：**
+- 监控资源利用率和应用性能
+- 必要时调整PostgreSQL参数
+
+## 验证
+通过检查集群配置或Pod详情验证更新后的资源：
+```bash
+kbcli cluster describe pg-cluster -n demo
+```
+
+预期输出：
+```bash
+资源分配:
+组件        实例模板          CPU(请求/限制)     内存(请求/限制)      存储大小       存储类
+postgresql                  1 / 1              1Gi / 1Gi          data:20Gi     standard
+```
+
+## KubeBlocks垂直扩缩容的核心优势
+- 无缝扩缩容：按特定顺序重建Pod确保最小中断
+- 动态资源调整：根据工作负载需求轻松调整CPU和内存
+- 灵活性：可选择动态扩缩容的OpsRequest或精确控制的直接API更新
+- 高可用性：扩缩容过程中集群保持运行状态
+
+## 清理资源
+删除PostgreSQL集群及其命名空间以清除所有创建的资源：
+```bash
+kubectl delete cluster pg-cluster -n demo
+kubectl delete ns demo
+```
+
+## 总结
+本指南中您学会了如何：
+1. 部署KubeBlocks管理的PostgreSQL集群
+2. 通过增减postgresql组件资源进行垂直扩缩容
+3. 使用OpsRequest和直接Cluster API更新两种方式调整资源分配
+
+垂直扩缩容是优化资源利用率和适应工作负载变化的强大工具，可确保PostgreSQL集群始终保持高性能和弹性。

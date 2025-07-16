@@ -1,0 +1,153 @@
+---
+description: 了解如何使用KubeBlocks部署MongoDB集群，并配置在S3存储库中保留的自动化定时备份。
+keywords:
+- MongoDB
+- Backup
+- KubeBlocks
+- Scheduled Backup
+- Kubernetes
+sidebar_label: 定时备份
+sidebar_position: 3
+title: 在KubeBlocks中设置带定时备份的MongoDB集群
+---
+# 在 KubeBlocks 中设置带定时备份的 MongoDB 集群
+
+本指南演示如何使用 KubeBlocks 部署 MongoDB 集群，并配置定时备份到 S3 存储仓库的保留策略。
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署 MongoDB 集群
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+## 验证部署
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+## 备份前提条件
+
+1. 已配置备份仓库：
+   - 已配置 `BackupRepo`
+   - 集群与仓库间网络连通，`BackupRepo` 状态为 `Ready`
+
+2. 集群运行状态：
+   - 集群必须处于 `Running` 状态
+   - 无正在进行的操作（扩缩容、升级等）
+
+## 配置定时备份
+
+KubeBlocks 在创建集群时会自动生成 `BackupSchedule` 资源。按以下步骤启用并配置定时备份：
+
+1. 验证默认备份计划配置：
+
+```bash
+kubectl get backupschedule mongo-cluster-mongodb-backup-schedule  -n demo -oyaml
+```
+
+示例输出：
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: BackupSchedule
+spec:
+  backupPolicyName: mongo-cluster-MongoDB-backup-policy
+  schedules:
+  - backupMethod: datafile
+    # ┌───────────── 分钟 (0-59)
+    # │ ┌───────────── 小时 (0-23)
+    # │ │ ┌───────────── 月份中的天 (1-31)
+    # │ │ │ ┌───────────── 月 (1-12)
+    # │ │ │ │ ┌───────────── 周中的天 (0-6) (0=周日)
+    # │ │ │ │ │
+    # 0 18 * * *
+    # 每天18:00(UTC)执行此任务
+    cronExpression: 0 18 * * * # 按需修改cron表达式
+    enabled: true # 设为`true`启用定期基础备份
+    retentionPeriod: 7d # 按需设置保留期限
+```
+
+2. 启用并自定义备份计划：
+```bash
+kubectl edit backupschedule mongo-cluster-mongodb-backup-schedule -n demo
+```
+
+修改以下关键参数：
+- `enabled`：设为 `true` 启用定时备份
+- `cronExpression`：使用 cron 语法配置备份频率
+- `retentionPeriod`：设置备份保留时长（如 `7d`、`1mo`）
+
+每日18:00 UTC备份并保留7天的配置示例：
+```yaml
+schedules:
+- backupMethod: datafile
+  enabled: true
+  cronExpression: "0 18 * * *"
+  retentionPeriod: 7d
+```
+
+3. 验证计划配置：
+```bash
+# 检查计划状态
+kubectl get backupschedule mongo-cluster-mongodb-backup-schedule -n demo -w
+
+# 查看详细配置
+kubectl describe backupschedule mongo-cluster-mongodb-backup-schedule -n demo
+```
+
+## 监控与管理备份
+
+启用定时备份后，请监控执行情况并管理备份保留：
+
+1. 查看所有备份：
+```bash
+kubectl get backup -n demo -l app.kubernetes.io/instance=mongo-cluster
+```
+
+2. 检查备份详情：
+```bash
+kubectl describe backup <backup-name> -n demo
+```
+
+3. 验证备份文件：
+- 状态应显示"Completed"
+- 检查备份大小是否符合预期
+- 确认保留策略已生效
+- 验证仓库中存在备份文件
+
+4. 管理备份保留：
+- 手动删除旧备份：
+```bash
+kubectl delete backup <backup-name> -n demo
+```
+- 修改保留期限：
+```bash
+kubectl edit backupschedule mongo-cluster-mongodb-backup-schedule -n demo
+```
+
+## 清理资源
+删除 MongoDB 集群及其命名空间以移除所有资源：
+
+```bash
+kubectl delete cluster mongo-cluster -n demo
+kubectl delete ns demo
+```
+
+## 总结
+
+本指南演示了：
+1. MongoDB 自动备份配置
+2. 使用 cron 语法自定义计划
+3. 保留策略管理
+4. 备份验证流程
+
+您的 MongoDB 集群现已具备：
+- 定期自动备份
+- 可配置的保留策略
+- 完整的备份历史追踪

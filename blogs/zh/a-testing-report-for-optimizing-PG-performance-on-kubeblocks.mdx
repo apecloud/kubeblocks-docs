@@ -1,0 +1,545 @@
+---
+authors:
+  image_url: https://avatars.githubusercontent.com/u/111858489?v=4
+  name: dullboy
+  url: https://github.com/nayutah
+date: 2023-09-21
+description: Kubernetes上优化PostgreSQL性能的测试报告
+image: /img/blogs/thumbnails/blog-pg.png
+slug: A-testing-report-for-optimizing-PG-performance-on-Kubernetes
+tags:
+- KubeBlocks PG
+- ECS PG
+- optimization
+- performance
+title: Kubernetes上优化PostgreSQL性能的测试报告
+---
+# Kubernetes 上优化 PostgreSQL 性能的测试报告
+
+##  引言
+
+如今，越来越多的应用被部署在 Kubernetes 的容器中运行。这一趋势如此显著，以至于有人将 Kubernetes 比作云时代的 Linux，以形容其无处不在的影响力。然而，尽管应用层的容器化增长显而易见，数据管理领域的容器化进程却尚未形成同等规模。数据库作为有状态工作负载，常被称为"最不适合运行在 Kubernetes 上的组件"。这并不令人意外，因为容器化工作负载本身就需要具备应对重启、扩缩容、虚拟化等各种约束的健壮性。
+
+但当前关注点正在向数据层转移，开发者希望像管理应用栈一样管理数据基础设施。他们试图对数据库和应用使用相同的工具，以获取一致的收益，例如快速部署和环境一致性。在本博客中，我们将对自托管的 PostgreSQL 解决方案（使用 KubeBlocks PG）和在 ECS 上自托管 PostgreSQL（以下简称 ECS PG）进行测试对比，并探讨如何优化数据库性能，使其在生产环境中的性能和稳定性达到或超越全托管数据库的水平。
+
+## 环境准备
+| | 版本 | CPU | 内存 | 磁盘 | 网络 | 实例类型 | 复制协议 |
+|--|-------|--------|-----|------|--------|-----|------|
+| ECS PG|12.14|16核|64G|ESSD PL1 500G|SLB|专属型|异步复制 |
+|KubeBlocks PG|12.14|16核|64G|ESSD PL1 300G|SLB|专属型|异步复制 |
+
+1. 在ACK上购买K8s集群并部署KubeBlocks（参考[本教程](https://kubeblocks.io/docs/preview/user_docs/installation/install-with-kbcli/install-kbcli)）。采用Terway网络模式，使Pod IP即为VPC IP。这能确保VPC内网络连通性，简化网络管理并降低应用开发成本。将节点规格设置为16核64G。
+
+2. 在生产环境中，开发者可能无法在16核64G规格的专属节点上创建实例。这通常是由于kubelet等代理进程占用了资源。为解决此问题，需将资源请求和限制设置为14核56G。
+
+现在通过kubectl edit编辑PG集群的资源规格。移除对资源请求和限制的约束，以确保在压力测试期间集群能充分利用16核CPU。将缓冲区设置为16GB，然后使用以下命令创建PG实例：
+
+```bash
+kbcli cluster create --cluster-definition=postgresql
+```
+
+
+
+
+## 测试计划
+Sysbench 读密集型测试：80% 读取 + 20% 写入。
+
+在测试场景中，读取请求多于写入请求，这与实际生产场景相似。
+
+## 第一轮压力测试：TPS 降为 0
+
+本次测试由 ECS 发起，通过 VPC IP 访问 PG 集群。
+
+<table>
+<thead>
+  <tr>
+    <th>线程数</th>
+    <th colSpan="2">吞吐量</th>
+    <th colSpan="2">延迟(ms)</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td></td>
+    <td>KubeBlocks PG</td>
+    <td>ECS PG</td>
+    <td>KubeBlocks PG</td>
+    <td>ECS PG</td>
+  </tr>
+  <tr>
+    <td>25</td>
+    <td>87264</td>
+    <td>91310</td>
+    <td>31.94</td>
+    <td>28.67</td>
+  </tr>
+  <tr>
+    <td>50</td>
+    <td>111063</td>
+    <td>140559</td>
+    <td>55.82</td>
+    <td>40.37</td>
+  </tr>
+  <tr>
+    <td>100</td>
+    <td>83032</td>
+    <td>159386</td>
+    <td>132.49</td>
+    <td>92.42</td>
+  </tr>
+  <tr>
+    <td>150</td>
+    <td>61865</td>
+    <td>140938</td>
+    <td>272.27</td>
+    <td>18654</td>
+  </tr>
+  <tr>
+    <td>175</td>
+    <td>56487</td>
+    <td>134933</td>
+    <td>350.33</td>
+    <td>240.02</td>
+  </tr>
+</tbody>
+</table>
+
+出现的问题：
+
+1. CPU 未能满载：当数据库由 ECS 测试时，数据库所在节点的 CPU 无法完全负载。
+2. 并发性能快速衰减：随着并发数增加，KubeBlocks PG 的性能下降速度比 ECS PG 更快。
+3. TPS 间歇性降为 0：在测试过程中（从 307 秒开始）频繁观察到 TPS 降为 0 的情况。
+
+<img src='/img/blogs/k8s-1.jpeg' alt="TPS dropped to 0"   />
+
+由于客户端和服务端的 CPU 均未满载，我怀疑网络是否存在问题，特别是 SLB 规格是否已达到上限。因此，我将 SLB 规格从默认的 'slb.s2.small' 更改为 'slb.s3.large' 并重新发起压力测试。
+
+<img src='/img/blogs/k8s-2.jpeg' alt="Change spec"   />
+
+然而，问题依然存在。
+
+## 第二轮压力测试：排查网络链路问题
+为了测试SLB性能，我们设计了使用'sysbench select 1'模拟端到端网络延迟的测试用例。虽然简单的ping测试可以反映部分延迟问题，但存在诸多局限性，无法保证完全端到端穿透。例如，SLB设备可能直接响应ping测试产生的ICMP包，导致无法检测从SLB到Pod的后续链路。
+
+测试再次通过ECS发起：
+
+1. ECS -> Pod IP：使用VPC IP直接网络访问
+2. ECS -> SLB IP -> Pod IP：中间增加SLB层
+3. ECS -> ECS SLB IP：前端默认嵌入SLB层的PG
+
+测试结果如下：
+
+<table>
+<thead>
+  <tr>
+    <th>线程数</th>
+    <th colSpan="3">吞吐量</th>
+    <th colSpan="3">延迟(ms)</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td></td>
+    <td>Pod IP</td>
+    <td>SLB IP</td>
+    <td>SLB IP</td>
+    <td>PodIP</td>
+    <td>SLB IP</td>
+    <td>SLB IP</td>
+  </tr>
+  <tr>
+    <td>25</td>
+    <td>107309</td>
+    <td>105298</td>
+    <td>92163</td>
+    <td>0.30</td>
+    <td>0.30</td>
+    <td>0.32</td>
+  </tr>
+</tbody>
+</table>
+
+结果表明，ACK和SLB网络均表现良好，不太可能是性能波动的原因。因此，我们继续进行压力测试。
+
+## 第三轮压测：调整IO带宽
+随后我们继续按原测试计划，通过观察ECS监控图表对系统进行定性分析。
+
+<img src='/img/blogs/k8s-3.jpeg' alt="CPU繁忙率"   />
+
+从监控图表可以看出：
+1. 磁盘读写带宽已达瓶颈。ESSD带宽与磁盘容量直接相关，计算公式为min`{120+0.5*容量, 350}`。对于300GB磁盘，对应带宽为270MB，数据显示已触及瓶颈。
+
+2. 检查日志时发现，当TPS降至0时，CPU繁忙率同步下降。
+
+<img src='/img/blogs/k8s-4.jpeg' alt="CPU繁忙率"   />
+
+由于带宽达到上限，我们追加了一组500GB磁盘的性能测试。500GB磁盘带宽为350MB（min{120+0.5*500, 350}）。压力测试期间，即使磁盘写满时CPU仍出现间歇性波动，这种波动可能与检查点相关，但依然不应导致TPS完全降为0。
+
+提升磁盘带宽后，TPS骤降问题有所缓解。因此我们决定采用ESSD PL2 1TB磁盘（带宽620MB）来最大化磁盘带宽。结果显示波动虽仍存在，但幅度大幅减小，CPU繁忙率下降区间也明显收窄。
+
+<img src='/img/blogs/k8s-5.jpeg' alt="CPU繁忙率"   />
+
+我们采取了更激进的调整方案——升级至ESSD PL3 2TB磁盘（带宽700MB）。
+
+<img src='/img/blogs/k8s-6.jpeg' alt="CPU繁忙率"   />
+
+此次TPS下跌和CPU波动得到改善，但问题仍未根除。在8183秒时，TPS从2400骤降至1400，跌幅约40%，且CPU波动范围虽缩小但仍持续存在。
+
+<img src='/img/blogs/k8s-7.jpeg' alt="TPS下跌与CPU波动"   />
+
+结论：IO带宽对CPU和TPS均有显著影响。随着IO带宽提升，波动现象减轻，TPS归零的情况消失。但即便在没有IO带宽限制的情况下，TPS仍会出现40%的下跌。排除硬件限制因素后，该问题很可能与PG集群自身相关。
+
+## 第四轮压测：检查点与锁分析
+
+在这一轮测试中，我深入研究了检查点机制，并分析了I/O限流对检查点和事务的影响。
+
+1. 为什么PostgreSQL的检查点相比其他数据库受到更严重的影响？在MySQL上进行类似测试时，我观察到的波动较弱。
+
+2. 即使I/O限流生效时，结果显示I/O仍处于满载状态，因此TPS不应降至0。这是否因为带宽完全被检查点进程占用？
+
+为了更好地监控数据库，我启用了KubeBlocks内置的Node Exporter并开始测试。
+结果显示，当TPS降至0时，我观察到单次操作中有10GB内存被回收。在没有Huge Pages的情况下，如果页帧大小约为4KB，那么10GB大约相当于250万页。如此大规模的页面遍历和回收操作可能对操作系统内核的页面回收模块造成巨大压力。在那个特定时刻，操作系统出现了数十秒的冻结，导致上层所有进程挂起。
+
+这类回收行为通常与dirty_background_ratio参数设置不当有关。于是我执行了`sysctl -a | grep dirty_background_ratio`命令，发现`vm.dirty_background_ratio = 10`。
+
+<img src='/img/blogs/k8s-8.jpeg' alt="dirty_background_ratio = 10"   />
+
+
+通过命令`sysctl -w vm.dirty_background_ratio=5`将后台比例调整为5%。这个调整可以促使部分脏页缓存被刷写。
+
+这个设置非常关键，且与PostgreSQL的机制密切相关。PostgreSQL依赖操作系统页缓存，这与Oracle和MySQL的I/O架构不同。MySQL使用DirectIO，因此对内存管理的压力较小。但在某些场景下，DirectIO相比写入缓冲缓存可能会带来稍高的延迟。
+
+另一个发现是关于PostgreSQL内核和日志的。登录到Pod后，我发现WAL日志默认大小为16MB：
+
+```bash
+root@postgres-cluster-postgresql-0:/home/postgres/pgdata/pgroot/data/pg_wal# du -sh 0000000A000001F300000077 16M 0000000A000001F300000077
+```
+
+此外，PostgreSQL的后台进程会清理pg_wal目录下的WAL日志以释放空间。通过strace命令，我发现单次操作最多会删除数百个WAL文件，总大小为12GB。
+
+（由于时区问题，日志中的时间需要加8小时调整，例如5:42对应北京时间13:42。）
+
+```bash
+2023-05-18 05:42:42.352 GMT,,,129,,64657f66.81,134,,2023-05-18 01:29:10 GMT,,0,LOG,00000,"checkpoint complete: wrote 680117 buffers (32.4%); 0 WAL file(s) added, 788 removed, 0 recycled; write=238.224 s, sync=35.28 6 s, total=276.989 s; sync files=312, longest=1.348 s, average=0.114 s; distance=18756500 kB, estimate=19166525 kB",,,,,,,,,"" 2023-05-18 05:42:42.362 GMT,,,129,,64657f66.81,135,,2023-05-18 01:29:10 GMT,,0,LOG,00000,"checkpoint starting: wal",,,,,,,,,"" 2023-05-18 05:42:44.336 GMT,"sysbenchrole","pgbenchtest",65143,"::1:43962",6465928f.fe77,1157,"SELECT",2023-05-18 02:50:55 GMT,36/46849938,0,LOG,00000,"duration: 1533.532 ms execute sbstmt1641749330-465186528: SEL ECT c FROM sbtest46 WHERE id=$1","parameters: $1 = '948136'",,,,,,,,"" 2023-05-18 05:42:44.336 GMT,"sysbenchrole","pgbenchtest",65196,"::1:44028",6465928f.feac,1137,"UPDATE",2023-05-18 02:50:55 GMT,57/43973954,949436561,LOG,00000,"duration: 1533.785 ms execute sbstmt493865735-6481814 15: UPDATE sbtest51 SET k=k+1 WHERE id=$1","parameters: $1 = '996782'",,,,,,,,""
+```
+
+当执行检查点时，CPU空闲率飙升至80%（对应TPS降至0）。
+
+<img src='/img/blogs/k8s-9.png' alt="CPU idle spiked to 80%"   />
+
+日志中部分事务的持续时间延长至超过1秒。
+
+TPS下降问题也在13:44:20结束。
+
+```bash
+2023-05-18 05:44:20.693 GMT,"sysbenchrole","pgbenchtest",65145,"::1:43964",6465928f.fe79,1178,"SELECT",2023-05-18 02:50:55 GMT,48/45617265,0,LOG,00000,"duration: 1942.633 ms execute sbstmt-1652152656-473838068: SE LECT c FROM sbtest37 WHERE id=$1","parameters: $1 = '1007844'",,,,,,,,""
+```
+
+在 13:45:41，vacuum 进程启动。
+
+
+
+```bash
+2023-05-18 05:45:41.512 GMT,,,87995,,646596d6.157bb,71,,2023-05-18 03:09:10 GMT,64/3879558,0,LOG,00000,"automatic aggressive vacuum of table ""pgbenchtest.public.sbtest45"": index scans: 1 pages: 0 removed, 66886 remain, 0 skipped due to pins, 2328 skipped frozen tuples: 14166 removed, 2005943 remain, 15904 are dead but not yet removable, oldest xmin: 944519757
+```
+
+在 13:47:04，检查点最终完成。
+
+```bash
+2023-05-18 05:47:04.920 GMT,,,129,,64657f66.81,136,,2023-05-18 01:29:10 GMT,,0,LOG,00000,"checkpoint complete: wrote 680483 buffers (32.4%); 0 WAL file(s) added, 753 removed, 0 recycled; write=226.176 s, sync=32.53
+```
+
+整个过程在监控图表中清晰呈现。
+
+<img src='/img/blogs/k8s-10.jpeg' alt="Entire process"   />
+
+CPU波动与检查点期间的脏页刷新过程高度吻合。
+
+同时磁盘带宽始终保持饱和状态。
+
+<img src='/img/blogs/k8s-11.png' alt="Disk bandwidth saturated"   />
+
+当TPS降为0的时间段，恰好与检查点刷写脏页的时刻完全对应。
+
+<img src='/img/blogs/k8s-12.jpeg' alt="Checkpoint flush"   />
+
+通过观察内存波动可以发现，内存回收导致的卡顿问题已得到有效解决，这表明调整`dirty_background_ratio`参数确实有效。
+
+此外在刷写过程中，锁数量始终保持较高水平，这与非刷写状态形成鲜明对比。
+
+<img src='/img/blogs/k8s-13.jpeg' alt="Number of locks"   />
+
+涉及的锁类型包括：
+
+<img src='/img/blogs/k8s-14.png' alt="Locks"   />
+<img src='/img/blogs/k8s-15.png' alt="Locks"   />
+
+有时会出现多个进程争抢同一把锁的情况。
+
+<img src='/img/blogs/k8s-16.png' alt="Lock contentions"   />
+<img src='/img/blogs/k8s-17.png' alt="Lock contentions"   />
+
+在常规I/O操作中，即便磁盘带宽满载，事务间也极少出现锁争用，TPS保持稳定。但当锁争用显著时，TPS极易跌至0值，这与检查点过程直接相关。
+
+<img src='/img/blogs/k8s-18.png' alt="Lock contentions"   />
+
+## 第五轮压力测试：分析PG核心代码与追踪
+
+在继续调查的过程中，我研究了一些与PostgreSQL检查点和WAL相关的代码，并对PostgreSQL后端进程进行了追踪。随后发现了一些WAL日志创建的问题，这些问题的时间数据是通过脚本日志分析计算得出的。
+
+```bash
+duration:550 ms 11:50:03.951036 openat(AT_FDCWD, "pg_wal/archive_status/00000010000002EE000000E7.ready", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 22
+duration:674 ms 11:50:09.733902 openat(AT_FDCWD, "pg_wal/archive_status/00000010000002EF00000003.ready", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 22
+duration:501 ms 11:50:25.263054 openat(AT_FDCWD, "pg_wal/archive_status/00000010000002EF0000004B.ready", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 23
+duration:609 ms 11:50:47.875338 openat(AT_FDCWD, "pg_wal/archive_status/00000010000002EF000000A8.ready", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 25
+duration:988 ms 11:50:53.596897 openat(AT_FDCWD, "pg_wal/archive_status/00000010000002EF000000BD.ready", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 29
+duration:1119 ms 11:51:10.987796 openat(AT_FDCWD, "pg_wal/archive_status/00000010000002EF000000F6.ready", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 29
+duration:1442 ms 11:51:42.425118 openat(AT_FDCWD, "pg_wal/archive_status/00000010000002F000000059.ready", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 45
+duration:1083 ms 11:51:52.186613 openat(AT_FDCWD, "pg_wal/archive_status/00000010000002F000000071.ready", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 51
+duration:503 ms 11:52:32.879828 openat(AT_FDCWD, "pg_wal/archive_status/00000010000002F0000000D8.ready", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 75
+duration:541 ms 11:52:43.078011 openat(AT_FDCWD, "pg_wal/archive_status/00000010000002F0000000EB.ready", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 84
+duration:1547 ms 11:52:56.286199 openat(AT_FDCWD, "pg_wal/archive_status/00000010000002F10000000C.ready", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 84
+duration:1773 ms 11:53:19.821761 openat(AT_FDCWD, "pg_wal/archive_status/00000010000002F10000003D.ready", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 94
+duration:2676 ms 11:53:30.398228 openat(AT_FDCWD, "pg_wal/archive_status/00000010000002F10000004F.ready", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 101
+duration:2666 ms 11:54:05.693044 openat(AT_FDCWD, "pg_wal/archive_status/00000010000002F100000090.ready", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 122
+duration:658 ms 11:54:55.267889 openat(AT_FDCWD, "pg_wal/archive_status/00000010000002F1000000E5.ready", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 139
+duration:933 ms 11:55:37.229660 openat(AT_FDCWD, "pg_wal/archive_status/00000010000002F200000025.ready", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 163
+duration:2681 ms 11:57:02.550339 openat(AT_FDCWD, "pg_wal/archive_status/00000010000002F200000093.ready", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 197
+```
+
+这些WAL文件准备就绪耗时超过500毫秒，有些甚至长达2.6秒。这就是为什么部分事务持续时间超过2秒的原因——事务必须等待WAL文件就绪后才能继续写入。
+
+创建WAL文件的过程如下：
+1. `stat(pg_wal/00000010000002F200000093)` - 未找到文件
+2. 使用`pg_wal/xlogtemp.129`创建WAL文件
+3. 将`pg_wal/xlogtemp.129`清零
+4. 在(`pg_wal/xlogtemp.129`和`pg_wal/00000010000002F200000093`)之间创建符号链接
+5. 打开`pg_wal/00000010000002F200000093`
+6. 在文件末尾写入元数据
+7. 加载并应用WAL文件
+
+从PostgreSQL日志判断，当时部分客户端连接被重置，某些事务执行耗时超过10秒。
+
+
+
+```bash
+2023-05-22 11:56:08.355 GMT,,,442907,"100.127.12.1:23928",646b5858.6c21b,1,"",2023-05-22 11:56:08 GMT,,0,LOG,08006,"could not receive data from client: Connection reset by peer",,,,,,,,,"" 2023-05-22 11:56:10.427 GMT,,,442925,"100.127.12.1:38942",646b585a.6c22d,1,"",2023-05-22 11:56:10 GMT,,0,LOG,08006,"could not receive data from client: Connection reset by peer",,,,,,,,,"" 2023-05-22 11:56:12.118 GMT,,,442932,"100.127.13.2:41985",646b585c.6c234,1,"",2023-05-22 11:56:12 GMT,,0,LOG,08006,"could not receive data from client: Connection reset by peer",,,,,,,,,"" 2023-05-22 11:56:13.401 GMT,"postgres","pgbenchtest",3549,"::1:45862",646ae5d3.ddd,3430,"UPDATE waiting",2023-05-22 03:47:31 GMT,15/95980531,1420084298,LOG,00000,"process 3549 still waiting for ShareLock on transac tion 1420065380 after 1000.051 ms","Process holding the lock: 3588. Wait queue: 3549.",,,,"while updating tuple (60702,39) in relation ""sbtest44""","UPDATE sbtest44 SET k=k+1 WHERE id=$1",,,""
+```
+
+我对比日志后发现，每当WAL段文件需要较长时间完成时，客户端就会生成一批慢查询（>1秒）日志。
+
+我在PG内核中清除了WAL文件：
+
+
+2. "PG kernel"译为"PG内核"（PostgreSQL内核）
+3. "slow query"译为行业通用术语"慢查询"
+4. 保留所有时间单位符号">1s"不变
+5. 保持技术名词首字母大写规范（如WAL/PG））
+
+```bash
+/* do not use get_sync_bit() here --- want to fsync only at end of fill */
+        fd = BasicOpenFile(tmppath, open_flags);
+        if (fd < 0)
+                ereport(ERROR,
+                                (errcode_for_file_access(),
+                                 errmsg("could not create file \"%s\": %m", tmppath)));
+
+        pgstat_report_wait_start(WAIT_EVENT_WAL_INIT_WRITE);
+        save_errno = 0;
+        if (wal_init_zero)
+        {
+                ssize_t                rc;
+
+                /*
+                 * Zero-fill the file.  With this setting, we do this the hard way to
+                 * ensure that all the file space has really been allocated.  On
+                 * platforms that allow "holes" in files, just seeking to the end
+                 * doesn't allocate intermediate space.  This way, we know that we
+                 * have all the space and (after the fsync below) that all the
+                 * indirect blocks are down on disk.  Therefore, fdatasync(2) or
+                 * O_DSYNC will be sufficient to sync future writes to the log file.
+                 */
+                rc = pg_pwrite_zeros(fd, wal_segment_size, 0); // buffer write
+
+                if (rc < 0)
+                        save_errno = errno;
+        }
+        else
+        {
+                /*
+                 * Otherwise, seeking to the end and writing a solitary byte is
+                 * enough.
+                 */
+                errno = 0;
+                if (pg_pwrite(fd, "\0", 1, wal_segment_size - 1) != 1)
+                {
+                        /* if write didn't set errno, assume no disk space */
+                        save_errno = errno ? errno : ENOSPC;
+                }
+        }
+        pgstat_report_wait_end();
+
+        if (save_errno)
+        {
+                /*
+                 * If we fail to make the file, delete it to release disk space
+                 */
+                unlink(tmppath);
+
+                close(fd);
+
+                errno = save_errno;
+
+                ereport(ERROR,
+                                (errcode_for_file_access(),
+                                 errmsg("could not write to file \"%s\": %m", tmppath)));
+        }
+
+        pgstat_report_wait_start(WAIT_EVENT_WAL_INIT_SYNC);
+        if (pg_fsync(fd) != 0)  // fsync data to disk
+        {
+                save_errno = errno;
+                close(fd);
+                errno = save_errno;
+                ereport(ERROR,
+                                (errcode_for_file_access(),
+                                 errmsg("could not fsync file \"%s\": %m", tmppath)));
+        }
+        pgstat_report_wait_end();
+```
+
+如代码所示，清理操作始于异步写入，每次写入针对一个页块执行，直至整个循环完成。随后执行一次fsync操作。
+
+通常情况下，异步写入速度较快，在系统负载较低时响应时间可达微秒级。但在高系统负载下，异步I/O操作的延迟可能超过30毫秒。这与操作系统内核中的I/O路径密切相关。当内存压力较大时，异步写入可能会转变为同步写入。此外，I/O过程与页回收的慢路径相互交织，理论上会导致较长的持续时间。这一现象在实际跟踪记录中确实被观测到。
+
+以下是监控到的两次连续清理操作，其中两次异步IO操作之间的间隔超过了30毫秒：
+
+```bash
+11:56:57.238340 write(3, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"..., 8192) = 8192
+11:56:57.271551 write(3, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"..., 8192) = 8192
+```
+
+磁盘带宽如下：
+
+<img src='/img/blogs/k8s-19.png' alt="Disk bandwidth"   />
+
+对于一个16MB的WAL段，如果需要进行2000次操作且每次耗时1毫秒，那么完成整体清零至少需要2秒。
+
+例如：
+
+```bash
+# I traced a PostgreSQL backend process that was executing a transaction. It took 1.5s to wait for the lock.
+02:27:52.868356 recvfrom(10, "*\0c\304$Es\200\332\2130}\32S\250l\36\202H\261\243duD\344\321p\335\344\241\312/"..., 92, 0, NULL, NULL) = 92
+02:27:52.868409 getrusage(RUSAGE_SELF, {ru_utime={tv_sec=232, tv_usec=765624}, ru_stime={tv_sec=59, tv_usec=963504}, ...}) = 0
+02:27:52.868508 futex(0x7f55bebf9e38, FUTEX_WAIT_BITSET|FUTEX_CLOCK_REALTIME, 0, NULL, FUTEX_BITSET_MATCH_ANY) = 0
+02:27:54.211960 futex(0x7f55bebfa238, FUTEX_WAKE, 1) = 1
+02:27:54.215049 write(2, "\0\0\36\1\377\334\23\0T2023-05-23 02:27:54.215"..., 295) = 295
+02:27:54.215462 getrusage(RUSAGE_SELF, {ru_utime={tv_sec=232, tv_usec=765773}, ru_stime={tv_sec=59, tv_usec=963504}, ...}) = 0
+```
+
+对应的 SQL 语句为：
+
+```bash
+2023-05-23 02:27:54.215 GMT,"postgres","pgbenchtest",1301759,"::1:56066",646c1ef3.13dcff,58,"SELECT",2023-05-23 02:03:31 GMT,43/198458539,0,LOG,00000,"duration: 1346.558 ms execute sbstmt-13047857631771152290: SEL ECT c FROM sbtest39 WHERE id=$1","parameters: $1 = '1001713'",,,,,,,,""
+```
+
+至此可以得出结论：TPS降至0和CPU波动与WAL清零操作有关。其机制如下：
+
+WAL创建 -> WAL清零 -> 脏页刷写与清零过程的I/O争用 -> 事务执行时间延长 -> 锁持有时间增加 -> 更多事务被阻塞 -> 事务超时。
+
+<img src='/img/blogs/k8s-20.jpg' alt="TPS drops mechanism"   />
+
+清零操作的最大问题在于会产生大量IO，且所有事务必须等待新WAL文件准备就绪后才能同步数据。在此过程中，所有事务都需等待WALWrite和wal_insert锁，这是造成性能抖动的最主要原因。
+
+由于问题的根本原因仍是IO争用，若IO负载较低且清零速度相对较快，抖动就不会如此显著，问题也不会暴露。目前严重抖动仅出现在压力测试期间，因此在前几轮测试中增加IO带宽确实有助于缓解TPS下降和CPU问题。
+
+此外，由于创建新WAL文件时需要加锁，调整WAL文件大小以降低加锁频率也是解决方案之一。
+
+## 第六轮压力测试：禁用 wal_init_zero
+
+现在我尝试解决这个问题。
+
+清零WAL日志依赖于WAL日志槽是否正常工作，这是一种次优但某种程度上有效的方法。理想情况下WAL日志应该是自描述的，不应依赖清零来确保正确性。不过这种解决方案需要修改PG内核，这并不现实。另一种方法是通过文件系统清除WAL日志，而无需显式的PG内核调用。此解决方案要求文件系统支持此功能。
+
+ZFS和XFS恰好具有这种COW特性。更多细节请参考[Reddit上的这个回答](https://www.reddit.com/r/bcachefs/comments/fhws6h/the_state_of_linux_cow_file_systems_what_to_choose/?rdt=58971)。
+
+由于测试使用的EXT4文件系统没有这个特性，我切换到了ZFS文件系统。
+
+然而在ZFS测试过程中，我多次遇到文件系统挂起的情况：
+
+```bash
+root@pgclusterzfs-postgresql-0:~# cat /proc/4328/stack
+[<0>] zil_commit_impl+0x105/0x650 [zfs]
+[<0>] zfs_fsync+0x71/0xf0 [zfs]
+[<0>] zpl_fsync+0x63/0x90 [zfs]
+[<0>] do_fsync+0x38/0x60
+[<0>] __x64_sys_fsync+0x10/0x20
+[<0>] do_syscall_64+0x5b/0x1d0
+[<0>] entry_SYSCALL_64_after_hwframe+0x44/0xa9
+[<0>] 0xffffffffffffffff
+```
+
+出于稳定性考虑，我选择了XFS文件系统并设置`wal_init_zero=off`。为了降低WAL日志文件的创建频率，同时将`wal_segment_size`从16MB调整为1GB，从而减少锁争用频率。
+
+这次调整后，TPS下降和CPU抖动现象得到了显著缓解。
+
+<img src='/img/blogs/k8s-21.jpeg' alt="Disable wal_init_zero"   />
+
+虽然避免清零操作和降低锁频率已见成效，但在检查点期间，脏页刷盘和WAL日志写入仍会引发带宽和锁资源的竞争，导致性能波动。为进一步优化该问题，我将重点转向减少单个事务的IO量。
+
+出于数据安全考虑，之前的压力测试都启用了`full_page_write`功能，这是为了确保在因断电可能导致数据块损坏时仍能恢复数据。具体原理可参考[这篇文章](http://mysql.taobao.org/monthly/2015/11/05/)。如果存储设备能保证原子写入（不会出现部分成功/失败），或者PostgreSQL可以通过备份集恢复（完整的基础数据+增量WAL重放），那么在保证数据安全的前提下，或许可以考虑禁用`full_page_write`功能。
+
+## 第七轮压力测试：禁用 full_page_write
+本次测试中，在禁用 `full_page_write` 前后，CPU 和 IO 带宽表现出了截然不同的性能特征。
+
+<img src='/img/blogs/k8s-22.jpeg' alt="CPU performance with full_page_write off"   />
+<img src='/img/blogs/k8s-23.jpeg' alt="IO bandwidth performance with full_page_write off"   />
+
+可以看出 IO 争用对 PG 产生了显著影响，即使在禁用 `full_page_write` 后，检查点期间的 CPU 抖动也几乎消失。
+
+随后我又进行了三组对比测试：
+1. 启用 `full_page_write` 并设置 16MB WAL 段大小
+2. 启用 `full_page_write` 并设置 1GB WAL 段大小
+3. 禁用 `full_page_write` 并设置 1GB WAL 段大小
+
+<img src='/img/blogs/k8s-24.jpeg' alt="KubeBlocks PG wal_segment 1GB vs 16MB"   />
+
+当 `full_page_write` 启用时，1GB 段大小相比 16MB 略有性能提升，这验证了增大段尺寸确实能降低锁竞争频率。而在禁用 `full_page_write` 后，PG 性能表现非常优异。
+
+最终我选择以下组合配置进行测试：
+(`wal_init_zero off` + XFS) + (`full_page_write` 禁用) + (`wal_segment_size` 1GB)
+测试结果如下：
+
+<img src='/img/blogs/k8s-25.png' alt="CPU performance"   />
+<img src='/img/blogs/k8s-26.png' alt="Disk R/W data performance"   />
+
+在检查点期间系统运行非常平稳，没有任何抖动。PG 也从 IO 瓶颈转变为 CPU 瓶颈。至此可以确定，问题的核心在于 PG 的锁机制。
+
+## 第八轮压力测试：最终性能对比
+然而根据我的经验，PG作为进程模型（一个会话对应一个进程），在并发较高时会产生较大的页表和进程上下文切换开销，因此需要引入pgBouncer。用户自建ECS PG实例时通常会开启Huge Pages来解决并发问题，而KubeBlocks PG部署在ACK上并未启用Huge Page。
+
+为保证测试公平性，我在后续测试中为KubeBlocks开启了`full_page_write`参数。
+
+<img src='/img/blogs/k8s-27.jpeg' alt="KubeBlocks PG vs ECS PG throughput"   />
+引入pgBouncer后，PG能够处理更多连接且性能无明显下降。KubeBlocks PG与PG表现相当，但在低并发场景下略胜一筹，整体稳定性更优。
+
+<img src='/img/blogs/k8s-28.jpeg' alt="KubeBlocks PG vs ECS PG latency"   />
+
+
+
+## 结论
+1. 清零 WAL 段对 PG 的性能和稳定性有显著影响。若文件系统支持清零操作，可关闭 `wal_init_zero` 选项以有效降低 CPU 和 TPS 波动。
+2. `full_page_write` 同样对 PG 的性能和稳定性影响较大。若存储或备份方案能确保数据安全，可考虑关闭该功能以有效减少 CPU 和 TPS 抖动。
+3. 增大 WAL 段尺寸可降低日志轮换时的锁竞争频率，也能缓解 CPU 和 TPS 抖动，但效果可能不如前两项显著。
+4. PG 采用多进程模型。引入 pgBouncer 可支持更大并发连接数并显著提升稳定性。若条件允许，启用 Huge Page 也能达到类似效果，尽管原理不同。
+5. 默认情况下 PG 受 IO 限制，但经过上述优化后会转为受 CPU 限制。
+6. ACK 和 SLB 网络表现稳健，满足性能与稳定性需求。
+7. K8s 可便捷调整文件系统及 PG 参数，并能快速有效地进行不同组合测试。此外，在 K8s 上运行数据库不会造成性能降级，经过常规调优即可呈现优异表现。K8s 为用户提供了更多自由度和自主权，限制更少。
+
+
+- Huge Page = 大页
+- IO-bound = IO 密集型
+- CPU-bound = CPU 密集型
+- ACK = 阿里云容器服务
+- SLB = 负载均衡服务
+- K8s = Kubernetes）

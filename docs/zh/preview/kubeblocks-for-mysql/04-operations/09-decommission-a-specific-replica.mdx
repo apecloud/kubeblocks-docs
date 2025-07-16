@@ -1,0 +1,237 @@
+---
+description: 了解如何在KubeBlocks管理的MySQL集群中下线（停用）特定Pod。
+keywords:
+- KubeBlocks
+- MySQL
+- Decommission Pod
+- Horizontal Scaling
+- Kubernetes
+sidebar_label: 下线 MySQL 副本
+sidebar_position: 9
+title: 在KubeBlocks管理的MySQL集群中下线特定Pod
+---
+
+
+```markdown
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## 为什么需要 KubeBlocks 下线 Pod？
+
+在传统的基于 StatefulSet 的部署中，Kubernetes 缺乏下线特定 Pod 的能力。StatefulSet 会确保 Pod 的顺序和身份标识，缩容操作总是优先移除序号最高的 Pod（例如从 3 个副本缩容时，会先移除 `Pod-2`）。这一限制导致无法精确控制下线的 Pod，使得维护、工作负载分配或故障处理变得复杂。
+
+KubeBlocks 通过允许管理员直接下线特定 Pod 来克服这一限制。这种细粒度的控制能力既能确保高可用性，又能在不影响整个集群的情况下实现更优的资源管理。
+
+## 前提条件
+
+在继续之前，请确保满足以下要求：
+- 环境准备：
+    - 已启动并运行一个 Kubernetes 集群。
+    - 已配置 kubectl CLI 工具以与集群通信。
+    - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处提供的安装说明进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 部署 MySQL 半同步集群
+
+部署一个 3 节点的 MySQL 半同步集群（1 个主节点，2 个从节点）：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+
+
+
+## 验证部署
+
+监控集群状态直到其转为 Running 状态：
+
+```bash
+kubectl get cluster example-mysql-cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Creating   8s
+example-mysql-cluster   mysql                Delete               Running    2m41s
+```
+
+当集群状态变为 Running 时，您的 MySQL 集群已准备就绪。
+
+列出集群中的 Pod 以验证所有三个 Pod 是否正在运行：
+
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster
+```
+
+
+
+```bash
+NAME                           READY   STATUS    RESTARTS   AGE
+example-mysql-cluster-mysql-0   4/4     Running   0          4m30s
+example-mysql-cluster-mysql-1   4/4     Running   0          4m30s
+example-mysql-cluster-mysql-2   4/4     Running   0          49s
+```
+
+
+
+
+
+## 下线特定 Pod
+
+要下线特定 Pod（例如 'example-mysql-cluster-mysql-1'），可以使用以下方法之一：
+
+    <Tabs>
+
+    <TabItem value="opsRequest" label="OPSREQUEST API" default>
+
+### 选项 1：使用 OpsRequest
+创建一个 OpsRequest 将 Pod 标记为离线：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-cluster-decommission-ops
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  type: HorizontalScaling
+  horizontalScaling:
+  - componentName: mysql
+    scaleIn:
+      onlineInstancesToOffline:
+        - 'example-mysql-cluster-mysql-1'  # Specifies the instance names that need to be taken offline
+EOF
+```
+
+#### 监控下线进程
+检查下线操作的进度：
+
+```bash
+kubectl describe ops example-mysql-cluster-decommission-ops -n demo
+```
+
+示例输出：
+
+```bash
+Status:
+  Phase:              Succeed
+  Progress:           1/1
+  ...
+```
+
+</TabItem>
+
+    <TabItem value="ClusterAPI" label="CLUSTER API">
+
+### 选项 2：使用 Cluster API
+或者，直接更新 Cluster 资源来下线 Pod：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2    # <----- Reduce replicas from 3 to 2
+      offlineInstances:
+        - example-mysql-cluster-mysql-1   # <----- Specify Pod to be decommissioned
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+</TabItem>
+
+    </Tabs>
+
+### 验证下线操作
+
+应用更新后的配置后，验证集群中剩余的 Pod：
+
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster
+```
+
+示例输出：
+
+```bash
+NAME                                READY   STATUS    RESTARTS   AGE
+example-mysql-cluster-mysql-0   4/4     Running   0          6m38s
+example-mysql-cluster-mysql-2   4/4     Running   0          6m38s
+```
+
+
+
+
+## 总结
+在本指南中，您了解到：
+- 传统基于 StatefulSet 的扩缩容在 Kubernetes 中的局限性。
+- KubeBlocks 如何实现对特定 Pod 的精准下线。
+- 两种下线 Pod 的方法：使用 OpsRequest 或直接更新 Cluster API。
+
+通过利用 KubeBlocks，您可以对 MySQL 集群进行细粒度管理，确保高可用性，并为维护和工作负载分配提供灵活性。

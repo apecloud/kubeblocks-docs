@@ -1,0 +1,159 @@
+---
+description: KubeBlocks, CRD
+keywords:
+- kubeblocks
+- concepts
+sidebar_position: 1
+title: 概念
+---
+# 概念
+
+在["统一API如何降低学习曲线"](./../overview/introduction)章节中，您已经看到了使用统一API表示各类数据库的优势。如果仔细观察这些示例，您会发现示例YAML文件中存在两个核心概念：**Cluster（集群）**和**Component（组件）**。例如，`test-mysql`是一个Cluster，它包含一个名为`mysql`的Component（其componentDef为`apecloud-mysql`）；同样，`test-redis`也是一个Cluster，它包含两个Component：一个名为`redis`（componentDef为`redis-7`）的组件包含两个副本，另一个名为`redis-sentinel`（componentDef为`redis-sentinel`）的组件包含三个副本。
+
+本文将解释这两个概念的设计初衷，并简要介绍其底层API（即CRD）。
+
+## KubeBlocks 分层 API 的设计动机
+
+在 KubeBlocks 中，为了通过统一 API 管理各类数据库，我们需要对不同数据库的拓扑结构和特性进行抽象。
+
+我们观察到，生产环境中部署的数据库系统通常采用多组件构成的拓扑结构。例如，一个生产级 MySQL 集群可能包含若干 Proxy 节点（如 ProxySQL、MaxScale、Vitess、WeScale 等）和多个 MySQL 服务器节点（如 MySQL 社区版、Percona、MariaDB、ApeCloud MySQL 等），以实现更高的可用性和读写分离能力。类似地，Redis 部署通常由主节点和多个只读副本组成，通过 Sentinel 管理实现高可用。部分用户还会使用 twemproxy 进行水平分片，以获得更大的容量和吞吐量。
+
+这种模块化设计在分布式数据库系统中更为显著——整个系统被划分为职责明确且单一的独立组件，例如数据存储、查询处理、事务管理、日志记录和元数据管理等。这些组件通过网络交互，在提供与单机数据库相当的强一致性和事务保证的同时，还能实现负载均衡、分布式事务和具备故障转移能力的灾难恢复等复杂功能。
+
+因此，KubeBlocks 采用了分层 API（即 CRD）设计，由 **Cluster** 和 **Component** 构成，以适配数据库系统多组件、高可变的部署拓扑。这些抽象层使我们能够灵活表示和管理数据库系统在 Kubernetes 上的多样化动态拓扑，并轻松将组件按选定拓扑组装成集群。
+
+组件（Component）是构成集群的基本构建块。实际上，Addon 开发者可以在 ClusterDefinition 中定义多个组件如何组装成不同的拓扑结构（不过等等，这听起来是否很复杂？如果您不是 Addon 开发者，其实无需关心 ClusterDefinition 的细节，只需知道 Addon 可以提供多种拓扑供您选择即可）。例如 Redis Addon 就提供了三种拓扑："standalone"（单机）、"replication"（主从复制）和 "replication-twemproxy"（主从分片）。用户在创建集群时可以指定所需拓扑。
+
+以下是通过 `clusterDef` 和 `topology` 创建 Redis 集群的示例：
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: test-redis-use-topology
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: redis
+  topology: replication
+  componentSpecs:
+    - name: redis
+      serviceVersion: "7.2.4"
+      disableExporter: false
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+    - name: redis-sentinel
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+细心的读者会发现：通过在 Cluster 中指定 `clusterDef` 和 `topology`，就不再需要为每个 Component 单独指定 `componentDef` 了。
+
+最后分享一个有趣的事实：您知道这个项目为何命名为 KubeBlocks 吗？通过 Component API，我们将数据库容器打包成标准化的构建块，这些构建块可以按照指定拓扑组装成数据库集群并在 Kubernetes 上运行——整个过程就像用乐高积木搭建模型一样充满模块化的乐趣。
+
+## 深入解析KubeBlocks API
+
+KubeBlocks的核心CRD架构如下图所示。我们特别突出了API的分层结构，而其他重要API（如OpsRequest、Backup和Restore）未在此图中展示。这些省略是为了聚焦层次关系，使图表更清晰。我们将在其他文档中阐述这些附加API。
+
+![KubeBlocks API层级结构](/img/docs/en/kubeblocks_api_layers.png)
+
+KubeBlocks的CRD可分为两大类别：面向用户的CRD和面向扩展组件的CRD。
+
+**面向用户的CRD**
+
+这类CRD包括Cluster（集群）、Component（组件）和InstanceSet（实例集）。当使用KubeBlocks创建数据库集群时，这些自定义资源将被生成。具体而言：
+- Cluster对象由用户直接创建
+- Component对象是KubeBlocks集群控制器在感知到Cluster对象后递归创建的子资源
+- InstanceSet对象是组件控制器在感知到Component对象后递归创建的子资源，而实例集控制器会进一步递归创建Pod和PVC对象
+
+**面向扩展组件的CRD**
+
+这类CRD包括ClusterDefinition（集群定义）、ComponentDefinition（组件定义）和ComponentVersion（组件版本）。这些CR由扩展组件开发者编写，并打包在扩展组件的Helm Chart中。
+
+:::重要说明
+虽然用户不需要编写ClusterDefinition和ComponentDefinition的CR，但仍需使用这些CR。如先前创建Redis集群的示例所示，当用户创建Cluster时，需要在每个组件的`componentDef`中指定对应ComponentDefinition CR的名称，或在`clusterDef`中指定对应ClusterDefinition CR的名称及所需拓扑结构。
+:::
+
+### 面向用户的KubeBlocks API
+
+#### Cluster（集群）
+Cluster对象代表由KubeBlocks管理的完整数据库集群。一个Cluster可包含多个Component。用户在此指定每个组件的配置，集群控制器将生成并协调对应的Component对象。此外，集群控制器还管理所有在集群级别暴露的服务地址。
+
+对于采用无共享架构的分布式数据库（如Redis Cluster），Cluster支持管理多个分片，每个分片由独立的Component管理。该架构还支持动态分片：如需横向扩展新增分片，只需添加新Component；反之如需收缩减少分片，则移除对应Component。
+
+#### Component（组件）
+Component是Cluster对象的基础构建单元。例如，Redis集群可包含`redis`、`sentinel`等组件，以及可能的代理组件如`twemproxy`。
+
+Component对象负责管理组件内所有副本的生命周期，支持广泛的操作包括：供应、停止、重启、终止、升级、配置变更、垂直与水平扩缩容、故障转移、主从切换、调度配置、服务暴露、系统账户管理等。
+
+Component是从用户提交的Cluster对象派生的内部子对象，主要供KubeBlocks控制器使用。不建议用户直接修改Component对象，而应仅将其用于监控组件状态。
+
+#### InstanceSet（实例集）
+自KubeBlocks v0.9起，我们使用InstanceSet替代了StatefulSet。
+
+数据库实例（或称副本）由一个Pod和若干辅助对象（PVC、Service、ConfigMap、Secret）组成。InstanceSet是负责管理一组实例的工作负载CRD。在KubeBlocks中，所有工作负载最终都通过InstanceSet管理。相较于Kubernetes原生的工作负载CRD（如StatefulSet和Deployment），InstanceSet融入了更多数据库领域的特殊考量与设计，例如每个副本的角色分配、更高的可用性要求，以及特定节点下线等运维需求。
+
+### 面向扩展组件的KubeBlocks API
+
+:::开发须知
+仅扩展组件开发者需要理解ClusterDefinition和ComponentDefinition API。因此KubeBlocks用户可以轻松绕过这两个API。
+:::
+
+#### ClusterDefinition（集群定义）
+ClusterDefinition是用于定义数据库集群所有可用拓扑结构的API，提供多样化的拓扑配置以满足不同部署需求和场景。
+
+每个拓扑结构包含组件列表，每个组件都关联到一个ComponentDefinition，这种设计增强了可重用性并减少冗余。例如，etcd、Zookeeper等通用组件的ComponentDefinition只需定义一次，即可在多个ClusterDefinition中复用，简化新系统的搭建流程。
+
+此外，ClusterDefinition还规定了组件的启动、升级和关闭顺序，确保对组件生命周期的管控具有可预测性。
+
+#### ComponentDefinition（组件定义）
+ComponentDefinition是创建Component的可复用蓝图或模板，封装了关键的静态设置，包括：组件描述、Pod模板、配置文件模板、脚本、参数列表、注入的环境变量及其来源、事件处理器等。ComponentDefinition与Component中的动态设置协同工作，在集群创建时实例化组件。
+
+ComponentDefinition中可定义的关键要素包括：
+- PodSpec模板：指定组件使用的PodSpec模板
+- 配置模板：声明组件所需的配置文件模板
+- 脚本：提供组件管理和操作所需的脚本
+- 存储卷：配置组件所需的存储卷及其规格
+- Pod角色：定义组件内Pod的各种角色及其能力
+- 暴露的Kubernetes服务：声明组件需要暴露的服务
+- 系统账户：配置组件所需的系统账户
+
+ComponentDefinition还支持定义组件对事件的响应行为，例如成员加入/退出、组件增删、角色变更、主从切换等。这使得组件能自动处理事件，从而将复杂行为封装在组件内部。
+
+## 什么是 Addon
+
+KubeBlocks 通过 Addon 机制扩展对各类数据库引擎的支持。一个 Addon 代表对特定数据库引擎的扩展支持，例如 MySQL Addon、PostgreSQL Addon、Redis Addon、MongoDB Addon 和 Kafka Addon 等。目前 KubeBlocks 仓库中已提供超过 30 种 Addon。
+
+每个 Addon 包含基于 ClusterDefinition、ComponentDefinition 和 ComponentVersion 等 CRD 的 CR（自定义资源），以及部分 ConfigMap（用作配置模板或脚本文件模板）、脚本文件、定义备份恢复操作方式的 CR，以及 Grafana 仪表板的 JSON 对象。
+
+Addon 会以 Helm Chart 的形式打包安装。用户安装某个数据库引擎的 Addon 后，在创建 Cluster 时即可引用该 Addon 中包含的 ClusterDefinition CR 和 ComponentDefinition CR，从而创建对应数据库引擎的 Cluster。

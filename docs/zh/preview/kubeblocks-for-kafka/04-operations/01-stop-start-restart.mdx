@@ -1,0 +1,322 @@
+---
+description: 了解如何在KubeBlocks中管理Kafka集群状态，包括停止、启动和重启操作，以优化资源使用。
+keywords:
+- KubeBlocks
+- Kafka
+- Cluster Management
+- Stop
+- Start
+- Restart
+sidebar_label: 生命周期管理
+sidebar_position: 1
+title: Kafka 集群生命周期管理（停止、启动、重启）
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Kafka 集群生命周期管理
+
+本指南演示如何在 **KubeBlocks** 中管理 Kafka 集群的运行状态，包括：
+
+- 停止集群以节省资源
+- 启动已停止的集群
+- 重启集群组件
+
+这些操作有助于优化 Kubernetes 环境中的资源使用并降低运营成本。
+
+KubeBlocks 中的生命周期管理操作：
+
+| 操作       | 效果                     | 使用场景                 |
+|------------|--------------------------|--------------------------|
+| 停止       | 暂停集群，保留存储       | 节省成本、维护期间       |
+| 启动       | 恢复集群运行             | 暂停后恢复服务           |
+| 重启       | 重新创建组件 Pod         | 配置变更、故障排查       |
+
+
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+
+
+## 部署 Kafka 集群
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+
+
+## 验证部署
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+
+
+## 集群生命周期操作
+
+### 停止集群
+
+在 KubeBlocks 中停止 Kafka 集群将执行以下操作：
+
+1. 终止所有运行中的 Pod
+2. 保留持久化存储（PVC）
+3. 保持集群配置不变
+
+此操作适用于以下场景：
+- 临时节省成本
+- 维护窗口期
+- 开发环境暂停
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  选项1：使用 OpsRequest API
+
+  创建停止操作请求：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: kafka-separated-cluster-stop-ops
+    namespace: demo
+  spec:
+    clusterName: kafka-separated-cluster
+    type: Stop
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  选项2：使用 使用 Cluster API Patch
+
+  通过修改 stop 字段直接调整集群配置：
+
+  ```bash
+  kubectl patch cluster kafka-separated-cluster -n demo --type='json' -p='[
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/0/stop",
+    "value": true
+  },
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/1/stop",
+    "value": true
+  },
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/2/stop",
+    "value": true
+  }
+  ]'
+  ```
+
+  </TabItem>
+
+</Tabs>
+
+### 验证集群停止
+
+确认停止操作成功执行：
+
+1. 检查集群状态转换：
+    ```bash
+    kubectl get cluster kafka-separated-cluster -n demo -w
+    ```
+    示例输出：
+    ```bash
+    NAME                      CLUSTER-DEFINITION    TERMINATION-POLICY   STATUS     AGE
+    kafka-separated-cluster   kafka                 Delete               Stopping   16m3s
+    kafka-separated-cluster   kafka                 Delete               Stopped    16m55s
+    ```
+
+2. 验证无运行中的 Pod：
+    ```bash
+    kubectl get pods -l app.kubernetes.io/instance=kafka-separated-cluster -n demo
+    ```
+    示例输出：
+    ```bash
+    No resources found in demo namespace.
+    ```
+
+3. 确认持久卷仍然存在：
+    ```bash
+    kubectl get pvc -l app.kubernetes.io/instance=kafka-separated-cluster -n demo
+    ```
+    示例输出：
+    ```bash
+    NAME                                                  STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+    data-kafka-separated-cluster-kafka-broker-0           Bound    pvc-ddd54e0f-414a-49ed-8e17-41e9f5082af1   20Gi       RWO            standard       <unset>                 14m
+    metadata-kafka-separated-cluster-kafka-broker-0       Bound    pvc-d63b7d80-cac5-41b9-b694-6a298921003b   1Gi        RWO            standard       <unset>                 14m
+    metadata-kafka-separated-cluster-kafka-controller-0   Bound    pvc-e6263eb1-405a-4090-b2bb-f92cca0ba36d   1Gi        RWO            standard       <unset>                 14m
+    ```
+
+### 启动集群
+
+启动已停止的 Kafka 集群将：
+1. 重新创建所有 Pod
+2. 重新挂载持久化存储
+3. 恢复服务端点
+
+预期行为：
+- 集群恢复到之前状态
+- 不会发生数据丢失
+- 服务自动恢复
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  发起启动操作请求：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: kafka-separated-cluster-start-ops
+    namespace: demo
+  spec:
+    # 指定此操作目标集群资源的名称
+    clusterName: kafka-separated-cluster
+    type: Start
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  修改集群配置以恢复运行：
+  1. 设置 stop: false，或
+  2. 完全移除 stop 字段
+
+    ```bash
+    kubectl patch cluster kafka-separated-cluster -n demo --type='json' -p='[
+    {
+      "op": "remove",
+      "path": "/spec/componentSpecs/0/stop"
+    },
+    {
+      "op": "remove",
+      "path": "/spec/componentSpecs/1/stop"
+    },
+    {
+      "op": "remove",
+      "path": "/spec/componentSpecs/2/stop"
+    }
+    ]'
+    ```
+
+  </TabItem>
+
+</Tabs>
+
+### 验证集群启动
+
+确认启动操作成功执行：
+
+1. 检查集群状态转换：
+    ```bash
+    kubectl get cluster kafka-separated-cluster -n demo -w
+    ```
+    示例输出：
+    ```bash
+    NAME                      CLUSTER-DEFINITION     TERMINATION-POLICY   STATUS     AGE
+    kafka-separated-cluster   kafka                  Delete               Updating   24m
+    kafka-separated-cluster   kafka                  Delete               Running    24m
+    kafka-separated-cluster   kafka                  Delete               Running    24m
+    ```
+
+2. 验证 Pod 重建情况：
+    ```bash
+    kubectl get pods -n demo -l app.kubernetes.io/instance=kafka-separated-cluster
+    ```
+    示例输出：
+    ```bash
+    NAME                                         READY   STATUS    RESTARTS   AGE
+    kafka-separated-cluster-kafka-broker-0       2/2     Running   0          2m4s
+    kafka-separated-cluster-kafka-controller-0   2/2     Running   0          104s
+    kafka-separated-cluster-kafka-exporter-0     1/1     Running   0          84s
+    ```
+
+### 重启集群
+
+重启操作提供以下特性：
+- 无需完全停止集群即可重建 Pod
+- 组件级细粒度控制
+- 最小化服务中断
+
+适用场景：
+- 需要重启的配置变更
+- 资源刷新
+- 故障排查
+
+**检查组件**
+
+Milvus 集群包含五个组件。获取组件列表：
+```bash
+kubectl get cluster -n demo kafka-separated-cluster -oyaml | yq '.spec.componentSpecs[].name'
+```
+
+预期输出：
+```text
+kafka-controller
+kafka-broker
+kafka-exporter
+```
+
+**通过 OpsRequest API 重启代理**
+
+列出需要重启的特定组件：
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: kafka-separated-cluster-restart-ops
+  namespace: demo
+spec:
+  clusterName: kafka-separated-cluster
+  type: Restart
+  restart:
+  - componentName: kafka-broker
+```
+
+**验证重启完成**
+
+确认组件重启成功：
+
+1. 跟踪 OpsRequest 进度：
+    ```bash
+    kubectl get opsrequest kafka-separated-cluster-restart-ops -n demo -w
+    ```
+    示例输出：
+    ```bash
+    NAME                                  TYPE      CLUSTER                   STATUS    PROGRESS   AGE
+    kafka-separated-cluster-restart-ops   Restart   kafka-separated-cluster   Running   0/1        8s
+    kafka-separated-cluster-restart-ops   Restart   kafka-separated-cluster   Running   1/1        22s
+    kafka-separated-cluster-restart-ops   Restart   kafka-separated-cluster   Running   1/1        23s
+    kafka-separated-cluster-restart-ops   Restart   kafka-separated-cluster   Succeed   1/1        23s
+    ```
+
+2. 检查 Pod 状态：
+    ```bash
+    kubectl get pods -n demo -l app.kubernetes.io/instance=kafka-separated-cluster
+    ```
+    注意：重启后 Pod 将显示新的创建时间戳。只有属于组件 `kafka-broker` 的 Pod 会被重启。
+
+操作完成后，集群将恢复至 Running 状态。
+
+## 概述
+在本指南中，您学习了如何：
+1. **停止 Kafka 集群**：暂停集群运行同时保留持久化存储
+2. **启动已停止的集群**：将集群重新恢复在线状态
+3. **重启特定集群组件**：在不停止整个集群的情况下重建目标组件的 Pod
+
+通过管理 Kafka 集群的生命周期，您可以优化资源利用率、降低成本，并在 Kubernetes 环境中保持运维灵活性。KubeBlocks 提供了无缝执行这些操作的能力，在确保高可用性的同时将业务中断降至最低。

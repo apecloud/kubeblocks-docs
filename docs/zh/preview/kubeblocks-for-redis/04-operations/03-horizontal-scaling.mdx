@@ -1,0 +1,289 @@
+---
+description: 了解如何通过OpsRequest和直接Cluster API更新，对KubeBlocks管理的Redis集群执行水平扩缩容（扩容与缩容）。
+keywords:
+- KubeBlocks
+- Redis
+- Horizontal Scaling
+- Scale-Out
+- Scale-In
+- Kubernetes
+sidebar_label: 水平扩展
+sidebar_position: 3
+title: 使用KubeBlocks水平扩展Redis集群
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# 使用 KubeBlocks 实现 Redis 集群的水平扩缩容
+
+本指南介绍如何对 KubeBlocks 管理的 Redis 集群执行水平扩缩容（扩容和缩容）操作。您将学习如何使用 **OpsRequest** 和直接修改 **Cluster API** 两种方式来实现这一目标。
+
+## 先决条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+
+## 部署 Redis 复制集群
+
+import CreateCluster from '../_tpl/_create-redis-replication-cluster.mdx'
+
+<CreateCluster />
+
+
+## 验证部署状态
+
+import VerifyCluster from '../_tpl/_verify-redis-replication-cluster.mdx'
+
+<VerifyCluster />
+
+
+## 扩容（增加副本）
+
+**预期工作流程**：
+
+1. 新 Pod 被创建，状态从 `Pending` 转为 `Running`，角色为 `secondary`
+2. 数据从主节点同步到新副本
+3. 集群状态从 `Updating` 变为 `Running`
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  选项一：使用水平扩容 OpsRequest
+
+  通过为 redis 组件增加 1 个副本来扩容 Redis 集群：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: redis-replication-scale-out-ops
+    namespace: demo
+  spec:
+    clusterName: redis-replication
+    type: HorizontalScaling
+    horizontalScaling:
+    - componentName: redis
+      # 指定组件扩容的副本变更数量
+      scaleOut:
+        # 指定组件的副本变更数量
+        # 为当前组件增加 1 个副本
+        replicaChanges: 1
+  ```
+
+  监控扩容操作进度：
+
+  ```bash
+  kubectl get ops redis-replication-scale-out-ops -n demo -w
+  ```
+
+  预期结果：
+  ```bash
+  NAME                              TYPE                CLUSTER             STATUS    PROGRESS   AGE
+  redis-replication-scale-out-ops   HorizontalScaling   redis-replication   Running   0/1        9s
+  redis-replication-scale-out-ops   HorizontalScaling   redis-replication   Running   1/1        20s
+  redis-replication-scale-out-ops   HorizontalScaling   redis-replication   Succeed   1/1        20s
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  选项二：直接更新 Cluster API
+
+  您也可以直接修改 Cluster 资源中的 `replicas` 字段：
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: redis
+        serviceVersion: "7.2.4"
+        disableExporter: false
+        replicas: 3 # 增加副本数量实现扩容
+  ...
+  ```
+
+  或者使用命令修补集群 CR：
+
+  ```bash
+  kubectl patch cluster redis-replication -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 3}]'
+  ```
+  </TabItem>
+</Tabs>
+
+### 验证扩容结果
+
+操作完成后，您将看到新 Pod 被创建，Redis 集群状态从 `Updating` 变为 `Running`，新建 Pod 的角色为 `secondary`。
+
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=redis-replication
+```
+
+示例输出（3 个 Pod）：
+```bash
+NAME                                 READY   STATUS    RESTARTS   AGE
+redis-replication-redis-0            3/3     Running   0          9m47s
+redis-replication-redis-1            3/3     Running   0          10m
+redis-replication-redis-2            3/3     Running   0          4m48s
+redis-replication-redis-sentinel-0   2/2     Running   0          16m
+redis-replication-redis-sentinel-1   2/2     Running   0          16m
+redis-replication-redis-sentinel-2   2/2     Running   0          17m
+```
+
+新副本会自动作为从节点加入集群。
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=redis-replication -L kubeblocks.io/role
+```
+
+示例输出：
+```bash
+NAME                                 READY   STATUS    RESTARTS   AGE     ROLE
+redis-replication-redis-0            3/3     Running   0          10m     secondary
+redis-replication-redis-1            3/3     Running   0          11m     primary
+redis-replication-redis-2            3/3     Running   0          5m27s   secondary
+redis-replication-redis-sentinel-0   2/2     Running   0          17m
+redis-replication-redis-sentinel-1   2/2     Running   0          17m
+redis-replication-redis-sentinel-2   2/2     Running   0          17m
+```
+
+
+## 缩容（减少副本）
+
+**预期工作流程**：
+
+1. 移除序号最大的副本
+2. 如果移除的是主副本，会先触发自动故障转移
+3. Pod 被优雅终止
+4. 集群状态从 `Updating` 变为 `Running`
+
+:::note
+如果被缩容的副本恰好是主副本，KubeBlocks 会触发故障转移操作。在该操作成功前，该 Pod 不会被终止。
+:::
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  选项一：使用水平缩容 OpsRequest
+
+  通过减少 1 个副本来缩容 Redis 集群：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: redis-replication-scale-in-ops
+    namespace: demo
+  spec:
+    clusterName: redis-replication
+    type: HorizontalScaling
+    horizontalScaling:
+    - componentName: redis
+      # 指定组件缩容的副本变更数量
+      scaleIn:
+        # 指定组件的副本变更数量
+        # 从当前组件移除 1 个副本
+        replicaChanges: 1
+  ```
+
+  监控进度：
+  ```bash
+  kubectl get ops redis-replication-scale-in-ops -n demo -w
+  ```
+
+  预期结果：
+  ```bash
+  NAME                             TYPE                CLUSTER             STATUS    PROGRESS   AGE
+  redis-replication-scale-in-ops   HorizontalScaling   redis-replication   Running   0/1        8s
+  redis-replication-scale-in-ops   HorizontalScaling   redis-replication   Running   1/1        24s
+  redis-replication-scale-in-ops   HorizontalScaling   redis-replication   Succeed   1/1        24s
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  选项二：直接更新 Cluster API
+
+  您也可以直接修改 Cluster 资源中的 `replicas` 字段：
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: redis
+        serviceVersion: "7.2.4"
+        disableExporter: false
+        replicas: 1 # 减少副本数量实现缩容
+  ```
+
+  或者使用命令修补集群 CR：
+
+  ```bash
+  kubectl patch cluster redis-replication -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 1}]'
+  ```
+  </TabItem>
+
+</Tabs>
+
+### 验证缩容结果
+
+示例输出（1 个 Pod）：
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=redis-replication,apps.kubeblocks.io/component-name=redis
+NAME                        READY   STATUS    RESTARTS   AGE
+redis-replication-redis-0   3/3     Running   0          16m
+```
+
+
+## 故障排查
+如果缩容操作长时间卡住，请检查以下资源：
+
+```bash
+# 检查当前主节点和候选节点的 agent 日志
+kubectl logs -n demo <primary-pod> -c kbagent
+kubectl logs -n demo <candidate-pod> -c kbagent
+
+# 检查集群事件中的错误
+kubectl get events -n demo --field-selector involvedObject.name=pg-cluster
+
+# 检查 kubeblocks 日志
+kubectl -n kb-system logs deploy/kubeblocks
+```
+
+如果从主副本收到如下错误：
+```text
+INFO	Action Executed	{"action": "switchover", "result": "exit code: 1: failed"}
+INFO	HTTP API Called	{"user-agent": "Go-http-client/1.1", "method": "POST", "path": "/v1.0/action", "status code": 200, "cost": 7}
+```
+
+可能是故障转移错误，请检查 KubeBlocks 日志获取更多详情。
+```
+
+## 最佳实践
+
+进行水平扩展时：
+- 尽可能选择低流量时段执行扩缩容操作
+- 扩缩容过程中持续监控集群健康状态
+- 扩容前确保有足够的资源供给新副本
+- 考虑新增副本的存储需求
+
+## 清理资源
+要删除所有已创建的资源，请执行以下命令删除Redis集群及其命名空间：
+```bash
+kubectl delete cluster redis-replication -n demo
+kubectl delete ns demo
+```
+
+## 总结
+本指南中您已学习到：
+- 通过扩容操作为Redis集群添加副本
+- 通过缩容操作从Redis集群移除副本
+- 使用OpsRequest和直接Cluster API更新两种方式进行水平扩展
+
+KubeBlocks能确保在最小化影响数据库服务的情况下实现无缝扩缩容。

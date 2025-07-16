@@ -1,0 +1,36 @@
+监控集群状态直至其转为运行中(Running)状态：
+```bash
+kubectl get cluster es-multinode -n demo -w
+```
+
+预期输出：
+
+```bash
+NAME           CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+es-multinode                        Delete               Creating   10s
+es-multinode                        Delete               Updating   41s
+es-multinode                        Delete               Running    42s
+```
+
+检查Pod状态及其角色：
+```bash
+kubectl get pods -l app.kubernetes.io/instance=es-multinode -n demo
+```
+
+预期输出：
+```bash
+NAME                    READY   STATUS    RESTARTS   AGE
+es-multinode-dit-0      3/3     Running   0          6m21s
+es-multinode-dit-1      3/3     Running   0          6m21s
+es-multinode-dit-2      3/3     Running   0          6m21s
+es-multinode-master-0   3/3     Running   0          6m21s
+es-multinode-master-1   3/3     Running   0          6m21s
+es-multinode-master-2   3/3     Running   0          6m21s
+```
+
+当集群状态显示为Running时，您的Elasticsearch集群即可投入使用。
+
+:::tip
+如果是首次创建集群，可能需要一定时间拉取镜像后才能正常运行。
+
+:::

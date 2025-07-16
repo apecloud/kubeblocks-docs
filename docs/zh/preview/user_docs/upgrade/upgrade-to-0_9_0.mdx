@@ -1,0 +1,171 @@
+---
+description: 升级至 KubeBlocks v0.9.0：操作指南、技巧与注意事项
+keywords:
+- upgrade
+- 0.9.0
+title: 升级至 v0.9.0
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 升级至 KubeBlocks v0.9.0
+
+本教程将指导您如何升级至 KubeBlocks v0.9.0 版本。
+
+:::note
+
+执行 `helm -n kb-system list | grep kubeblocks` 或 `kbcli version` 命令可查看当前运行的 KubeBlocks 版本，再进行升级操作。
+
+:::
+
+## 兼容性说明
+
+KubeBlocks 0.9.0 兼容 KubeBlocks 0.8 版本的 API，但不保证与 v0.8 之前版本的 API 兼容。若您正在使用 KubeBlocks 0.7 或更早版本（0.6 等）的 Addons，请务必[先升级至 v0.8 版本](../upgrade/upgrade-to-0_8)，确保服务可用性后再升级至 v0.9.0。
+
+## 从 KubeBlocks v0.8 升级
+
+<Tabs>
+
+<TabItem value="Helm" label="Helm" default>
+
+1. 为 Addons 添加 `"helm.sh/resource-policy": "keep"` 注解
+
+    KubeBlocks v0.8 精简了默认安装的引擎。为避免升级过程中删除正在使用的 Addon 资源，请先执行以下命令：
+
+    - 为 Addons 添加注解（可将 `-l app.kubernetes.io/name=kubeblocks` 替换为实际筛选条件）：
+
+         ```bash
+         kubectl annotate addons.extensions.kubeblocks.io -l app.kubernetes.io/name=kubeblocks helm.sh/resource-policy=keep
+         ```
+
+    - 验证 Addons 注解
+
+         执行以下命令确保 Addon 注解中包含 `"helm.sh/resource-policy": "keep"`：
+
+         ```bash
+         kubectl get addon -o json | jq '.items[] | {name: .metadata.name, annotations: .metadata.annotations}'
+         ```
+
+2. 删除不兼容的 OpsDefinition
+
+   ```bash
+   kubectl delete opsdefinitions.apps.kubeblocks.io kafka-quota kafka-topic kafka-user-acl switchover
+   ```
+
+3. 升级前安装 StorageProvider CRD
+
+    若网络较慢，建议提前下载 CRD YAML 文件到本地：
+
+    ```bash
+    kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/v0.9.0/dataprotection.kubeblocks.io_storageproviders.yaml
+    ```
+
+4. 升级 KubeBlocks
+
+    ```bash
+    helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version 0.9.0
+    ```
+
+    :::note
+
+    为避免影响现有数据库集群，升级至 KubeBlocks v0.9.0 时默认不会升级已安装的 Addons 版本。如需将 Addons 升级至 v0.9.0 内置版本，请执行以下命令（注意：此操作可能导致集群重启并影响可用性，请谨慎操作）：
+
+    ```bash
+    helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version 0.9.0 \
+    --set upgradeAddons=true
+    ```
+
+    :::
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+1. 下载 kbcli v0.9.0
+
+    ```bash
+    curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash -s 0.9.0
+    ```
+
+2. 升级 KubeBlocks
+
+    ```bash
+    kbcli kb upgrade --version 0.9.0
+    ```
+
+    :::note
+
+    为避免影响现有数据库集群，升级至 KubeBlocks v0.9.0 时默认不会升级已安装的 Addons 版本。如需将 Addons 升级至 v0.9.0 内置版本，请执行以下命令（注意：此操作可能导致集群重启并影响可用性，请谨慎操作）：
+
+    ```bash
+    kbcli kb upgrade --version 0.9.0 --set upgradeAddons=true
+    ```
+
+    :::
+
+    kbcli 会自动添加 `"helm.sh/resource-policy": "keep"` 注解，确保升级过程中不会删除现有 Addons。
+
+</TabItem>
+
+</Tabs>
+
+## 升级 Addons
+
+若未设置 `upgradeAddons=true` 或您的 Addon 不在默认安装列表中，可通过以下命令升级 Addons 以使用 v0.9.0 API。
+
+:::note
+
+特殊注意事项：
+- 若需升级 `mysql` Addon，必须升级并重启集群，否则 v0.8 创建的集群将无法在 v0.9.0 中使用
+- 对于 `clickhouse/milvus/elasticsearch/llm` Addons，需先升级 KubeBlocks 再升级 Addon，否则这些 Addon 在 v0.9.0 中将无法正常使用
+
+:::
+
+<Tabs>
+
+<TabItem value="Helm" label="Helm" default>
+
+```bash
+# 添加 Helm 仓库
+helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
+
+# 若 GitHub 访问困难，可使用以下镜像仓库
+helm repo add kubeblocks-addons https://jihulab.com/api/v4/projects/150246/packages/helm/stable
+
+# 更新仓库索引
+helm repo update
+
+# 更新 Addon 版本
+helm upgrade -i {addon-release-name} kubeblocks-addons/{addon-name} --version x.y.z -n kb-system
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+```bash
+# 查看 Addon 索引列表
+kbcli addon index list
+
+# 更新索引（默认索引为 kubeblocks）
+kbcli addon index update kubeblocks
+
+# 搜索可用 Addon 版本
+kbcli addon search <addonName>
+
+# 安装 Addon
+kbcli addon install <addonName> --version x.y.z
+
+# 升级至指定版本
+kbcli addon upgrade <addonName> --version x.y.z
+
+# 强制升级至指定版本
+kbcli addon upgrade <addonName> --version x.y.z --force
+
+# 查看可用 Addon 版本
+kbcli addon list | grep <addonName>
+```
+
+</TabItem>
+
+</Tabs>

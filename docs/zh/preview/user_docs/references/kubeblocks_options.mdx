@@ -1,0 +1,211 @@
+---
+description: KubeBlocks 选项与角色
+keywords:
+- kubeblocks
+- options
+- roles
+sidebar_position: 8
+title: KubeBlocks 选项与角色
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# KubeBlocks 选项与角色
+
+## KubeBlocks 配置选项
+
+### KubeBlocks 基础选项
+| 参数 | 描述 | 默认值 |
+|----------|------|--------|
+| image.registry | KubeBlocks 镜像仓库地址 | apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com |
+| image.repository | KubeBlocks 镜像仓库名称 | apecloud/kubeblocks |
+| image.pullPolicy | 镜像拉取策略 | IfNotPresent |
+| image.tag | 镜像标签，默认使用 chart 的 appVersion | "" |
+| image.imagePullSecrets | 镜像拉取密钥 | [] |
+| image.tools.repository | 工具镜像仓库名称 | apecloud/kubeblocks-tools |
+| replicaCount | 副本数量 | 1 |
+| reconcileWorkers | 协调工作线程数 | "" |
+
+### 数据保护选项
+| 参数 | 描述 | 默认值 |
+|----------|------|--------|
+| dataProtection.enabled | 启用数据保护控制器 | true |
+| dataProtection.leaderElectId | 数据保护领导者选举ID | "" |
+| dataProtection.encryptionKey | 备份加密密钥 | "" |
+| dataProtection.encryptionKeySecretKeyRef.name | 加密密钥 Secret 名称 | "" |
+| dataProtection.encryptionKeySecretKeyRef.key | 加密密钥 Secret 键名 | "" |
+| dataProtection.encryptionKeySecretKeyRef.skipValidation | 跳过密钥验证 | false |
+| dataProtection.enableBackupEncryption | 启用备份加密 | false |
+| dataProtection.backupEncryptionAlgorithm | 备份加密算法，可选 "AES-128-CFB"、"AES-192-CFB"、"AES-256-CFB" | "" |
+| dataProtection.gcFrequencySeconds | 垃圾回收频率（秒） | 3600 |
+| dataProtection.reconcileWorkers | 备份控制器并发数 | "" |
+| dataProtection.image.registry | 数据保护镜像仓库地址 | "" |
+| dataProtection.image.repository | 数据保护镜像仓库名称 | |
+| dataProtection.image.pullPolicy | 镜像拉取策略 | IfNotPresent |
+| dataProtection.image.tag | 镜像标签 | "" |
+| dataProtection.image.imagePullSecrets | 镜像拉取密钥 | [] |
+| dataProtection.image.datasafed.repository | Datasafed 镜像仓库名称 | apecloud/datasafed |
+| dataProtection.image.datasafed.tag | Datasafed 镜像标签 | 0.2.0 |
+
+### 备份仓库选项
+| 参数 | 描述 | 默认值 |
+|----------|------|--------|
+| backupRepo.create | 安装时创建备份仓库 | false |
+| backupRepo.default | 将创建的仓库设为默认 | true |
+| backupRepo.accessMethod | 备份仓库访问方式，可选 [Mount, Tool] | Tool |
+| backupRepo.storageProvider | 仓库使用的存储提供商，可选 [s3, oss, minio] | "" |
+| backupRepo.pvReclaimPolicy | PV 回收策略，可选 [Retain, Delete] | Retain |
+| backupRepo.volumeCapacity | 创建 PVC 的容量 | "" |
+| backupRepo.config.bucket | 存储桶名称 | "" |
+| backupRepo.config.endpoint | 存储端点地址 | "" |
+| backupRepo.config.region | 存储区域 | "" |
+| backupRepo.secrets.accessKeyId | 存储访问密钥ID | "" |
+| backupRepo.secrets.secretAccessKey | 存储访问密钥 | "" |
+
+### 插件选项
+| 参数 | 描述 | 默认值 |
+|----------|------|--------|
+| addonController.enabled | 启用插件控制器（需要 `cluster-admin` ClusterRole） | true |
+| addonController.jobTTL | 插件作业的存活时间（time.Duration 格式） | 5m |
+| addonController.jobImagePullPolicy | 插件安装作业的镜像拉取策略 | IfNotPresent |
+| keepAddons | 卸载 chart 时保留 Addon CR 对象 | true |
+| addonChartLocationBase | KubeBlocks 官方插件 chart 基础路径。离线环境下，若 URL 以 "file://" 开头，KubeBlocks 将使用从 addonChartsImage 复制的 Helm charts | file:// |
+| addonChartsImage.registry | 插件 charts 镜像仓库地址（未指定时使用 image.registry） | "" |
+| addonChartsImage.repository | 插件 charts 镜像仓库名称 | apecloud/kubeblocks-charts |
+| addonChartsImage.pullPolicy | 镜像拉取策略 | IfNotPresent |
+| addonChartsImage.tag | 镜像标签 | "" |
+| addonChartsImage.chartsPath | 插件 charts 镜像中的 Helm charts 路径 | /charts |
+| addonChartsImage.pullSecrets | 镜像拉取密钥 | [] |
+| addonHelmInstallOptions | 插件 Helm 安装选项 | ["--atomic", "--cleanup-on-fail", "--wait", "--insecure-skip-tls-verify"] |
+| upgradeAddons | 升级 chart 时升级插件。设为 false 可防止 chart 升级时插件 CR 被更新 | false |
+| autoInstalledAddons | 安装和升级时自动安装的插件列表 | ["apecloud-mysql", "etcd", "kafka", "mongodb", "mysql", "postgresql", "qdrant", "redis", "rabbitmq"] |
+
+### 控制器选项
+| 参数 | 描述 | 默认值 |
+|----------|------|--------|
+| controllers.apps.enabled | 启用应用控制器 | true |
+| controllers.workloads.enabled | 启用工作负载控制器 | true |
+| controllers.operations.enabled | 启用操作控制器 | true |
+| controllers.experimental.enabled | 启用实验性控制器 | false |
+| controllers.trace.enabled | 启用追踪控制器 | false |
+
+### 特性开关选项
+| 参数 | 描述 | 默认值 |
+|----------|------|--------|
+| featureGates.inPlacePodVerticalScaling.enabled | 启用原地 Pod 垂直扩缩容 | false |
+
+更新配置选项可使用以下命令：
+
+<Tabs>
+<TabItem value="Helm" label="Helm" default>
+
+1. 安装
+```bash
+helm install kubeblocks kubeblocks/kubeblocks \
+  --namespace kb-system \
+  --create-namespace \
+  --version {{VERSION}} \
+  --set optionName=optionValue
+```
+
+1. 升级
+```bash
+helm upgrade kubeblocks kubeblocks/kubeblocks \
+  --namespace kb-system \
+  --version {{VERSION}} \
+  --set optionName=optionValue
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+1. 安装
+```bash
+kbcli kubeblocks install \
+  --version={{VERSION}} \
+  --create-namespace \
+  --set optionName=optionValue
+```
+
+1. 升级
+```bash
+kbcli kubeblocks upgrade \
+  --version={{VERSION}} \
+  --set optionName=optionValue
+```
+
+</TabItem>
+</Tabs>
+
+## KubeBlocks Operator RBAC 权限说明
+KubeBlocks operator 需要以下权限才能正常工作。
+
+### 1. Kubernetes 资源权限
+**主要权限包括：**
+
+#### 核心集群权限：
+- **节点(Node)**: `list`, `watch`
+- **Pod**: `create`, `delete`, `deletecollection`, `get`, `list`, `patch`, `update`, `watch`, `exec`, `log`
+- **服务(Service)**: `create`, `delete`, `deletecollection`, `get`, `list`, `patch`, `update`, `watch`
+- **ConfigMap**: `create`, `delete`, `deletecollection`, `get`, `list`, `patch`, `update`, `watch`
+- **Secret**: `create`, `delete`, `deletecollection`, `get`, `list`, `patch`, `update`, `watch`
+- **ServiceAccount**: `create`, `delete`, `get`, `list`, `patch`, `update`, `watch`
+- **PersistentVolumeClaim**: `create`, `delete`, `get`, `list`, `patch`, `update`, `watch`
+- **PersistentVolume**: `get`, `list`, `patch`, `update`, `watch`
+- **事件(Event)**: `create`, `get`, `list`, `patch`, `watch`
+
+#### 应用资源权限：
+- **部署(Deployment)**: `get`, `list`, `watch`
+- **StatefulSet**: `create`, `delete`, `deletecollection`, `get`, `list`, `patch`, `update`, `watch`
+- **Job**: `create`, `delete`, `deletecollection`, `get`, `list`, `patch`, `update`, `watch`
+- **CronJob**: `create`, `delete`, `get`, `list`, `patch`, `update`, `watch`
+
+#### 存储相关权限：
+- **StorageClass**: `create`, `delete`, `get`, `list`, `watch`
+- **CSIDriver**: `get`, `list`, `watch`
+- **VolumeSnapshot**: `create`, `delete`, `get`, `list`, `patch`, `update`, `watch`
+- **VolumeSnapshotClass**: `create`, `delete`, `get`, `list`, `patch`, `update`, `watch`
+
+#### RBAC 权限：
+- **Role**: `get`, `list`, `watch`
+- **RoleBinding**: `create`, `delete`, `get`, `list`, `patch`, `update`, `watch`
+
+#### 协调机制权限：
+- **Lease**: `create`, `get`, `list`, `patch`, `update`, `watch`
+
+#### 认证代理权限
+- **TokenReview**: `create`
+- **SubjectAccessReview**: `create`
+
+### 2. KubeBlocks 自定义资源权限
+
+- **apps.kubeblocks.io** API 组: **ClusterDefinition**, **Cluster**, **ComponentDefinition**, **Component**, **ComponentVersion**, **Rollout**, - **ServiceDescriptor**, **ShardingDefinition**, **SidecarDefinition**
+- **dataprotection.kubeblocks.io** API 组: **ActionSet**, **BackupPolicy**, **BackupPolicyTemplate**, **BackupRepo**, **Backup**, **BackupSchedule**, - **Restore**, **StorageProvider**
+- **operations.kubeblocks.io** API 组: **OpsDefinition**, **OpsRequest**
+- **parameters.kubeblocks.io** API 组: **ComponentParameter**, **ParamConfigRenderer**, **Parameter**, **ParameterDefinition**
+- **experimental.kubeblocks.io** API 组: **NodeCountScaler**
+- **extensions.kubeblocks.io** API 组: **Addon**
+- **trace.kubeblocks.io** API 组: **ReconciliationTrace**
+- **workloads.kubeblocks.io** API 组: **InstanceSet**
+
+### 3. 条件性权限
+
+**数据保护功能 (dataProtection.enabled=true):**
+- 备份相关权限
+
+**Webhook 转换功能 (webhooks.conversionEnabled=true):**
+- **CustomResourceDefinition**: `create`, `get`, `list`, `patch`, `update`, `watch`
+- **Deployment**: 额外的部署管理权限
+
+**插件控制器 (addonControllerEnabled=true):**
+- **cluster-admin**: 完整的集群管理员权限
+
+:::note
+
+插件控制器需要 `cluster-admin` ClusterRole。
+如果不想授予此权限，可以在安装 KubeBlocks 时设置 `addonController.enabled=false`。
+
+禁用后，仍可以通过 `helm` 方式[安装插件](../install_addons)。
+
+:::

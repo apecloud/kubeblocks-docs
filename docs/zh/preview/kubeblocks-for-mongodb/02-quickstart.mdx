@@ -1,0 +1,538 @@
+---
+description: 使用KubeBlocks部署和管理MongoDB副本集集群的完整指南，涵盖安装、配置及运维最佳实践。
+keywords:
+- Kubernetes
+- MongoDB
+- KubeBlocks
+- Helm
+- Cluster Management
+- QuickStart
+sidebar_label: 快速入门
+sidebar_position: 2
+title: MongoDB 快速入门
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# MongoDB 快速入门
+
+本指南提供了使用 **KubeBlocks MongoDB 插件** 部署和管理 MongoDB 副本集集群的完整流程，内容包括：
+- 系统前提条件与插件安装
+- 集群创建与配置
+- 运维管理（包括启动/停止流程）
+- 连接方式与集群监控
+
+## 前置条件
+
+### 系统要求
+
+开始前请确认您的环境满足以下要求：
+
+- 可用的 Kubernetes 集群（推荐 v1.21+ 版本）
+- 已安装并配置好集群访问权限的 `kubectl` v1.21+ 
+- 已安装 Helm（[安装指南](https://helm.sh/docs/intro/install/)）
+- 已安装 KubeBlocks（[安装指南](../user_docs/overview/install-kubeblocks)）
+
+### 验证 MongoDB 插件
+
+MongoDB 插件默认随 KubeBlocks 安装。检查其状态：
+
+```bash
+helm list -n kb-system | grep mongodb
+```
+
+<details open>
+<summary>示例输出：</summary>
+
+```bash
+NAME               NAMESPACE   REVISION    UPDATED                     STATUS      CHART
+kb-addon-mongodb     kb-system   1           2025-05-21                  deployed    mongodb-1.0.0
+```
+</details>
+
+如果插件未启用，请选择安装方式：
+
+<Tabs>
+
+  <TabItem value="helm" label="helm" default>
+  ```bash
+  # 添加 Helm 仓库
+  helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
+  # 中国大陆用户若 GitHub 访问困难或缓慢，可使用以下镜像仓库：
+  #helm repo add kubeblocks-addons https://jihulab.com/api/v4/projects/150246/packages/helm/stable
+
+  # 更新 Helm 仓库
+  helm repo update
+  # 搜索可用插件版本
+  helm search repo kubeblocks/mongodb --versions
+  # 安装指定版本（将 <VERSION> 替换为目标版本号）
+  helm upgrade -i kb-addon-mongodb kubeblocks-addons/mongodb --version <VERSION> -n kb-system
+  ```
+  </TabItem>
+
+  <TabItem value="kbcli" label="kbcli">
+
+  ```bash
+  # 添加索引（kubeblocks 索引默认已添加）
+  kbcli addon index add kubeblocks https://github.com/apecloud/block-index.git
+  # 更新索引
+  kbcli addon index update kubeblocks
+  # 更新所有索引
+  kbcli addon index update --all
+  ```
+
+  搜索并安装插件：
+
+  ```bash
+  # 搜索插件
+  kbcli addon search mongodb
+  # 安装指定版本插件（将 <VERSION> 替换为目标版本号）
+  kbcli addon install mongodb --version <VERSION>
+  ```
+  **示例输出：**
+  ```bash
+  ADDON   VERSION         INDEX
+  mongodb   0.9.0           kubeblocks
+  mongodb   0.9.1           kubeblocks
+  mongodb   1.0.0           kubeblocks
+  ```
+  启用/禁用插件：
+
+  ```bash
+  # 启用插件
+  kbcli addon enable mongodb
+  # 禁用插件
+  kbcli addon disable mongodb
+  ```
+
+  </TabItem>
+</Tabs>
+
+:::note
+**版本兼容性说明**
+
+请始终确保 MongoDB 插件版本与 KubeBlocks 主版本相匹配，以避免兼容性问题。
+
+:::
+
+### 验证支持的 MongoDB 版本
+
+**列出可用 MongoDB 版本：**
+
+```bash
+kubectl get cmpv mongodb
+```
+<details open>
+<summary>示例输出</summary>
+```text
+NAME      VERSIONS                                                                                         STATUS      AGE
+mongodb   8.0.8,8.0.6,8.0.4,7.0.19,7.0.16,7.0.12,6.0.22,6.0.20,6.0.16,5.0.30,5.0.28,4.4.29,4.2.24,4.0.28   Available   26d
+```
+</details>
+
+**检查 ComponentDefinitions 的版本兼容性**
+
+**步骤 1.** 获取与指定 `ComponentVersion` 关联的 `ComponentDefinition` 列表
+
+```bash
+kubectl get cmpv mongodb -ojson | jq -r '.metadata.annotations."componentversion.kubeblocks.io/compatible-definitions"' | tr ',' '\n'
+```
+
+<details>
+<summary>示例输出</summary>
+```text
+mongodb-1.0.0
+```
+</details>
+
+**步骤 2.** 获取与指定 `ComponentVersion` 关联的 `ComponentDefinition` 列表
+
+```bash
+kubectl get cmpv mongodb -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("mongodb"))) | .releases[]'
+```
+
+此命令返回与名为 `mongodb` 的 `ComponentDefinition` 兼容的版本：
+
+<details open>
+<summary>示例输出</summary>
+```text
+8.0.8
+8.0.6
+8.0.4
+7.0.19
+7.0.16
+7.0.12
+6.0.22
+6.0.20
+6.0.16
+5.0.30
+5.0.28
+4.4.29
+4.2.24
+4.0.28
+```
+</details>
+
+### 存储配置
+
+MongoDB 需要持久化存储。验证可用选项：
+
+```bash
+kubectl get storageclass
+```
+
+推荐存储特性：
+- 最小 20Gi 容量
+- ReadWriteOnce 访问模式
+- 支持存储卷扩容
+- 满足工作负载的性能需求
+
+## 部署 MongoDB 复制集群
+
+使用默认配置部署基础 MongoDB ReplicaSet 集群：
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/mongodb/cluster.yaml
+```
+
+该操作将创建：
+- 一个包含两个组件的 MongoDB ReplicaSet 集群：MongoDB（2个副本）和 MongoDB Sentinel（3个副本）
+- 默认资源分配（0.5 CPU，0.5Gi 内存）
+- 20Gi 持久化存储
+- 自动化的主从节点配置
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: mongo-cluster
+  namespace: demo
+spec:
+  # 指定删除集群时的行为策略
+  # 有效选项：[DoNotTerminate, Delete, WipeOut]（KB 0.9 起弃用 `Halt`）
+  # - `DoNotTerminate`：阻止集群删除，确保所有资源保持完整
+  # - `Delete`：在 `Halt` 策略基础上增加删除 PVC 操作，实现包含持久化数据的彻底清理
+  # - `WipeOut`：激进策略，将删除包括外部存储中的卷快照和备份在内的所有集群资源，导致数据完全清除。应谨慎使用，主要适用于非生产环境以避免不可逆数据丢失
+  terminationPolicy: Delete
+  # 指定创建集群时使用的 ClusterDefinition 名称
+  # 注意：请勿修改此字段
+  # 必须设置为 `mongodb` 才能创建 MongoDB 集群
+  clusterDef: mongodb
+  # 指定创建集群时使用的 ClusterTopology 名称
+  # 有效选项：[replicaset]
+  topology: replicaset
+  # 定义组成集群的各个组件的 ClusterComponentSpec 对象列表
+  # 该字段允许对集群内每个组件进行详细配置
+  componentSpecs:
+    - name: mongodb
+      # serviceVersion 指定该组件期望部署的服务版本
+      # 有效选项：[4.0.28,4.2.24,4.4.29,5.0.28,6.0.16,7.0.1]
+      serviceVersion: "6.0.16"
+      # 指定该组件的期望副本数
+      replicas: 3
+      # 指定该组件所需的计算资源
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      # 定义组件存储需求的 PersistentVolumeClaim 模板列表
+      volumeClaimTemplates:
+        # 引用 componentDefinition.spec.runtime.containers[*].volumeMounts 中定义的 volumeMount 名称
+        - name: data
+          spec:
+            # 声明所需的 StorageClass 名称
+            # 若未指定，默认使用标注了 `storageclass.kubernetes.io/is-default-class=true` 的 StorageClass
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                # 按需设置存储容量
+                storage: 20Gi
+```
+
+更多 API 字段说明请参阅 [API 参考文档](../user_docs/references/api-reference/cluster)。
+
+### 创建指定版本的 MongoDB ReplicaSet 集群
+
+在应用配置前，通过设置 `spec.componentSpecs.serviceVersion`（主版本.次版本）字段可创建特定版本的集群：
+
+<Tabs>
+  <TabItem value="mongodb4" label="MongoDB 4">
+  ```yaml
+    componentSpecs:
+      - name: mongodb
+        serviceVersion: 4.0.28    # 有效选项：[4.0.28,4.2.24,4.4.29]
+  ```
+  </TabItem>
+  <TabItem value="mongodb5" label="MongoDB 5">
+  ```yaml
+    componentSpecs:
+      - name: mongodb
+        serviceVersion: 5.0.28   # 有效选项：[5.0.28]
+  ```
+  </TabItem>
+  <TabItem value="mongodb6" label="MongoDB 6" default>
+  ```yaml
+    componentSpecs:
+      - name: mongodb
+        serviceVersion: 6.0.22    # 有效选项：[6.0.22,6.0.20,6.0.16]
+  ```
+  </TabItem>
+  <TabItem value="mongodb7" label="MongoDB 7">
+  ```yaml
+    componentSpecs:
+      - name: mongodb
+        serviceVersion: 7.0.19    # 有效选项：[7.0.19,7.0.16,7.0.12]
+  ```
+  </TabItem>
+  <TabItem value="mongodb8" label="MongoDB 8">
+  ```yaml
+    componentSpecs:
+      - name: mongodb
+        serviceVersion: 8.0.8    # 有效选项：[8.0.8,8.0.6,8.0.4]
+  ```
+  </TabItem>
+</Tabs>
+
+## 验证集群状态
+
+当部署包含1个主副本和2个从副本的MongoDB副本集集群时：
+
+通过以下检查确认部署成功：
+1. 集群阶段为`Running`（运行中）
+2. 所有Pod均正常运行
+3. 副本角色配置正确
+
+可通过以下任一方式检查状态：
+
+<Tabs>
+  <TabItem value='kubectl' label='kubectl' default>
+```bash
+kubectl get cluster mongo-cluster -n demo -w
+NAME            CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+mongo-cluster   mongodb              Delete               Creating   49s
+mongo-cluster   mongodb              Delete               Running    62s
+
+kubectl get pods -l app.kubernetes.io/instance=mongo-cluster -L  kubeblocks.io/role -n demo
+NAME                      READY   STATUS    RESTARTS   AGE   ROLE
+mongo-cluster-mongodb-0   2/2     Running   0          78s   primary
+mongo-cluster-mongodb-1   2/2     Running   0          63s   secondary
+mongo-cluster-mongodb-2   2/2     Running   0          48s   secondary
+```
+  </TabItem>
+
+  <TabItem value='kbcli' label='kbcli'>
+
+  安装`kbcli`后，可查看完整的集群信息：
+
+```bash
+kbcli cluster describe mongo-cluster -n demo
+
+名称: mongo-cluster	 创建时间: 2025年5月18日 21:16 UTC+0800
+命名空间   集群定义        拓扑结构      状态      终止策略
+demo      mongodb        replicaset   运行中     Delete
+
+访问端点:
+组件      内部地址                                                        外部地址
+mongodb   mongo-cluster-mongodb.demo.svc.cluster.local:27017              <无>
+          mongo-cluster-mongodb-mongodb.demo.svc.cluster.local:27017
+          mongo-cluster-mongodb-mongodb-ro.demo.svc.cluster.local:27017
+
+拓扑结构:
+组件      服务版本    实例名称                  角色        状态     可用区    节点    创建时间
+mongodb   6.0.16     mongo-cluster-mongodb-0   主节点     运行中    zone-x   x.y.z   2025年5月18日 21:16 UTC+0800
+mongodb   6.0.16     mongo-cluster-mongodb-1   从节点     运行中    zone-x   x.y.z   2025年5月18日 21:16 UTC+0800
+mongodb   6.0.16     mongo-cluster-mongodb-2   从节点     运行中    zone-x   x.y.z   2025年5月18日 21:17 UTC+0800
+
+资源分配:
+组件      实例模板    CPU(请求/限制)   内存(请求/限制)    存储大小     存储类
+mongodb               500m / 500m     512Mi / 512Mi     data:20Gi   <无>
+
+镜像信息:
+组件      组件定义          镜像
+mongodb   mongodb-1.0.0    docker.io/library/mongo:6.0.16
+                           apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.0
+
+数据保护:
+备份仓库   自动备份    备份计划    备份方法    备份保留期    可恢复时间
+
+查看集群事件: kbcli cluster list-events -n demo mongo-cluster
+```
+
+  </TabItem>
+</Tabs>
+
+## 访问 MongoDB 副本集集群
+
+KubeBlocks 会自动配置以下资源：
+1. 凭证信息存储在 Secret `mongo-cluster-mongodb-account-root` 中
+2. 用于读写（主节点）的 ClusterIP 服务 `mongo-cluster-mongodb-mongodb`
+3. 用于只读（从节点）的 ClusterIP 服务 `mongo-cluster-mongodb-mongodb-ro`
+
+### 获取凭证
+```bash
+# 获取用户名
+NAME=$(kubectl get secret -n demo mongo-cluster-mongodb-account-root -o jsonpath='{.data.username}' | base64 --decode)
+# 获取密码
+PASSWD=$(kubectl get secret -n demo mongo-cluster-mongodb-account-root -o jsonpath='{.data.password}' | base64 --decode)
+```
+
+### 连接方式
+
+<Tabs>
+  <TabItem value="Direct Pod Access" label="直接访问 Pod" default>
+
+  直接连接到 Pod：
+  ```bash
+  kubectl exec -ti -n demo mongo-cluster-mongodb-0 -- \
+    mongosh "mongodb://${NAME}:${PASSWD}@mongo-cluster-mongodb-mongodb:27017/admin"
+  ```
+  </TabItem>
+
+  <TabItem value="Local Port Forwarding" label="本地端口转发">
+
+  1. 转发服务端口：
+
+  ```bash
+  kubectl port-forward svc/mongo-cluster-mongodb-mongodb 27017:27017 -n demo
+  ```
+
+  2. 通过本地地址连接：
+  ```bash
+  mongosh "mongodb://${NAME}:${PASSWD}@127.0.0.1:27017/admin"
+  ```
+  </TabItem>
+</Tabs>
+
+:::note
+**生产环境注意事项**
+
+在生产环境中，应避免使用 `kubectl exec` 和 `port-forward`，建议采用：
+- 通过 LoadBalancer 或 NodePort 服务实现外部访问
+- 配置网络策略限制访问权限
+- 启用 TLS 加密确保连接安全
+- 使用连接池提升性能
+:::
+
+## 停止 MongoDB 副本集集群
+
+停止集群会暂时暂停运行，同时保留所有数据和配置：
+
+**关键影响：**
+- 计算资源（Pod）将被释放
+- 持久化存储（PVC）保持完整
+- 服务定义得以保留
+- 集群配置不会丢失
+- 运营成本降低
+
+<Tabs>
+  <TabItem value="OpsRequest" label="OpsRequest API" default>
+  ```bash
+  kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/mongodb/stop.yaml
+  ```
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: mongodb-stop
+    namespace: demo
+  spec:
+    clusterName: mongo-cluster
+    type: Stop
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+  也可以通过设置 `spec.componentSpecs.stop` 为 true 来停止集群：
+
+```bash
+kubectl patch cluster mongo-cluster -n demo --type='json' -p='[
+{
+  "op": "add",
+  "path": "/spec/componentSpecs/0/stop",
+  "value": true
+}
+]'
+```
+
+  ```yaml
+  spec:
+    componentSpecs:
+      - name: mongodb
+        stop: true  # 设置为停止组件
+        replicas: 2
+  ```
+  </TabItem>
+</Tabs>
+
+## 启动 MongoDB 副本集集群
+
+重启已停止的集群可恢复运行，所有数据和配置将保持完整。
+
+**关键影响：**
+- 计算资源（Pod）会被重新创建
+- 服务将再次可用
+- 集群恢复到之前的状态
+
+<Tabs>
+  <TabItem value="OpsRequest" label="OpsRequest API" default>
+  ```bash
+  kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/mongodb/start.yaml
+  ```
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: mongodb-start
+    namespace: demo
+  spec:
+    clusterName: mongo-cluster
+    type: Start
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+  通过将 `spec.componentSpecs.stop` 设置为 false 来重启集群：
+
+```bash
+kubectl patch cluster mongo-cluster -n demo --type='json' -p='[
+{
+  "op": "remove",
+  "path": "/spec/componentSpecs/0/stop"
+}
+]'
+```
+
+  </TabItem>
+</Tabs>
+
+## 删除 MongoDB ReplicaSet 集群
+
+请根据数据保留需求谨慎选择删除策略：
+
+| 策略            | 删除的资源范围       | 数据清除情况       | 适用场景               |
+|-----------------|---------------------|-------------------|-----------------------|
+| DoNotTerminate  | 不删除任何资源       | 保留所有数据       | 关键生产环境集群       |
+| Delete          | 删除所有Kubernetes资源 | PVC存储卷会被删除  | 非关键环境             |
+| WipeOut         | 删除所有资源         | 彻底清除所有数据*  | 仅限测试环境使用       |
+
+*包含外部存储中的快照和备份数据
+
+**删除前检查清单：**
+1. 确认没有应用正在使用该集群
+2. 确保已存在必要的备份
+3. 验证terminationPolicy设置正确
+4. 检查是否存在依赖资源
+
+对于测试环境，可使用以下命令进行完整清理：
+
+```bash
+kubectl patch cluster mongo-cluster -p '{"spec":{"terminationPolicy":"WipeOut"}}' --type="merge" -n demo
+kubectl delete cluster mongo-cluster -n demo
+```

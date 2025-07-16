@@ -1,0 +1,322 @@
+---
+description: 了解如何在KubeBlocks中通过负载均衡器及其他服务类型配置和管理Kafka服务，实现内外部访问。
+keywords:
+- KubeBlocks
+- Kafka
+- LoadBalancer
+- External Service
+- Expose
+- Kubernetes
+sidebar_label: 管理Kafka服务
+sidebar_position: 5
+title: 使用KubeBlocks声明式集群API创建和销毁Kafka服务
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# 使用 KubeBlocks 声明式集群 API 管理 Kafka 服务
+
+本指南提供了逐步操作说明，指导如何通过 KubeBlocks 管理 Kafka 服务的内外部暴露。您将学习到：
+- 使用云服务商 LoadBalancer 服务配置外部访问
+- 管理内部服务
+- 在不需要时正确关闭外部暴露功能
+
+
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+
+
+## 部署 Kafka 集群
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+
+
+## 验证部署
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+
+
+## 查看网络服务
+列出为 Kafka 集群创建的服务：
+```bash
+kubectl get service -l app.kubernetes.io/instance=kafka-separated-cluster -n demo
+```
+
+示例服务列表：
+```bash
+NAME                                                         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+kafka-separated-cluster-kafka-broker-advertised-listener-0   ClusterIP   10.96.101.247   <none>        9092/TCP   19m
+```
+
+说明：
+- 该命令会筛选出标签 `app.kubernetes.io/instance=kafka-separated-cluster` 且位于 `demo` 命名空间下的所有服务
+- 示例输出显示了一个 Kafka broker 的广告监听器服务，类型为 ClusterIP，内部端口为 9092
+- 服务名称遵循 `<集群名称>-<组件类型>-<功能描述>-<序号>` 的命名规范
+
+## 暴露 Kafka 服务
+
+外部服务地址允许公网访问 Kafka，而内部服务地址将访问限制在用户的 VPC 内。
+
+### 服务类型对比
+
+| 类型          | 使用场景           | 云服务成本  | 安全性       |
+|---------------|--------------------|------------|-------------|
+| ClusterIP    | 内部服务通信       | 免费       | 最高        |
+| NodePort     | 开发测试环境       | 低         | 中等        |
+| LoadBalancer | 生产环境外部访问   | 高         | 通过安全组管理 |
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  选项一：使用 OpsRequest
+
+  要通过 LoadBalancer 对外暴露 Kafka 服务，创建 OpsRequest 资源：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: kafka-separated-cluster-expose-enable-ops
+    namespace: demo
+  spec:
+    type: Expose
+    clusterName: kafka-separated-cluster
+    expose:
+    - componentName: kafka-broker
+      services:
+      - name: internet
+        # 决定服务暴露方式，默认为 'ClusterIP'
+        # 有效选项为 'ClusterIP'、'NodePort' 和 'LoadBalancer'
+        serviceType: LoadBalancer
+        ports:
+          - name: kafka-client
+            port: 9092
+            targetPort: kafka-client
+        # 当 ServiceType 为 LoadBalancer 时包含云服务商相关参数
+        # 以下是 AWS EKS 的示例配置
+        annotations:
+          service.beta.kubernetes.io/aws-load-balancer-type: nlb
+          service.beta.kubernetes.io/aws-load-balancer-internal: "false"  # 设为 "true" 则使用内部 VPC IP
+      switch: Enable
+  ```
+
+  等待 OpsRequest 完成：
+  ```bash
+  kubectl get ops kafka-separated-cluster-expose-enable-ops -n demo
+  ```
+
+  示例输出：
+  ```bash
+  NAME                                        TYPE     CLUSTER                   STATUS    PROGRESS   AGE
+  kafka-separated-cluster-expose-enable-ops   Expose   kafka-separated-cluster   Succeed   1/1        31s
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  选项二：使用 Cluster API
+
+  或者，在 Cluster 资源的 `spec.services` 部分添加 LoadBalancer 服务配置：
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  metadata:
+    name: kafka-separated-cluster
+    namespace: demo
+  spec:
+    terminationPolicy: Delete
+    clusterDef: kafka
+    # 暴露外部服务
+    services:
+      - annotations:
+          service.beta.kubernetes.io/aws-load-balancer-type: nlb  # 使用网络负载均衡器
+          service.beta.kubernetes.io/aws-load-balancer-internal: "false"  # 设为 "true" 则使用内部 VPC IP
+        componentSelector: kafka-broker
+        name: kafka-internet
+        serviceName: kafka-internet
+        spec:  # 定义 K8s 服务行为
+          ipFamilyPolicy: PreferDualStack
+          ports:
+          - name: kafka-client
+            # 暴露端口
+            port: 9092 # 15672 端口用于 kafka 管理控制台
+            protocol: TCP
+            targetPort: kafka-client
+          type: LoadBalancer
+    componentSpecs:
+    ...
+  ```
+  上述 YAML 配置在 services 部分新增了一个外部服务。该 LoadBalancer 服务包含了 AWS 网络负载均衡器 (NLB) 的注解。
+
+  :::note
+  云服务商注解说明
+
+  使用 LoadBalancer 服务时，必须添加对应云服务商的特定注解。以下是常用云服务商的注解示例：
+
+  - AWS
+  ```yaml
+  service.beta.kubernetes.io/aws-load-balancer-type: nlb  # 使用网络负载均衡器
+  service.beta.kubernetes.io/aws-load-balancer-internal: "true"  # 设为 "false" 表示面向互联网的负载均衡器
+  ```
+
+  - Azure
+  ```yaml
+  service.beta.kubernetes.io/azure-load-balancer-internal: "true" # 设为 "false" 表示面向互联网的负载均衡器
+  ```
+
+  - GCP
+  ```yaml
+  networking.gke.io/load-balancer-type: "Internal"  # 限制负载均衡器仅限内部 VPC 访问。未指定时默认为面向互联网。
+  cloud.google.com/l4-rbs: "enabled" # 面向互联网负载均衡器的优化配置
+  ```
+
+  - 阿里云
+  ```yaml
+  service.beta.kubernetes.io/alibaba-cloud-loadbalancer-address-type: "internet"  # 设为 "intranet" 表示内部负载均衡器
+  ```
+  :::
+
+
+  :::note
+  `service.beta.kubernetes.io/aws-load-balancer-internal` 注解控制负载均衡器是内部还是面向互联网。注意该注解在服务创建后无法动态修改。
+  ```yaml
+    service.beta.kubernetes.io/aws-load-balancer-internal: "false"  # 设为 "true" 表示使用内部 VPC IP
+  ```
+  如果在服务创建后将此注解从 "false" 改为 "true"，注解可能在服务对象中会更新，但负载均衡器仍会保留其公网 IP。
+
+  正确修改该行为的步骤：
+  - 首先删除现有的负载均衡器服务
+  - 使用更新后的注解重新创建服务（`service.beta.kubernetes.io/aws-load-balancer-internal`: "true"）
+  - 等待新负载均衡器分配正确的内部或外部 IP
+  :::
+
+
+  使用以下命令等待集群状态变为 Running：
+  ```bash
+  kubectl get cluster kafka-separated-cluster -n demo -w
+  ```
+  ```
+  NAME                      CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+  kafka-separated-cluster   kafka                Delete               Running   18m
+  ```
+  </TabItem>
+
+</Tabs>
+
+### 验证暴露的服务
+检查服务详情以确认 LoadBalancer 服务已创建：
+
+```bash
+kubectl get service -l app.kubernetes.io/instance=kafka-separated-cluster -n demo
+```
+
+示例输出：
+```bash
+NAME                                                         TYPE            CLUSTER-IP      EXTERNAL-IP      PORT(S)          AGE
+kafka-separated-cluster-kafka-broker-advertised-listener-0   ClusterIP       10.96.101.247   <none>           9092/TCP         24m
+kafka-separated-cluster-kafka-broker-internet                LoadBalancer    10.96.180.189   <EXTERNAL_IP>    9092:31243/TCP   59s
+```
+
+## 禁用外部访问
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  方法一：使用 OpsRequest
+
+  要禁用外部访问，创建一个 OpsRequest：
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: kafka-separated-cluster-expose-disable-ops
+    namespace: demo
+  spec:
+    clusterName: kafka-separated-cluster
+    expose:
+    - componentName: kafka-broker
+      services:
+      - name: internet
+        serviceType: LoadBalancer
+      switch: Disable
+    preConditionDeadlineSeconds: 0
+    type: Expose
+  ```
+
+  等待 OpsRequest 完成：
+  ```bash
+  kubectl get ops kafka-separated-cluster-expose-disable-ops -n demo
+  ```
+  示例输出：
+  ```bash
+  NAME                                         TYPE     CLUSTER                   STATUS    PROGRESS   AGE
+  kafka-separated-cluster-expose-disable-ops   Expose   kafka-separated-cluster   Succeed   1/1        16s
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  方法二：使用 Cluster API
+
+  或者，从 Cluster 资源中移除 `spec.services` 字段：
+  ```bash
+  kubectl patch cluster kafka-separated-cluster -n demo --type=json -p='[
+    {
+      "op": "remove",
+      "path": "/spec/services"
+    }
+  ]'
+  ```
+
+  监控集群状态直到变为 Running：
+  ```bash
+  kubectl get cluster kafka-separated-cluster -n demo -w
+  ```
+
+  ```bash
+  NAME                      CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+  kafka-separated-cluster   kafka                Delete               Running   26m
+  ```
+  </TabItem>
+</Tabs>
+
+### 验证服务移除
+
+确保 'kafka-separated-cluster-kafka-internet' 服务已被移除：
+
+```bash
+kubectl get service -l app.kubernetes.io/instance=kafka-separated-cluster -n demo
+```
+
+预期结果：'kafka-separated-cluster-kafka-internet' 服务应被移除。
+
+## 清理资源
+要删除所有已创建的资源，请执行以下命令删除Kafka集群及其命名空间：
+```bash
+kubectl delete cluster kafka-separated-cluster -n demo
+kubectl delete ns demo
+```
+
+## 概述
+本指南演示了如何：
+- 使用 KubeBlocks 对外部或内部暴露 Kafka 服务
+- 通过云服务商特定注解配置 LoadBalancer 类型的服务
+- 通过 OpsRequest 或直接更新 Cluster API 来启用/禁用服务，从而管理外部访问
+
+KubeBlocks 为 Kubernetes 环境中的 Kafka 服务管理提供了灵活且简化的解决方案。

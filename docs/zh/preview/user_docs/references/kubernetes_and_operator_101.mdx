@@ -1,0 +1,135 @@
+---
+description: 关于Kubernetes你需要了解的事项
+keywords:
+- K8s
+- operator
+- concept
+sidebar_position: 7
+title: Kubernetes 与 Operator 基础入门
+---
+# Kubernetes 与 Operator 基础入门
+
+## Kubernetes
+
+什么是Kubernetes？有人说它是一个容器编排系统，也有人将其描述为分布式操作系统，还有人视其为多云PaaS（平台即服务）平台，更有观点认为它是构建PaaS解决方案的基础平台。
+
+本文将介绍Kubernetes中的核心概念与基础组件。
+
+
+
+## Kubernetes 控制平面
+
+Kubernetes 控制平面是 Kubernetes 的大脑和心脏。它负责管理集群的整体运行，包括处理 API 请求、存储配置数据以及确保集群达到期望状态。核心组件包括：
+
+- **API Server**：处理所有通信请求
+- **etcd**：存储所有集群数据
+- **Controller Manager**：确保系统维持期望状态
+- **Scheduler**：将工作负载分配到各个节点
+- **Cloud Controller Manager**：管理云平台特定的集成功能（如负载均衡器、存储和网络）
+
+这些组件协同工作，共同完成集群中容器的部署、扩缩容和管理任务。
+
+## 节点
+
+有人将Kubernetes比作分布式操作系统，能够管理众多节点。节点（Node）是集群中的工作单元，可以是物理机或虚拟机。每个节点都运行着关键服务，包括容器运行时（如Docker或containerd）、kubelet和kube-proxy。其中，kubelet确保容器按照Pod（Kubernetes中最小的可部署单元）中的定义运行；kube-proxy负责网络路由维护，管理网络规则，并实现Pod与服务之间的通信。节点为运行容器化应用提供所需的计算资源，由Kubernetes主节点（Master）统一管理，包括任务分发、节点健康状态监控以及维护集群的期望状态。
+
+:::note
+
+在某些场景下，当同时讨论Kubernetes（K8s）和数据库时，"节点"这一术语可能引发混淆。在Kubernetes中，"节点"指的是参与集群的物理机或虚拟机，作为运行容器化应用的工作单元。但当数据库运行于Kubernetes内部时，"数据库节点"通常特指承载数据库实例的Pod。
+
+在KubeBlocks文档中，"节点"一般指代数据库节点。若需指代Kubernetes节点，我们会明确标注为"K8s节点"以避免歧义。
+
+:::
+
+## kubelet
+
+kubelet 是 Kubernetes 控制平面用来管理集群中每个节点的代理组件。它确保容器按照 Kubernetes 控制平面定义的规范在 Pod 中运行。kubelet 持续监控容器的状态，确保它们健康且按预期运行。如果某个容器发生故障，kubelet 会根据指定的策略尝试重启该容器。
+
+
+
+## Pod
+
+在Kubernetes中，Pod可以类比为虚拟机，但更加轻量级且专用化。它是Kubernetes中最小的可部署单元。
+
+Pod代表一个或多个紧密耦合、需要协同工作的容器，这些容器共享存储（存储卷）、网络资源以及运行容器的配置规范。这些容器可以通过localhost相互通信，并共享内存和存储等资源。
+
+Kubernetes会动态管理Pod，确保它们按照规范运行，并在发生故障时自动重启或替换。Pod可以跨节点（Node）分布以实现冗余，这使得它成为在Kubernetes中部署和管理容器化应用（包括数据库）的基础单元。
+
+## 存储类
+
+当为 Pod 内部的工作负载（如数据库）创建磁盘时，您可能需要指定磁盘介质的类型，例如是 HDD 还是 SSD。在云环境中，通常会有更多选项可供选择。例如，AWS EBS 提供多种卷类型，如通用型 SSD（gp2/gp3）、预配置 IOPS SSD（io1/io2）和吞吐优化型 HDD（st1）。在 Kubernetes 中，您可以通过 StorageClass 来选择所需的磁盘类型。
+
+## PVC
+
+在Kubernetes中，持久卷声明（Persistent Volume Claim，PVC）是用户对存储资源的请求。PVC本质上是一种申请具有特定属性存储的方式，这些属性包括存储类（storage class）、容量大小以及访问模式（例如读写或只读）。通过PVC，Pod可以使用存储资源而无需了解底层基础设施的具体细节。
+
+在K8s中，用户通过创建PVC来使用存储资源。当PVC被创建时，Kubernetes会寻找与该请求匹配的存储类（StorageClass）。如果找到匹配的StorageClass，系统将根据定义的参数（无论是SSD、HDD、EBS还是NAS）自动配置存储资源。若PVC未指定StorageClass，Kubernetes则会使用默认的StorageClass（如果已配置）来分配存储空间。
+
+## CSI（容器存储接口）
+
+在Kubernetes中，各类存储类（StorageClass）通过容器存储接口（CSI）提供，该接口负责为应用程序配置底层存储"磁盘"。CSI的功能类似于Kubernetes中的"磁盘驱动程序"，使平台能够适配并整合多种存储系统，例如本地磁盘、AWS EBS和Ceph等。这些存储类及其关联的存储资源，均由特定的CSI驱动进行配置，这些驱动负责与底层存储基础设施的交互操作。
+
+CSI是一种标准API，使得Kubernetes能够以统一且可扩展的方式与各类存储系统交互。由存储供应商或Kubernetes社区开发的CSI驱动，向Kubernetes暴露了动态配置、挂载、卸载和快照等核心存储功能。
+
+当您在Kubernetes中定义存储类时，通常会指定一个CSI驱动作为其配置器（provisioner）。该驱动会根据存储类中的参数及关联的持久卷声明（PVC），自动配置持久卷（PV），确保为您的应用提供适当类型和配置的存储——无论是SSD、HDD还是其他类型。
+
+## 持久卷（PV）
+
+在Kubernetes中，持久卷（Persistent Volume，简称PV）代表一种存储资源，其底层可由多种系统支持，包括本地磁盘、NFS或云存储（如AWS EBS、Google Cloud Persistent Disks等），通常由不同的CSI驱动管理。
+
+PV拥有独立于Pod的生命周期，由Kubernetes控制平面管理。即使关联的Pod被删除，PV也能确保数据持久化。持久卷会与持久卷声明（PVC）进行绑定，PVC用于申请特定的存储特性（如容量大小和访问模式），从而保证应用程序获得所需的存储资源。
+
+简而言之，PV是实际的存储资源，而PVC是对存储资源的申请。通过PVC中指定的StorageClass，可以将其与不同CSI驱动提供的PV进行绑定。
+
+## 服务
+
+在Kubernetes中，服务（Service）充当负载均衡器的角色。它定义了一组逻辑上的Pod，并提供了访问这些Pod的策略。由于Pod是临时性的，可以被动态创建和销毁，其IP地址并不稳定。服务通过提供一个稳定的网络端点（虚拟IP地址，称为ClusterIP）来解决这个问题，该端点始终保持不变，使得其他Pod或外部客户端无需知道具体Pod的IP地址就能与服务背后的Pod集合通信。
+
+服务支持多种类型：ClusterIP（集群内部访问）、NodePort（通过`<节点IP>:<节点端口>`实现外部访问）、LoadBalancer（使用云提供商的负载均衡器对外暴露服务）以及ExternalName（将服务映射到外部DNS）。
+
+## ConfigMap
+
+ConfigMap 用于以键值对的形式存储配置数据，使您能够将配置与应用程序代码解耦。通过这种方式，您可以独立管理应用设置，并在多个环境中复用这些配置。ConfigMap 可用于将配置数据以环境变量、命令行参数或配置文件的形式注入到 Pod 中。它提供了一种灵活便捷的方式来管理应用配置，无需将配置值硬编码到应用容器内部。
+
+
+
+## Secret
+
+Secret 用于存储敏感数据，如密码、令牌或加密密钥。通过 Secret，您可以将机密信息与应用代码分离管理，避免在容器镜像中暴露敏感数据。Kubernetes Secret 可以以环境变量形式注入到 Pod 中，或作为文件挂载，确保敏感信息以安全可控的方式处理。
+
+需要注意的是，Secret 默认并不加密——它们仅经过 base64 编码，这并不提供真正的加密保护。使用时仍需谨慎，确保配置适当的访问控制措施。
+
+## CRD（自定义资源定义）
+
+若要通过 Kubernetes 管理数据库对象，您需要扩展 Kubernetes API 来描述所管理的数据库对象。这正是 CRD（Custom Resource Definition）机制的作用所在——它允许您定义与特定用例（如数据库集群或备份）相关的自定义资源，并像管理原生 Kubernetes 资源一样对其进行管理。
+
+
+
+## 自定义资源（CR）
+
+自定义资源（Custom Resource，简称CR）是自定义资源定义（CRD）的一个实例。它代表了一种扩展Kubernetes API的特定配置或对象。通过CR，您可以使用Kubernetes原生工具来定义和管理自定义资源（如数据库或应用程序）。当CR创建后，Kubernetes控制器或Operator会持续监控该资源，并执行相应操作以维持其期望状态。
+
+CRD与CR是开发Kubernetes Operator的基础。CRD通常用于实现自定义控制器或Operator，这些控制器会持续监听CR的变化（例如代表数据库集群的CR），并自动执行相应操作。
+
+## 什么是 Kubernetes Operator？
+
+Kubernetes Operator 是一种软件，通常由一个或多个控制器组成，它通过将对自定义资源（CR）的修改转化为对原生 Kubernetes 对象（如 Pod、服务、PVC、ConfigMap 和 Secret）的操作，来自动化管理复杂应用。
+
+- 输入：用户对 CR 的修改。
+- 输出：根据被管理应用的需求，对底层 Kubernetes 资源进行相应变更或与外部系统交互（例如写入数据库或调用 API）。
+
+Operator 持续监控这些 Kubernetes 对象的状态。当发生变更时（例如 Pod 崩溃），Operator 会自动采取纠正措施，例如重新创建 Pod 或调整流量（例如更新服务端点）。
+
+本质上，Kubernetes Operator 将复杂的运维知识封装为软件，自动化执行部署、扩缩容、升级和备份等任务，确保应用始终维持其期望状态而无需人工干预。
+
+## Helm 与 Helm Chart
+
+Helm 是 Kubernetes 上流行的包管理工具，用于简化和统一应用程序的管理与部署。它将所有必需的 Kubernetes 资源打包成一个 Helm Chart，用户只需一条命令（`helm install`）即可完成应用安装。同时，Helm 还支持配置管理和版本更新（`helm upgrade`），使得应用程序的整个生命周期管理更加便捷。
+
+Helm Chart 的核心组件包括：
+
+- **Templates（模板）**：包含占位符的 YAML 文件，用于定义 Kubernetes 资源（如 Pod、服务和 ConfigMap）。
+- **values.yaml**：用户在此文件中指定模板的默认值，实现快速定制。Helm 允许基于现有 Chart，通过 `values.yaml` 或命令行参数覆盖默认值，从而无需修改底层模板即可为不同环境提供特定配置。
+- **Chart.yaml**：描述 Chart 的元数据信息，包括名称、版本和说明等。
+
+Helm 能够与 Jenkins、GitLab CI 和 GitHub Actions 等 CI/CD 工具无缝集成。通过将其纳入持续交付流水线，可实现自动化部署和回滚，确保应用程序在不同环境中保持一致的部署状态。

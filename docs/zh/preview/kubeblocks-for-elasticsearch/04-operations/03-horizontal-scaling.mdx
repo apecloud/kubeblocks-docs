@@ -1,0 +1,237 @@
+---
+description: 了解如何通过OpsRequest和直接Cluster API更新，对KubeBlocks管理的Elasticsearch集群执行水平扩缩容（扩容与缩容）。
+keywords:
+- KubeBlocks
+- Elasticsearch
+- Horizontal Scaling
+- Scale-Out
+- Scale-In
+- Kubernetes
+sidebar_label: 水平扩展
+sidebar_position: 3
+title: 使用KubeBlocks实现Elasticsearch集群的水平扩展
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# 使用KubeBlocks实现Elasticsearch集群水平扩缩容
+
+本指南将介绍如何对KubeBlocks管理的Elasticsearch集群执行水平扩缩容（扩容和缩容）操作。您将学习如何使用**OpsRequest**和直接修改**Cluster API**两种方式实现这一目标。
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署Elasticsearch集群
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+## 验证部署
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+
+## 扩容（增加副本）
+
+**预期工作流程**：
+
+1. 新Pod被创建，状态从`Pending`转为`Running`
+2. 集群状态从`Updating`变为`Running`
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  选项1：使用水平扩容OpsRequest
+
+  通过为elasticsearch组件增加1个副本来扩容集群：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: es-multinode-scale-out-ops
+    namespace: demo
+  spec:
+    clusterName: es-multinode
+    type: HorizontalScaling
+    horizontalScaling:
+    - componentName: dit
+      # 指定组件扩容的副本变化
+      scaleOut:
+        # 指定组件的副本变化量
+        # 当前组件增加1个副本
+        replicaChanges: 1
+  ```
+
+  监控扩容操作进度：
+
+  ```bash
+  kubectl get ops es-multinode-scale-out-ops -n demo -w
+  ```
+
+  预期结果：
+  ```bash
+  NAME                         TYPE                CLUSTER        STATUS    PROGRESS   AGE
+  es-multinode-scale-out-ops   HorizontalScaling   es-multinode   Running   0/1        9s
+  es-multinode-scale-out-ops   HorizontalScaling   es-multinode   Running   1/1        16s
+  es-multinode-scale-out-ops   HorizontalScaling   es-multinode   Succeed   1/1        16s
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  选项2：直接更新Cluster API
+
+  您也可以直接修改Cluster资源中的`replicas`字段：
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: dit
+        replicas: 4 # 增加副本数实现扩容
+  ...
+  ```
+
+  或者使用命令修补集群CR：
+
+  ```bash
+  kubectl patch cluster es-multinode -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 4}]'
+  ```
+  </TabItem>
+</Tabs>
+
+### 验证扩容结果
+
+操作完成后，您将看到新Pod被创建，Elasticsearch集群状态从`Updating`变为`Running`，且新建Pod具有新的`secondary`角色。
+
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=es-multinode,apps.kubeblocks.io/component-name=dit
+```
+
+示例输出：
+```bash
+NAME                 READY   STATUS    RESTARTS   AGE
+es-multinode-dit-0   3/3     Running   0          4m28s
+es-multinode-dit-1   3/3     Running   0          5m27s
+es-multinode-dit-2   3/3     Running   0          6m25s
+es-multinode-dit-3   3/3     Running   0          1m25s
+```
+
+## 缩容（减少副本）
+
+**预期工作流程**：
+
+1. 移除序号最大的副本
+2. Pod被优雅终止
+3. 集群状态从`Updating`变为`Running`
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  选项1：使用水平缩容OpsRequest
+
+  通过减少1个副本来缩容Elasticsearch集群：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: es-multinode-scale-in-ops
+    namespace: demo
+  spec:
+    clusterName: es-multinode
+    type: HorizontalScaling
+    horizontalScaling:
+    - componentName: dit
+      # 指定组件缩容的副本变化
+      scaleIn:
+        # 指定组件的副本变化量
+        # 当前组件减少1个副本
+        replicaChanges: 1
+  ```
+
+  监控操作进度：
+  ```bash
+  kubectl get ops es-multinode-scale-in-ops -n demo -w
+  ```
+
+  预期结果：
+  ```bash
+  NAME                        TYPE                CLUSTER        STATUS    PROGRESS   AGE
+  es-multinode-scale-in-ops   HorizontalScaling   es-multinode   Running   0/1        8s
+  es-multinode-scale-in-ops   HorizontalScaling   es-multinode   Running   1/1        24s
+  es-multinode-scale-in-ops   HorizontalScaling   es-multinode   Succeed   1/1        24s
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  选项2：直接更新Cluster API
+
+  您也可以直接修改Cluster资源中的`replicas`字段：
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: dit
+        replicas: 3 # 减少副本数实现缩容
+  ```
+
+  或者使用命令修补集群CR：
+
+  ```bash
+  kubectl patch cluster es-multinode -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 3}]'
+  ```
+  </TabItem>
+
+</Tabs>
+
+### 验证缩容结果
+
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=es-multinode,apps.kubeblocks.io/component-name=dit
+```
+
+示例输出（三个Pod）：
+```bash
+NAME                 READY   STATUS    RESTARTS   AGE
+es-multinode-dit-0   3/3     Running   0          8m20s
+es-multinode-dit-1   3/3     Running   0          9m19s
+es-multinode-dit-2   3/3     Running   0          10m
+```
+
+## 最佳实践
+
+执行水平扩缩容时：
+- 尽可能选择低流量时段操作
+- 扩缩容过程中监控集群健康状态
+- 扩容前确保有足够的资源
+- 考虑新副本的存储需求
+
+## 清理资源
+删除Elasticsearch集群及其命名空间以移除所有创建的资源：
+```bash
+kubectl delete cluster es-multinode -n demo
+kubectl delete ns demo
+```
+
+## 总结
+在本指南中您学会了：
+- 执行扩容操作为Elasticsearch集群增加副本
+- 执行缩容操作从Elasticsearch集群移除副本
+- 使用OpsRequest和直接Cluster API更新两种方式进行水平扩缩容
+
+KubeBlocks能确保在最小化影响数据库操作的前提下实现无缝扩缩容。

@@ -1,0 +1,249 @@
+---
+authors:
+  image_url: https://avatars.githubusercontent.com/u/28781141?v=4
+  name: free6om
+  url: https://github.com/free6om
+date: 2024-12-17
+description: 本博客介绍如何在KubeBlocks中配置实例模板。
+image: /img/blogs/thumbnails/blog-instance-template.png
+slug: configure-instance-template
+tags:
+- instance
+- instance template
+- kubernetes
+- instanceset
+title: 如何在KubeBlocks中配置实例模板
+---
+# 如何在 KubeBlocks 中配置实例模板
+
+## 为何引入实例模板？
+
+在 KubeBlocks 中，一个 **Cluster** 由多个 **Component** 组成，每个 Component 管理多个 Pod 及其辅助对象。
+
+在 v0.9 版本之前，这些 Pod 是从共享的 **PodTemplate** 渲染而来，该模板定义在 **ClusterDefinition** 或 **ComponentDefinition** 中。然而，这种设计无法完全满足以下几个关键用例：
+
+1. 从同一个 **Addon** 渲染的 **Cluster** 需要能够配置独立的调度设置，例如 **NodeName**、**NodeSelector** 或 **Tolerations**。
+2. 从同一个 **Addon** 渲染的 **Component** 需要能够灵活地为其管理的 Pod 应用自定义的 **Annotations**、**Labels** 或 **Environment Variables**（环境变量）。
+3. 由同一个 **Component** 管理的 **Pod** 需要能够定义不同的 **CPU**、**Memory** 以及其他 **Resource Request** 和 **Limits**。
+
+随着这些需求变得越来越普遍，KubeBlocks v0.9 版本在 Cluster API 中引入了 **Instance Template** 功能。该功能提供了对 Pod 配置更精细的控制，有助于解决上述用例。
+
+## 什么是实例模板？
+
+**Instance**（实例）是 KubeBlocks 中的基本单元，由一个 Pod 和若干辅助对象组成。为简化理解，您可以将 **Instance** 视为 **Pod**。为了保持术语一致性，下文中我们将继续使用 "**Instance**" 这一称谓。
+
+自 v0.9 版本起，KubeBlocks 支持为 **Cluster**（集群）中的某个 **Component**（组件）定义多个 **instance templates**（实例模板）。这些实例模板包含多个字段，例如 **Name**（名称）、**Replicas**（副本数）、**Annotations**（注解）、**Labels**（标签）、**Env**（环境变量）、**Tolerations**（容忍度）、**NodeSelector**（节点选择器）。模板中定义的值将覆盖默认模板（即在 **ClusterDefinition** 和 **ComponentDefinition** 中定义的 **PodTemplate**）中的对应值，最终生成用于渲染实例的配置。
+
+## 如何应用实例模板？
+
+实例模板可应用于多种场景。本节以 [RisingWave 集群](https://github.com/risingwavelabs/risingwave) 为例进行说明。
+
+KubeBlocks 现已支持管理 RisingWave 集群。RisingWave Addon 是由 RisingWave 团队贡献的组件。为实现最佳性能，RisingWave 需要依赖外部存储解决方案（如 AWS S3 或阿里云 OSS）作为其状态后端。在配置 RisingWave 集群时，必须设置凭证及其他存储相关参数。这些配置可能因集群而异，因此确保正确设置对集群的平稳运行至关重要。
+
+在 RisingWave 的官方镜像中，这些参数可通过环境变量注入。KubeBlocks v0.9 支持直接在实例模板中配置这些环境变量，使您能够在每次创建集群时指定必要的凭证和存储参数，将所需信息无缝注入 RisingWave 容器。
+
+在 RisingWave Addon 的默认模板中，[环境变量](https://github.com/apecloud/kubeblocks-addons/blob/main/addons/risingwave/templates/cmpd-compute.yaml#L26) 的配置如下：
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1alpha1
+kind: ClusterDefinition
+metadata:
+  name: risingwave
+...
+spec:
+  componentDefs:
+name: compute
+...
+    podSpec:
+      containers:
+      - name: compute
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+        command:
+        - /risingwave/bin/risingwave
+        - compute-node
+        env:
+        - name: RUST_BACKTRACE
+          value: "1"
+        - name: RW_CONFIG_PATH
+          value: /risingwave/config/risingwave.toml
+        - name: RW_LISTEN_ADDR
+          value: 0.0.0.0:5688
+        - name: RW_ADVERTISE_ADDR
+          value: $(KB_POD_FQDN):5688
+        - name: RW_META_ADDR
+          value: load-balance+http://$(metaSvc)-headless:5690
+        - name: RW_METRICS_LEVEL
+          value: "1"
+        - name: RW_CONNECTOR_RPC_ENDPOINT
+          value: $(connectorSvc):50051
+        - name: RW_PROMETHEUS_LISTENER_ADDR
+          value: 0.0.0.0:1222
+...
+```
+
+在将实例模板添加到[集群资源](https://github.com/apecloud/kubeblocks-addons/blob/main/addons-cluster/risingwave/templates/cluster.yaml)后，环境变量配置如下：
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1alpha1
+kind: Cluster
+metadata:
+  name: {{ include "risingwave-cluster.name" . }}
+  namespace: {{ .Release.Namespace }}
+...
+spec:
+  componentSpecs:
+componentDefRef: compute
+    name: compute
+    replicas: {{ .Values.risingwave.compute.replicas }}
+    instances:
+    - name: instance
+      replicas: {{ .Values.risingwave.compute.replicas }}
+      env:
+      - name: RW_STATE_STORE
+        value: "hummock+s3://{{ .Values.risingwave.stateStore.s3.bucket }}"
+      - name: AWS_REGION
+        value: "{{ .Values.risingwave.stateStore.s3.region }}"
+      {{- if eq .Values.risingwave.stateStore.s3.authentication.serviceAccountName "" }}
+      - name: AWS_ACCESS_KEY_ID
+        value: "{{ .Values.risingwave.stateStore.s3.authentication.accessKey }}"
+      - name: AWS_SECRET_ACCESS_KEY
+        value: "{{ .Values.risingwave.stateStore.s3.authentication.secretAccessKey }}"
+      {{- end }}
+      - name: RW_DATA_DIRECTORY
+        value: "{{ .Values.risingwave.stateStore.dataDirectory }}"
+      {{- if .Values.risingwave.stateStore.s3.endpoint }}
+      - name: RW_S3_ENDPOINT
+        value: "{{ .Values.risingwave.stateStore.s3.endpoint }}"
+      {{- end }}
+      {{- if .Values.risingwave.metaStore.etcd.authentication.enabled }}
+      - name: RW_ETCD_USERNAME
+        value: "{{ .Values.risingwave.metaStore.etcd.authentication.username }}"
+      - name: RW_ETCD_PASSWORD
+        value: "{{ .Values.risingwave.metaStore.etcd.authentication.password }}"
+      {{- end }}
+      - name: RW_ETCD_ENDPOINTS
+        value: "{{ .Values.risingwave.metaStore.etcd.endpoints }}"
+      - name: RW_ETCD_AUTH
+        value: "{{ .Values.risingwave.metaStore.etcd.authentication.enabled}}"
+...
+```
+
+在上面的示例中，我们通过`instances`字段添加了一个名为`instance`的实例模板。该模板定义了多个环境变量，包括`RW_STATE_STORE`和`AWS_REGION`。这些环境变量将由KubeBlocks追加到默认模板定义的环境变量列表中。因此，最终渲染的实例将同时包含来自默认模板和此实例模板的环境变量。
+
+此外，实例模板中的`replicas`字段与`componentSpec`中定义的字段完全相同（两者均为`{{ .Values.risingwave.compute.replicas }}`）。这确保了在覆盖默认模板后，此实例模板将用于渲染该组件内的所有实例。
+
+## 实例模板详情
+
+每个组件（Component）可以定义多个实例模板，每个模板应通过 Name 字段配置唯一名称。同一组件内的实例模板名称必须保持唯一。
+
+每个模板中的 `Replicas` 字段决定了从该模板渲染的实例数量，默认值为 1。组件内所有**实例模板**的 `Replicas` 总和不得超过**组件**定义的 `Replicas` 值。如果实例模板渲染的实例数量不足**组件**所需总数，剩余实例将使用默认模板渲染。
+
+基于实例模板渲染的实例命名模式为 `(集群名)-(组件名)-$(实例模板名)-序号`。例如在上述 RisingWave 集群中，集群名为 **risingwave**，组件名为 **compute**，实例模板名为 **instance**，**Replicas** 数量为 3，则渲染的实例名称为：
+
+- `risingwave-compute-instance-0`
+- `risingwave-compute-instance-1`
+- `risingwave-compute-instance-2`
+
+实例模板可在创建集群时使用，也可在运行阶段进行更新，包括添加、删除或修改模板。在执行更新前需谨慎评估变更可能带来的影响，因为这可能会更新、删除或重建实例。
+
+### 注解
+
+实例模板中的 `Annotations` 字段用于覆盖默认模板中的 `Annotations` 字段。如果实例模板的 `Annotations` 中的某个 Key 已存在于默认模板中，则实例模板的 `value` 将优先使用。如果该 Key 在默认模板中不存在，则该键值对将被添加到最终的 `Annotations` 中。
+
+例如，默认模板中的 `annotations` 为：
+
+```yaml
+annotations:
+  "foo0": "bar0"
+  "foo1": "bar"
+```
+
+以及实例模板中的 `annotations` 为：
+
+```yaml
+annotations:
+  "foo1": "bar1"
+  "foo2": "bar2"
+```
+
+
+
+```yaml
+annotations:
+  "foo0": "bar0"
+  "foo1": "bar1"
+  "foo2": "bar2"
+```
+
+请注意，KubeBlocks 会添加系统级别的 `Annotations`，这些注解无法被实例模板覆盖。
+
+### 标签（Labels）
+
+在 KubeBlocks v0.9 之前，标签可以在集群或组件级别的默认模板中定义。此外，KubeBlocks 会自动添加一些系统默认标签。这些标签共同构成资源的最终 `Labels` 集合。
+
+从 KubeBlocks v0.9 开始，您可以通过实例模板设置 `Labels`。
+
+与 `Annotations` 类似，实例模板中的 `Labels` 遵循相同的覆盖逻辑应用于现有的 `Labels`。
+
+实例模板的 `Labels` 具有最高优先级。但是，它们无法覆盖由 KubeBlocks 添加的系统 `Labels`。
+
+### 镜像（Image）
+
+实例模板中的 `Image` 字段用于覆盖默认模板中第一个容器的 `Image` 字段。
+
+使用 `Image` 字段时应格外谨慎：对于像数据库这样的 StatefulSet 应用，更改 `Image` 通常会引入兼容性问题，尤其是数据格式方面。更改此字段时，请确保实例模板中的镜像版本与默认模板中的版本完全兼容。
+
+从 KubeBlocks v0.9 开始，`ComponentVersion` 字段用于更有效地管理镜像版本。建议使用 `ComponentVersion` 来管理版本，以避免兼容性问题。
+
+### 调度策略.调度器名称（SchedulingPolicy.SchedulerName）
+
+实例模板中的 `SchedulerName` 会覆盖默认模板中的相同字段。
+
+### 调度策略.节点名称（SchedulingPolicy.NodeName）
+
+实例模板中的 `NodeName` 会覆盖默认模板中的相同字段。
+
+### 调度策略.节点选择器（SchedulingPolicy.NodeSelector）
+
+实例模板中的 `NodeSelector` 会覆盖默认模板中的相同字段。
+
+### 调度策略.容忍（SchedulingPolicy.Tolerations）
+
+实例模板中的 `Tolerations` 字段会覆盖默认模板中的相同字段。
+
+如果实例模板中的 `Toleration` 与默认模板中的 `Toleration` 完全相同（所有属性——`Key`、`Operator`、`Value`、`Effect` 和 `TolerationSeconds`——都相同），则该 `Toleration` 将被忽略。否则，它将被添加到默认模板的 `Tolerations` 列表中。
+
+### 调度策略.亲和性（SchedulingPolicy.Affinity）
+
+实例模板中的 `Affinity` 字段会覆盖默认模板中的相同字段。
+
+### 调度策略.拓扑分布约束（SchedulingPolicy.TopologySpreadConstraints）
+
+实例模板中的 `TopologySpreadConstraints` 字段会覆盖默认模板中的相同字段。
+
+### 资源（Resources）
+
+在 v0.9 之前，KubeBlocks 支持在多个级别定义 `Resource` 值：默认模板、集群和组件级别。最终资源值通过级联覆盖机制确定，组件级别优先级最高。从 v0.9 开始，实例模板可以定义 `Resource` 值，并且优先级高于组件级别设置。
+
+### 环境变量（Env）
+
+在 v0.9 之前，KubeBlocks 中的环境变量可以在默认模板和组件级别设置，直接或间接地。此外，KubeBlocks 通过 ConfigMaps 使用 `EnvVarSource` 机制提供某些系统默认环境变量。这些变量共同构成最终的 Env 列表。
+
+从 v0.9 开始，实例模板引入了一种新的定义环境变量的方式。实例模板中定义的值将覆盖其他 Env 变量，除了 KubeBlocks 的系统默认环境变量。覆盖逻辑与 `Annotations` 和 `Labels` 相同：如果 Env 的 `Name` 匹配，则实例模板中的 `Value` 或 `ValueFrom` 优先；如果不匹配，则新的 Env 将被添加到列表中。
+
+### 存储卷（Volumes）
+
+实例模板中的 `Volumes` 字段会覆盖默认模板中第一个容器的相同字段。如果存储卷的 `Name` 匹配，则应用实例模板中的 `VolumeSource`；如果不匹配，则该存储卷将作为新条目添加到最终存储卷列表中。
+
+### 存储卷挂载（VolumeMounts）
+
+实例模板中的 `VolumeMounts` 字段会覆盖默认模板中第一个 Container 的同名字段。如果 VolumeMount 的 `Name` 匹配，则应用实例模板中的 `MountPath` 及其他相关值。如果名称不匹配，则该 VolumeMount 会作为新条目添加。
+
+### VolumeClaimTemplates
+
+实例模板中的 `VolumeClaimTemplates` 字段会覆盖 Component 中由 `ClusterComponentVolumeClaimTemplates` 生成的同名字段。如果 `PersistentVolumeClaim Name` 相同，则应用实例模板中的 `PersistentVolumeClaimSpec` 值；否则会作为新的 `PersistentVolumeClaim` 添加。

@@ -1,0 +1,279 @@
+---
+description: 了解如何通过OpsRequest和直接Cluster API更新，对KubeBlocks管理的Qdrant集群执行水平扩缩容（扩容与缩容）。
+keywords:
+- KubeBlocks
+- Qdrant
+- Horizontal Scaling
+- Scale-Out
+- Scale-In
+- Kubernetes
+sidebar_label: 水平扩展
+sidebar_position: 3
+title: 使用KubeBlocks实现Qdrant集群的水平扩展
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# 使用 KubeBlocks 实现 Qdrant 集群水平扩缩容
+
+本指南介绍如何对 KubeBlocks 管理的 Qdrant 集群执行水平扩缩容（扩容和缩容）操作。您将学习如何使用 **OpsRequest** 和直接修改 **Cluster API** 两种方式实现这一目标。
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署 Qdrant 集群
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+## 验证部署状态
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+
+## 扩容（增加副本）
+
+**预期工作流程**：
+
+1. 新 Pod 被创建，状态从 `Pending` 转变为 `Running`
+2. 集群状态从 `Updating` 转变为 `Running`
+
+:::note
+
+Qdrant 使用 **Raft 共识协议** 来维护集群拓扑和集合结构的一致性。
+建议保持副本数为奇数（如 3、5、7），以避免扩容/缩容后出现脑裂场景。
+
+:::
+
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  选项一：使用水平扩容 OpsRequest
+
+  为 qdrant 组件增加 1 个副本实现集群扩容：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: qdrant-cluster-scale-out-ops
+    namespace: demo
+  spec:
+    clusterName: qdrant-cluster
+    type: HorizontalScaling
+    horizontalScaling:
+    - componentName: qdrant
+      # 指定组件扩容的副本变更数
+      scaleOut:
+        # 指定组件的副本变更数
+        # 为当前组件增加 1 个副本
+        replicaChanges: 1
+  ```
+
+  监控扩容操作进度：
+
+  ```bash
+  kubectl get ops qdrant-cluster-scale-out-ops -n demo -w
+  ```
+
+  预期输出：
+  ```bash
+  NAME                           TYPE                CLUSTER          STATUS    PROGRESS   AGE
+  qdrant-cluster-scale-out-ops   HorizontalScaling   qdrant-cluster   Running   0/1        9s
+  qdrant-cluster-scale-out-ops   HorizontalScaling   qdrant-cluster   Running   1/1        16s
+  qdrant-cluster-scale-out-ops   HorizontalScaling   qdrant-cluster   Succeed   1/1        16s
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  选项二：直接修改 Cluster API
+
+  您也可以直接更新 Cluster 资源中的 `replicas` 字段：
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: qdrant
+        replicas: 4 # 增加副本数实现扩容
+  ...
+  ```
+
+  或者使用命令修补集群 CR：
+
+  ```bash
+  kubectl patch cluster qdrant-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 4}]'
+  ```
+  </TabItem>
+</Tabs>
+
+### 验证扩容结果
+
+操作完成后，您将看到新创建的 Pod，且 Qdrant 集群状态从 `Updating` 变为 `Running`，新建的 Pod 会被赋予 `secondary` 角色。
+
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=qdrant-cluster
+```
+
+示例输出：
+```bash
+NAME                      READY   STATUS    RESTARTS   AGE
+qdrant-cluster-qdrant-0   2/2     Running   0          6m24s
+qdrant-cluster-qdrant-1   2/2     Running   0          7m19s
+qdrant-cluster-qdrant-2   2/2     Running   0          5m57s
+qdrant-cluster-qdrant-3   2/2     Running   0          3m54s
+```
+
+## 缩容（减少副本）
+
+**预期工作流程**：
+
+1. 移除序号最大的副本
+3. Pod 被优雅终止
+4. 集群状态从 `Updating` 转变为 `Running`
+
+:::note
+
+Qdrant 缩容时，数据将在剩余副本间重新分配。请确保集群有足够容量容纳数据。
+数据重分配过程耗时取决于数据量，该过程由 Qdrant 的 `MemberLeave` 操作处理，在数据重分配（即 `MemberLeave` 操作）成功完成前，相关 Pod 不会被删除。
+
+:::
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  选项一：使用水平缩容 OpsRequest
+
+  通过减少 1 个副本实现 Qdrant 集群缩容：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: qdrant-cluster-scale-in-ops
+    namespace: demo
+  spec:
+    clusterName: qdrant-cluster
+    type: HorizontalScaling
+    horizontalScaling:
+    - componentName: qdrant
+      # 指定组件缩容的副本变更数
+      scaleIn:
+        # 指定组件的副本变更数
+        # 从当前组件移除 1 个副本
+        replicaChanges: 1
+  ```
+
+  监控操作进度：
+  ```bash
+  kubectl get ops qdrant-cluster-scale-in-ops -n demo -w
+  ```
+
+  预期输出：
+  ```bash
+  NAME                         TYPE                 CLUSTER          STATUS    PROGRESS   AGE
+  qdrant-cluster-scale-in-ops   HorizontalScaling   qdrant-cluster   Running   0/1        8s
+  qdrant-cluster-scale-in-ops   HorizontalScaling   qdrant-cluster   Running   1/1        24s
+  qdrant-cluster-scale-in-ops   HorizontalScaling   qdrant-cluster   Succeed   1/1        24s
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  选项二：直接修改 Cluster API
+
+  您也可以直接更新 Cluster 资源中的 `replicas` 字段：
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: qdrant
+        replicas: 1 # 减少副本数实现缩容
+  ```
+
+  或者使用命令修补集群 CR：
+
+  ```bash
+  kubectl patch cluster qdrant-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 1}]'
+  ```
+  </TabItem>
+
+</Tabs>
+
+### 验证缩容结果
+
+示例输出（保留 1 个 Pod）：
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=qdrant-cluster
+NAME                        READY   STATUS   RESTARTS   AGE
+qdrant-cluster-qdrant-0     2/2     Running  0          18m
+```
+
+## 故障排查
+
+缩容时，KubeBlocks Qdrant 会按以下步骤重分配数据：
+
+1. 集群信息收集：
+- 识别待移除成员
+- 获取包含节点 ID 和领导者信息的集群状态
+
+2. 数据迁移：
+- 发现待移除成员上的所有集合
+- 为每个集合定位所有本地分片
+- 将每个分片迁移至集群领导者
+- 在继续操作前验证分片转移是否成功
+
+3. 集群成员更新：
+- 从集群成员中移除待离开节点
+- 使用文件锁防止并发移除操作
+
+若缩容操作长时间停滞，请检查以下资源：
+
+```bash
+# 检查 agent 日志
+kubectl logs -n demo <pod-name> -c kbagent
+
+# 检查集群错误事件
+kubectl get events -n demo --field-selector involvedObject.name=pg-cluster
+
+# 检查 kubeblocks 日志
+kubectl -n kb-system logs deploy/kubeblocks
+```
+
+## 最佳实践
+
+执行水平扩缩容时建议：
+- 尽可能在低流量时段操作
+- 扩缩容过程中监控集群健康状态
+- 扩容前确保有足够资源
+- 考虑新副本的存储需求
+
+## 清理资源
+删除 Qdrant 集群及其命名空间以释放所有资源：
+```bash
+kubectl delete cluster qdrant-cluster -n demo
+kubectl delete ns demo
+```
+
+## 总结
+本指南中您已学习如何：
+- 通过增加副本实现 Qdrant 集群扩容
+- 通过减少副本实现 Qdrant 集群缩容
+- 使用 OpsRequest 和直接修改 Cluster API 两种方式进行水平扩缩容
+
+KubeBlocks 能确保在最小化影响数据库服务的情况下实现无缝扩缩容。

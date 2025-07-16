@@ -1,0 +1,527 @@
+---
+description: 了解如何使用KubeBlocks部署Redis复制集群。本指南涵盖配置、验证、故障转移测试及超时设置。
+keywords:
+- KubeBlocks
+- Redis
+- Kubernetes
+- High Availability
+sidebar_label: Milvus 集群
+sidebar_position: 1
+title: 使用KubeBlocks部署Milvus集群
+---
+# 使用 KubeBlocks 部署 Milvus 集群
+
+Milvus 集群是一种面向生产工作负载的分布式部署方案，包含多个专用组件：
+
+**接入层**
+
+- 无状态代理节点，负责处理客户端连接和请求路由
+
+**计算层**
+
+- 查询节点（Query Nodes）：执行搜索操作
+- 数据节点（Data Nodes）：处理数据写入和压缩
+- 索引节点（Index Nodes）：构建和维护向量索引
+
+**协调层**
+
+- 根协调器（Root Coordinator）：管理全局元数据
+- 查询协调器（Query Coordinator）：协调查询执行
+- 数据协调器（Data Coordinator）：管理数据分布
+- 索引协调器（Index Coordinator）：监督索引构建
+
+**存储层**
+
+- 元数据存储（ETCD）：集群元数据和配置存储
+- 对象存储（MinIO/S3）：向量数据的持久化存储
+- 日志存储（Pulsar）：用于变更数据捕获的消息队列
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+
+
+## 部署 Milvus 集群
+
+### 步骤 1. 部署 ETCD 集群
+
+ETCD 集群用于元数据存储
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: etcdm-cluster
+  namespace: demo
+spec:
+  terminationPolicy: WipeOut
+  componentSpecs:
+    - name: etcd
+      componentDef: etcd-3-1.0.0
+      serviceVersion: 3.5.6
+      replicas: 1
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+### 步骤 2. 部署 MinIO 集群
+
+MinIO 用于对象存储
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: miniom-cluster
+  namespace: demo
+spec:
+  terminationPolicy: WipeOut
+  componentSpecs:
+    - name: minio
+      componentDef: milvus-minio-1.0.0
+      replicas: 1
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+### 步骤 3. 部署 Pulsar 集群
+
+Pulsar 用于日志存储
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: pulsarm-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  # 该值必须为 `pulsar` 以创建 Pulsar 集群
+  clusterDef: pulsar
+  topology: pulsar-basic-cluster
+  services:
+    - name: broker-bootstrap
+      serviceName: broker-bootstrap
+      componentSelector: broker
+      spec:
+        type: ClusterIP
+        ports:
+          - name: pulsar
+            port: 6650
+            targetPort: 6650
+          - name: http
+            port: 80
+            targetPort: 8080
+          - name: kafka-client
+            port: 9092
+            targetPort: 9092
+    - name: zookeeper
+      serviceName: zookeeper
+      componentSelector: zookeeper
+      spec:
+        type: ClusterIP
+        ports:
+          - name: client
+            port: 2181
+            targetPort: 2181
+  componentSpecs:
+    - name: broker
+      serviceVersion: 3.0.2
+      replicas: 1
+      env:
+        - name: KB_PULSAR_BROKER_NODEPORT
+          value: "false"
+      resources:
+        limits:
+          cpu: "1"
+          memory: "512Mi"
+        requests:
+          cpu: "200m"
+          memory: "512Mi"
+    - name: bookies
+      serviceVersion: 3.0.2
+      replicas: 4
+      resources:
+        limits:
+          cpu: "1"
+          memory: "512Mi"
+        requests:
+          cpu: "200m"
+          memory: "512Mi"
+      volumeClaimTemplates:
+        - name: ledgers
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 8Gi
+        - name: journal
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 8Gi
+    - name: zookeeper
+      serviceVersion: 3.0.2
+      replicas: 1
+      resources:
+        limits:
+          cpu: "1"
+          memory: "512Mi"
+        requests:
+          cpu: "100m"
+          memory: "512Mi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 8Gi
+```
+
+### 部署 Milvus 集群
+
+该集群将包含以下组件：
+- Proxy（代理节点）
+- Data Node（数据节点）
+- Index Node（索引节点）
+- Query Node（查询节点）
+- Mixed Coordinator（混合协调器）
+
+每个组件将通过 `serviceRef` 关联到之前创建的对应服务：etcd、minio 和 pulsar。
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  namespace: demo
+  name: milvus-cluster
+spec:
+  terminationPolicy: Delete
+  # 该值必须为 `milvus` 以创建 Milvus 集群
+  clusterDef: milvus
+  # 可选值: [standalone,cluster]
+  topology: cluster
+  componentSpecs:
+    - name: proxy
+      replicas: 1
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      # 定义组件的服务引用列表
+      serviceRefs:
+        - name: milvus-meta-storage # 指定服务引用声明的标识符，定义在 `componentDefinition.spec.serviceRefDeclarations[*].name`
+          namespace: demo        # 引用集群的命名空间，按需修改
+          # 引用另一个 KubeBlocks 集群提供的服务
+          clusterServiceSelector:
+            cluster: etcdm-cluster  # ETCD 集群名称，按需修改
+            service:
+              component: etcd       # 组件名称，应为 etcd
+              service: headless     # 引用默认的无头服务
+              port: client          # 引用端口名称 'client'
+        - name: milvus-log-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: pulsarm-cluster # Pulsar 集群名称
+            service:
+              component: broker
+              service: headless
+              port: pulsar
+        - name: milvus-object-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: miniom-cluster # Minio 集群名称
+            service:
+              component: minio
+              service: headless
+              port: http
+            credential:            # 指定用于认证和建立与引用集群连接的系统账户
+              component: minio     # 对应组件 'minio'
+              name: admin          # 引用的凭证（系统账户）名称，本例使用 'admin' 账户
+    - name: mixcoord
+      replicas: 1
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      serviceRefs:
+        - name: milvus-meta-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: etcdm-cluster
+            service:
+              component: etcd
+              service: headless
+              port: client
+        - name: milvus-log-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: pulsarm-cluster
+            service:
+              component: broker
+              service: headless
+              port: pulsar
+        - name: milvus-object-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: miniom-cluster
+            service:
+              component: minio
+              service: headless
+              port: http
+            credential:
+              component: minio
+              name: admin
+    - name: datanode
+      replicas: 1
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      serviceRefs:
+        - name: milvus-meta-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: etcdm-cluster
+            service:
+              component: etcd
+              service: headless
+              port: client
+        - name: milvus-log-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: pulsarm-cluster
+            service:
+              component: broker
+              service: headless
+              port: pulsar
+        - name: milvus-object-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: miniom-cluster
+            service:
+              component: minio
+              service: headless
+              port: http
+            credential:
+              component: minio
+              name: admin
+    - name: indexnode
+      replicas: 1
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      serviceRefs:
+        - name: milvus-meta-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: etcdm-cluster
+            service:
+              component: etcd
+              service: headless
+              port: client
+        - name: milvus-log-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: pulsarm-cluster
+            service:
+              component: broker
+              service: headless
+              port: pulsar
+        - name: milvus-object-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: miniom-cluster
+            service:
+              component: minio
+              service: headless
+              port: http
+            credential:
+              component: minio
+              name: admin
+    - name: querynode
+      replicas: 2
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      serviceRefs:
+        - name: milvus-meta-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: etcdm-cluster
+            service:
+              component: etcd
+              service: headless
+              port: client
+        - name: milvus-log-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: pulsarm-cluster
+            service:
+              component: broker
+              service: headless
+              port: pulsar
+        - name: milvus-object-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: miniom-cluster
+            service:
+              component: minio
+              service: headless
+              port: http
+            credential:
+              component: minio
+              name: admin
+```
+
+:::note
+
+像 Pulsar、MinIO 和 ETCD 这样的集群有多个端口提供不同服务。
+当使用 `serviceRef` 创建集群时，您需要知道哪个 `port` 提供对应的服务。
+例如，在 MinIO 中主要有四个端口：9000、9001、3501 和 3502，它们用于不同的服务或功能。
+
+:::
+
+服务引用通过 `serviceRefs` 指定如下，请根据您的运行环境更新集群名称和端口：
+```yaml
+# 定义组件的服务引用列表
+serviceRefs:
+  - name: milvus-meta-storage # 指定服务引用声明的标识符，定义在 `componentDefinition.spec.serviceRefDeclarations[*].name`
+    namespace: demo        # 引用集群的命名空间，按需修改
+    # 引用另一个 KubeBlocks 集群提供的服务
+    clusterServiceSelector:
+      cluster: etcdm-cluster  # ETCD 集群名称，按需修改
+      service:
+        component: etcd       # 组件名称，应为 etcd
+        service: headless     # 引用默认的无头服务
+        port: client          # 注意：引用端口名称 'client'，对应端口号 '3501'
+  - name: milvus-log-storage
+    namespace: demo
+    clusterServiceSelector:
+      cluster: pulsarm-cluster # Pulsar 集群名称
+      service:
+        component: broker
+        service: headless
+        port: pulsar          # 注意：引用端口名称 'pulsar'，对应端口号 '6650'
+  - name: milvus-object-storage
+    namespace: demo
+    clusterServiceSelector:
+      cluster: miniom-cluster # Minio 集群名称
+      service:
+        component: minio
+        service: headless
+        port: http           # 注意：引用端口名称 'http'，对应端口号 '9000'
+      credential:            # 指定用于认证和建立与引用集群连接的系统账户
+        component: minio     # 对应组件 'minio'
+        name: admin          # 注意：引用的凭证（系统账户）名称，本例使用 'admin' 账户
+```
+
+## 验证部署
+
+### 检查集群状态
+集群部署完成后，检查其状态：
+```bash
+kubectl get cluster milvus-cluster  -n demo -w
+```
+预期输出：
+```bash
+NAME             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+milvus-cluster   milvus               Delete               Running   4m38s
+```
+
+### 验证组件和Pod状态
+```bash
+kubectl get component -l app.kubernetes.io/instance=milvus-cluster -n demo
+```
+预期输出：
+```bash
+NAME                       DEFINITION                       SERVICE-VERSION   STATUS    AGE
+milvus-cluster-datanode    milvus-datanode-1.0.0            v2.3.2            Running   5m8s
+milvus-cluster-indexnode   milvus-indexnode-1.0.0           v2.3.2            Running   5m8s
+milvus-cluster-mixcoord    milvus-mixcoord-1.0.0            v2.3.2            Running   5m8s
+milvus-cluster-proxy       milvus-proxy-1.0.0               v2.3.2            Running   5m8s
+milvus-cluster-querynode   milvus-querynode-1.0.0           v2.3.2            Running   5m8s
+```
+
+检查Pod状态：
+
+```bash
+kubectl get pods -l app.kubernetes.io/instance=milvus-cluster -n demo
+```
+
+预期输出：
+```bash
+NAME                         READY   STATUS    RESTARTS   AGE
+milvus-cluster-datanode-0    1/1     Running   0          5m30s
+milvus-cluster-indexnode-0   1/1     Running   0          5m31s
+milvus-cluster-mixcoord-0    1/1     Running   0          5m32s
+milvus-cluster-proxy-0       1/1     Running   0          5m32s
+milvus-cluster-querynode-0   1/1     Running   0          5m31s
+milvus-cluster-querynode-1   1/1     Running   0          3m51s
+```
+
+## 清理资源
+要删除本教程中创建的所有资源，请执行以下命令：
+
+```bash
+kubectl delete cluster milvus-cluster -n demo
+kubectl delete cluster etcdm-cluster -n demo
+kubectl delete cluster miniom-cluster -n demo
+kubectl delete cluster pulsarm--cluster -n demo
+kubectl delete ns demo
+```
+
+说明：
+- 上述命令会依次删除在demo命名空间中创建的Milvus集群、ETCD集群、MinIO集群和Pulsar集群
+- 最后一条命令将删除整个demo命名空间及其下所有资源
+- 请确保这些资源不再需要后再执行删除操作

@@ -1,0 +1,602 @@
+---
+authors:
+  image_url: https://avatars.githubusercontent.com/u/111858489?v=4
+  name: dullboy
+  url: https://github.com/nayutah
+date: 2024-05-28
+description: 我们如何通过KubeBlocks解决在Kubernetes上管理Redis的问题
+image: /img/blogs/thumbnails/blog-redis-on-kb.png
+slug: manage-redis-on-k8s
+tags:
+- containerization
+- database performance
+- network compatibility
+- redis
+title: 基于KubeBlocks优化Kubernetes上的Redis集群部署及解决网络兼容性问题
+---
+# 基于KubeBlocks简化Redis集群在Kubernetes的部署及解决网络兼容性问题
+
+Redis Cluster是Redis数据库的分布式解决方案，用于将数据分布在多个节点上以提供高可用性和可扩展性。它允许将大量数据分片存储在多个节点上，并自动处理数据分片和迁移。
+Redis Cluster使用哈希槽来管理数据分布。数据被划分为固定数量的哈希槽，每个槽可以分配给不同的节点。每个节点负责处理分配给它的哈希槽中的部分数据。客户端可以直接连接到任意节点，无需中间代理。
+在应用部署中，整体架构通常由后端的Redis Cluster和应用端的智能客户端组成。
+Redis Cluster提供以下特性：
+
+1. 自动分片和数据迁移：当节点加入或离开集群时，Redis Cluster会自动将数据迁移到正确的节点以保持数据分布均衡。
+2. 高可用性：Redis Cluster采用主从复制机制，每个主节点有多个从节点。当主节点故障时，从节点可以自动接管，提供高可用性。
+3. 负载均衡：Redis Cluster实现了客户端与节点间的自动负载均衡。客户端可以直接连接任意节点，节点会自动转发请求，实现负载均衡。
+
+通过将数据分布在多个节点上，并提供自动故障转移和负载均衡机制，Redis Cluster使应用程序能够处理大规模数据集和高并发访问需求。它是一个强大的分布式解决方案，常用于需要高性能和可扩展性的场景，如缓存、会话存储和实时计数。
+
+许多Kubeblocks的客户对Redis Cluster有强烈需求，因此我们基于Kubeblocks适配了Redis Cluster。在适配过程中，我们也发现了一些Redis Cluster在Kubernetes容器场景下面临的网络标准兼容性问题。
+
+## 问题复现
+
+1. 安装 KubeBlocks 0.9.0。
+
+```
+slc@slcmac kbcli % ./bin/kbcli kubeblocks list-versions --devel
+VERSION         RELEASE-NOTES
+0.9.0-beta.8    https://github.com/apecloud/kubeblocks/releases/tag/v0.9.0-beta.8
+0.9.0-beta.7    https://github.com/apecloud/kubeblocks/releases/tag/v0.9.0-beta.7
+slc@slcmac kbcli % kbcli kubeblocks install --version="0.9.0-beta.8"
+```
+
+2. 安装 redis-cluster 插件。
+
+虽然 Redis 集群插件默认已安装，但由于网络标准兼容性问题导致了一些故障，我们需要手动安装它。
+
+```
+# Disable addon
+slc@slcmac addons % kbcli addon disable redis
+# Install the latest addon on the branch
+slc@slcmac addons % git clone git@github.com:apecloud/kubeblocks-addons.git
+slc@slcmac addons % cd kubeblocks-addons/addons/redis 
+slc@slcmac addons % helm dependency build && cd ..
+slc@slcmac addons % helm install redis ./redis
+slc@slcmac addons % helm list
+NAME          NAMESPACE        REVISION        UPDATED                                     STATUS          CHART                      APP VERSION
+redis         default          1               2024-04-15 21:29:37.953119 +0800 CST        deployed        redis-0.9.0                7.0.6
+```
+
+为复现该问题，我们在执行 `helm install redis` 命令前修改了插件的配置。
+[img](/static/img/redis-helm.png)
+3. 创建 Redis 集群。
+
+该集群采用 NodePort 模式创建，包含 3 个主节点和 3 个从节点。
+
+```
+slc@slcmac addons % helm install redisc ./redis-cluster --set mode=cluster --set nodePortEnabled=true --set redisCluster.shardCount=3
+slc@slcmac addons % kg pods | grep -v job
+NAME                                           READY   STATUS    RESTARTS   AGE
+redisc-shard-hxx-1                             3/3     Running   0          14m
+redisc-shard-hxx-0                             3/3     Running   0          14m
+redisc-shard-xwz-0                             3/3     Running   0          14m
+redisc-shard-xwz-1                             3/3     Running   0          14m
+redisc-shard-5g8-0                             3/3     Running   0          14m
+redisc-shard-5g8-1                             3/3     Running   0          14m
+```
+
+我们可以清楚地看到创建了3个主从Pod，但节点间的关系尚未建立。
+通告 ip/端口/bus端口
+
+（严格保持原文格式和换行，技术术语"primary-secondary pods"译为"主从Pod"，"ip/port/bus-port"采用中文技术文档常见表述"ip/端口/bus端口"的格式）
+
+```
+redisc-shard-5g8-0
+kubectl exec -it redisc-shard-5g8-0 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-ip 172.18.0.2
+kubectl exec -it redisc-shard-5g8-0 -c redis-cluster -- redis-cli -a O3605v7HsS config set re 30039
+kubectl exec -it redisc-shard-5g8-0 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-bus-port 32461
+redisc-shard-hxx-0
+kubectl exec -it redisc-shard-hxx-0 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-ip 172.18.0.2
+kubectl exec -it redisc-shard-hxx-0 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-port 30182
+kubectl exec -it redisc-shard-hxx-0 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-bus-port 31879
+redisc-shard-xwz-0
+kubectl exec -it redisc-shard-xwz-0 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-ip 172.18.0.2
+kubectl exec -it redisc-shard-xwz-0 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-port 31993
+kubectl exec -it redisc-shard-xwz-0 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-bus-port 30105
+```
+
+创建插槽
+
+```
+kubectl exec -it redisc-shard-5g8-0 -c redis-cluster -- redis-cli -a O3605v7HsS cluster ADDSLOTSRANGE 0 5461
+kubectl exec -it redisc-shard-hxx-0 -c redis-cluster -- redis-cli -a O3605v7HsS cluster ADDSLOTSRANGE 5462 10922
+kubectl exec -it redisc-shard-xwz-0 -c redis-cluster -- redis-cli -a O3605v7HsS cluster ADDSLOTSRANGE 10923 16383
+```
+
+集群接入
+
+（保持原始空行格式）
+
+```
+# login to one of the primary nodes 
+slc@slcmac redis % kubectl exec -it redisc-shard-5g8-0 -c redis-cluster -- /bin/bash
+root@redisc-shard-5g8-0:/# redis-cli -a O3605v7HsS
+127.0.0.1:6379> cluster nodes
+ff935854b7626a7e4374598857d5fbe998297799 172.18.0.2:30039@32461 myself,master - 0 0 0 connected 0-5461
+# Only one node found, we have to meet other two nodes. 
+slc@slcmac redis %  kubectl exec -it redisc-shard-5g8-0 -c redis-cluster -- redis-cli -a O3605v7HsS cluster meet 172.18.0.2 30182 31879
+OK
+slc@slcmac redis %  kubectl exec -it redisc-shard-5g8-0 -c redis-cluster -- redis-cli -a O3605v7HsS cluster meet 172.18.0.2 31993 30105
+OK
+# Check the topology again.
+slc@slcmac redis % kubectl exec -it redisc-shard-5g8-0 -c redis-cluster -- /bin/bash
+root@redisc-shard-5g8-0:/# redis-cli -a O3605v7HsS
+127.0.0.1:6379> cluster nodes
+ff935854b7626a7e4374598857d5fbe998297799 172.18.0.2:30039@32461 myself,master - 0 1713324462000 0 connected 0-5461
+e4d9b914e7ee7c4fd399bdf3dd1c98f7a0a1791b 172.18.0.2:31993@30105 master - 0 1713324462989 2 connected 10923-16383
+a54e8fa9474c620154f4c1abc9628116deb3dc7e 172.18.0.2:30182@31879 master - 0 1713324463091 1 connected 5462-10922
+```
+
+此时，一个包含 3 个节点的集群已创建完成。
+
+4. 加入无头从节点
+
+我们将 Pod `redisc-shard-5g8-1` 作为主 Pod `redisc-shard-5g8-0` 的备用节点。
+检查主 Pod 上的连接情况，可见其未与其他任何主 Pod 建立连接。
+
+
+
+```
+# Check link
+root@redisc-shard-5g8-1:/# netstat -anop | grep redis
+tcp        0      0 0.0.0.0:16379           0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 0.0.0.0:6379            0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 127.0.0.1:6379          127.0.0.1:46948         ESTABLISHED 1/redis-server *:63  keepalive (123.22/0/0)
+tcp6       0      0 :::16379                :::*                    LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp6       0      0 :::6379                 :::*                    LISTEN      1/redis-server *:63  off (0.00/0/0)
+```
+
+从节点 Pod 的无头地址：redisc-shard-5g8-1.redisc-shard-5g8-headless:6379
+完整的 `join` 命令为：
+
+```
+slc@slcmac redis % kubectl exec -it redisc-shard-5g8-1 -c redis-cluster -- /bin/bash
+root@redisc-shard-5g8-1:/# redis-cli -a O3605v7HsS --cluster add-node redisc-shard-5g8-1.redisc-shard-5g8-headless:6379 172.18.0.2:30039 --cluster-slave --cluster-master-id ff935854b7626a7e4374598857d5fbe998297799
+>>> Adding node redisc-shard-5g8-1.redisc-shard-5g8-headless:6379 to cluster 172.18.0.2:30039
+>>> Performing Cluster Check (using node 172.18.0.2:30039)
+M: ff935854b7626a7e4374598857d5fbe998297799 172.18.0.2:30039
+   slots:[0-5461] (5462 slots) master
+M: e4d9b914e7ee7c4fd399bdf3dd1c98f7a0a1791b 172.18.0.2:31993
+   slots:[10923-16383] (5461 slots) master
+M: a54e8fa9474c620154f4c1abc9628116deb3dc7e 172.18.0.2:30182
+   slots:[5462-10922] (5461 slots) master
+[OK] All nodes agree about slots configuration.
+>>> Check for open slots...
+>>> Check slots coverage...
+[OK] All 16384 slots covered.
+>>> Send CLUSTER MEET to node redisc-shard-5g8-1.redisc-shard-5g8-headless:6379 to make it join the cluster.
+Waiting for the cluster to join
+
+>>> Configure node as replica of 172.18.0.2:30039.
+[OK] New node added correctly.
+```
+
+172.18.0.2:30039 是主节点 Pod 对外宣告的 IP/端口。
+
+检查连接：
+
+```
+root@redisc-shard-5g8-1:/# netstat -anop | grep redis
+tcp        0      0 0.0.0.0:16379           0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 0.0.0.0:6379            0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 10.42.0.237:48424       172.18.0.2:31879        ESTABLISHED 1/redis-server *:63  off (0.00/0/0) // master-2 announced bus port
+tcp        0      0 10.42.0.237:36154       172.18.0.2:32461        ESTABLISHED 1/redis-server *:63  off (0.00/0/0) // master-1 announced bus port
+tcp        0      0 10.42.0.237:33504       172.18.0.2:30039        ESTABLISHED 1/redis-server *:63  keepalive (285.22/0/0) // master-1 announced port
+tcp        0      0 127.0.0.1:6379          127.0.0.1:46948         ESTABLISHED 1/redis-server *:63  keepalive (279.99/0/0) // local redis-cli
+tcp        0      0 10.42.0.237:58576       172.18.0.2:30105        ESTABLISHED 1/redis-server *:63  off (0.00/0/0) // master-3 announced bus port
+tcp6       0      0 :::16379                :::*                    LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp6       0      0 :::6379                 :::*                    LISTEN      1/redis-server *:63  off (0.00/0/0)
+```
+
+从节点 Pod 与其他 3 个主节点 Pod 通过已声明的总线端口连接，同时该从节点 Pod 也与其主节点 Pod 保持连接。
+请在从节点 Pod 上检查集群拓扑结构。
+
+（严格保持原文格式与换行）
+
+```
+root@redisc-shard-5g8-1:/# redis-cli -a O3605v7HsS
+127.0.0.1:6379> cluster nodes
+ff935854b7626a7e4374598857d5fbe998297799 172.18.0.2:30039@32461 master - 0 1713327060494 0 connected 0-5461
+3a136cd50eb3f2c0dcc3844a0de63d5e44b462d7 :6379@16379 myself,slave ff935854b7626a7e4374598857d5fbe998297799 0 0 0 connected
+e4d9b914e7ee7c4fd399bdf3dd1c98f7a0a1791b 172.18.0.2:31993@30105 master - 0 1713327060696 2 connected 10923-16383
+a54e8fa9474c620154f4c1abc9628116deb3dc7e 172.18.0.2:30182@31879 master - 0 1713327060605 1 connected 5462-10922
+```
+
+检查主 Pod 上的集群拓扑，发现新添加的从 Pod 缺失。
+
+```
+root@redisc-shard-5g8-0:/# redis-cli -a O3605v7HsS
+127.0.0.1:6379> cluster nodes
+ff935854b7626a7e4374598857d5fbe998297799 172.18.0.2:30039@32461 myself,master - 0 1713327106000 0 connected 0-5461
+e4d9b914e7ee7c4fd399bdf3dd1c98f7a0a1791b 172.18.0.2:31993@30105 master - 0 1713327107004 2 connected 10923-16383
+a54e8fa9474c620154f4c1abc9628116deb3dc7e 172.18.0.2:30182@31879 master - 0 1713327107106 1 connected 5462-10922
+```
+
+在之前的 `add-node` 过程中，`cluster meet` 操作报告成功，但主节点实际上并未识别到新的副本节点。检查 ·/data/running.log· 后，发现以下错误信息：
+
+
+
+```
+root@redisc-shard-5g8-0:/data# grep 16379 running.log
+1:M 17 Apr 2024 04:05:37.610 - Connection with Node 30e6d55c687bfc08e4a2fcd2ef586ba5458d801f at 10.42.0.1:16379 failed: Connection refused
+**10 times repeated**
+30e6d55c687bfc08e4a2fcd2ef586ba5458d801f at 10.42.0.1:16379 failed: Connection refused
+```
+
+因此，实际上这个 `cluster meet` 操作是失败的。但为什么呢？
+
+## 故障排查
+
+1. 神秘的IP地址问题  
+默认的Redis集群总线端口是16379（即6379 + 10000）。如果总线端口未显式声明，Redis集群将使用这个默认地址。因此问题现象是：当主节点Pod收到meet请求时，它尝试重新连接到另一个Pod的默认总线端口（16379），但连接失败。然而从节点Pod的IP（10.42.0.237）与错误信息中提到的IP（10.42.0.1）不一致。为什么主节点Pod会尝试连接到一个不一致的IP地址？
+
+
+
+```
+slc@slcmac redis %  kg pods -A -o wide | grep redisc-shard-5g8-1
+default       redisc-shard-5g8-1                             3/3     Running     0              72m    10.42.0.237   k3d-k3s-default-server-0
+```
+
+在继续调查过程中，发现10.42.0.1实际上是k3d（我们在开发环境中使用的Kubernetes版本）CNI0的地址。
+
+```
+slc@slcmac redis % docker ps
+CONTAINER ID   IMAGE                            COMMAND                  CREATED        STATUS        PORTS                             NAMES
+8f8958df3298   moby/buildkit:buildx-stable-1    "buildkitd --allow-i…"   6 weeks ago    Up 6 weeks                                      buildx_buildkit_project-v3-builder0
+f8f349b2faab   ghcr.io/k3d-io/k3d-proxy:5.4.6   "/bin/sh -c nginx-pr…"   6 months ago   Up 3 months   80/tcp, 0.0.0.0:57830->6443/tcp   k3d-k3s-default-serverlb
+3e291f02144a   rancher/k3s:v1.24.4-k3s1         "/bin/k3d-entrypoint…"   6 months ago   Up 3 months                                     k3d-k3s-default-server-0
+slc@slcmac redis % docker exec -it 3e291f02144a /bin/sh
+/ # ifconfig
+cni0      Link encap:Ethernet  HWaddr 32:22:34:47:9D:BF
+          inet addr:10.42.0.1  Bcast:10.42.0.255  Mask:255.255.255.0
+          UP BROADCAST RUNNING MULTICAST  MTU:1450  Metric:1
+          RX packets:219424018 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:238722923 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000
+          RX bytes:33805804056 (31.4 GiB)  TX bytes:199941577234 (186.2 GiB)
+
+eth0      Link encap:Ethernet  HWaddr 02:42:AC:12:00:02
+          inet addr:172.18.0.2  Bcast:172.18.255.255  Mask:255.255.0.0
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:74602028 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:68167266 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:39814942542 (37.0 GiB)  TX bytes:17167663962 (15.9 GiB)
+slc@slcmac redis % kg node -o wide
+NAME                       STATUS   ROLES                  AGE    VERSION        INTERNAL-IP   EXTERNAL-IP   OS-IMAGE   KERNEL-VERSION      CONTAINER-RUNTIME
+k3d-k3s-default-server-0   Ready    control-plane,master   183d   v1.24.4+k3s1   172.18.0.2    <none>        K3s dev    5.10.104-linuxkit   containerd://1.6.6-k3s1
+```
+
+换句话说，10.42.* 是 k3d 默认的 Pod CIDR 网段，而 172.18.0.2 是唯一 k3d 节点的物理地址（这就是为什么看到的节点端口地址都是 172.18.0.2）。
+
+2. 一个不太明显的链接。
+
+事实证明，对应 gossip 协议的链接（本地 16379 -> 远程 NodePort）在目标端经过了 NAT 转换。通过 tcpdump 抓包，我们成功定位到一个 gossip 会话链接。尽管该会话链接已被 CNI 进行了 NAT 转换，但我们仍能利用 TS Val 和 ECR 信息完整还原它。以下是已建立的主节点 primary-1 和 primary-2 之间还原出的 gossip 链接。
+
+主节点 primary-1 redisc-shard-5g8-0 的链接信息：
+
+```
+root@redisc-shard-5g8-0:/data# netstat -anop | grep redis
+tcp        0      0 0.0.0.0:6379            0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 0.0.0.0:16379           0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 127.0.0.1:6379          127.0.0.1:46798         ESTABLISHED 1/redis-server *:63  keepalive (117.47/0/0)
+tcp        0      0 10.42.0.236:58412       172.18.0.2:31879        ESTABLISHED 1/redis-server *:63  off (0.00/0/0) // Other part is primary-2 nodeport
+tcp        0      0 10.42.0.236:6379        10.42.0.1:45255         ESTABLISHED 1/redis-server *:63  keepalive (118.11/0/0)
+tcp        0      0 10.42.0.236:36528       172.18.0.2:30105        ESTABLISHED 1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 10.42.0.236:16379       10.42.0.1:16471         ESTABLISHED 1/redis-server *:63  keepalive (1.20/0/0)
+tcp        0      0 10.42.0.236:16379       10.42.0.1:30788         ESTABLISHED 1/redis-server *:63  keepalive (0.08/0/0)
+tcp        0      0 10.42.0.236:16379       10.42.0.1:20521         ESTABLISHED 1/redis-server *:63  keepalive (1.42/0/0)
+tcp6       0      0 :::6379                 :::*                    LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp6       0      0 :::16379                :::*                    LISTEN      1/redis-server *:63  off (0.00/0/0)
+```
+
+主节点 primary-2 的连接信息 redisc-shard-hxx-0：
+
+```
+root@redisc-shard-hxx-0:/# netstat -anop | grep redis
+tcp        0      0 0.0.0.0:16379           0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 0.0.0.0:6379            0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 10.42.0.232:16379       10.42.0.1:24780         ESTABLISHED 1/redis-server *:63  keepalive (0.72/0/0) // master-1 被 NAT 之后的地址
+tcp        0      0 10.42.0.232:41974       172.18.0.2:30105        ESTABLISHED 1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 10.42.0.232:16379       10.42.0.1:6717          ESTABLISHED 1/redis-server *:63  keepalive (1.34/0/0)
+tcp        0      0 10.42.0.232:16379       10.42.0.1:24130         ESTABLISHED 1/redis-server *:63  keepalive (0.33/0/0)
+tcp        0      0 10.42.0.232:33306       172.18.0.2:32461        ESTABLISHED 1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 127.0.0.1:6379          127.0.0.1:46626         ESTABLISHED 1/redis-server *:63  keepalive (24.56/0/0)
+tcp6       0      0 :::16379                :::*                    LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp6       0      0 :::6379                 :::*                    LISTEN      1/redis-server *:63  off (0.00/0/0)
+```
+
+两个链接之间的映射关系：
+
+```
+# On primary-1 redisc-shard-5g8-0, capture packets on NodePort 31879 (primary  -2 redisc-shard-hxx-0):
+05:40:04.817984 IP redisc-shard-5g8-0.redisc-shard-5g8-headless.default.svc.cluster.local.58412 > k3d-k3s-default-server-0.31879: Flags [P.], seq 6976:9336, ack 7081, win 10027, options [nop,nop,TS val 4191410578 ecr 867568717], length 2360
+05:40:04.818428 IP k3d-k3s-default-server-0.31879 > redisc-shard-5g8-0.redisc-shard-5g8-headless.default.svc.cluster.local.58412: Flags [.], ack 9336, win 498, options [nop,nop,TS val 867569232 ecr 4191410578], length 0
+05:40:04.819269 IP k3d-k3s-default-server-0.31879 > redisc-shard-5g8-0.redisc-shard-5g8-headless.default.svc.cluster.local.58412: Flags [P.], seq 7081:9441, ack 9336, win 501, options [nop,nop,TS val 867569233 ecr 4191410578], length 2360
+05:40:04.819309 IP redisc-shard-5g8-0.redisc-shard-5g8-headless.default.svc.cluster.local.58412 > k3d-k3s-default-server-0.31879: Flags [.], ack 9441, win 10026, options [nop,nop,TS val 4191410580 ecr 867569233], length 0
+
+# On primary-2 redisc-shard-hxx-0, capture packets on local Port 24780 (primary-1 redisc-shard-5g8-0): 
+05:40:04.818178 IP 10.42.0.1.24780 > redisc-shard-hxx-0.redisc-shard-hxx-headless.default.svc.cluster.local.16379: Flags [P.], seq 32624:34984, ack 32937, win 10027, options [nop,nop,TS val 4191410578 ecr 867568717], length 2360
+05:40:04.818371 IP redisc-shard-hxx-0.redisc-shard-hxx-headless.default.svc.cluster.local.16379 > 10.42.0.1.24780: Flags [.], ack 34984, win 498, options [nop,nop,TS val 867569232 ecr 4191410578], length 0
+05:40:04.819239 IP redisc-shard-hxx-0.redisc-shard-hxx-headless.default.svc.cluster.local.16379 > 10.42.0.1.24780: Flags [P.], seq 32937:35297, ack 34984, win 501, options [nop,nop,TS val 867569233 ecr 4191410578], length 2360
+05:40:04.819327 IP 10.42.0.1.24780 > redisc-shard-hxx-0.redisc-shard-hxx-headless.default.svc.cluster.local.16379: Flags [.], ack 35297, win 10026, options [nop,nop,TS val 4191410580 ecr 867569233], length 0
+```
+
+如我们所见，通信对端的所有 Pod 和 NodePort 流量都被 NAT 转换到了 CNI0 地址 10.42.0.1。
+
+3. 真相大白
+
+至此，meet 操作失败的原因已经非常清晰。secondary-1 pod 在未宣告自身地址的情况下，尝试使用 pod IP（10.42.0.237）与 primary-1 建立 meet 连接。该 meet 消息在 primary-1 pod 上被 NAT 转换为 10.42.0.1。primary-1 随后尝试使用默认总线端口 16379 和从消息中提取的源 IP 地址（10.42.0.1）重新连接 secondary-1。当尝试连接 10.42.0.1:16379 时，由于这不是实际的 Redis pod，该端口没有 Redis-server 进程监听，因此返回了"connection refused"错误。
+
+
+
+## 问题修复
+
+1. Secondary-1 宣告与重新加入  
+既然已经找到根本原因，问题就变得更容易解决了。
+
+针对这种"加入失败"的场景，我们可以让 secondary-1 显式宣告其 IP/端口/bus端口，然后主动加入集群。这样当 primary-1 尝试重新连接时，就会使用宣告的 IP 来建立连接。
+
+```
+slc@slcmac redis % kubectl exec -it redisc-shard-5g8-1 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-ip 172.18.0.2
+slc@slcmac redis % kubectl exec -it redisc-shard-5g8-1 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-port 31309
+slc@slcmac redis % kubectl exec -it redisc-shard-5g8-1 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-bus-port 31153
+
+# Execute cluster nodes on redisc-shard-5g8-1, we can see the newly announced IP address and port No. are used.
+127.0.0.1:6379> cluster nodes
+ff935854b7626a7e4374598857d5fbe998297799 172.18.0.2:30039@32461 master - 0 1713334354116 0 connected 0-5461
+# before announcing :6379@16379
+3a136cd50eb3f2c0dcc3844a0de63d5e44b462d7 172.18.0.2:31309@31153 myself,slave ff935854b7626a7e4374598857d5fbe998297799 0 0 0 connected
+e4d9b914e7ee7c4fd399bdf3dd1c98f7a0a1791b 172.18.0.2:31993@30105 master - 0 1713334354325 2 connected 10923-16383
+a54e8fa9474c620154f4c1abc9628116deb3dc7e 172.18.0.2:30182@31879 master - 0 1713334354532 1 connected 5462-10922
+
+# meet primary-1 again
+127.0.0.1:6379> cluster meet 172.18.0.2 30039 32461
+OK
+```
+
+检查 primary-1 以查看 `meet` 后的差异。
+
+```
+root@redisc-shard-5g8-0:/data# redis-cli -a O3605v7HsS
+Warning: Using a password with '-a' or '-u' option on the command line interface may not be safe.
+127.0.0.1:6379> cluster nodes
+ff935854b7626a7e4374598857d5fbe998297799 172.18.0.2:30039@32461 myself,master - 0 1713334463000 0 connected 0-5461
+e4d9b914e7ee7c4fd399bdf3dd1c98f7a0a1791b 172.18.0.2:31993@30105 master - 0 1713334463613 2 connected 10923-16383
+a54e8fa9474c620154f4c1abc9628116deb3dc7e 172.18.0.2:30182@31879 master - 0 1713334463613 1 connected 5462-10922
+127.0.0.1:6379> cluster nodes
+ff935854b7626a7e4374598857d5fbe998297799 172.18.0.2:30039@32461 myself,master - 0 1713334506000 0 connected 0-5461
+3a136cd50eb3f2c0dcc3844a0de63d5e44b462d7 172.18.0.2:31309@31153 slave ff935854b7626a7e4374598857d5fbe998297799 0 1713334506133 0 connected
+e4d9b914e7ee7c4fd399bdf3dd1c98f7a0a1791b 172.18.0.2:31993@30105 master - 0 1713334506133 2 connected 10923-16383
+a54e8fa9474c620154f4c1abc9628116deb3dc7e 172.18.0.2:30182@31879 master - 0 1713334506233 1 connected 5462-10922
+```
+
+可以在 primary-1 上找到 secondary-1 的 gossip 链接。
+
+（严格保持原文格式，包括换行和间距）
+
+```
+root@redisc-shard-5g8-0:/data# netstat -anop | grep redis
+tcp        0      0 0.0.0.0:6379            0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 0.0.0.0:16379           0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 127.0.0.1:6379          127.0.0.1:46798         ESTABLISHED 1/redis-server *:63  keepalive (22.34/0/0)
+tcp        0      0 10.42.0.236:58412       172.18.0.2:31879        ESTABLISHED 1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 10.42.0.236:6379        10.42.0.1:45255         ESTABLISHED 1/redis-server *:63  keepalive (22.15/0/0)
+tcp        0      0 10.42.0.236:43732       172.18.0.2:31153        ESTABLISHED 1/redis-server *:63  off (0.00/0/0) // to slave-1 nodeport
+tcp        0      0 10.42.0.236:36528       172.18.0.2:30105        ESTABLISHED 1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 10.42.0.236:16379       10.42.0.1:16471         ESTABLISHED 1/redis-server *:63  keepalive (1.17/0/0)
+tcp        0      0 10.42.0.236:16379       10.42.0.1:30788         ESTABLISHED 1/redis-server *:63  keepalive (0.97/0/0)
+tcp        0      0 10.42.0.236:16379       10.42.0.1:20521         ESTABLISHED 1/redis-server *:63  keepalive (1.48/0/0)
+tcp6       0      0 :::6379                 :::*                    LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp6       0      0 :::16379                :::*                    LISTEN      1/redis-server *:63  off (0.00/0/0)
+```
+
+我们可以看到从 primary-1/2/3 到 secondary-1 的三个新 gossip 链接。
+
+```
+root@redisc-shard-5g8-1:/# netstat -anop | grep redis
+tcp        0      0 0.0.0.0:16379           0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 0.0.0.0:6379            0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 10.42.0.237:48424       172.18.0.2:31879        ESTABLISHED 1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 10.42.0.237:16379       10.42.0.1:35577         ESTABLISHED 1/redis-server *:63  keepalive (1.11/0/0) // from NAT master
+tcp        0      0 10.42.0.237:36154       172.18.0.2:32461        ESTABLISHED 1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 10.42.0.237:16379       10.42.0.1:32078         ESTABLISHED 1/redis-server *:63  keepalive (0.15/0/0) // from NAT master
+tcp        0      0 10.42.0.237:33504       172.18.0.2:30039        ESTABLISHED 1/redis-server *:63  keepalive (0.00/0/0)
+tcp        0      0 127.0.0.1:6379          127.0.0.1:46948         ESTABLISHED 1/redis-server *:63  keepalive (0.00/0/0)
+tcp        0      0 10.42.0.237:58576       172.18.0.2:30105        ESTABLISHED 1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 10.42.0.237:16379       10.42.0.1:35265         ESTABLISHED 1/redis-server *:63  keepalive (1.22/0/0) // from NAT master
+tcp6       0      0 :::16379                :::*                    LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp6       0      0 :::6379                 :::*                    LISTEN      1/redis-server *:63  off (0.00/0/0)
+```
+
+这三个链接实际上是主 Pod 通过 secondary-1 的 NodePort 成功连接后，再被 NAT 转换到该 Pod 的 CNI0 地址。
+
+```
+slc@slcmac redis % kubectl exec -it redisc-shard-hxx-1 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-ip 172.18.0.2
+slc@slcmac redis % kubectl exec -it redisc-shard-hxx-1 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-port 30662
+slc@slcmac redis % kubectl exec -it redisc-shard-hxx-1 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-bus-port 30960
+slc@slcmac redis % kubectl exec -it redisc-shard-hxx-1 -c redis-cluster -- /bin/bash
+```
+
+添加节点 secondary-2（此过程包含 `meet` 操作）
+
+（严格保留原始格式与换行）
+
+```
+redis-cli -a O3605v7HsS --cluster add-node 172.18.0.2:30662 172.18.0.2:30182 --cluster-slave --cluster-master-id a54e8fa9474c620154f4c1abc9628116deb3dc7e
+```
+
+检查 secondary-2 上的集群拓扑结构。
+
+```
+127.0.0.1:6379> cluster nodes
+3a136cd50eb3f2c0dcc3844a0de63d5e44b462d7 172.18.0.2:31309@31153 slave ff935854b7626a7e4374598857d5fbe998297799 0 1713335442641 0 connected
+a54e8fa9474c620154f4c1abc9628116deb3dc7e 172.18.0.2:30182@31879 master - 0 1713335442328 1 connected 5462-10922
+e4d9b914e7ee7c4fd399bdf3dd1c98f7a0a1791b 172.18.0.2:31993@30105 master - 0 1713335442328 2 connected 10923-16383
+4d497f9b4ff459b8c65f50afa6621e122e1d8470 172.18.0.2:30662@30960 myself,slave a54e8fa9474c620154f4c1abc9628116deb3dc7e 0 1713335442000 1 connected
+ff935854b7626a7e4374598857d5fbe998297799 172.18.0.2:30039@32461 master - 0 1713335442641 0 connected 0-5461
+```
+
+检查主节点2上的集群拓扑结构。
+
+（严格保留原文换行和间距）
+
+```
+127.0.0.1:6379> cluster nodes
+e4d9b914e7ee7c4fd399bdf3dd1c98f7a0a1791b 172.18.0.2:31993@30105 master - 0 1713335448690 2 connected 10923-16383
+ff935854b7626a7e4374598857d5fbe998297799 172.18.0.2:30039@32461 master - 0 1713335448892 0 connected 0-5461
+a54e8fa9474c620154f4c1abc9628116deb3dc7e 172.18.0.2:30182@31879 myself,master - 0 1713335448000 1 connected 5462-10922
+4d497f9b4ff459b8c65f50afa6621e122e1d8470 172.18.0.2:30662@30960 slave a54e8fa9474c620154f4c1abc9628116deb3dc7e 0 1713335448998 1 connected
+3a136cd50eb3f2c0dcc3844a0de63d5e44b462d7 172.18.0.2:31309@31153 slave ff935854b7626a7e4374598857d5fbe998297799 0 1713335448794 0 connected
+```
+
+3. 从节点-3 宣告与加入
+
+宣告 IP/端口/总线端口，随后添加节点。
+
+```
+slc@slcmac redis % kubectl exec -it redisc-shard-xwz-1 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-ip 172.18.0.2
+slc@slcmac redis % kubectl exec -it redisc-shard-xwz-1 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-port 30110
+slc@slcmac redis % kubectl exec -it redisc-shard-xwz-1 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-bus-port 30971
+slc@slcmac redis % kubectl exec -it redisc-shard-xwz-1 -c redis-cluster -- /bin/bash
+root@redisc-shard-xwz-1:/# redis-cli -a O3605v7HsS --cluster add-node 172.18.0.2:30110 172.18.0.2:31993 --cluster-slave --cluster-master-id e4d9b914e7ee7c4fd399bdf3dd1c98f7a0a1791b
+>>> Adding node 172.18.0.2:30110 to cluster 172.18.0.2:31993
+>>> Performing Cluster Check (using node 172.18.0.2:31993)
+M: e4d9b914e7ee7c4fd399bdf3dd1c98f7a0a1791b 172.18.0.2:31993
+   slots:[10923-16383] (5461 slots) master
+M: ff935854b7626a7e4374598857d5fbe998297799 172.18.0.2:30039
+   slots:[0-5461] (5462 slots) master
+   1 additional replica(s)
+S: 3a136cd50eb3f2c0dcc3844a0de63d5e44b462d7 172.18.0.2:31309
+   slots: (0 slots) slave
+   replicates ff935854b7626a7e4374598857d5fbe998297799
+M: a54e8fa9474c620154f4c1abc9628116deb3dc7e 172.18.0.2:30182
+   slots:[5462-10922] (5461 slots) master
+   1 additional replica(s)
+S: 4d497f9b4ff459b8c65f50afa6621e122e1d8470 172.18.0.2:30662
+   slots: (0 slots) slave
+   replicates a54e8fa9474c620154f4c1abc9628116deb3dc7e
+[OK] All nodes agree about slots configuration.
+>>> Check for open slots...
+>>> Check slots coverage...
+[OK] All 16384 slots covered.
+>>> Send CLUSTER MEET to node 172.18.0.2:30110 to make it join the cluster.
+Waiting for the cluster to join
+
+>>> Configure node as replica of 172.18.0.2:31993.
+[OK] New node added correctly.
+```
+
+在任何主节点 Pod 上检查集群拓扑。
+
+
+
+```
+127.0.0.1:6379> cluster nodes
+e4d9b914e7ee7c4fd399bdf3dd1c98f7a0a1791b 172.18.0.2:31993@30105 master - 0 1713335724101 2 connected 10923-16383
+ff935854b7626a7e4374598857d5fbe998297799 172.18.0.2:30039@32461 master - 0 1713335724101 0 connected 0-5461
+a54e8fa9474c620154f4c1abc9628116deb3dc7e 172.18.0.2:30182@31879 myself,master - 0 1713335724000 1 connected 5462-10922
+4d497f9b4ff459b8c65f50afa6621e122e1d8470 172.18.0.2:30662@30960 slave a54e8fa9474c620154f4c1abc9628116deb3dc7e 0 1713335724404 1 connected
+3a136cd50eb3f2c0dcc3844a0de63d5e44b462d7 172.18.0.2:31309@31153 slave ff935854b7626a7e4374598857d5fbe998297799 0 1713335724510 0 connected
+161ff6ea42047be45d986ed8ba4505afd07096d9 172.18.0.2:30110@30971 slave e4d9b914e7ee7c4fd399bdf3dd1c98f7a0a1791b 0 1713335724101 2 connected
+```
+
+至此，集群现已处于完整的 3 主节点和 3 从节点配置状态。
+
+## 关于 CNI
+
+1. k3s、Flannel 与 NodePort/Pod
+
+k3s/k3d 默认使用的 CNI 是 Flannel，如上文分析，Flannel 会存在 NAT 映射问题。
+
+2. k3s、Calico 与 NodePort
+
+我们还测试了 k3s 与 Calico 的场景，其中 Calico 使用 vxlan 建立 Pod 网络。我们发现当使用 NodePort 时，Calico 上依然存在 NAT 问题。假设我们使用的 NodePort 是 10.128.0.52:32135，在入站方向上，通过 NodePort (10.128.0.52) 访问本地端口 16379 的通信仍会被转换为节点 vxlan.calico 网络设备地址 (192.168.238.0)。
+这是其中一个从节点 Pod 的网络连接情况：
+
+```
+root@redisc-shard-ffv-1:/# netstat -anop | grep redis
+tcp        0      0 0.0.0.0:16379           0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 0.0.0.0:6379            0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 192.168.32.136:41800    10.128.0.52:32135       ESTABLISHED 1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 192.168.32.136:45578    10.128.0.52:31952       ESTABLISHED 1/redis-server *:63  keepalive (277.76/0/0) // 到远端的 NodePort
+tcp        0      0 127.0.0.1:6379          127.0.0.1:45998         ESTABLISHED 1/redis-server *:63  keepalive (185.62/0/0)
+tcp        0      0 192.168.32.136:53280    10.128.0.52:32675       ESTABLISHED 1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 192.168.32.136:16379    192.168.238.0:8740      ESTABLISHED 1/redis-server *:63  keepalive (8.79/0/0) // 来自远端的经过 NAT 的 NodePort
+tcp        0      0 192.168.32.136:16379    192.168.238.0:9617      ESTABLISHED 1/redis-server *:63  keepalive (1.70/0/0)
+tcp        0      0 192.168.32.136:34040    10.128.0.52:31454       ESTABLISHED 1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 192.168.32.136:16379    192.168.238.0:18110     ESTABLISHED 1/redis-server *:63  keepalive (1.82/0/0)
+tcp        0      0 192.168.32.136:39006    10.128.0.52:30390       ESTABLISHED 1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 192.168.32.136:16379    192.168.238.0:32651     ESTABLISHED 1/redis-server *:63  keepalive (1.57/0/0)
+tcp        0      0 192.168.32.136:54986    10.128.0.52:30459       ESTABLISHED 1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 192.168.32.136:16379    192.168.238.0:43310     ESTABLISHED 1/redis-server *:63  keepalive (1.83/0/0)
+tcp6       0      0 :::16379                :::*                    LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp6       0      0 :::6379                 :::*                    LISTEN      1/redis-server *:63  off (0.00/0/0)
+```
+
+在节点 10.128.0.52 上，存在两个设备。
+
+（严格保持原文格式，包括换行和间距）
+
+```
+ens4: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1460
+        inet 10.128.0.52  netmask 255.255.255.255  broadcast 0.0.0.0
+        inet6 fe80::4001:aff:fe80:34  prefixlen 64  scopeid 0x20<link>
+        ether 42:01:0a:80:00:34  txqueuelen 1000  (Ethernet)
+        RX packets 3228477  bytes 3975395572 (3.9 GB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 3025699  bytes 2382110168 (2.3 GB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+vxlan.calico: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1410
+        inet 192.168.238.0  netmask 255.255.255.255  broadcast 0.0.0.0
+        inet6 fe80::64b2:cdff:fe99:7f96  prefixlen 64  scopeid 0x20<link>
+        ether 66:b2:cd:99:7f:96  txqueuelen 1000  (Ethernet)
+        RX packets 587707  bytes 714235654 (714.2 MB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 810205  bytes 682665081 (682.6 MB)
+        TX errors 0  dropped 31 overruns 0  carrier 0  collisions 0
+```
+
+如果 NodePort 使用的是 Pod 所在节点，在 Calico 中将不会进行 NAT 转换。
+
+（严格保持原文格式与换行）
+
+```
+slc@cluster-1:~$ kubectl exec -it redisc-shard-ffv-1 -c redis-cluster -- redis-cli -a O3605v7HsS config set cluster-announce-ip 10.128.0.54 // Set the announced IP to the local Node IP where the Pod is located.
+OK
+slc@cluster-1:~$ kubectl exec -it redisc-shard-ffv-1 -c redis-cluster -- /bin/bash
+root@redisc-shard-ffv-1:/# netstat -anop | grep redis
+tcp        0      0 0.0.0.0:16379           0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 0.0.0.0:6379            0.0.0.0:*               LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 192.168.32.136:16379    10.128.0.54:44757       ESTABLISHED 1/redis-server *:63  keepalive (6.92/0/0)
+tcp        0      0 192.168.32.136:41800    10.128.0.52:32135       ESTABLISHED 1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 192.168.32.136:16379    10.128.0.54:16772       ESTABLISHED 1/redis-server *:63  keepalive (0.64/0/0)
+tcp        0      0 192.168.32.136:45578    10.128.0.52:31952       ESTABLISHED 1/redis-server *:63  keepalive (70.79/0/0)
+tcp        0      0 127.0.0.1:6379          127.0.0.1:45998         ESTABLISHED 1/redis-server *:63  keepalive (0.00/0/0)
+tcp        0      0 192.168.32.136:53280    10.128.0.52:32675       ESTABLISHED 1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 192.168.32.136:16379    10.128.0.54:16440       ESTABLISHED 1/redis-server *:63  keepalive (8.62/0/0)
+tcp        0      0 192.168.32.136:34040    10.128.0.52:31454       ESTABLISHED 1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 192.168.32.136:16379    10.128.0.54:28655       ESTABLISHED 1/redis-server *:63  keepalive (0.14/0/0)
+tcp        0      0 192.168.32.136:39006    10.128.0.52:30390       ESTABLISHED 1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 192.168.32.136:54986    10.128.0.52:30459       ESTABLISHED 1/redis-server *:63  off (0.00/0/0)
+tcp        0      0 192.168.32.136:16379    10.128.0.54:29959       ESTABLISHED 1/redis-server *:63  keepalive (8.62/0/0)
+tcp6       0      0 :::16379                :::*                    LISTEN      1/redis-server *:63  off (0.00/0/0)
+tcp6       0      0 :::6379                 :::*                    LISTEN      1/redis-server *:63  off (0.00/0/0)
+```
+
+因此在Calico vxlan方案中，NodePort是否做SNAT与源Node地址有关。如果是本Node则不需要SNAT，如果是远端Node则需要SNAT。但由于我们做了显式通告，Redis集群相遇时也不会有问题。
+
+3. k3s、Calico与Pod
+如果仅使用pod IP，Redis集群可以正常相遇，且集群拓扑结构正确。
+
+## 总结
+
+1. 在某些 Kubernetes 版本中，根据 CNI 实现的不同，Pod 和 NodePort 可能会被 NAT，而经过 NAT 的 IP 和端口无法被集群中其他角色重新连接，导致 meet 失败。
+2. 由于上述机制，在 Kubernetes 中创建 Redis 集群时，要么使用 host 网络，要么使用 NodePort 并显式声明 IP/port/bus-port。对于纯 Pod 网络且未显式声明的情况，需要防止 NAT，这取决于 CNI 的具体实现。
+3. Redis 集群的内部通信和外部通信共用同一套 IP 地址。声明 IP 后，声明的 IP 会覆盖 Pod IP 用于后续通信，导致内部 gossip 协商过程也走声明网络，这是不必要的浪费。未来的建议是将内部协议链路和外部应用数据链路分离。
+4. 即使将 Pod IP 和声明 IP 分开使用，内部通信走 Pod 网络，外部和客户端数据链路走声明网络，也无法解决 CNI NAT 转换的问题。由于 Redis 集群重连机制的存在，经过 NAT 后的地址无法直接重连。这里需要对 Redis 集群通信协议进行扩展。理想情况是：
+   - 内部通信：Pod 网络，需要重连，携带原始 Pod IP 作为源 IP，即使经过 NAT 也能获取到源 IP。
+   - 外部通信：声明网络，可以是 NodePort/LoadBalancer，不需要重连，是否 NAT 无关紧要。
+   当然，内部通信也可以走 NodePort 和 LoadBalancer，但前提是携带原始源 IP（声明 IP 也是一种源 IP），5. 这也是 KubeBlocks 当前的解决方案。
+5. 使用 NodePort 会引入另一个问题。当节点宕机时，集群节点的声明 IP 需要更新，这也不是一个容易的实现，需要 Operator 和 HA 节点的配合。

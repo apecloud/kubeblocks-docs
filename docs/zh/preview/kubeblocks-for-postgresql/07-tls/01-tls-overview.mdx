@@ -1,0 +1,200 @@
+---
+description: 了解如何在KubeBlocks上部署支持TLS加密的PostgreSQL集群以实现安全通信。本指南涵盖部署配置、安全连接及资源清理操作。
+keywords:
+- KubeBlocks
+- PostgreSQL
+- Kubernetes
+- TLS
+- Secure Communication
+sidebar_label: 支持 TLS 的 PostgreSQL 集群
+sidebar_position: 1
+title: 在KubeBlocks上部署支持TLS的PostgreSQL集群
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 在 KubeBlocks 上部署启用 TLS 的 PostgreSQL 集群
+
+本指南演示如何使用 KubeBlocks 部署启用 TLS 加密的 PostgreSQL 集群。传输层安全协议（TLS）通过加密传输中的数据，确保 PostgreSQL 客户端与服务器之间的通信安全，防止敏感信息被截获。您将学习如何：
+
+- 部署启用 TLS 的 PostgreSQL 集群
+- 使用不同 TLS 模式建立安全连接
+- 验证 TLS 配置
+- 测试完成后清理资源
+
+## 先决条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署 PostgreSQL 复制集群
+
+KubeBlocks 采用声明式方式管理 PostgreSQL 集群。以下是一个启用 TLS 的 PostgreSQL 集群（1 主 1 从）部署配置示例：
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: pg-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: postgresql
+  topology: replication
+  componentSpecs:
+    - name: postgresql
+      serviceVersion: 16.4.0
+      tls: true  # 启用 TLS 加密
+      issuer:
+        name: KubeBlocks  # 使用 KubeBlocks 内置证书颁发机构
+      labels:
+        apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
+      disableExporter: true
+      replicas: 2
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+**关键配置字段**：
+- `tls: true`：为所有连接启用 TLS 加密
+- `issuer: KubeBlocks`：使用 KubeBlocks 内置证书颁发机构（也可选择 `UserProvided` 使用自定义证书）
+
+## 验证部署
+
+监控集群状态直至变为 `Running`：
+```bash
+kubectl get cluster pg-cluster -n demo -w
+```
+
+预期输出：
+```bash
+NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+pg-cluster   postgresql           Delete               Creating   50s
+pg-cluster   postgresql           Delete               Running    4m2s
+```
+
+验证 PostgreSQL 实例上的 TLS 配置：
+```sql
+postgres=# show ssl;
+ ssl
+-----
+ on
+(1 row)
+
+postgres=# show ssl_ca_file;
+     ssl_ca_file
+---------------------
+ /etc/pki/tls/ca.pem
+(1 row)
+
+postgres=# show ssl_cert_file;
+     ssl_cert_file
+----------------------
+ /etc/pki/tls/cert.pem
+(1 row)
+
+postgres=# show ssl_key_file;
+     ssl_key_file
+---------------------
+ /etc/pki/tls/key.pem
+(1 row)
+```
+
+验证 KubeBlocks 生成的 TLS 证书：
+```bash
+kubectl get secret -l app.kubernetes.io/instance=pg-cluster -n demo | grep tls
+```
+
+预期输出：
+```bash
+pg-cluster-postgresql-tls-certs                  Opaque   3      24m
+```
+
+## 安全访问 PostgreSQL 集群
+
+### 步骤 1：获取凭据
+
+KubeBlocks 创建了包含 PostgreSQL 凭据的 Secret：
+```bash
+NAME=$(kubectl get secret -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.username}' | base64 --decode)
+PASSWD=$(kubectl get secret -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.password}' | base64 --decode)
+```
+
+### 步骤 2：使用 TLS 连接
+
+将 PostgreSQL 端口转发到本地：
+```bash
+kubectl port-forward svc/pg-cluster-postgresql-postgresql 5432:5432 -n demo
+```
+
+<Tabs>
+<TabItem value="require" label="sslmode=require" default>
+
+```bash
+psql "host=127.0.0.1 dbname=postgres user=${NAME} password=${PASSWD} sslmode=require"
+```
+
+示例输出：
+```bash
+SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, compression: off, ALPN: none)
+Type "help" for help.
+
+postgres=#
+```
+
+</TabItem>
+
+<TabItem value="verify-full" label="sslmode=verify-full">
+
+1. 获取并保存根证书：
+```bash
+kubectl get -n demo secrets pg-cluster-postgresql-tls-certs -oyaml | yq '.data."ca.pem"' | base64 -d > /tmp/ca.crt
+```
+
+2. 使用证书验证连接：
+```bash
+psql "host=127.0.0.1 dbname=postgres user=${NAME} password=${PASSWD} sslmode=verify-full sslrootcert=/tmp/ca.crt"
+```
+
+示例输出：
+```bash
+SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, compression: off, ALPN: none)
+Type "help" for help.
+
+postgres=#
+```
+
+</TabItem>
+</Tabs>
+
+## 清理
+
+删除所有教程资源：
+```bash
+kubectl delete cluster pg-cluster -n demo
+kubectl delete ns demo
+```
+
+## 总结
+
+在本指南中，您学会了如何：
+
+1. 使用 KubeBlocks 部署启用 TLS 加密的 PostgreSQL 集群
+2. 验证 TLS 配置和证书生成
+3. 使用不同 TLS 模式建立安全连接：
+   - `require`：基础加密
+   - `verify-full`：完整证书验证

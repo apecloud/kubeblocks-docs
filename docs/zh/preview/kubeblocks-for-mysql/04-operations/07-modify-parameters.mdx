@@ -1,0 +1,274 @@
+---
+description: 了解如何通过Reconfiguring OpsRequest在KubeBlocks中修改MySQL的动态与静态参数，以优化数据库性能与可用性。
+keywords:
+- MySQL
+- KubeBlocks
+- OpsRequest
+- dynamic parameters
+- static parameters
+- database configuration
+sidebar_label: 修改MySQL参数
+sidebar_position: 7
+title: 修改MySQL参数
+---
+# 修改 MySQL 参数
+
+重新配置数据库涉及修改数据库参数、设置或配置，以提高性能、安全性或可用性。这些变更可分为两类：
+- 动态参数：无需重启数据库即可生效的变更。
+- 静态参数：需要重启数据库才能生效的变更。
+
+即使是静态参数，**KubeBlocks** 也能确保最短停机时间。它会先修改并重启副本节点，然后执行**主从切换**将更新后的副本提升为主节点（此过程通常可在几毫秒内完成），最后重启原主节点。
+
+本指南演示如何通过 Reconfiguring OpsRequest 修改 KubeBlocks 管理的 MySQL 集群的动态和静态参数。
+
+## 前提条件
+
+在继续之前，请确保满足以下要求：
+- 环境设置：
+    - 已启动并运行一个 Kubernetes 集群。
+    - 已配置 kubectl CLI 工具以与集群通信。
+    - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处的安装说明进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 部署 MySQL 半同步集群
+
+KubeBlocks 采用声明式方式管理 MySQL 集群。以下是一个配置示例，用于部署包含 2 个节点（1 个主节点，1 个副本节点）的半同步模式 MySQL 集群。
+
+使用以下 YAML 清单部署集群：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+
+
+
+## 验证部署
+
+集群部署完成后，使用以下命令验证其状态：
+
+```bash
+kubectl get cluster example-mysql-cluster -n demo -w
+NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Creating   12s
+example-mysql-cluster   mysql                Delete               Running   46s
+```
+
+这表明 MySQL 集群正在成功运行。
+
+## 连接到 MySQL 集群  
+KubeBlocks 会自动创建一个包含 MySQL root 凭据的 Secret。通过以下命令获取凭据：  
+
+
+
+```bash
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+mDvdY62156
+```
+
+要连接到集群的主节点，请使用 MySQL 客户端：
+
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pmDvdY62156
+```
+
+连接成功后，您可以查询当前'max_connections'和'performance_schema'的值：
+
+（保持原有格式和换行）
+
+```sql
+mysql> SHOW VARIABLES LIKE 'max_connections';
++-----------------+-------+
+| Variable_name   | Value |
++-----------------+-------+
+| max_connections | 83    |
++-----------------+-------+
+1 row in set (0.00 sec)
+
+mysql> SHOW VARIABLES LIKE 'performance_schema';
++--------------------+-------+
+| Variable_name      | Value |
++--------------------+-------+
+| performance_schema | OFF   |
++--------------------+-------+
+1 row in set (0.00 sec)
+```
+
+
+
+
+## 动态参数示例：修改 max_connections
+
+动态参数可以在不重启数据库的情况下进行修改。例如，更新 'max_connections' 参数可以允许更多并发连接到 MySQL 实例。
+
+预期行为是修改配置后，新设置会立即生效，无需重启数据库。
+
+要将 'max_connections' 参数从 83 修改为 100，请应用以下重新配置操作请求（Reconfiguring OpsRequest）：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: mysql-reconfigure-dynamic
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  force: false
+  reconfigures:
+  - componentName: mysql
+    parameters:
+      - key: max_connections
+        value: '100'
+  preConditionDeadlineSeconds: 0
+  type: Reconfiguring
+EOF
+```
+
+等待 OpsRequest 完成：
+
+```bash
+kubectl get ops mysql-reconfigure-dynamic -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                        TYPE            CLUSTER                 STATUS    PROGRESS   AGE
+mysql-reconfigure-dynamic   Reconfiguring   example-mysql-cluster   Running   -/-        11s
+mysql-reconfigure-dynamic   Reconfiguring   example-mysql-cluster   Succeed   -/-        31s
+```
+
+### 验证配置变更
+
+登录 MySQL 实例并确认 max_connections 参数已更新：
+
+```sql
+mysql> SHOW VARIABLES LIKE 'max_connections';
++-----------------+-------+
+| Variable_name   | Value |
++-----------------+-------+
+| max_connections | 100   |
++-----------------+-------+
+1 row in set (0.00 sec)
+```
+
+输出确认'max_connections'参数已成功更新为100。
+
+## 静态参数示例：修改 performance_schema
+
+静态参数（如 'performance_schema'）需要重启数据库才能生效。本示例中，我们将把 performance_schema 设置为 ON。
+
+创建一个重配置操作请求（Reconfigure OpsRequest）。应用以下 OpsRequest YAML 来更新 'performance_schema'：
+
+
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: mysql-reconfigure-static
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  force: false
+  reconfigures:
+  - componentName: mysql
+    parameters:
+    - key: performance_schema
+      value: 'OFF'
+  preConditionDeadlineSeconds: 0
+  type: Reconfiguring
+EOF
+```
+
+检查 OpsRequest 的状态直至完成：
+
+```bash
+kubectl get ops mysql-reconfigure-static -n demo -w
+```
+
+示例输出：
+
+```bash
+mysql-reconfigure-static   Reconfiguring   example-mysql-cluster   Running   -/-        5s
+mysql-reconfigure-static   Reconfiguring   example-mysql-cluster   Succeed   -/-        31s
+```
+
+### 验证配置变更
+
+当 Pod 重启后，连接到 MySQL 实例并确认 'performance_schema' 参数已更新为 'ON'。
+
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pmDvdY62156
+```
+
+
+
+
+
+```sql
+mysql> SHOW VARIABLES LIKE 'performance_schema';
++--------------------+-------+
+| Variable_name      | Value |
++--------------------+-------+
+| performance_schema | ON    |
++--------------------+-------+
+1 row in set (0.00 sec)
+```
+
+
+
+
+## 清理
+要移除所有已创建的资源，请删除 MySQL 集群及其命名空间：
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete ns demo
+```
+
+
+
+
+## 总结  
+本指南演示了如何通过 KubeBlocks 的 Reconfiguring OpsRequest 修改 MySQL 的动态参数（如 `max_connections`）和静态参数（如 `performance_schema`）。动态参数变更会立即生效，而静态参数变更需要重启数据库。通过利用 KubeBlocks 的声明式自动化管理能力，可以高效实施这些配置更新，并将停机时间降至最低。

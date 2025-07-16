@@ -1,0 +1,61 @@
+---
+description: 如何从备份集恢复数据
+keywords:
+- backup and restore
+- restore
+- backup set
+sidebar_label: 从备份集恢复
+sidebar_position: 1
+title: 从备份集恢复数据
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 从备份集恢复数据
+
+KubeBlocks 支持从备份中恢复集群。本文档以 MySQL 为例，更多详细信息请参考 [MySQL 备份与恢复](../../../../kubeblocks-for-mysql/05-backup-restore/05-restoring-from-full-backup)。
+
+**步骤 1. 查看备份集。**
+
+<Tabs>
+
+<TabItem value="kubectl" label="kubectl" default>
+
+```bash
+kubectl get backups
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+对于现有集群，执行：
+
+```bash
+kbcli cluster list-backups mycluster
+```
+
+如果集群已被删除，执行：
+
+```bash
+kbcli dataprotection list-backups
+```
+
+</TabItem>
+
+</Tabs>
+
+**步骤 2. 从指定备份恢复集群。**
+
+```bash
+# 恢复为新集群
+kbcli cluster restore myrestore --backup mybackup
+>
+集群 myrestore 已创建
+
+# 查看恢复集群的状态
+kbcli cluster list myrestore
+>
+名称        命名空间   集群定义        终止策略        状态      创建时间
+myrestore   default   mysql           Delete          运行中   2025年5月26日 18:42 UTC+0800
+```

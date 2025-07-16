@@ -1,0 +1,142 @@
+---
+description: 了解如何在KubeBlocks管理的MongoDB集群中下线（停用）特定Pod。
+keywords:
+- KubeBlocks
+- MongoDB
+- Decommission Pod
+- Horizontal Scaling
+- Kubernetes
+sidebar_label: 停用 MongoDB 副本
+sidebar_position: 9
+title: 在KubeBlocks管理的MongoDB集群中下线特定Pod
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# 下线 KubeBlocks 托管的 MongoDB 集群中的特定 Pod
+
+本指南介绍如何在 KubeBlocks 托管的 MongoDB 集群中下线（停用）特定 Pod。通过精确控制集群资源的同时保持可用性，此功能适用于工作负载再平衡、节点维护或故障处理场景。
+
+## 为何选择 KubeBlocks 下线 Pod？
+
+在传统的基于 StatefulSet 的部署中，Kubernetes 无法下线特定 Pod。StatefulSet 会严格保证 Pod 的顺序和身份标识，缩容操作总是优先移除序号最大的 Pod（例如从 3 个副本缩容时，会先移除 `Pod-2`）。这种限制导致无法精确控制下线目标，给维护工作、负载分配和故障处理带来不便。
+
+KubeBlocks 突破了这一限制，允许管理员直接下线指定 Pod。这种细粒度控制既能保障高可用性，又能实现更优的资源管理，且不会影响整个集群。
+
+## 前置条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署 MongoDB 集群
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+## 验证部署状态
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+## 下线 Pod
+
+**预期流程**：
+1. `onlineInstancesToOffline` 中指定的副本被移除
+2. Pod 优雅终止
+3. 集群状态从 `Updating` 转为 `Running`
+
+要下线特定 Pod（例如 'mongo-cluster-mongodb-1'），可采用以下任一方式：
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  方法一：使用 OpsRequest
+
+  创建 OpsRequest 标记待下线 Pod：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: mongo-cluster-decommission-ops
+    namespace: demo
+  spec:
+    clusterName: mongo-cluster
+    type: HorizontalScaling
+    horizontalScaling:
+    - componentName: mongodb
+      scaleIn:
+        onlineInstancesToOffline:
+          - 'mongo-cluster-mongodb-1'  # 指定需要下线的实例名称
+  ```
+
+  #### 监控下线进度
+  查看下线操作执行状态：
+
+  ```bash
+  kubectl get ops mongo-cluster-decommission-ops -n demo -w
+  ```
+  示例输出：
+
+  ```bash
+  NAME                             TYPE                CLUSTER         STATUS    PROGRESS   AGE
+  mongo-cluster-decommission-ops   HorizontalScaling   mongo-cluster   Succeed   1/1        5s
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  方法二：使用 Cluster API
+
+  也可直接更新 Cluster 资源来下线 Pod：
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: mongodb
+        replicas: 1       # 下线后的预期副本数
+        offlineInstances:
+          - mongo-cluster-mongodb-1   # <----- 指定待下线的 Pod
+   ...
+  ```
+  </TabItem>
+
+</Tabs>
+
+### 验证下线结果
+
+应用更新配置后，检查集群中剩余的 Pod：
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=mongo-cluster
+```
+
+示例输出：
+```bash
+NAME                      READY   STATUS    RESTARTS   AGE
+mongo-cluster-mongodb-0   2/2     Running   0          25m
+mongo-cluster-mongodb-2   2/2     Running   0          24m
+```
+
+登录 MongoDB 副本集验证状态：
+```bash
+# 登录任意 mongodb 副本：
+mongo-cluster-mongodb [direct: secondary] admin> rs.status()
+```
+检查 `members` 字段的变化。
+
+## 总结
+核心要点：
+- 传统 StatefulSet 缺乏精确的 Pod 移除控制
+- KubeBlocks 支持定向下线特定 Pod
+- 两种实现方式：OpsRequest 或 Cluster API
+
+该功能在保障可用性的同时，提供了精细化的集群管理能力。

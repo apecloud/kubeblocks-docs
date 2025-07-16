@@ -1,0 +1,157 @@
+---
+description: 了解如何在由KubeBlocks管理的PostgreSQL集群中下线（停用）特定Pod。
+keywords:
+- KubeBlocks
+- PostgreSQL
+- Decommission Pod
+- Horizontal Scaling
+- Kubernetes
+sidebar_label: 停用 PostgreSQL 副本
+sidebar_position: 9
+title: 在KubeBlocks管理的PostgreSQL集群中下线特定Pod
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 下线 KubeBlocks 管理的 PostgreSQL 集群中的特定 Pod
+
+本文档介绍如何在 KubeBlocks 管理的 PostgreSQL 集群中下线（停用）特定 Pod。下线操作可在保持集群可用性的同时，实现对资源的精确控制。此功能适用于工作负载重平衡、节点维护或故障处理等场景。
+
+## 为什么选择 KubeBlocks 下线 Pod？
+
+在传统的基于 StatefulSet 的部署中，Kubernetes 无法下线特定 Pod。StatefulSet 会确保 Pod 的顺序和身份标识，缩容时总是优先移除序号最大的 Pod（例如从 3 个副本缩容时，会先移除 `Pod-2`）。这种限制使得管理员无法精确控制要下线的 Pod，给维护工作、负载分配或故障处理带来不便。
+
+KubeBlocks 突破了这一限制，允许管理员直接下线指定 Pod。这种细粒度控制既能保障高可用性，又能在不影响整个集群的前提下优化资源管理。
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署 PostgreSQL 集群
+
+import CreatePGCluster from '../_tpl/_create-pg-replication-cluster.mdx'
+
+<CreatePGCluster />
+
+## 验证部署
+
+import VerifyPGCluster from '../_tpl/_verify-pg-replication-cluster.mdx'
+
+<VerifyPGCluster />
+
+## 下线 Pod
+
+**预期工作流程**：
+1. `onlineInstancesToOffline` 中指定的副本被移除
+2. Pod 优雅终止
+3. 集群状态从 `Updating` 转为 `Running`
+
+要下线特定 Pod（例如 'pg-cluster-postgresql-1'），可采用以下任一方法：
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  方法一：使用 OpsRequest
+
+  创建 OpsRequest 将 Pod 标记为下线：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: pg-cluster-decommission-ops
+    namespace: demo
+  spec:
+    clusterName: pg-cluster
+    type: HorizontalScaling
+    horizontalScaling:
+    - componentName: postgresql
+      scaleIn:
+        onlineInstancesToOffline:
+          - 'pg-cluster-postgresql-1'  # 指定需要下线的实例名称
+  ```
+
+  #### 监控下线进度
+  检查下线操作执行状态：
+
+  ```bash
+  kubectl get ops pg-cluster-decommission-ops -n demo -w
+  ```
+  示例输出：
+
+  ```bash
+  NAME                          TYPE                CLUSTER      STATUS    PROGRESS   AGE
+  pg-cluster-decommission-ops   HorizontalScaling   pg-cluster   Succeed   1/1        33s
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  方法二：使用 Cluster API
+
+  也可直接更新 Cluster 资源来下线 Pod：
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  metadata:
+    name: pg-cluster
+    namespace: demo
+  spec:
+    terminationPolicy: Delete
+    clusterDef: postgresql
+    topology: replication
+    componentSpecs:
+      - name: postgresql
+        serviceVersion: 16.4.0
+        labels:
+          apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
+        disableExporter: true
+        replicas: 1
+        offlineInstances:
+          - pg-cluster-postgresql-1   # <----- 指定要下线的 Pod
+        resources:
+          limits:
+            cpu: '0.5'
+            memory: 0.5Gi
+          requests:
+            cpu: '0.5'
+            memory: 0.5Gi
+        volumeClaimTemplates:
+          - name: data
+            spec:
+              storageClassName: ""
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 20Gi
+  ```
+  </TabItem>
+
+</Tabs>
+
+### 验证下线结果
+
+应用更新配置后，检查集群中剩余的 Pod：
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster
+```
+
+示例输出：
+```bash
+NAME                      READY   STATUS    RESTARTS   AGE
+pg-cluster-postgresql-0   4/4     Running   0          6m12s
+```
+
+## 总结
+核心要点：
+- 传统 StatefulSet 缺乏精确的 Pod 移除控制
+- KubeBlocks 支持定向下线特定 Pod
+- 两种实现方式：OpsRequest 或 Cluster API
+
+该功能在保障可用性的同时，提供了细粒度的集群管理能力。

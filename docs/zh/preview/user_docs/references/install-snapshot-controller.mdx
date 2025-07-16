@@ -1,0 +1,78 @@
+---
+description: 安装快照控制器
+keywords:
+- kbcli
+- kubeblocks
+- SnapshotController
+- K8s
+- CSI
+sidebar_label: 快照控制器
+sidebar_position: 5
+title: 安装快照控制器
+---
+# 安装快照控制器
+
+快照控制器（Snapshot Controller）用于管理CSI存储卷快照，支持创建、恢复和删除持久卷（PV）快照。KubeBlocks的数据保护控制器（DataProtection Controller）依赖该组件实现数据库快照操作。
+
+**步骤1：检查先决条件**
+验证所需CRD是否存在：
+
+```bash
+kubectl get crd volumesnapshotclasses.snapshot.storage.k8s.io
+kubectl get crd volumesnapshots.snapshot.storage.k8s.io
+kubectl get crd volumesnapshotcontents.snapshot.storage.k8s.io
+```
+
+如果集群中缺少这些CRD，需要先安装：
+
+```bash
+# v8.2.0是external-snapshotter的最新版本，可按需替换为其他版本
+kubectl create -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml
+```
+
+:::note
+
+**可选安装**
+
+如果不需要快照备份功能，可以仅安装CRD并跳过后续步骤。
+
+:::
+
+**步骤2：部署快照控制器**
+
+通过Helm执行安装：
+
+```bash
+helm repo add piraeus-charts https://piraeus.io/helm-charts/
+helm repo update
+# 将命名空间修改为适合您环境的值（例如kb-system）
+helm install snapshot-controller piraeus-charts/snapshot-controller -n kb-system --create-namespace
+```
+
+高级配置选项请参考[快照控制器文档](https://artifacthub.io/packages/helm/piraeus-charts/snapshot-controller#configuration)。
+
+**步骤3：验证部署**
+
+检查快照控制器Pod是否正常运行：
+
+```bash
+kubectl get pods -n kb-system | grep snapshot-controller
+```
+
+<details open>
+
+<summary>预期输出</summary>
+
+```bash
+snapshot-controller-xxxx-yyyy   1/1   Running   0   30s
+```
+
+</details>
+
+如果Pod处于CrashLoopBackOff状态，可查看日志：
+
+```bash
+kubectl logs -n kb-system deployment/snapshot-controller
+```

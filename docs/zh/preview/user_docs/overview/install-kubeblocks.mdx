@@ -1,0 +1,543 @@
+---
+description: 使用 Helm 在现有 Kubernetes 集群上安装 KubeBlocks
+keywords:
+- taints
+- affinity
+- tolerance
+- install
+- kbcli
+- KubeBlocks
+- helm
+sidebar_label: 安装
+sidebar_position: 4
+title: 安装
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import { VersionProvider, Version } from '@/components/VersionContext';
+
+<VersionProvider>
+
+# KubeBlocks
+
+本指南介绍在现有 Kubernetes 集群上部署 KubeBlocks 的方法。请选择您偏好的安装方式：
+
+- **Helm**（生产环境推荐）
+- **kbcli**（简化的 CLI 体验）
+
+## 先决条件
+
+### 资源需求
+| 组件         | 数据库       | 推荐配置               |
+|--------------|------------|-----------------------|
+| **控制平面** | -          | 1个节点（4核，4GB内存，50GB存储） |
+| **数据平面** | MySQL      | 2个节点（2核，4GB内存，50GB存储） |
+|              | PostgreSQL | 2个节点（2核，4GB内存，50GB存储） |
+|              | Redis      | 2个节点（2核，4GB内存，50GB存储） |
+|              | MongoDB    | 3个节点（2核，4GB内存，50GB存储） |
+
+- **控制平面**：运行KubeBlocks组件的节点
+- **数据平面**：托管数据库实例的节点
+
+### 系统要求
+
+安装前请确认您的环境满足以下要求：
+
+- Kubernetes集群（推荐v1.21+版本）- 如需创建测试集群请参考[准备本地K8s集群](../references/prepare-a-local-k8s-cluster)
+- 已安装并配置`kubectl` v1.21+版本，且具有集群访问权限
+- 已安装Helm（[安装指南](https://helm.sh/docs/intro/install/)）
+- 已安装Snapshot Controller（[安装指南](../references/install-snapshot-controller)）
+
+## 安装 KubeBlocks
+
+<Tabs>
+
+<TabItem value="Helm" label="使用 Helm 安装" default>
+
+```bash
+# 步骤 1：安装 CRDs
+kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/{{VERSION}}/kubeblocks_crds.yaml
+
+# 步骤 2：配置 Helm 仓库
+helm repo add kubeblocks https://apecloud.github.io/helm-charts
+helm repo update
+
+# 步骤 3：部署 KubeBlocks
+helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace --version={{VERSION}}
+```
+
+
+:::note
+
+如果您使用的 Kubernetes 版本 ≤ 1.23，在安装 CRDs 时可能会遇到以下错误：
+
+```bash
+unknown field "x-kubernetes-validations".... if you choose to ignore these errors, turn validation off with --validate\=false
+```
+
+可以通过以下命令解决：
+```bash
+kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/{{VERSION}}/kubeblocks_crds.yaml --validate\=false
+```
+:::
+
+
+**需要其他版本？**
+
+您可以在 [KubeBlocks 发布页面](https://github.com/apecloud/kubeblocks/releases/) 查找可用版本，或使用以下命令查询：
+
+```bash
+# 获取最新稳定版
+curl -s https://api.github.com/repos/apecloud/kubeblocks/releases/latest | jq -r '.tag_name'
+
+# 获取所有版本（包括预发布版）
+curl -s https://api.github.com/repos/apecloud/kubeblocks/tags | jq -r '.[0].name'
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="使用 kbcli 安装">
+
+**准备工作**：
+- 安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli)
+- 确保 kubectl 已配置集群访问权限
+
+```bash
+kbcli kubeblocks install --version={{VERSION}} --create-namespace
+```
+
+**需要其他版本？**
+
+列出可用版本或查找其他发布：
+
+```bash
+# 列出稳定版
+kbcli kubeblocks list-versions
+
+# 列出所有版本（包括预发布版）
+kbcli kb list-versions --devel --limit=100
+```
+
+或浏览 [KubeBlocks 发布页面](https://github.com/apecloud/kubeblocks/releases/) 上的所有版本。
+
+:::note
+
+**版本兼容性说明**
+
+KubeBlocks 要求 `kbcli` 与安装的发行版主版本号匹配：
+- 兼容示例：kbcli v1.0.0 与 KubeBlocks v1.0.0
+- 不兼容示例：kbcli v0.9.0 与 KubeBlocks v1.0.0
+
+主版本号不匹配可能导致意外行为或错误。
+
+:::
+
+默认情况下，KubeBlocks 会安装在 `kb-system` 命名空间。如需指定其他命名空间：
+
+```bash
+kbcli kubeblocks install --version={{VERSION}} --create-namespace --namespace my-namespace
+```
+
+💡 *请将 `my-namespace` 替换为您期望的命名空间名称。*
+
+</TabItem>
+
+</Tabs>
+
+## 验证安装
+
+执行以下命令检查 KubeBlocks 是否安装成功。
+
+<Tabs>
+
+<TabItem value="kubectl" label="kubectl" default>
+
+```bash
+kubectl -n kb-system get pods
+```
+
+<details open>
+<summary> 预期输出：</summary>
+
+如果所有 KubeBlocks 工作负载均处于就绪状态，则表示 KubeBlocks 已成功安装。
+
+```bash
+NAME                                             READY   STATUS    RESTARTS       AGE
+kubeblocks-7cf7745685-ddlwk                      1/1     Running   0              4m39s
+kubeblocks-dataprotection-95fbc79cc-b544l        1/1     Running   0              4m39s
+```
+</details>
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+```bash
+kbcli kubeblocks status
+```
+
+<details open>
+<summary> 预期输出：</summary>
+
+如果所有 KubeBlocks 工作负载均处于就绪状态，则表示 KubeBlocks 已成功安装。
+
+```bash
+KubeBlocks is deployed in namespace: kb-system,version: {{VERSION}}
+
+Kubernetes Cluster:
+VERSION   PROVIDER   REGION   AVAILABLE ZONES
+v1.29.2   Kind
+
+KubeBlocks Workloads:
+NAMESPACE   KIND         NAME                        READY PODS   CPU(CORES)   MEMORY(BYTES)   CREATED-AT
+kb-system   Deployment   kubeblocks                  1/1          N/A          N/A             May 26,2025 13:53 UTC+0800
+kb-system   Deployment   kubeblocks-dataprotection   1/1          N/A          N/A             May 26,2025 13:53 UTC+0800
+
+KubeBlocks Addons:
+NAME             STATUS    TYPE   PROVIDER
+apecloud-mysql   Enabled   Helm   N/A
+etcd             Enabled   Helm   N/A
+kafka            Enabled   Helm   N/A
+```
+</details>
+
+</TabItem>
+
+</Tabs>
+
+## 高级配置
+
+以下列出 KubeBlocks 的一些常用配置。有关 KubeBlocks 选项的更多信息，请参考 [KubeBlocks 选项](../references/kubeblocks_options)。
+
+### 自定义镜像仓库
+
+通过指定以下参数来配置镜像仓库。
+
+<Tabs>
+
+<TabItem value="Helm" label="Helm" default>
+
+```bash
+helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace \
+--version {{VERSION}} \
+--set image.registry=docker.io \
+--set dataProtection.image.registry=docker.io \
+--set addonChartsImage.registry=docker.io
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+```bash
+kbcli kubeblocks upgrade --version {{VERSION}} \
+--set image.registry=docker.io \
+--set dataProtection.image.registry=docker.io \
+--set addonChartsImage.registry=docker.io
+```
+
+</TabItem>
+
+</Tabs>
+
+上述命令中参数说明如下：
+
+- `--set image.registry` 指定 KubeBlocks 镜像仓库地址
+- `--set dataProtection.image.registry` 指定 KubeBlocks-DataProtection 镜像仓库地址
+- `--set addonChartsImage.registry` 指定 Addon Charts 镜像仓库地址
+
+若无法访问 `docker.io`，请使用以下镜像仓库和命名空间：
+- 仓库地址：apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com
+- 命名空间：apecloud
+
+### 指定容忍度
+
+如需为 KubeBlocks 安装配置自定义容忍度，可使用以下命令：
+
+<Tabs>
+
+<TabItem value="Helm" label="Helm" default>
+
+```bash
+helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace \
+--version {{VERSION}} \
+--set-json 'tolerations=[ { "key": "control-plane-taint", "operator": "Equal", "effect": "NoSchedule", "value": "true" } ]' \
+--set-json 'dataPlane.tolerations=[{ "key": "data-plane-taint", "operator": "Equal", "effect": "NoSchedule", "value": "true"}]'
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+```bash
+kbcli kubeblocks install --version {{VERSION}} --create-namespace \
+--set image.registry=docker.io \
+--set dataProtection.image.registry=docker.io \
+--set addonChartsImage.registry=docker.io
+```
+
+</TabItem>
+
+</Tabs>
+
+### 跳过 Addon 自动安装
+
+```bash
+helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace \
+--version {{VERSION}} \
+--set autoInstalledAddons="{}"
+```
+
+### 启用原地垂直扩缩容
+
+如需启用 KubeBlocks 的原地垂直扩缩容功能，在安装或升级时设置特性门控参数：
+
+```bash
+featureGates.inPlacePodVerticalScaling.enabled=true
+```
+
+<Tabs>
+<TabItem value="Helm" label="Helm" default>
+
+1. 安装
+```bash
+helm install kubeblocks kubeblocks/kubeblocks \
+  --namespace kb-system \
+  --create-namespace \
+  --version {{VERSION}} \
+  --set featureGates.inPlacePodVerticalScaling.enabled=true
+```
+
+2. 升级
+```bash
+helm upgrade kubeblocks kubeblocks/kubeblocks \
+  --namespace kb-system \
+  --version {{VERSION}} \
+  --set featureGates.inPlacePodVerticalScaling.enabled=true
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+1. 安装
+```bash
+kbcli kubeblocks install \
+  --version={{VERSION}} \
+  --create-namespace \
+  --set featureGates.inPlacePodVerticalScaling.enabled=true
+```
+
+2. 升级
+```bash
+kbcli kubeblocks upgrade \
+  --version={{VERSION}} \
+  --set featureGates.inPlacePodVerticalScaling.enabled=true
+```
+
+</TabItem>
+</Tabs>
+
+**验证**
+
+安装或升级后，可通过以下命令验证特性门控是否启用：
+
+```bash
+kubectl -n kb-system get deployments.apps kubeblocks -oyaml | \
+  yq '.spec' | \
+  grep IN_PLACE_POD_VERTICAL_SCALING -A 1
+```
+
+输出应显示：
+```text
+- name: IN_PLACE_POD_VERTICAL_SCALING
+  value: "true"
+```
+
+## 卸载 KubeBlocks
+
+:::note
+
+在卸载 KubeBlocks 和 kbcli 之前，请删除所有集群和备份。
+:::
+
+```bash
+# 获取集群和备份信息
+kubectl get cluster -A
+kubectl get backup -A
+
+# 按命名空间删除集群和备份
+kubectl delete cluster <clusteName> -n <namespace>
+kubectl delete backup <clusteName> -n <namespace>
+```
+
+<Tabs>
+
+<TabItem value="Helm" label="Helm" default>
+
+1. 列出所有插件
+```bash
+# 列出所有插件
+helm list -n kb-system | grep kb-addon
+```
+
+2. 卸载所有插件
+```bash
+helm list -n kb-system | grep kb-addon | awk '{print $1}' | xargs -I {} helm -n kb-system uninstall {}
+```
+
+卸载过程中会看到如下提示信息：
+```
+Release "kb-addon-etcd" uninstalled
+These resources were kept due to the resource policy:
+[ConfigMap] kafka27-configuration-tpl-1.0.0
+[ComponentDefinition] kafka-combine-1.0.0
+[ComponentDefinition] kafka-controller-1.0.0
+[ComponentDefinition] kafka-exporter-1.0.0
+[ComponentDefinition] kafka27-broker-1.0.0
+[ComponentDefinition] kafka-broker-1.0.0
+```
+
+由于资源策略保留了一些资源，需要检查并全部删除
+
+3. 检查剩余资源（如 ComponentDefinition、配置相关的 ConfigMap 等）并全部删除
+```bash
+kubectl get componentdefinitions.apps.kubeblocks.io
+kubectl get parametersdefinitions.parameters.kubeblocks.io
+kubectl get configmap -n kb-system | grep configuration
+kubectl get configmap -n kb-system | grep template
+```
+
+示例删除命令：
+```bash
+kubectl delete componentdefinitions.apps.kubeblocks.io --all
+kubectl delete parametersdefinitions.parameters.kubeblocks.io --all
+kubectl get configmap -n kb-system | grep configuration  | awk '{print $1}' | xargs -I {} kubectl delete -n kb-system cm {}
+kubectl get configmap -n kb-system | grep template| awk '{print $1}' | xargs -I {} kubectl delete -n kb-system cm {}
+```
+
+4. 删除 Addon 自定义资源
+
+```bash
+kubectl delete addon.extensions.kubeblocks.io --all
+```
+
+5. 验证所有 KubeBlocks 资源是否已删除
+
+```bash
+kubectl get crd  | grep kubeblocks.io | awk '{print $1}' | while read crd; do
+  echo "Processing CRD: $crd"
+  kubectl get "$crd" -o json | jq '.items[] | select(.metadata.finalizers != null) | .metadata.name' -r | while read resource; do
+    echo "Custom Resource left: $resource in CRD: $crd"
+  done
+done
+```
+
+如果输出显示仍有自定义资源残留，请全部删除。
+
+6. 卸载 KubeBlocks
+
+```bash
+helm uninstall kubeblocks --namespace kb-system
+```
+
+Helm 不会删除 CRD 对象。可以通过以下命令删除 KubeBlocks 创建的 CRD：
+
+```bash
+kubectl get crd -o name | grep kubeblocks.io | xargs kubectl delete
+```
+
+7. 再次验证所有 KubeBlocks 资源是否已删除
+
+```bash
+kubectl get crd  | grep kubeblocks.io | awk '{print $1}' | while read crd; do
+  echo "Processing CRD: $crd"
+  kubectl get "$crd" -o json | jq '.items[] | select(.metadata.finalizers != null) | .metadata.name' -r | while read resource; do
+    echo "Custom Resource left: $resource in CRD: $crd"
+  done
+done
+```
+此时输出应为空。
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+1. 检查插件列表
+```bash
+kbcli addon list | grep Enabled
+```
+
+2. 为所有插件设置 `keepResource=false`
+```bash
+# 更新插件配置，移除 ComponentDefinition/ConfigMaps 中的 'helm.sh/resource-policy: keep' 注解
+kbcli addon enable <addonName>  --set extra.keepResource=false
+```
+
+示例：
+```bash
+kbcli addon enable apecloud-mysql   --set extra.keepResource=false
+kbcli addon enable etcd             --set extra.keepResource=false
+kbcli addon enable kafka            --set extra.keepResource=false
+kbcli addon enable mongodb          --set extra.keepResource=false
+kbcli addon enable mysql            --set extra.keepResource=false
+kbcli addon enable postgresql       --set extra.keepResource=false
+kbcli addon enable redis            --set extra.keepResource=false
+```
+
+3. 禁用所有插件
+
+```bash
+kbcli addon disable <addonName>
+```
+
+示例：
+```bash
+kbcli addon disable apecloud-mysql
+kbcli addon disable etcd
+kbcli addon disable kafka
+kbcli addon disable mongodb
+kbcli addon disable mysql
+kbcli addon disable postgresql
+kbcli addon disable redis
+```
+
+4. 验证所有 KubeBlocks 资源是否已删除
+
+```bash
+kubectl get crd  | grep kubeblocks.io | awk '{print $1}' | while read crd; do
+  echo "Processing CRD: $crd"
+  kubectl get "$crd" -o json | jq '.items[] | select(.metadata.finalizers != null) | .metadata.name' -r | while read resource; do
+    echo "Custom Resource left: $resource in CRD: $crd"
+  done
+done
+```
+
+如果输出显示仍有自定义资源残留，请全部删除。
+
+5. 卸载 KubeBlocks
+```bash
+kbcli kubeblocks uninstall
+```
+
+6. 再次验证所有 KubeBlocks 资源是否已删除
+
+```bash
+kubectl get crd  | grep kubeblocks.io | awk '{print $1}' | while read crd; do
+  echo "Processing CRD: $crd"
+  kubectl get "$crd" -o json | jq '.items[] | select(.metadata.finalizers != null) | .metadata.name' -r | while read resource; do
+    echo "Custom Resource left: $resource in CRD: $crd"
+  done
+done
+```
+检查是否还有 ConfigMap 残留：
+
+```bash
+kubectl get configmap -n kb-system
+```
+
+</TabItem>
+
+</Tabs>
+
+</VersionProvider>

@@ -1,0 +1,184 @@
+---
+description: 了解如何在KubeBlocks中配置支持定时全量备份与持续增量备份的MongoDB集群。
+keywords:
+- MongoDB
+- Backup
+- PITR
+- KubeBlocks
+- Kubernetes
+sidebar_label: 定时持续备份
+sidebar_position: 4
+title: 在KubeBlocks中设置支持定时持续备份的MongoDB集群
+---
+# 在 KubeBlocks 中配置支持定时持续备份的 MongoDB 集群
+
+本指南演示如何在 KubeBlocks 上配置 MongoDB 集群，实现以下功能：
+- 定时全量备份（基础备份）
+- 持续 WAL（预写日志）归档
+- 时间点恢复（PITR）能力
+
+这种组合方案能提供全面的数据保护，并实现最小的恢复点目标（RPO）。
+
+## 什么是 PITR？
+时间点恢复（PITR）允许您通过结合全量备份和持续的 binlog/wal/归档日志备份，将数据库恢复到特定时间点。
+
+有关从全量备份和持续 binlog 备份恢复数据的详细信息，请参阅[从 PITR 恢复](restore-with-pitr.mdx)指南。
+
+## 前提条件
+
+开始前请确保：
+- 环境准备：
+    - Kubernetes 集群已启动并运行
+    - kubectl CLI 工具已配置为可访问您的集群
+    - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处说明进行安装。
+- 命名空间准备：为保持资源隔离，请为本教程创建专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## 备份前提条件
+
+1. 备份仓库配置：
+   - 已配置 `BackupRepo`
+   - 集群与仓库间网络连通，`BackupRepo` 状态为 `Ready`
+
+2. 集群运行状态：
+   - 集群必须处于 `Running` 状态
+   - 没有正在进行的操作（扩缩容、升级等）
+
+## 备份方法列表
+
+KubeBlocks MongoDB 支持以下备份方法：
+
+| 功能           | 方法          | 描述 |
+|-------------|--------|------------|
+| 全量备份 | dump   | 使用 MongoDB 工具 `mongodump` 创建数据库内容的二进制导出 |
+| 全量备份 | datafile | 备份数据库的数据文件 |
+| 持续备份 | archive-oplog | 使用 `wal-g` 持续归档 MongoDB oplog |
+
+## 部署支持备份 API 的 MongoDB 副本集集群
+
+部署一个包含 3 个副本的 MongoDB 副本集集群，并指定备份信息：
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: mongo-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: mongodb
+  topology: replicaset
+  componentSpecs:
+    - name: mongodb
+      serviceVersion: "6.0.16"
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+  backup:
+    retentionPeriod: 7d
+    # 全量备份配置
+    method: datafile # 全量备份方法名称
+    enabled: true
+    cronExpression: 0 18 * * * # 全量备份调度时间
+    # 持续备份配置
+    continuousMethod: archive-oplog # 持续备份方法，与 wal-g 配对使用
+    pitrEnabled: true # 是否启用持续备份方法
+    repoName: s3-repo # 指定备份仓库，如未指定则使用标注为 `default` 的 BackupRepo
+```
+
+**关键配置字段说明**
+
+| 字段 | 值 | 描述 |
+|-------|-------|-------------|
+| `backup.enabled` | `true` | 启用定时备份 |
+| `method` | `datafile` | 使用 MongoDB 原生工具进行全量备份 |
+| `cronExpression` | `0 18 * * *` | 每天 UTC 时间 18:00 执行全量备份 |
+| `retentionPeriod` | `7d` | 备份保留 7 天 |
+| `repoName` | `s3-repo` | 备份仓库名称（S3 兼容存储） |
+| `pitrEnabled` | `true` | 启用持续 WAL 归档以实现 PITR |
+| `continuousMethod` | `archive-oplog` | 持续 WAL 归档方法 |
+
+
+## 验证部署
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+## 监控持续备份
+
+使用以下命令验证持续备份操作：
+```bash
+# 获取持续备份
+kubectl get backup -l app.kubernetes.io/instance=mongo-cluster,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
+# 获取执行持续备份的 Pod
+kubectl get pod -l app.kubernetes.io/instance=mongo-cluster,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
+```
+
+## 验证备份配置
+
+KubeBlocks 会自动创建 `BackupSchedule` 资源。检查配置：
+
+```bash
+kubectl get backupschedule pg-cluster-postgresql-backup-schedule  -n demo -oyaml
+```
+
+示例输出：
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: BackupSchedule
+...
+spec:
+  backupPolicyName: mongo-cluster-mongodb-backup-schedule
+  schedules:
+  - backupMethod: datafile
+    cronExpression: 0 18 * * *
+    enabled: true #
+    retentionPeriod: 7d
+  - backupMethod: archive-oplog
+    cronExpression: '*/5 * * * *'
+    enabled: true  # 设置为 `true` 启用持续备份
+    retentionPeriod: 8d # 根据需要设置保留期限
+```
+
+1. **全量备份** (datafile):
+  - 备份 MongoDB 的数据文件
+  - 按配置的计划运行（默认为每日）
+  - 作为 PITR 的基础
+
+2. **持续备份** (archive-oplog):
+  - 使用 wal-g 持续归档 MongoDB oplog
+  - 使用 datasafed 作为存储后端，采用 zstd 压缩
+  - 维护备份元数据，包括大小和时间范围
+  - 自动清理过期备份
+  - 验证 MongoDB 主节点状态和进程健康状态
+
+## 总结
+
+本指南涵盖：
+1. 使用 pg-basebackup 配置定时全量备份
+2. 启用 wal-g-archive 持续 WAL 归档
+3. 设置时间点恢复（PITR）能力
+4. 监控备份操作
+
+主要优势：
+- 定时全量备份确保定期恢复点
+- 持续 WAL 归档最小化潜在数据丢失
+- PITR 支持恢复到任意时间点

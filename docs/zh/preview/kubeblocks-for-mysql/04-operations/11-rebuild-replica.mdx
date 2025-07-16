@@ -1,0 +1,478 @@
+---
+description: 如何通过原地修复与非原地修复方法恢复KubeBlocks管理的半同步集群中的MySQL副本
+keywords:
+- KubeBlocks
+- MySQL
+- Replica Recovery
+- In-Place Repair
+- Non-In-Place Repair
+sidebar_label: 恢复 MySQL 副本
+sidebar_position: 11
+title: 在KubeBlocks中恢复MySQL副本
+---
+# 在KubeBlocks中恢复MySQL副本
+
+本指南演示如何在KubeBlocks管理的MySQL半同步集群中执行以下任务：
+- 向主节点写入记录并验证副本上的复制情况
+- 停止高可用性，中断复制，修改副本上的数据并移除复制
+- 使用"原地"修复和"非原地"修复两种方法重建副本
+- 验证副本上的数据恢复情况
+
+> **注意**：上述步骤仅用于测试目的。禁用高可用性、中断复制以及在副本上修改数据可能会破坏数据库一致性。请勿在生产数据库上执行这些操作。
+
+## 前提条件
+
+在继续之前，请确保满足以下条件：
+- 环境准备：
+    - 已启动并运行一个 Kubernetes 集群。
+    - 已配置 kubectl CLI 工具以与集群通信。
+    - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处提供的安装说明进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 部署 MySQL 半同步集群
+
+KubeBlocks 采用声明式方法管理 MySQL 集群。以下是一个配置示例，用于部署包含 2 个节点（1 个主节点，1 个副本节点）的半同步模式 MySQL 集群。
+
+集群配置
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+
+
+
+## 验证部署
+
+监控集群状态直到其转为 Running 状态：
+
+```bash
+kubectl get cluster example-mysql-cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster    mysql                Delete               Running   36m
+```
+
+列出集群中所有 Pod 及其角色，以识别主节点和从节点实例：
+
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+example-mysql-cluster-mysql-0	secondary
+example-mysql-cluster-mysql-1	primary
+```
+
+
+
+
+## 获取连接凭证
+
+创建 MySQL 集群时，KubeBlocks 会创建一个名为 "mysql-cluster-mysql-account-root" 的 Secret 来存储 MySQL root 用户名和密码。
+
+```bash
+kubectl get secret -n demo -l app.kubernetes.io/instance=example-mysql-cluster
+```
+
+预期输出：
+
+```bash
+NAME                                       TYPE     DATA   AGE
+example-mysql-cluster-mysql-account-root   Opaque   2      12m
+```
+
+您可以通过以下两条命令获取MySQL的root用户名和密码：
+
+（保持原有空行格式）
+
+```bash
+kubectl get secret example-mysql-cluster-mysql-account-root -n demo -o jsonpath='{.data.username}' | base64 --decode
+
+kubectl get secret example-mysql-cluster-mysql-account-root -n demo -o jsonpath='{.data.password}' | base64 --decode
+```
+
+预期输出：
+
+```bash
+root
+
+R0z5Z1DS02
+```
+
+
+
+
+## 连接到主 MySQL 集群并写入模拟数据
+
+### 步骤 1：连接到主实例
+
+使用获取的凭据连接到主实例（'example-mysql-cluster-mysql-1'）：
+
+```bash
+kubectl exec -ti -n demo example-mysql-cluster-mysql-1 -- mysql  -uroot -pR0z5Z1DS02
+```
+
+注意：如果主实例是 'example-mysql-cluster-mysql-0'，则应连接到 'example-mysql-cluster-mysql-0' 而非其他实例。在连接前请务必确认每个实例的角色。
+
+
+### 步骤 2：向主实例写入数据
+连接到主实例并向数据库写入一条记录：
+
+```sql
+mysql> CREATE DATABASE test;
+mysql> USE test;
+mysql> CREATE TABLE t1 (id INT PRIMARY KEY, name VARCHAR(255));
+mysql> INSERT INTO t1 VALUES (1, 'John Doe');
+```
+
+### 步骤3：验证数据复制  
+连接到副本实例（example-mysql-cluster-mysql-0）以验证数据是否已复制：
+
+```bash
+kubectl exec -ti -n demo example-mysql-cluster-mysql-0 -- mysql  -uroot -pR0z5Z1DS02
+```
+
+注意：如果主实例是 'example-mysql-cluster-mysql-0'，则应连接到 'example-mysql-cluster-mysql-1'。连接前请务必检查每个实例的角色。
+
+（严格保留原文格式与换行）
+
+```sql
+mysql> SELECT * FROM test.t1;
+```
+
+示例输出：
+
+```bash
++----+----------+
+| id | name     |
++----+----------+
+|  1 | John Doe |
++----+----------+
+```
+
+
+
+
+## 中断高可用性与复制并修改副本
+
+### 步骤 1：禁用高可用性
+
+获取高可用性配置：
+
+```bash
+kubectl get configmap -n demo example-mysql-cluster-mysql-haconfig -o yaml
+```
+
+预期输出：
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    MaxLagOnSwitchover: "10"
+    enable: "true"
+    ttl: "15"
+```
+
+修补 ConfigMap 以禁用高可用性：
+
+（保持原有格式和换行）
+
+```bash
+kubectl patch configmap -n demo example-mysql-cluster-mysql-haconfig --type merge -p '{"metadata":{"annotations":{"enable":"false"}}}'
+```
+
+### 步骤 2：停止复制
+
+在副本实例上停止复制：
+
+```sql
+mysql> STOP REPLICA;
+```
+
+### 步骤 3：将副本切换为读写模式
+
+将副本实例切换为读写模式：
+
+```sql
+mysql> SET GLOBAL super_read_only = OFF;
+mysql> SET GLOBAL read_only = OFF;
+```
+
+### 步骤 4：从副本删除数据
+删除副本上的数据：
+
+```sql
+mysql> DELETE FROM test.t1 WHERE id = 1;
+```
+
+### 步骤5：将副本切换为只读模式  
+将副本恢复为只读模式：
+
+```sql
+mysql> SET GLOBAL super_read_only = ON;
+mysql> SET GLOBAL read_only = ON;
+```
+
+### 步骤6：启用高可用性
+通过修补ConfigMap重新启用高可用性：
+
+```bash
+kubectl patch configmap -n demo example-mysql-cluster-mysql-haconfig --type merge -p '{"metadata":{"annotations":{"enable":"true"}}}'
+```
+
+### 步骤7：验证数据删除  
+验证数据是否已删除：
+
+```sql
+mysql> SELECT * FROM test.t1;
+Empty set (0.00 sec)
+```
+
+
+
+
+## 重建副本
+
+KubeBlocks 提供两种副本重建方式：原地修复和非原地修复。
+
+### 原地修复
+
+通过以下配置原地重建副本：
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-ops-rebuild-replica-inplace
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  type: RebuildInstance
+  force: true
+  rebuildFrom:
+  - componentName: mysql
+    inPlace: true
+    instances:
+      - name: example-mysql-cluster-mysql-0
+EOF
+```
+
+在此配置中，"example-mysql-cluster-mysql-0" 指代将要修复的实例名称（Pod 名称）。
+
+监控重建操作：
+
+```bash
+kubectl get ops example-mysql-ops-rebuild-replica-inplace -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                                        TYPE              CLUSTER                 STATUS    PROGRESS   AGE
+example-mysql-ops-rebuild-replica-inplace   RebuildInstance   example-mysql-cluster   Running   0/1        24s
+example-mysql-ops-rebuild-replica-inplace   RebuildInstance   example-mysql-cluster   Succeed   1/1        33s
+```
+
+验证 Pod 以确认副本 ("example-mysql-cluster-mysql-0") 已重启：
+
+```bash
+kubectl get pods -n demo
+```
+
+示例输出：
+
+```bash
+NAME                            READY   STATUS    RESTARTS   AGE
+example-mysql-cluster-mysql-0   4/4     Running   0          28s
+example-mysql-cluster-mysql-1   4/4     Running   0          89m
+```
+
+#### 验证数据恢复  
+连接到副本并检查数据是否已恢复：  
+
+（保持原有格式与换行）
+
+```bash
+kubectl exec -ti -n demo example-mysql-cluster-mysql-0 -- mysql  -uroot -pR0z5Z1DS02
+```
+
+
+
+
+
+```sql
+mysql> SELECT * FROM test.t1;
++----+----------+
+| id | name     |
++----+----------+
+|  1 | John Doe |
++----+----------+
+1 row in set (0.01 sec)
+```
+
+### 非原地修复
+
+通过创建新实例重建副本：
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-ops-rebuild-replica-non-inplace
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  type: RebuildInstance
+  force: true
+  rebuildFrom:
+  - componentName: mysql
+    instances:
+      - name: example-mysql-cluster-mysql-0
+EOF
+```
+
+在此配置中，"example-mysql-cluster-mysql-0" 指代将要修复的实例名称（Pod 名称）。
+
+```bash
+kubectl get ops -n demo example-mysql-ops-rebuild-replica-non-inplace -w
+```
+
+示例输出：
+
+```bash
+example-mysql-ops-rebuild-replica-non-inplace   RebuildInstance   example-mysql-cluster   Succeed   1/1        34s
+```
+
+
+
+
+
+```bash
+kubectl get pods -n demo -w
+NAME                            READY   STATUS    RESTARTS   AGE
+example-mysql-cluster-mysql-1   4/4     Running   0          42m
+example-mysql-cluster-mysql-0   4/4     Running   0          3m53s
+example-mysql-cluster-mysql-2   0/4     Pending   0          0s
+example-mysql-cluster-mysql-2   0/4     Pending   0          3s
+example-mysql-cluster-mysql-2   0/4     Init:0/5   0          3s
+example-mysql-cluster-mysql-2   0/4     Init:1/5   0          10s
+example-mysql-cluster-mysql-2   0/4     Init:1/5   0          11s
+example-mysql-cluster-mysql-2   0/4     Init:2/5   0          12s
+example-mysql-cluster-mysql-2   0/4     Init:3/5   0          13s
+example-mysql-cluster-mysql-2   0/4     Init:4/5   0          14s
+example-mysql-cluster-mysql-2   0/4     PodInitializing   0          15s
+example-mysql-cluster-mysql-2   3/4     Running           0          17s
+example-mysql-cluster-mysql-2   3/4     Running           0          18s
+example-mysql-cluster-mysql-2   3/4     Running           0          18s
+example-mysql-cluster-mysql-2   4/4     Running           0          19s
+example-mysql-cluster-mysql-0   4/4     Terminating       0          5m28s
+example-mysql-cluster-mysql-0   4/4     Terminating       0          5m28s
+example-mysql-cluster-mysql-0   4/4     Terminating       0          5m28s
+```
+
+预期行为：
+- 创建一个新的 Pod（'example-mysql-cluster-mysql-2'）。
+- 终止旧的 Pod（'example-mysql-cluster-mysql-0'）。
+
+#### 验证数据恢复
+连接到新的副本实例（'example-mysql-cluster-mysql-2'）并验证数据：
+
+```bash
+kubectl exec -ti -n demo example-mysql-cluster-mysql-2 -- mysql  -uroot -pR0z5Z1DS02
+```
+
+示例输出：
+
+```sql
+mysql> SELECT * FROM test.t1;
++----+----------+
+| id | name     |
++----+----------+
+|  1 | John Doe |
++----+----------+
+1 row in set (0.01 sec)
+```
+
+#### 检查所有 Pod
+运行以下命令列出 MySQL 集群中的所有 Pod：
+
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster
+```
+
+示例输出：
+
+```bash
+NAME                            READY   STATUS    RESTARTS   AGE
+example-mysql-cluster-mysql-1   4/4     Running   0          13m
+example-mysql-cluster-mysql-2   4/4     Running   0          2m14s
+```
+
+此时，您可以看到两个 Pod：'example-mysql-cluster-mysql-1' 和 'example-mysql-cluster-mysql-2'。原有的 Pod 'example-mysql-cluster-mysql-0' 已被删除。
+
+要验证集群状态，请检查集群资源：
+
+```bash
+kubectl get cluster example-mysql-cluster -n demo -oyaml
+```
+
+示例输出：
+
+```yaml
+    offlineInstances:
+    - example-mysql-cluster-mysql-0
+```
+
+实例 'example-mysql-cluster-mysql-0' 已被标记为离线。
+
+## 总结
+- 原地修复（In-Place Repair）：成功重建副本并恢复已删除数据。
+- 非原地修复（Non-In-Place Repair）：创建新的副本实例并成功恢复数据。
+
+两种方法均能有效恢复副本并确保数据一致性。
+
+（严格保持原文格式与换行，技术术语采用标准译法）

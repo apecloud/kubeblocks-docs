@@ -1,0 +1,233 @@
+---
+authors:
+  name: Xueqiang Wu & Yuxing Liu
+date: 2024-09-03
+description: "这是由ApeCloud与快手在KubeCon China 2024上联合呈现的技术演讲。本次演讲主题为快手如何将大规模Redis实例从裸金属迁移至Kubernetes平台，以实现资源利用率的提升"
+image: /img/blogs/thumbnails/blog-kubecon-kuaishou.png
+slug: migrate-redis-at-kuaishou-from-bare-metal-to-k8s
+tags:
+- redis
+- kuaishou
+- migration
+- bare metal
+- k8s
+title: 资源利用率提升——大规模Redis从裸金属迁移至Kubernetes
+---
+# 资源利用率提升：大规模Redis从裸金属迁移至Kubernetes实践
+
+我是吴雪强，非常荣幸能在KubeCon与大家分享。今天我将与来自快手的刘宇星共同演讲，重点讨论如何通过将大规模Redis实例从裸金属迁移至Kubernetes来显著提升资源利用率。
+
+首先来看今天的议程安排。我会先简要介绍KubeBlocks项目，然后从单个Redis集群的角度，重点讲解KubeBlocks为解决Redis等数据库在Kubernetes上运行的三大关键挑战所做的努力。之后，宇星将从大规模部署的角度，分享他在跨多个Kubernetes集群管理众多Redis集群的实践经验。
+
+
+- Kubernetes -> Kubernetes（技术专名不译）
+- Redis -> Redis（数据库名称不译）
+- bare metal -> 裸金属（技术术语标准译法）
+- resource utilization -> 资源利用率（标准技术术语）
+- cluster -> 集群（标准技术术语）
+- deployment -> 部署（标准技术术语））
+
+## 什么是 KubeBlocks？
+
+首先，让我概述一下 KubeBlocks。KubeBlocks 由 ApeCloud 创建，这是一家由在数据库开发和运维领域（尤其是阿里云工作期间）拥有丰富经验的团队创立的初创公司。大约两年前，我们决定成立自己的公司，专注于开发简化在 Kubernetes 上运行 Redis 等数据库的产品。去年，我们开源了 KubeBlocks 项目。
+
+简而言之，KubeBlocks 是一个 Kubernetes Operator，但它与其他数据库 Operator 不同，因为它旨在支持多种多样的数据库。事实上，KubeBlocks 已经支持超过 35 种不同的数据库。
+
+为了实现这一目标，我们将 KubeBlocks 的 API 或自定义资源定义（CRD）分为两大类。第一类是 **"Add-on Provider API"**。这些 API 允许数据库提供商轻松将其数据库集成到 KubeBlocks 生态系统中。第二类是 **"Developer & DevOps API"**，它为用户和运维人员提供了管理数据库的能力——无论是创建新集群、扩缩容、执行备份和恢复等操作。此外，这些声明式 API 使 KubeBlocks 能够轻松与 Kubernetes 生态系统中的其他工具和系统（如 kubectl、Argo CD、Terraform 等）集成。
+
+![What is KubeBlocks](/img/blogs/redis-kuaishou-1.png)
+
+## KubeBlocks 解决的问题：单 Redis 集群视角
+
+在了解 KubeBlocks 的基础知识后，让我们深入探讨它如何解决在 Kubernetes 上运行单个 Redis 集群时的具体挑战。
+
+### 如何处理数据复制？
+
+在 Kubernetes 上运行数据库面临诸多挑战，其中最关键之一就是数据复制。正确管理复制对于维护高可用性和数据完整性至关重要，尤其是在大规模部署中。
+
+考虑一个典型场景，如下图所示，Redis 以单副本形式运行在 StatefulSet 中。这种配置会带来几个问题：
+
+![数据复制](/img/blogs/redis-kuaishou-2.png)
+
+1. 存在单点故障 - 系统极易发生中断
+2. 单个 Redis 实例的吞吐量存在固有上限
+3. 数据丢失风险极高
+
+为解决这些问题，我们可以水平扩展 StatefulSet，将副本数从 1 增加到 3。但这又带来了管理副本间复制关系的新问题。
+
+第一个问题是：在 Redis 主从架构中，只有主实例能处理写操作，如何确保服务能找到主实例？第二个问题是：扩容时新增的实例如何发现主实例并正确建立复制关系？第三个问题是：当需要在 Redis 集群中执行次版本升级时，如何设计更新策略以最小化停机时间？
+
+StatefulSet 虽然有用，但并不能完全解决这些挑战。这正是 KubeBlocks 发挥作用的地方，它提供了一个专为数据库设计的 API，称为 **InstanceSet**。
+
+与 StatefulSet 类似，**InstanceSet 为每个 Pod 分配稳定且唯一的网络标识符**。但关键区别在于：**InstanceSet 中的 Pod 不是独立的 - 它们会被分配角色，代表其在复制关系中的作用**。
+
+其工作原理是：每当 InstanceSet 创建 Pod 时，会注入一个名为 kbagent 的边车容器，kbagent 会定期探测主数据库容器以检测其当前角色，并更新 Pod 上的标签来反映这个角色。通过这些角色标签，我们可以实现许多有用功能。
+
+首先，我们可以更新 Service 的选择器以匹配"Master"角色标签，这样网络流量就会自动流向主 Redis 实例。
+
+其次，当扩展 Redis 集群时，新的从实例可以通过角色标签找到主实例并正确建立复制关系。
+
+第三，**角色标签让我们能更好地定义更新策略**。例如遵循数据库升级最佳实践，可以先更新从实例，再更新主实例。并且我们可以在升级主实例前执行切换操作。
+
+通过这种基于角色的设计，KubeBlocks 不仅简化了复制关系管理，还显著提高了 Redis 集群的整体可用性。
+
+![角色](/img/blogs/redis-kuaishou-3.png)
+
+### 如何实现高可用性？
+
+谈到可用性，让我们讨论第二个关键主题 - 如何实现高可用性。数据库高可用性涉及多个维度，但这里我们重点关注控制平面。
+
+除了基于角色的更新策略外，InstanceSet 还引入了另外两个旨在提高可用性的特性
+
+第一种称为"[原地实例更新](https://kubeblocks.io/docs/preview/api_docs/maintenance/in-place-update/overview)"。Kubernetes中Pod的原地更新和持久卷声明(PVCs)的存储卷扩容并非新概念，而KubeBlocks充分利用了这些能力。但KubeBlocks更进一步解决了数据库管理中的独特挑战：配置变更。数据库经常需要更新配置参数，传统上这些变更需要完全重启数据库，这会严重影响Redis集群的可用性。为此，KubeBlocks引入了原地配置更新功能。
+
+![原地更新](/img/blogs/redis-kuaishou-4.png)
+
+我们将数据库参数分为三类：**不可变参数**、**静态参数**和**动态参数**。
+
+- 不可变参数一旦设置就无法更改
+- 静态参数可以更改但需要重启数据库
+- 动态参数可以热加载
+
+基于此分类，InstanceSet可以在无需完全重启数据库的情况下执行配置更新，显著降低恢复时间目标(RTO)并提升服务运行时间。
+
+第二个特性称为"**实例重建**"。许多数据库仍运行在本地持久卷(LocalPVs)上，这带来一个挑战：如果节点故障，运行其上的Pod无法自动重新调度。实例重建功能通过在其他节点上自动重建PV和Pod来解决这个问题，使Redis集群能够恢复并回到正常状态。
+
+![实例重建](/img/blogs/redis-kuaishou-5.png)
+
+### 如何处理超大规模集群？
+
+讨论完高可用性相关主题后，我们来看最后部分——Operator的P10K问题。
+
+在快手的使用场景中，我们遇到了极具挑战性的情况：单个Redis集群可能包含近10,000个Pod。这意味着单个InstanceSet自定义资源(CR)会产生超过10,000个次级对象，这对Controller的协调过程造成巨大影响。
+
+为解决这个问题，我们对InstanceSet Controller进行了参数调优和设计变更。
+
+首先在调优方面，**我们增加了InstanceSet Controller pod分配的CPU和内存资源，使其能缓存更多对象**。同时提高了Controller与API Server之间的速率限制阈值，即ClientQPS和ClientBurst。我们压缩了InstanceSet CR中一些较大的字段以保持在Kubernetes对象大小限制内。最后，我们将协调goroutine从单个改为多个。
+
+在设计方面，首先**我们将InstanceSet协调分为两个阶段——Prepare和Commit**。在Prepare阶段，通过比较InstanceSet CR中的期望状态与次级对象的当前状态，计算需要创建、更新或删除的次级对象。然后在Commit阶段，一次性将所有变更提交到API Server。这有助于将后续协调合并为一次，减少总协调次数。
+
+其次，在Prepare阶段**我们采用了函数式编程思想**。将每个协调步骤设计为确定性函数，在Commit阶段确保所有API Server请求的幂等性。这帮助我们解决了由缓存陈旧引起的一些问题。
+
+第三，**我们将Prepare阶段中一些较重操作异步化**，进一步提升协调效率。
+
+通过这些优化，我们能够很好地处理P10K场景。
+
+![Operator P10K](/img/blogs/redis-kuaishou-6.png)
+
+总结而言，KubeBlocks为在Kubernetes上管理Redis集群提供了强大的功能。**基于InstanceSet的角色化能力，使我们能够高效管理Redis服务器的主从复制关系**。原地实例更新和实例重建特性显著提升了Redis服务器的可用性。最后，针对P10K问题的优化证明了KubeBlocks具备处理单集群海量Pod极端场景的能力。
+
+![Summary](/img/blogs/redis-kuaishou-7.png)
+
+现在，我想邀请Yuxing回到台上，分享他在多个Kubernetes集群中运行多个Redis集群的一些经验。
+
+## 快手如何应对多Redis集群与多Kubernetes集群的挑战？
+
+我将带您了解快手如何利用KubeBlocks高效管理跨多个Kubernetes集群的Redis实例。
+
+### Redis在快手的应用
+
+在深入细节之前，先了解一些背景。在快手，Redis采用经典的主从架构部署，包含三个核心组件：Server（服务端）、Sentinel（哨兵）和Proxy（代理）。我们的Redis部署与众不同之处在于其庞大的规模——不仅是实例总数，单个集群的规模也很大，有些甚至超过10,000个节点。
+
+既然已经实现了如此大规模下的稳定性，您可能会好奇为何还要进行云原生转型。答案在于资源利用率。尽管规模庞大，但我们注意到Redis并未充分利用其资源。在这种规模下，即使微小的优化也能带来显著收益。
+
+那么如何提升资源利用率？您可能已有一些想法。我们发现云原生技术为此提供了最佳实践。此外，云容器已成为业务运营与基础设施间的新接口。虽然快手的无状态服务已迁移至云容器，但我们认识到将基础设施统一到云原生方式是大势所趋。这一转变不仅能解耦业务逻辑与基础设施，还能提升敏捷性并降低运维成本。
+
+简而言之，我们启动云原生转型是为了优化成本。为此，我们同时调动了Redis团队和云原生团队的力量。
+
+![Redis in Kuaishou](/img/blogs/redis-kuaishou-8.png)
+
+### 为什么选择KubeBlocks？
+
+今天我们讨论这个主题，意味着我们选择了KubeBlocks进行云原生转型。但为什么是KubeBlocks？让我们探究背后的决策原因。
+
+用一个词概括：API。**KubeBlocks提供的API专为有状态服务设计**。
+
+什么是有状态服务？它与无状态服务有何区别？
+
+乍看之下，区别似乎仅在于服务是否维护状态信息。但我们认为**真正的差异在于实例间的不对等关系**。有状态服务中不同实例扮演不同角色、存储不同数据，这使得它们不可随意替换。您不能随意丢弃任何实例。这种不对等关系是动态的，可能在运行时发生变化（如切换期间）。KubeBlocks正是为管理这种复杂性而生，提供**基于角色的管理能力**。
+
+此外，KubeBlocks支持多种数据库，**无需为每个数据库单独创建Operator**。它还通过OpsRequest提供**面向流程的API**，简化数据库迁移。如需了解具体实现，可深入查阅[官方文档中的KubeBlocks API](../user_docs/references/api-reference/cluster)。
+
+![Why KubeBlocks](/img/blogs/redis-kuaishou-9.png)
+
+### Redis集群编排定义
+
+我们已经讨论了很多关于KubeBlocks API的内容，现在看看KubeBlocks如何定义Redis集群。KubeBlocks中的Redis集群包含所有核心组件：Server、Sentinel和Proxy。
+
+为避免组件定义的冗余，KubeBlocks将组件定义与组件版本分离，使得创建新集群时可直接引用。我们以最复杂的Redis Server组件为例。
+
+- 首先，Redis Server 通过 ShardSpec 定义，其中包含分片列表。这种方式通过将 Redis Server 集群拆分为多个分片（每个分片包含主从实例）来支持更大规模的数据。
+- 另一个关键点是，同一个分片内的主从实例可能需要不同配置。为此，KubeBlocks 允许通过[实例模板](https://kubeblocks.io/docs/preview/api_docs/instance-template/introduction)在同一个组件内定义多套配置。
+
+以下是 Redis Server 组件内部对象的关系结构：
+
+- **Cluster**：将整个 Redis 集群定义为一个整体
+- **ShardSpec**：指定 Redis Server 的分片列表
+- **Component**：表示独立组件，如 Redis Proxy、Sentinel 和单个服务器分片
+- **InstanceTemplate**：指定同一组件内的不同配置
+- **InstanceSet**：最终自动生成的工作负载，提供前文提到的基于角色的管理能力
+
+![集群编排](/img/blogs/redis-kuaishou-10.png)
+
+### 角色管理
+
+在基于角色的管理中，有两个关键方面尤为突出：
+
+- **建立并维护正确的关系**
+- **实现细粒度的基于角色的管理**（薛强已为我们介绍过这部分）
+
+让我们重点探讨如何维护正确的角色关系。需要考虑的一个关键点是分片内主节点信息的重要性。如果该信息不正确或不可访问，可能导致严重问题。为确保业务稳定性，我们选择将数据平面与控制平面分离。这也是我们不依赖 KubeBlocks 获取主节点信息的原因。
+
+![角色管理](/img/blogs/redis-kuaishou-11.png)
+
+### 部署架构
+
+KubeBlocks 已证明在单个 Kubernetes 集群内运行有状态服务是有效的。然而，快手平台的 Redis 实例数量远超单个 Kubernetes 集群的承载能力，因此需要使用多个 Kubernetes 集群来支持业务需求。
+
+管理多集群会带来新的挑战。如果直接将这种复杂性暴露给 Redis 团队，会导致以下问题：
+
+- Redis 团队需要维护所有 Kubernetes 集群的缓冲资源池，造成资源浪费
+- Redis 团队还需在单个 Kubernetes 集群达到容量上限前提前迁移 Redis 集群
+
+为简化操作，我们决定隐藏多集群管理的复杂性。幸运的是，我们已通过联邦集群具备所需能力，尽管 KubeBlocks 本身并不原生支持多集群环境。
+
+如何解决这个问题？以下是整体架构：
+
+![整体架构](/img/blogs/redis-kuaishou-12.png)
+
+我们将 KubeBlocks Operator 拆分为两部分：**Cluster Operator 和 Component Operator 部署在联邦集群中，而 InstanceSet Controller 位于成员集群内**。在这两者之间，我们引入了 **Federated InstanceSet Controller** 组件，负责将 InstanceSet 对象从联邦集群分发到成员集群。那么 Federated InstanceSet Controller 如何运作？
+
+- 其主要职责是**获取调度建议，决定每个集群应部署多少实例**
+- 次要职责是**拆分 InstanceSet 并将其分发到成员集群**
+
+与 StatefulSet 类似，InstanceSet 的每个实例都有编号名称。为保持一致性，我们重新设计了 InstanceSet 中的 'ordinals' 字段，允许自定义编号范围。
+
+通过这种架构，我们实现了 KubeBlocks 跨多个 Kubernetes 集群运行，而无需进行重大改动。
+
+![多集群分布](/img/blogs/redis-kuaishou-13.png)
+
+### 稳定性保障
+
+除了满足业务需求外，确保我们的解决方案具备生产环境就绪性至关重要，特别是在稳定性方面。让我们探讨几个关键方面。
+
+首先，考虑调度能力。为了确保Redis的高可用性，实例必须尽可能均匀地分布在集群中。然而，我们还需要考虑单台机器故障对Redis集群规模的影响。为了解决这个问题，我们定制了**细粒度分散调度能力**。这允许我们配置每个节点的最大实例数和每个Redis集群的最大节点数。
+
+此外，我们还提供了基于CPU、内存和网络带宽的负载均衡调度能力。
+
+接下来，讨论运行时控制。虽然Kubernetes带来的自动化是有益的，但它也引入了风险——小的变更可能导致大规模故障。为了降低这些风险，我们对运行中的实例实施了多项控制措施，包括并发控制和强制仅允许原地更新。我们还采取了许多其他措施，但由于时间限制，这里就不一一展开了。
+
+![稳定性保障](/img/blogs/redis-kuaishou-14.png)
+
+## 总结
+
+综上所述，正如许多读者可能已经意识到的，KubeBlocks 是一个卓越的项目。与 StatefulSet 相比，**KubeBlocks 引入了一个专为有状态服务设计的新 API，并提供了基于角色的管理功能，这使得云原生转型变得异常简单。**
+
+虽然 KubeBlocks 的 API 看似支持几乎所有有状态服务，但仍有许多工作有待完成：
+
+- 如何与现有的数据库 Operator 建立连接并与其能力对齐。
+- 推动有状态服务标准 API 的建设，这是快手非常希望与 KubeBlocks 合作的领域。我们也期待更多开发者加入我们，共同探索这一方向。
+
+截至目前，快手已与 KubeBlocks 在多个功能上展开合作，例如**通过 InstanceSet 直接管理 Pod 和 PVC**、**实例模板（原异构 Pod）**以及**联邦集群集成**。
+
+![Cooperation](/img/blogs/redis-kuaishou-15.png)

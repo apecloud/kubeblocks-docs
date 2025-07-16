@@ -1,0 +1,422 @@
+---
+description: 了解如何使用KubeBlocks部署带有Orchestrator和ProxySQL的MySQL半同步复制集群，实现高可用性和高效查询路由。
+keywords:
+- KubeBlocks
+- MySQL
+- Orchestrator
+- ProxySQL
+- Kubernetes
+- DBaaS
+sidebar_label: MySQL 搭配 Orchestrator 和 ProxySQL
+sidebar_position: 6
+title: 使用KubeBlocks部署带有Orchestrator和ProxySQL的MySQL集群
+---
+# 使用 KubeBlocks 部署 MySQL 集群及 Orchestrator 和 ProxySQL
+
+半同步复制通过要求至少一个副本节点确认事务提交，增强了主节点与副本节点之间的数据一致性。
+
+本指南演示如何使用 **KubeBlocks** 部署 MySQL 集群，其中包含用于高可用性和故障转移管理的 **Orchestrator**，以及用于高级查询路由和负载均衡的 **ProxySQL**。这些工具共同构建了一个健壮且高效的 MySQL 集群基础设施。
+
+### **什么是 Orchestrator？**
+
+Orchestrator 是一个强大的 MySQL 高可用性（HA）和故障转移管理工具。它自动化了 MySQL 集群的监控、故障检测和拓扑管理，非常适合管理大规模部署。主要功能包括：
+
+- **复制拓扑监控**：提供 MySQL 复制拓扑的实时视图。
+- **自动化故障转移**：在发生故障时将健康的副本提升为主节点，确保最短停机时间。
+- **拓扑管理**：简化 MySQL 集群的重新配置、重新平衡和恢复。
+
+### **什么是 ProxySQL？**
+
+ProxySQL 是一个高性能的 MySQL 代理，充当 MySQL 客户端和数据库服务器之间的中间件。它通过以下功能提升集群性能：
+
+- **查询路由**：根据查询目的（如读或写）将查询定向到适当的服务器。
+- **负载均衡**：在副本间分配流量以优化资源使用。
+- **查询缓存**：通过缓存频繁查询减少数据库负载。
+- **故障转移支持**：无缝处理故障转移场景，不中断应用服务。
+
+## 前提条件
+
+在继续之前，请确保满足以下条件：
+- 环境设置：
+    - 已启动并运行一个 Kubernetes 集群。
+    - 已配置 kubectl CLI 工具以与集群通信。
+    - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处的安装说明进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 安装编排器插件
+
+1. 查看插件版本。
+
+```bash
+# including pre-release versions
+helm search repo kubeblocks/orchestrator --devel --versions
+```
+
+2. 安装插件。使用 '--version' 指定版本。
+
+```bash
+helm install kb-addon-orc kubeblocks/orchestrator --namespace kb-system --create-namespace --version x.y.z
+```
+
+3. 验证该 Addon 是否已安装。
+
+```bash
+helm list -A
+```
+
+预期输出：
+
+```bash
+orchestrator           	kb-system  	1       	2025-02-14 11:12:32.286516 +0800 CST   deployed	orchestrator-1.0.0          	3.2.6
+```
+
+状态为已部署，此插件已成功安装。
+
+## 使用 Orchestrator 部署 MySQL 集群
+
+KubeBlocks 提供了一种声明式的方法来部署 MySQL 集群。以下是一个配置示例，用于在半同步模式下部署包含 2 个节点（1 个主节点和 1 个从节点）的 MySQL 集群。此配置还集成了 Orchestrator（3 个节点）用于故障转移管理，以及 ProxySQL（2 个节点）用于查询路由和负载均衡。
+
+集群配置
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: orc-proxysql
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      serviceRefs:
+        - name: orchestrator
+          namespace: demo
+          clusterServiceSelector:
+            cluster: example-orc-cluster
+            service:
+              component: orchestrator
+              service: orchestrator
+              port: orc-http
+            credential:
+              component: orchestrator
+              name: orchestrator
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+    - name: proxysql
+      serviceVersion: 2.4.4
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+---
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-orc-cluster
+  namespace: demo
+spec:
+  clusterDef: orchestrator
+  topology: raft
+  terminationPolicy: Delete
+  services:
+    - name: orchestrator
+      componentSelector: orchestrator
+      spec:
+        ports:
+          - name: orc-http
+            port: 80
+  componentSpecs:
+    - name: orchestrator
+      disableExporter: true
+      replicas: 3
+      resources:
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+**关键字段说明：**
+MySQL 半同步集群配置
+- `clusterDef`: 指定集群的 ClusterDefinition CR。ClusterDefinition 'mysql' 包含多种拓扑结构，例如 'semisync'、'semisync-proxysql'、'mgr'、'mgr-proxysql'、'orc'、'orc-proxysql'。
+- `topology : orc-proxysql`: 集成 Orchestrator 实现故障转移，并通过 ProxySQL 进行查询路由。
+- `serviceRefs`: 配置 MySQL 集群连接到 Orchestrator 集群。
+    - `name : orchestrator`: Orchestrator 的服务引用名称。
+    - `namespace: demo`: 指定 Orchestrator 集群位于相同的 demo 命名空间。
+    - `clusterServiceSelector`:
+        - `cluster: example-orc-cluster`: 选择名为 example-orc-cluster 的 Orchestrator 集群。
+        - `service`:
+            - `component: orchestrator`: 使用 example-orc-cluster 集群中的 Orchestrator 组件。
+            - `service: orchestrator`: 指定服务名称。
+            - `port: orc-http`: 引用 Orchestrator 服务的 HTTP 端口。
+
+Orchestrator 集群配置
+- `componentDef: orchestrator-raft`: 指定该组件采用 Raft 高可用模型。
+- `replicas: 3`: 配置 Orchestrator 集群以 3 节点运行，实现基于 Raft 的高可用性。
+
+YAML 文件的第一部分配置了一个 MySQL 集群（'example-mysql-cluster'），采用半同步模式运行 1 个主节点和 1 个副本节点，并与 Orchestrator 集群集成。
+
+YAML 文件的第二部分定义了一个采用 Raft 高可用模式的 Orchestrator 集群（'example-orc-cluster'）。该集群负责管理 MySQL 集群，监控其拓扑结构并处理故障转移。
+
+MySQL 集群配置中的 serviceRefs 建立了 MySQL 半同步集群与 Orchestrator 集群之间的连接：
+- 它指定了将管理 MySQL 集群的 Orchestrator 集群（'example-orc-cluster'）。
+- Orchestrator 将监控 MySQL 集群的拓扑结构，并在主节点故障时处理故障转移。
+- 'orc-http' 端口用于 Orchestrator 与 MySQL 集群之间的通信。
+
+## 验证部署
+
+监控集群状态直到其转为 Running 状态：
+
+```bash
+kubectl get cluster -n demo
+```
+
+示例输出：
+
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Running   2m32s
+example-orc-cluster     orchestrator         Delete               Running   2m31s
+```
+
+要获取有关 MySQL 集群的详细信息：
+
+```bash
+kbcli cluster describe example-mysql-cluster -n demo
+```
+
+示例输出：
+
+```bash
+Name: example-mysql-cluster	 Created Time: Mar 10,2025 16:43 UTC+0800
+NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY   STATUS    TERMINATION-POLICY
+demo        mysql                orc        Running   Delete
+
+Endpoints:
+COMPONENT   INTERNAL                                                         EXTERNAL
+mysql       example-mysql-cluster-mysql-0.demo.svc.cluster.local:3306        <none>
+            example-mysql-cluster-mysql-1.demo.svc.cluster.local:3306
+            example-mysql-cluster-mysql-server.demo.svc.cluster.local:3306
+
+Topology:
+COMPONENT   SERVICE-VERSION   INSTANCE                        ROLE        STATUS    AZ                NODE                                                       CREATED-TIME
+mysql       8.0.35            example-mysql-cluster-mysql-0   primary     Running   ap-southeast-1c   ip-10-0-3-68.ap-southeast-1.compute.internal/10.0.3.68     Mar 10,2025 16:43 UTC+0800
+mysql       8.0.35            example-mysql-cluster-mysql-1   secondary   Running   ap-southeast-1c   ip-10-0-3-225.ap-southeast-1.compute.internal/10.0.3.225   Mar 10,2025 16:44 UTC+0800
+
+Resources Allocation:
+COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+mysql                           500m / 500m          512Mi / 512Mi           data:20Gi      <none>
+
+Images:
+COMPONENT   COMPONENT-DEFINITION          IMAGE
+mysql       mysql-orc-8.0-1.0.0           docker.io/apecloud/mysql:8.0.35
+                                          docker.io/apecloud/mysqld-exporter:0.15.1
+                                          apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.0
+
+Show cluster events: kbcli cluster list-events -n demo example-mysql-cluster
+```
+
+要获取有关 Orchestrator 集群的详细信息：
+
+```bash
+kbcli cluster describe example-orc-cluster -n demo
+```
+
+示例输出：
+
+```bash
+Name: example-orc-cluster	 Created Time: Mar 10,2025 16:43 UTC+0800
+NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY   STATUS    TERMINATION-POLICY
+demo        orchestrator         raft       Running   Delete
+
+Endpoints:
+COMPONENT      INTERNAL                                                     EXTERNAL
+orchestrator   example-orc-cluster-orchestrator.demo.svc.cluster.local:80   <none>
+
+Topology:
+COMPONENT      SERVICE-VERSION   INSTANCE                             ROLE        STATUS    AZ                NODE                                                       CREATED-TIME
+orchestrator   3.2.6             example-orc-cluster-orchestrator-0   primary     Running   ap-southeast-1c   ip-10-0-3-225.ap-southeast-1.compute.internal/10.0.3.225   Mar 10,2025 16:43 UTC+0800
+orchestrator   3.2.6             example-orc-cluster-orchestrator-1   secondary   Running   ap-southeast-1c   ip-10-0-3-68.ap-southeast-1.compute.internal/10.0.3.68     Mar 10,2025 16:43 UTC+0800
+orchestrator   3.2.6             example-orc-cluster-orchestrator-2   secondary   Running   ap-southeast-1c   ip-10-0-3-225.ap-southeast-1.compute.internal/10.0.3.225   Mar 10,2025 16:44 UTC+0800
+
+Resources Allocation:
+COMPONENT      INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+orchestrator                       500m / 500m          512Mi / 512Mi           data:20Gi      kb-default-sc
+
+Images:
+COMPONENT      COMPONENT-DEFINITION   IMAGE
+orchestrator   orchestrator-raft      docker.io/apecloud/orchestrator:v3.2.6
+
+Show cluster events: kbcli cluster list-events -n demo example-orc-cluster
+```
+
+
+
+
+## 连接到 MySQL 集群
+KubeBlocks 会自动创建一个包含 MySQL root 凭据的 Secret。通过以下命令获取凭据：
+
+```bash
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
+root
+
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+GX596H32Oz
+```
+
+要连接到集群的主节点，请使用 MySQL 客户端：
+
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-server.demo.svc.cluster.local -uroot -pGX596H32Oz
+```
+
+
+
+
+## 测试半同步复制
+
+在本节中，我们将通过验证 Pod 角色并检查其复制状态，来测试 MySQL 集群的半同步复制功能。
+
+首先，列出集群中的所有 Pod 及其角色，以识别主节点和从节点实例：
+
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+```
+
+示例输出：
+
+```
+example-mysql-cluster-mysql-0	primary
+example-mysql-cluster-mysql-1	secondary
+```
+
+从输出中，我们可以看到以下信息：
+- 'example-mysql-cluster-mysql-0' 是主节点实例。
+- 'example-mysql-cluster-mysql-1' 是从节点实例。
+  'kubeblocks.io/role' 标签帮助我们轻松区分复制设置中各实例的角色。
+
+
+接下来，连接到主节点实例（'example-mysql-cluster-mysql-0'）并检查其半同步复制状态。使用以下命令在 MySQL Pod 内部执行查询：
+
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-0.demo.svc.cluster.local -uroot -pGX596H32Oz -e "show status like 'Rpl%_status';"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++------------------------------+-------+
+| Variable_name                | Value |
++------------------------------+-------+
+| Rpl_semi_sync_replica_status | OFF   |
+| Rpl_semi_sync_source_status  | ON   |
++------------------------------+-------+
+```
+
+说明：
+- "Rpl_semi_sync_source_status: ON"：表示主实例已配置为半同步复制的主节点（master）。
+- "Rpl_semi_sync_replica_status: OFF"：表示主实例在复制设置中不作为从节点运行。
+
+
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-1.demo.svc.cluster.local -uroot -pGX596H32Oz -e "show status like 'Rpl%_status';"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++------------------------------+-------+
+| Variable_name                | Value |
++------------------------------+-------+
+| Rpl_semi_sync_replica_status | ON   |
+| Rpl_semi_sync_source_status  | OFF   |
++------------------------------+-------+
+```
+
+说明：
+- "Rpl_semi_sync_replica_status: ON"：表示该从节点当前作为半同步副本运行，正在主动接收并确认来自主节点的变更。
+- "Rpl_semi_sync_source_status: OFF"：表示该从节点在复制架构中不作为源节点（即主节点）运行。
+
+（严格保持原文格式与换行，技术术语采用标准翻译："replica"译为"副本"，"source"译为"源节点"并括号注明"主节点"，"semi-synchronous"译为"半同步"）
+
+## 故障转移测试
+
+以下步骤演示如何触发 MySQL 集群的故障转移并验证 Pod 的角色变化。
+
+要发起故障转移，请删除当前被分配为主节点角色的 Pod：
+
+```bash
+kubectl delete pod example-mysql-cluster-mysql-0 -n demo
+pod "example-mysql-cluster-mysql-0" deleted
+```
+
+这将触发故障转移，从节点实例将被提升为主节点角色。
+一段时间后，被终止的 Pod 将被重新创建并承担从节点角色：
+
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+```
+
+预期输出：
+
+```bash
+example-semisync-mysql-mysql-0	secondary
+example-semisync-mysql-mysql-1	primary
+```
+
+此过程演示了故障转移机制如何通过在故障发生时自动将次要实例提升为主角色来确保高可用性。
+
+## 清理
+要删除所有已创建的资源，请连同其命名空间一起删除 MySQL 集群：
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete cluster example-orc-cluster -n demo
+kubectl delete ns demo
+```
+
+
+
+
+## 概述
+
+本指南演示了如何使用 KubeBlocks 部署一个具备以下特性的 MySQL 集群：
+- 半同步复制
+- 集成 Orchestrator 实现高可用性
+- 通过 ProxySQL 实现查询路由和负载均衡
+
+通过声明式配置方法，您可以轻松在 Kubernetes 环境中扩展和管理 MySQL 集群。

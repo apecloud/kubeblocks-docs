@@ -1,0 +1,170 @@
+---
+description: 使用 Helm 安装 KubeBlocks 插件
+keywords:
+- addon
+- helm
+- KubeBlocks
+sidebar_label: 安装插件
+sidebar_position: 3
+title: 安装插件
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# 安装插件
+
+随着 KubeBlocks v0.8.0 的发布，插件已从 KubeBlocks 中解耦，部分插件默认不再安装。如需使用这些插件，需先通过索引安装。若您卸载了某些插件，可按照本教程步骤重新安装。
+
+本教程以 elasticsearch 为例，您可将 elasticsearch 替换为您需要的插件名称。
+
+官方索引仓库为 [KubeBlocks index](https://github.com/apecloud/block-index)，插件维护在 [KubeBlocks Addon repo](https://github.com/apecloud/kubeblocks-addons)。
+
+:::重要提示
+
+请确保插件与 KubeBlocks 的主版本号一致。
+
+例如，您可以在 KubeBlocks v0.9.2 上安装 v0.9.0 版本的插件，但若主版本不匹配（如在 KubeBlocks v0.9.2 上使用 v0.8.0 版插件）可能导致错误。
+
+:::
+
+<Tabs>
+
+<TabItem value="Helm" label="使用 Helm 安装" default>
+
+1. （可选）添加 KubeBlocks 仓库。若已通过 Helm 安装 KubeBlocks，直接运行 `helm repo update` 即可。
+
+   ```bash
+   helm repo add kubeblocks https://apecloud.github.io/helm-charts
+   helm repo update
+   ```
+
+2. 查看插件版本。
+
+   ```bash
+   helm search repo kubeblocks/elasticsearch --devel --versions
+   ```
+
+3. 安装插件（以 elasticsearch 为例）。通过 `--version` 指定版本。
+
+   ```bash
+   helm install kb-addon-es kubeblocks/elasticsearch --namespace kb-system --create-namespace --version <VERSION>
+   ```
+
+4. 验证插件是否安装成功。
+
+   当 STATUS 显示为 `deployed` 时表示安装成功。
+
+   ```bash
+   helm list -A
+   >
+   NAME             NAMESPACE	REVISION	UPDATED                                STATUS  	 CHART                   APP VERSION
+   ...
+   kb-addon-es      kb-system	1       	2024-11-27 10:04:59.730127 +0800 CST   deployed	 elasticsearch-0.9.0     8.8.2
+   ```
+
+5. （可选）可通过以下命令卸载插件。
+
+   若已创建相关集群，请先删除集群。
+
+   ```bash
+   helm uninstall kb-addon-es --namespace kb-system
+   ```
+
+</TabItem>
+
+<TabItem value="kbcli" label="使用 kbcli 安装">
+
+1. 查看索引。
+
+   kbcli 默认创建名为 `kubeblocks` 的索引，可通过 `kbcli addon index list` 确认索引是否存在。
+
+   ```bash
+   kbcli addon index list
+   >
+   INDEX        URL
+   kubeblocks   https://github.com/apecloud/block-index.git
+   ```
+
+   若列表为空或需添加自定义索引，可通过 `kbcli addon index add <索引名称> <源地址>` 手动添加。例如：
+
+   ```bash
+   kbcli addon index add kubeblocks https://github.com/apecloud/block-index.git
+   ```
+
+   若不确认索引是否为最新版本，可执行更新：
+
+   ```bash
+   kbcli addon index update kubeblocks
+   ```
+
+2. （可选）搜索插件是否存在于索引中。
+
+   ```bash
+   kbcli addon search elasticsearch
+   >
+   ADDON           VERSION         INDEX
+   elasticsearch   0.7.0           kubeblocks
+   elasticsearch   0.7.1           kubeblocks
+   elasticsearch   0.7.2           kubeblocks
+   elasticsearch   0.8.0           kubeblocks
+   elasticsearch   0.9.0           kubeblocks
+   ```
+
+3. 安装插件。
+
+   若插件存在多个索引源或版本，可通过 `--index` 指定索引，`--version` 指定版本。默认会安装 `kubeblocks` 索引中的最新版本。
+
+   ```bash
+   kbcli addon install elasticsearch --index kubeblocks --version <VERSION>
+   ```
+
+4. 验证插件是否安装成功。
+
+   当 STATUS 显示为 `Enabled` 时表示安装成功。
+
+   ```bash
+   kbcli addon list
+   >
+   NAME                           VERSION        PROVIDER    STATUS     AUTO-INSTALL
+   elasticsearch                  0.9.0          apecloud    Enabled    true
+   ```
+
+5. （可选）可通过以下命令禁用插件。
+
+   若已创建相关集群，请先删除集群。
+
+   ```bash
+   kbcli addon disable elasticsearch
+   ```
+
+   或通过以下命令完全卸载插件：
+
+   ```bash
+   kbcli addon uninstall elasticsearch
+   ```
+
+:::注意
+
+kbcli 支持启用/禁用插件。您可根据实际需求操作。
+此外，通过 kbcli 安装 KubeBlocks 时，部分插件默认安装但处于禁用状态（状态显示为 `Disabled`）。可通过 kbcli 启用它们。例如：
+:::
+
+  6. 禁用/启用插件
+
+   * 启用插件
+
+   ```bash
+   kbcli addon enable qdrant
+   ```
+
+   * 禁用插件
+
+   ```bash
+   kbcli addon disable qdrant
+   ```
+
+操作完成后，可通过插件列表确认状态是否按预期变更。
+
+</TabItem>
+
+</Tabs>

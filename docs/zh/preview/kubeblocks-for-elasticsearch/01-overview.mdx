@@ -1,0 +1,72 @@
+---
+description: 了解KubeBlocks Elasticsearch插件的功能特性，包括部署拓扑、生命周期管理、备份恢复以及支持的版本。
+keywords:
+- Elasticsearch
+- KubeBlocks
+- database
+- features
+- lifecycle management
+- backup
+- restore
+sidebar_label: 概述
+sidebar_position: 1
+title: KubeBlocks Elasticsearch 插件概述
+---
+# KubeBlocks Elasticsearch 插件概述
+
+## 概述
+
+Elasticsearch 是一个分布式、RESTful 风格的搜索引擎，专为生产级工作负载的速度和相关性优化。每个 Elasticsearch 集群由一个或多个节点组成，每个节点承担特定角色。
+
+### 节点角色
+
+| 角色 | 描述 |
+|------|-------------|
+| **master** | 管理集群状态并协调操作 |
+| **data** | 存储数据并处理数据相关操作 |
+| **data_content** | 存储文档数据 |
+| **data_hot** | 处理近期频繁访问的数据 |
+| **data_warm** | 存储访问频率较低的数据 |
+| **data_cold** | 处理极少访问的数据 |
+| **data_frozen** | 管理归档数据 |
+| **ingest** | 在索引前处理文档 |
+| **ml** | 运行机器学习任务 |
+| **remote_cluster_client** | 连接远程集群 |
+| **transform** | 处理数据转换 |
+
+[查看 Elasticsearch 节点角色文档](https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-node.html)
+
+## 核心特性
+
+### 生命周期管理
+
+KubeBlocks 通过全面的生命周期管理简化 Elasticsearch 操作：
+
+| 特性                      | 描述                                                                 |
+|------------------------------|-----------------------------------------------------------------------------|
+| **水平扩展**       | 增减副本来调整容量                                   |
+| **垂直扩展**         | 调整 Elasticsearch 实例的 CPU/内存资源                       |
+| **存储卷扩容**         | 动态增加存储容量而无需停机                     |
+| **重启操作**       | 以最小中断进行受控集群重启                        |
+| **启动/停止**               | 临时暂停/恢复集群操作                              |
+| **自定义服务**          | 暴露专门的数据库端点                                      |
+| **副本管理**       | 安全地停用或重建特定副本                          |
+| **版本升级**         | 无缝执行次版本升级                                  |
+| **高级调度**      | 自定义 Pod 放置和资源分配                           |
+| **监控**               | 集成的 Prometheus 指标收集                                  |
+| **日志**                  | 通过 Loki Stack 实现集中式日志                                           |
+
+### 支持版本
+
+KubeBlocks Elasticsearch 插件支持以下 Elasticsearch 版本：
+
+| 主版本 | 支持的次版本       |
+|---------------|--------------------------------|
+| 7.x | 7.7.1,7.8.1,7.10.1 |
+| 8.x | 8.1.3, 8.8.2 |
+
+
+可通过以下命令查看支持的版本列表：
+```
+kubectl get cmpv elasticsearch
+```

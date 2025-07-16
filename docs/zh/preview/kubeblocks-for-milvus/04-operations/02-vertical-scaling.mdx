@@ -1,0 +1,192 @@
+---
+description: 了解如何在由KubeBlocks管理的Milvus集群中执行垂直扩展，以优化资源利用率并提升性能。
+keywords:
+- KubeBlocks
+- Milvus
+- Vertical Scaling
+- Kubernetes
+- Resources
+sidebar_label: 垂直扩展
+sidebar_position: 2
+title: Milvus 集群中的垂直扩展
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# 使用KubeBlocks垂直扩缩Milvus单机集群
+
+本指南演示如何通过调整计算资源（CPU和内存）对KubeBlocks管理的Milvus集群进行垂直扩缩，同时保持副本数量不变。
+
+垂直扩缩会修改Milvus实例的计算资源（CPU和内存）同时保持副本数量。主要特点：
+
+- **无中断性**：正确配置时，可在扩缩期间保持可用性
+- **精细化**：可独立调整CPU、内存或两者
+- **可逆性**：支持按需扩容或缩容
+
+KubeBlocks通过遵循受控的、角色感知的更新策略确保扩缩操作影响最小化：
+**角色感知副本（主/从副本）**
+- 从副本优先更新 - 先升级非主节点Pod以最小化影响
+- 主节点最后更新 - 仅当所有从节点健康后才重启主Pod
+- 集群状态在所有副本稳定后从"更新中"转为"运行中"
+
+**无角色副本（基于序号的扩缩）**
+若副本未定义角色，更新遵循Kubernetes Pod序号顺序：
+- 最高序号优先（如pod-2 → pod-1 → pod-0）以确保确定性滚动更新
+
+## 前提条件
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## 部署Milvus集群
+
+请参考[使用KubeBlocks部署Milvus集群](../03-topologies/02-cluster)部署一个milvus集群。
+
+## 垂直扩缩
+
+**预期工作流程**：
+
+1. Pod按序号从高到低顺序更新（如pod-2 → pod-1 → pod-0）
+1. 集群状态从"更新中"转为"运行中"
+
+**检查组件**
+
+Milvus集群包含五个组件。获取组件列表：
+```bash
+kubectl get cluster -n demo milvus-cluster -oyaml | yq '.spec.componentSpecs[].name'
+```
+
+预期输出：
+```text
+proxy
+mixcoord
+datanode
+indexnode
+querynode
+```
+
+<Tabs>
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+  选项1：使用VerticalScaling OpsRequest
+
+  应用以下YAML为**querynode**组件扩容资源：
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: milvus-cluster-vscale-ops
+    namespace: demo
+  spec:
+    clusterName: milvus-cluster
+    type: VerticalScaling
+    verticalScaling:
+    - componentName: querynode
+      requests:
+        cpu: '1'
+        memory: 1Gi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+  ```
+
+  可通过以下命令查看扩缩进度：
+
+  ```bash
+  kubectl -n demo get ops milvus-cluster-vscale-ops -w
+  ```
+
+  预期结果：
+
+  ```bash
+  NAME                        TYPE              CLUSTER          STATUS    PROGRESS   AGE
+  milvus-cluster-vscale-ops   VerticalScaling   milvus-cluster   Running   0/2        33s
+  milvus-cluster-vscale-ops   VerticalScaling   milvus-cluster   Running   1/2        55s
+  milvus-cluster-vscale-ops   VerticalScaling   milvus-cluster   Running   2/2        88s
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  选项2：直接更新Cluster API
+
+  也可通过更新`spec.componentSpecs.resources`字段直接调整资源：
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: querynode
+        replicas: 1
+        resources:
+          requests:
+            cpu: "1"       # 按需更新资源
+            memory: "1Gi"  # 按需更新资源
+          limits:
+            cpu: "1"       # 按需更新资源
+            memory: "1Gi"  # 按需更新资源
+    ...
+    ```
+  </TabItem>
+</Tabs>
+
+
+:::note
+
+Milvus集群包含五个组件。本教程仅展示如何调整单个组件资源。
+其他组件可采用相同方式进行变更。
+
+:::
+
+## 最佳实践与注意事项
+
+**规划阶段：**
+- 在维护窗口或低流量时段执行扩缩
+- 确认Kubernetes集群有足够资源
+- 操作前检查是否有其他进行中的操作
+
+**执行阶段：**
+- 保持CPU与内存的平衡比例
+- 设置相同的requests/limits以保证QoS
+
+**扩缩后：**
+- 监控资源利用率和应用性能
+- 必要时调整Milvus参数配置
+
+## 验证
+通过检查集群配置或Pod详情验证更新后的资源：
+```bash
+kbcli cluster describe milvus-cluster -n demo
+```
+
+预期输出：
+```bash
+资源分配：
+组件        实例模板        CPU(请求/限制)     内存(请求/限制)      存储大小       存储类
+milvus                     1 / 1              1Gi / 1Gi          data:20Gi     <none>
+```
+
+## KubeBlocks垂直扩缩的核心优势
+- 无缝扩缩：按特定顺序重建Pod确保最小影响
+- 动态资源调整：根据工作负载需求灵活调整CPU和内存
+- 灵活性：可选择OpsRequest动态扩缩或直接API更新精确控制
+- 高可用性：扩缩过程中集群保持可操作状态
+
+## 清理
+删除所有创建的资源，包括Milvus集群及其命名空间：
+```bash
+kubectl delete cluster milvus-cluster -n demo
+kubectl delete ns demo
+```
+
+## 总结
+本指南中您学会了如何：
+1. 部署KubeBlocks管理的Milvus集群
+2. 通过增减资源对milvus组件进行垂直扩缩
+3. 使用OpsRequest和直接Cluster API两种方式调整资源分配
+
+垂直扩缩是优化资源利用率和适应工作负载变化的强大工具，可确保您的Milvus集群始终保持高性能和弹性。

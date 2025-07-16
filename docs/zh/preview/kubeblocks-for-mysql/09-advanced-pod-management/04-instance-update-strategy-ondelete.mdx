@@ -1,0 +1,226 @@
+---
+description: 了解如何配置OnDelete实例更新策略，以控制KubeBlocks中MySQL集群的更新。
+keywords:
+- KubeBlocks
+- MySQL
+- OnDelete
+- Kubernetes
+- Cluster Updates
+sidebar_label: 使用 OnDelete 控制 Pod 更新
+sidebar_position: 4
+title: 在KubeBlocks中将MySQL集群的实例更新策略设置为OnDelete
+---
+# 为 KubeBlocks 中的 MySQL 集群设置实例更新策略为 OnDelete
+
+`instanceUpdateStrategy.type` 字段支持两个值：'OnDelete' 和 'RollingUpdate'。
+- 'OnDelete'：需要 Pod 重启的更新会被阻止，直到 Pod 被手动删除。这提供了对更新的细粒度控制，因为有序的滚动重启被禁用。您决定何时以及如何重启 Pod，确保对工作负载的影响最小。
+- 'RollingUpdate'（默认值）：更新会自动应用，并进行有序的滚动重启。Operator 会以受控的方式重启 Pod，以确保可用性和无缝的更新过程。
+
+通过使用 OnDelete 策略，您可以定制更新行为以满足特定需求，例如在更新期间保持最大稳定性，或在维护窗口期间安排重启。
+
+## 前提条件
+
+在继续之前，请确保满足以下要求：
+- 环境设置：
+    - 已启动并运行一个 Kubernetes 集群。
+    - 已配置 kubectl CLI 工具以与集群通信。
+    - 已安装 [KubeBlocks CLI](../../user_docs/references/install-kbcli) 和 [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks)。请按照此处的安装说明进行操作。
+- 命名空间准备：为保持资源隔离，请为本教程创建一个专用命名空间：
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+
+
+
+## 部署 MySQL 半同步集群
+
+使用以下 YAML 配置部署一个 2 节点 MySQL 半同步复制集群（1 个主节点，1 个从节点）：
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      instanceUpdateStrategy:
+        type: OnDelete
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+
+
+
+
+## 验证部署
+
+监控集群状态直到其转为 Running 状态：
+
+```bash
+kubectl get cluster example-mysql-cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Creating   6s
+example-mysql-cluster   mysql                Delete               Running    3m47s
+```
+
+当集群状态变为 Running 时，您的 MySQL 集群即可投入使用。
+
+## 测试 Pod 中断性更新
+采用 OnDelete 更新策略时，需要重启 Pod 的集群更新会被阻塞，直到用户手动删除受影响的 Pod。
+
+### 步骤 1. 触发资源更新
+更新 MySQL 集群的资源请求和限制：
+
+```bash
+kubectl patch cluster example-mysql-cluster -n demo --type='json' -p='[
+  {
+    "op": "replace",
+    "path": "/spec/componentSpecs/0/resources/limits/cpu",
+    "value": "1.0"
+  },
+  {
+    "op": "replace",
+    "path": "/spec/componentSpecs/0/resources/limits/memory",
+    "value": "1.0Gi"
+  },
+  {
+    "op": "replace",
+    "path": "/spec/componentSpecs/0/resources/requests/cpu",
+    "value": "1.0"
+  },
+  {
+    "op": "replace",
+    "path": "/spec/componentSpecs/0/resources/requests/memory",
+    "value": "1.0Gi"
+  }
+]'
+```
+
+### 步骤 2. 观察更新阻塞
+应用补丁后检查集群状态：
+
+```bash
+kubectl get cluster example-mysql-cluster -n demo
+```
+
+示例输出：
+
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster   mysql                Delete               Updating   5m57s
+```
+
+集群状态显示为"更新中"，但 Pod 仍保持运行状态且未发生重启。这是因为当设置为 OnDelete 策略时，Operator 会阻止需要重启 Pod 的更新操作。
+
+验证 Pod 是否仍在运行：
+
+```bash
+kubectl get pods -n demo
+```
+
+示例输出：
+
+```
+NAME                            READY   STATUS    RESTARTS   AGE
+example-mysql-cluster-mysql-0   4/4     Running   0          6m18s
+example-mysql-cluster-mysql-1   4/4     Running   0          4m30s
+```
+
+
+
+
+## 通过受控 Pod 重启应用变更
+要应用变更，您需要手动删除受影响的 Pod。Kubernetes 会使用更新后的配置重新创建它们。
+
+### 按顺序重启 Pod
+通过维护窗口控制逐个删除 Pod，以最小化对可用性的影响：
+
+```bash
+kubectl delete pod example-mysql-cluster-mysql-0 -n demo --wait=true --grace-period=300
+kubectl delete pod example-mysql-cluster-mysql-1 -n demo --wait=true --grace-period=300
+```
+
+监控 Pod 重新创建的过程：
+
+```bash
+kubectl get pods -n demo  -w
+```
+
+示例输出：
+
+```
+NAME                            READY   STATUS    RESTARTS   AGE
+example-mysql-cluster-mysql-0   4/4     Running   0          2m21s
+example-mysql-cluster-mysql-1   4/4     Running   0          18s
+```
+
+当所有 Pod 都运行后，集群状态将更新为 'Running'：
+
+（严格保留原文格式与换行）
+
+```bash
+kubectl get cluster example-mysql-cluster -n demo -w
+```
+
+示例输出：
+
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Running   24m
+```
+
+
+
+
+## 清理
+要删除所有已创建的资源，请连同其命名空间一起删除 MySQL 集群：
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete ns demo
+```
+
+
+
+
+
+## 概述
+在本指南中，我们演示了如何：
+- 以 `OnDelete` 作为实例更新策略部署 MySQL 集群。
+- 触发资源更新并观察 Operator 如何阻止 Pod 重启。
+- 以可控方式手动重启 Pod 以应用更新。
+
+通过将 `instanceUpdateStrategy` 设置为 'OnDelete'，您可以获得对更新的细粒度控制，确保 MySQL 集群在配置变更期间保持稳定和高可用性。
+

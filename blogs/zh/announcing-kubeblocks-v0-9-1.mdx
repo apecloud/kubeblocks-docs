@@ -1,0 +1,96 @@
+---
+date: 2024-10-18
+description: 本博客介绍KubeBlocks v0.9.1版本的主要变更。
+image: /img/blogs/thumbnails/blog-release-0.9.1.png
+slug: announcing-kubeblocks-v0-9-1
+tags:
+- KubeBlocks v0.9.1
+- release notes
+title: KubeBlocks v0.9.1 正式发布
+---
+# KubeBlocks v0.9.1 版本发布公告
+
+我们很高兴地宣布 KubeBlocks v0.9.1 正式发布！
+
+在此版本中，KubeBlocks 进一步优化了其 API 和插件功能，为您带来新特性和更好的用户体验。本次发布包含通过 Cluster API 启停集群、OpsRequest 中的实例重建能力、Redis 的时间点恢复（PITR）和基于键的恢复等新功能。我们还修复了一些错误并进行了多项改进以增强整体功能。
+
+阅读完整[版本说明](https://kubeblocks.io/docs/preview/user_docs/upgrade/upgrade-with-kbcli/upgrade-kubeblocks-to-0.9.1)并升级至 KubeBlocks v0.9.1，探索更多功能！
+
+## 亮点功能
+
+### KubeBlocks
+
+- 支持通过 Cluster API 启停集群
+
+  该特性提供了新选项以满足不同场景下的多样化需求。
+
+- 增强 OpsRequest 中的实例重建能力
+
+  结合 KubeBlocks 的 [InstanceSet](https://kubeblocks.io/blog/instanceset-introduction)，该功能显著提升了系统在故障场景下的恢复能力。
+
+### 插件
+
+- Redis
+  
+  支持时间点恢复（PITR）和基于键的恢复。
+
+- ZooKeeper
+
+  支持备份功能。
+
+- 新版本支持
+
+  MySQL 和 PostgreSQL 插件支持更多版本。有关插件最新版本信息，请参阅[插件列表](https://github.com/apecloud/kubeblocks-addons?tab=readme-ov-file#supported-add-ons)。
+
+## 变更内容
+
+### 新特性
+
+#### KubeBlocks
+
+- OpsDefinition 和 BackupPolicyTemplate 支持组件名前缀和正则匹配 [#8174](https://github.com/apecloud/kubeblocks/pull/8174)
+
+  OpsDefinition 和 BackupPolicyTemplate 现在支持组件名前缀和正则表达式匹配，提供更大灵活性。
+
+- 高可用性（HA）记录 [#8089](https://github.com/apecloud/kubeblocks/pull/8089)
+
+  KubeBlocks 支持 HA 记录，增强容错能力和系统可靠性。
+
+- 支持通过 Cluster API 启停集群 [#7783](https://github.com/apecloud/kubeblocks/pull/7783)
+
+  KubeBlocks 支持通过 Cluster API 启停集群，简化集群管理。
+
+- 支持实例重建时的水平扩展 [#7710](https://github.com/apecloud/kubeblocks/pull/7710)
+
+  您可以通过 OpsRequest API 中的 inPlace 字段选择实例重建方式：原地重建或远程重建。
+
+- 自动清理失败的 OpsRequests [#7796](https://github.com/apecloud/kubeblocks/pull/7796)
+
+  KubeBlocks 新增自动清理失败 OpsRequests 的机制，优化资源管理。
+
+- 备份失败时的日志收集 [#8208](https://github.com/apecloud/kubeblocks/pull/8208)
+
+  KubeBlocks 支持在备份操作失败时收集日志。
+
+#### 插件
+
+- Redis 插件
+  - 单机副本的时间点恢复（PITR）[#7998](https://github.com/apecloud/kubeblocks/pull/7998)
+  - Redis 基于键的恢复 [#8129](https://github.com/apecloud/kubeblocks/pull/8129)
+- 支持 Loki [#707](https://github.com/apecloud/kubeblocks-addons/pull/707)
+- 支持 MinIO [#926](https://github.com/apecloud/kubeblocks-addons/pull/926)
+- 支持 RabbitMQ [#746](https://github.com/apecloud/kubeblocks-addons/pull/746)
+- 支持 MySQL 8.4 [#987](https://github.com/apecloud/kubeblocks-addons/pull/987)
+- 支持 PostgreSQL 16 [#973](https://github.com/apecloud/kubeblocks-addons/pull/973)
+- ZooKeeper 插件
+   - 支持备份功能 [#794](https://github.com/apecloud/kubeblocks-addons/pull/794), [#851](https://github.com/apecloud/kubeblocks-addons/pull/851)
+
+### 其他改进
+
+- ComponentDefinition 不可变性检查
+
+  KubeBlocks 为 ComponentDefinition 添加了默认的不可变性检查，避免意外修改，增强系统稳定性。
+
+- 移除 Application 插件 (#7866)
+
+  Application 插件已从代码库中移除，默认不再安装。如有需要，您仍可手动安装。

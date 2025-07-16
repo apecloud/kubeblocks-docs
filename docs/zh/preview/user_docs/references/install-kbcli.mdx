@@ -1,0 +1,285 @@
+---
+description: KubeBlocks集群管理工具kbcli的安装、验证与配置完整指南
+keywords:
+- kbcli
+- KubeBlocks CLI
+- installation
+- configuration
+- command-line
+sidebar_label: 安装 kbcli
+sidebar_position: 4
+title: 安装并配置 KubeBlocks CLI (kbcli)
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# KubeBlocks 命令行工具 (kbcli)
+
+kbcli 是管理 KubeBlocks 集群的官方命令行工具，提供以下功能：
+- 集群生命周期管理（创建、扩缩容、删除）
+- 配置和故障排查工具
+- 版本兼容性检查
+- Shell 自动补全支持
+
+## 先决条件
+
+安装 kbcli 前，请确保系统满足以下要求：
+
+- **所有平台**：
+  - 可访问网络以下载安装包
+  - 管理员/sudo 权限
+- **Windows**：
+  - PowerShell 5.0 或更高版本
+- **macOS/Linux**：
+  - 已安装 curl 或 wget
+  - macOS 需安装 Homebrew（用于 brew 安装方式）
+
+## 安装 kbcli
+
+**支持平台**
+
+kbcli 支持以下平台：
+- **macOS**（Intel 和 Apple Silicon 芯片）
+- **Windows**（x86-64 架构）
+- **Linux**（x86-64 和 ARM64 架构）
+
+<Tabs>
+<TabItem value="macOS" label="macOS" default>
+
+选择您偏好的安装方式：
+
+- **curl**（推荐大多数用户使用）
+- **Homebrew**（macOS 包管理器）
+
+**选项 1：使用 curl 安装**
+
+安装最新稳定版：
+
+```bash
+curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash
+```
+
+安装特定版本：
+
+1. 查看 [kbcli 发布页](https://github.com/apecloud/kbcli/releases/) 获取可用版本
+2. 使用 `-s` 参数指定版本后运行以下命令
+
+   ```bash
+   curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash -s <VERSION>
+   ```
+
+:::note
+**版本兼容性说明**
+
+- kbcli 版本需与 KubeBlocks 部署版本匹配
+- 新安装建议使用最新稳定版
+- 现有部署需严格版本匹配：
+  - KubeBlocks v1.0.0 → kbcli v1.0.x
+  - KubeBlocks v0.9.x → kbcli v0.9.x
+- 版本不匹配可能导致操作异常
+:::
+
+2. 运行 `kbcli version` 检查版本号，确认安装成功
+
+:::tip
+**故障排查**
+若安装失败：
+1. 检查网络连接
+2. 验证防火墙/代理设置
+:::
+
+**选项 2：使用 Homebrew 安装**
+
+1. 添加 ApeCloud 的 Homebrew 仓库
+
+   ```bash
+   brew tap apecloud/tap
+   ```
+
+2. 安装 kbcli
+
+   ```bash
+   brew install kbcli
+   ```
+
+   如需安装指定版本：
+
+   ```bash
+   # 查看可用版本
+   brew search kbcli
+
+   # 指定版本安装
+   brew install kbcli@<VERSION>
+   ```
+
+3. 验证安装是否成功
+
+   ```bash
+   kbcli -h
+   ```
+
+</TabItem>
+
+<TabItem value="Windows" label="Windows">
+
+选择安装方式：
+
+**选项 1：脚本安装（推荐）**
+
+:::note
+
+默认安装路径为 C:\Program Files\kbcli-windows-amd64 且不可修改
+
+如需自定义路径，请使用 zip 安装包
+
+:::
+
+1. 以**管理员身份**运行 PowerShell 并执行 `Set-ExecutionPolicy Unrestricted`
+2. 安装 kbcli
+
+   以下脚本会自动在 C:\Program Files\kbcli-windows-amd64 添加环境变量
+
+    ```bash
+    powershell -Command " & ([scriptblock]::Create((iwr https://www.kubeblocks.io/installer/install_cli.ps1)))"
+    ```
+
+    安装指定版本时，在命令后添加 `-v` 参数：
+
+    ```bash
+    powershell -Command " & ([scriptblock]::Create((iwr https://www.kubeblocks.io/installer/install_cli.ps1))) -v 0.5.2"
+    ```
+
+**选项 2：手动安装**
+
+1. 从 [kbcli 发布页](https://github.com/apecloud/kbcli/releases/) 下载 zip 安装包
+2. 解压后添加至环境变量：
+    1. 点击 Windows 图标选择**系统设置**
+    2. 进入**设置** -> **相关设置** -> **高级系统设置**
+    3. 在**高级**选项卡点击**环境变量**
+    4. 在用户变量和系统变量中**新建**添加 kbcli 安装路径
+    5. 点击**应用**并**确定**
+
+</TabItem>
+
+<TabItem value="Linux" label="Linux">
+
+使用 `curl` 安装：
+
+1. 安装 kbcli
+
+   ```bash
+   curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash
+   ```
+
+   安装特定版本：
+
+   1. 查看 [kbcli 发布页](https://github.com/apecloud/kbcli/releases/) 获取可用版本
+   2. 使用 `-s` 参数指定版本：
+
+      ```bash
+      curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash -s <VERSION>
+      ```
+
+2. 运行 `kbcli version` 检查版本号，确认安装成功
+
+:::note
+
+- 如安装过程出现超时异常，请检查网络设置后重试
+
+:::
+
+</TabItem>
+</Tabs>
+
+## 卸载
+
+完全移除 kbcli 及其配置：
+
+<Tabs>
+
+<TabItem value="macOS" label="macOS" default>
+
+`curl` 安装方式执行：
+
+```bash
+sudo rm /usr/local/bin/kbcli
+```
+
+`brew` 安装方式执行：
+
+```bash
+brew uninstall kbcli
+```
+
+kbcli 会在 HOME 目录下创建隐藏文件夹 `~/.kbcli` 存储配置信息和临时文件，卸载后可删除此文件夹
+
+</TabItem>
+
+<TabItem value="Windows" label="Windows">
+
+1. 前往 `kbcli` 安装路径删除文件夹：
+   * 脚本安装方式：删除 `C:\Program Files\kbcli-windows-amd64`
+   * 自定义路径：删除对应安装文件夹
+
+2. 删除环境变量：
+   1. 点击 Windows 图标进入**系统**
+   2. 进入**设置** -> **相关设置** -> **高级系统设置**
+   3. 在**高级**选项卡点击**环境变量**
+   4. 在**用户变量**或**系统变量**列表中双击 **Path**：
+      * 脚本安装方式：双击**用户变量**中的 Path
+      * 自定义路径：根据之前创建位置选择对应 Path
+   5. 选择 `C:\Program Files\kbcli-windows-amd64` 或自定义路径删除（需二次确认）
+
+3. 删除 `.kbcli` 文件夹：
+   kbcli 会在 C:\Users\用户名 目录下创建 `.kbcli` 文件夹存储配置信息，卸载后可删除
+
+</TabItem>
+
+<TabItem value="Linux" label="Linux">
+
+使用 `curl` 安装方式的卸载命令：
+
+```bash
+sudo rm /usr/local/bin/kbcli
+```
+
+kbcli 会在 HOME 目录下创建隐藏文件夹 `~/.kbcli` 存储配置信息，卸载后可删除此文件夹
+
+</TabItem>
+
+</Tabs>
+
+## Shell 自动补全
+
+kbcli 支持以下 shell 的自动补全：
+- bash
+- zsh
+- fish
+- PowerShell
+
+```bash
+# 将 SHELL-TYPE 替换为 bash/fish/PowerShell/zsh 之一
+kbcli completion SHELL-TYPE -h
+```
+
+例如为 zsh 启用自动补全：
+
+***操作步骤：***
+
+1. 查看使用指南
+
+    ```bash
+    kbcli completion zsh -h
+    ```
+
+2. 先启用终端的补全功能
+
+    ```bash
+    echo "autoload -U compinit; compinit" >> ~/.zshrc
+    ```
+
+3. 启用 `kbcli` 自动补全功能
+
+    ```bash
+    echo "source <(kbcli completion zsh); compdef _kbcli kbcli" >> ~/.zshrc
+    ```
