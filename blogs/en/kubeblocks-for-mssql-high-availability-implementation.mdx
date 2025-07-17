@@ -1,0 +1,332 @@
+---
+slug: kubeblocks-for-mssql-high-availability-implementation
+title: KubeBlocks for MSSQL High Availability Implementation
+description: Deep dive into how KubeBlocks implements high availability for MSSQL using the lightweight Syncer framework, comparing it with traditional Pacemaker solutions and demonstrating fault tolerance capabilities.
+authors:
+  name: xuanchi
+  url: https://github.com/xuriwuyun
+  image_url: https://avatars.githubusercontent.com/u/5369071?v=4
+date: 2025-07-16
+tags: [MSSQL, high availability, Syncer, Pacemaker, fault tolerance, KubeBlocks, cloud native]
+image: /img/blogs/thumbnails/blog-mssql-ha.png
+---
+
+# KubeBlocks for MSSQL High Availability Implementation
+
+This blog is part of our ongoing series about running Microsoft SQL Server. Check out these related articles if you are looking for a way to run containerized MSSQL on Kubernetes. More blogs about MSSQL on Kubernetes will be published soon.
+
+1. [KubeBlocks for MSSQL Always On AG Revealed](./kubeblocks-for-mssql-always-on-ag-revealed)
+2. [KubeBlocks for MSSQL High Availability Implementation](./kubeblocks-for-mssql-high-availability-implementation)
+
+
+# Background
+
+Microsoft SQL Server (MSSQL) is a relational database management system developed by Microsoft. Initially supporting only Windows platforms, MSSQL began supporting Linux systems starting with the 2017 version, which made containerized deployment of MSSQL possible.
+
+MSSQL provides a multi-database replication management feature called Availability Group (AG), which supports implementing multi-replica redundancy across multiple nodes, thereby improving data reliability and service continuity. On Windows platforms, MSSQL achieves complete high-availability capabilities through integration with Windows Server Failover Cluster (WSFC).
+
+On Linux platforms, MSSQL provides an alternative solution based on Pacemaker + Corosync to build high-availability architecture. However, in cloud-native and containerized scenarios, Microsoft has not yet provided corresponding high-availability solutions, and currently recommends using the third-party commercial solution DH2I for implementation.
+
+When KubeBlocks integrates MSSQL, it faces the choice of how to build high-availability capabilities on its platform. There are mainly two implementation paths:
+
+The first solution is to build a "rich container" architecture based on Pacemaker, packaging components like Pacemaker, Corosync, and MSSQL into the same container. The advantage is that it can reuse existing open-source components without additional development work; however, the disadvantages include higher operational complexity, more cumbersome configuration of Pacemaker and Corosync, and in containerized environments where Pod stability cannot be completely guaranteed, it may lead to high management costs for the overall high-availability system and difficulty ensuring stability.
+
+The second solution is to independently develop a lightweight, cloud-native-oriented distributed high-availability framework to simulate the core functions of WSFC. Although this solution has relatively higher upfront development costs and technical difficulty, it offers higher autonomy and controllability, can avoid dependence on Pacemaker, and provides a more concise and consistent user experience.
+
+Considering that KubeBlocks has already built a unified high-availability management framework—Syncer, new engines only need to implement several key interfaces to quickly complete high-availability capability integration, and the overall development and maintenance costs are within controllable ranges. At the same time, this approach can also provide MSSQL with a high-availability experience consistent with other databases (such as MySQL, MongoDB, etc.).
+
+Therefore, KubeBlocks ultimately chose to implement MSSQL's high-availability capabilities based on the Syncer framework.
+
+# High Availability Overview
+
+Syncer is a lightweight distributed high-availability service independently developed to address database high-availability challenges in cloud-native environments. Its core goal is clear: to make databases in cloud-native environments scheduled and managed uniformly like other stateful services, without requiring developers or operators to deeply understand their internal complex state transitions and data synchronization mechanisms. It not only improves system observability and maintainability but also significantly lowers the threshold for database high-availability feature development.
+
+As a universal component oriented towards multiple database engines, Syncer abstracts a set of standardized high-availability interfaces, including:
+
+* `Promote`: Promote a replica to primary node
+* `Demote`: Demote a primary node to replica
+* `HealthCheck`: Health check
+* ...
+
+These interfaces enable different types of databases to quickly integrate with Syncer and obtain consistent high-availability support by implementing only a small amount of adaptation logic.
+
+This is also an important reason why we chose the self-developed approach in KubeBlocks for MSSQL. With the basic framework provided by Syncer, we can more flexibly adapt to MSSQL's characteristics, avoid dependence on complex external HA components (such as Pacemaker), and thus build a more lightweight, controllable, and stable cloud-native high-availability solution.
+
+The diagram below shows the high-availability structure of MSSQL with three nodes. KubeBlocks for MSSQL supports up to 5 synchronous nodes, with a maximum of no more than 9 nodes, consistent with the official specifications.
+
+![High-availability structure of MSSQL with three nodes](/img/blogs/mssql-ha/1-ha-structure.png)
+
+Syncer adopts a distributed architecture design, running as a hypervisor on each database Pod, responsible for local node and cluster-wide health detection. High-availability services between different clusters are independent of each other, each managing replica roles through internal election mechanisms.
+
+On Kubernetes, Syncer uses the API server as a distributed lock mechanism, combined with node heartbeat information and status, to manage node roles. When the primary node becomes abnormal, Syncer triggers failover, selecting the node with the best status from existing healthy nodes to promote to the new primary. When the old primary node recovers, it automatically demotes to a secondary node.
+
+## More Accurate and Faster Local Detection
+
+Syncer uses local detection methods, which can discover anomalies more accurately and quickly, unaffected by container network fluctuations. At the same time, it can also make more reliable judgments by combining system information:
+
+* When database connections are abnormal, Syncer can obtain current CPU and memory usage in real-time to determine if it's caused by excessive load;
+* If database writes are abnormal, Syncer can also check if the disk is full or if the file system has become read-only.
+
+This comprehensive detection mechanism combining database status with system resources significantly improves the accuracy of fault identification.
+
+## Self-Healing Capability, Reducing Operational Complexity
+
+Syncer also has certain self-healing capabilities. When a node experiences anomalies such as data corruption, after completing Failover, Syncer can automatically rebuild the replica of that node, ensuring the cluster returns to a healthy state. The entire process requires no manual intervention.
+
+## Secure and Controllable Process Management
+
+In addition to high availability capabilities, Syncer also provides process hosting and some basic operational support, facilitating fine-grained management in cloud-native environments.
+
+For example, databases typically need to wait for transactions to end and complete flush operations when shutting down. In Kubernetes, Pods can only set termination wait time, and processes will be forcibly closed after timeout, potentially causing data inconsistency issues.
+
+When Syncer performs shutdown operations, it waits for the database to exit normally before reporting stop status, thus avoiding risks from directly killing processes and ensuring database safety and consistency.
+
+# Fault Simulation
+
+After integrating with Syncer, MSSQL on the KubeBlocks platform gained high-availability capabilities close to those of MySQL, PostgreSQL, MongoDB, and other databases, achieving a consistent high-availability experience within a unified framework.
+
+To verify whether MSSQL's high-availability mechanism meets expectations, we conducted comprehensive fault simulation testing. To make the test environment closer to real business scenarios, we imported 90GB of test data before testing and maintained a service performing continuous writes throughout the testing process to simulate actual load.
+
+Due to space limitations, this article only lists several typical fault scenarios for illustration. The complete fault testing report can be obtained from the [KubeBlocks official website](https://kubeblocks.io/).
+
+## Active Switching
+
+In daily operations, such as during node upgrades or maintenance, it's usually necessary to actively initiate instance role switching (Switchover) to operate nodes in a rolling manner, thereby minimizing database unavailability time. Switchover can transform unexpected faults into controllable operational events, and is a key operation for ensuring high-availability and system maintainability.
+
+Switchover supports operation through the console interface, and can also be performed by issuing an `OpsRequest`. Under normal circumstances, role switching takes about 10 seconds. Before the new primary node resumes normal access, it needs to complete restoration of all databases in the Availability Group, so the actual data access time will be affected by data volume and current business load.
+
+![Switchover](/img/blogs/mssql-ha/2-switchover.gif)
+
+## Memory OOM
+
+Simulate primary node memory OOM through Chaos Mesh. The database becomes inaccessible, primary-secondary switching occurs, and primary node switching succeeds in about 15 seconds.
+
+* Initially, node 0 is the primary node
+
+![Initial state](/img/blogs/mssql-ha/3-initial-state.png)
+
+* Chaos Mesh simulates OOM fault
+
+```YAML
+kubectl create -f -<<EOF
+kind: StressChaos
+apiVersion: chaos-mesh.org/v1alpha1
+metadata:
+  generateName: test-primary-memory-oom-
+  namespace: default
+spec:
+  selector:
+    namespaces:
+      - kubeblocks-cloud-ns
+    labelSelectors:
+      app.kubernetes.io/instance: s4c16-6f6d9445b4
+      kubeblocks.io/role: primary
+  mode: all
+  containerNames:
+    - mssql
+  stressors:
+    memory:
+      workers: 1
+      size: "100GB"
+      oomScoreAdj: -1000
+  duration: 30s
+EOF
+```
+
+* Pod status shows OOMKilled
+
+```Bash
+kubectl get pod -w -n kubeblocks-cloud-ns s4c16-6f6d9445b4-mssql-0
+NAME                       READY   STATUS    RESTARTS   AGE
+s4c16-6f6d9445b4-mssql-0   3/4     OOMKilled   1 (56s ago)   151m
+s4c16-6f6d9445b4-mssql-0   2/4     OOMKilled   1 (65s ago)   151m
+s4c16-6f6d9445b4-mssql-0   2/4     CrashLoopBackOff   1 (11s ago)   151m
+s4c16-6f6d9445b4-mssql-0   3/4     Running            2 (11s ago)   151m
+s4c16-6f6d9445b4-mssql-0   4/4     Running            2 (17s ago)   151m
+```
+
+* After the fault occurs, node 2 switches to new primary at 15s
+
+![Failover](/img/blogs/mssql-ha/4-failover-oom.png)
+
+## Pod Failure
+
+Simulate primary node Pod Failure through Chaos Mesh, causing database inaccessibility and triggering Failover. Primary node switching succeeds in about 1 second.
+
+* Initial state: node 0 is the primary node
+* Chaos Mesh simulates Pod Failover
+
+```
+kubectl create -f -<<EOF
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  generateName: test-primary-pod-failure-
+  namespace: default
+spec:
+  selector:
+    namespaces:
+      - kubeblocks-cloud-ns
+    labelSelectors:
+      app.kubernetes.io/instance: s4c16-6f6d9445b4
+      kubeblocks.io/role: primary
+  mode: all
+  action: pod-failure
+  duration: 2m
+EOF
+```
+
+* After 1s, node 1 is selected as new primary, node 0 is in abnormal state
+
+![Failover](/img/blogs/mssql-ha/5-failover-pod-failure.png)
+
+## Network Delay
+
+Simulate primary node network delay for two minutes, primary node service becomes inaccessible triggering primary-secondary switching, switching occurs after 15s.
+
+* Chaos Mesh simulates Pod network fault
+
+```YAML
+kubectl create -f -<<EOF
+kind: NetworkChaos
+apiVersion: chaos-mesh.org/v1alpha1
+metadata:
+  generateName: test-primary-network-delay-
+  namespace: default
+spec:
+  selector:
+    namespaces:
+      - kubeblocks-cloud-ns
+    labelSelectors:
+      app.kubernetes.io/instance: s4c16-6f6d9445b4
+      kubeblocks.io/role: primary
+  mode: all
+  action: delay
+  delay:
+    latency: 10000ms
+    correlation: '100'
+    jitter: 0ms
+  direction: to
+  duration: 5m
+EOF
+```
+
+* Pod memory service access abnormal
+
+```YAML
+kubectl describe pod -n kubeblocks-cloud-ns s4c16-6f6d9445b4-mssql-0
+Events:
+  Type     Reason          Age                  From               Message
+  ----     ------          ----                 ----               -------
+  Normal   checkRole       5m43s                lorry              {"event":"Success","operation":"checkRole","originalRole":"waitForStart","role":"{\"term\":\"1749106874646075\",\"PodRoleNamePairs\":[{\"podName\":\"s4c16-6f6d9445b4-mssql-0\",\"roleName\":\"primary\",\"podUid\":\"c3a4f05f-cc25-48ca-9f16-30d4621b7393\"},{\"podName\":\"s4c16-6f6d9445b4-mssql-1\",\"podUid\":\"b2014bb1-848e-4ebc-900b-e5849b9b0104\"}]}"}
+  Warning  Unhealthy       67s                  kubelet            Readiness probe failed: Get "http://10.30.237.94:3501/v1.0/checkrole": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+```
+
+* Node 0 is selected as new primary, old primary role returns to normal after network fault recovery
+
+![Failover](/img/blogs/mssql-ha/6-failover-network-delay.png)
+
+## Process Exception
+
+Kill primary node process 1, simulate process exception triggering Failover, primary node switching succeeds at 1s.
+
+* Kill process 1
+
+```Bash
+echo "kill 1" | kubectl exec -it $(kubectl get pod -n kubeblocks-cloud-ns -l app.kubernetes.io/instance=s4c16-68bdc5d55d,kubeblocks.io/role=primary --no-headers| awk '{print $1}') -n kubeblocks-cloud-ns -- bash
+```
+
+* Pod events show CrashLoopBackOff
+
+```Bash
+kubectl get pod -n kubeblocks-cloud-ns -w s4c16-68bdc5d55d-mssql-0
+s4c16-68bdc5d55d-mssql-0   0/4     Error              16               15h
+s4c16-68bdc5d55d-mssql-0   0/4     CrashLoopBackOff   16 (4s ago)      15h
+s4c16-68bdc5d55d-mssql-0   3/4     Running            20 (27s ago)     15h
+s4c16-68bdc5d55d-mssql-0   3/4     Running            20 (31s ago)     15h
+s4c16-68bdc5d55d-mssql-0   4/4     Running            20 (33s ago)     15h
+```
+
+* After old primary exception, node 1 is selected as new primary at 1s
+
+![Failover](/img/blogs/mssql-ha/7-failover-process-exception.png)
+
+# Syncer vs Pacemaker
+
+Pacemaker is the recommended high-availability solution for MSSQL on Linux. It is an open-source and mature cluster resource manager widely used for managing various resources in high-availability clusters.
+
+Syncer, as the default high-availability solution provided by KubeBlocks, references Pacemaker in design but is mainly oriented towards cloud-native scenarios. To achieve higher levels of high-availability, Syncer adopts Plugin mode in integration, rather than the Agent mode used by Pacemaker. At the same time, Syncer has built-in cluster node management logic, making it more lightweight and efficient in health detection and role switching.
+
+Next, we will specifically compare the capability differences between Pacemaker and Syncer.
+
+## Two-Node Split-Brain
+
+In scenarios with only two nodes deployed, Pacemaker has the risk of split-brain. Pacemaker uses a quorum mechanism to ensure clusters can still make consistent decisions when node failures occur: when nodes cannot communicate with each other, the arbitration mechanism is used to determine which nodes can continue providing services to ensure data consistency and availability.
+
+In two-node configurations, `two_node` mode is usually enabled to maintain high-availability. However, this mode still has the possibility of split-brain and cannot completely avoid this problem.
+
+In contrast, Syncer uses a "heartbeat + global lock" approach to effectively solve the split-brain risk in two-node scenarios. When two nodes cannot communicate, two situations may occur:
+
+1. One node successfully obtains the global lock, then that node remains as the primary node, and the other node automatically demotes to secondary;
+2. Both nodes cannot obtain the global lock, then the cluster maintains its original state without triggering re-election.
+
+This mechanism is not only applicable to two-node scenarios but can also extend to multi-node environments, with good universality and stability.
+
+## RPO and RTO
+
+When the MSSQL primary node becomes abnormal, the high-availability service will trigger failover, selecting the optimal node from healthy secondary nodes to promote to new primary, continuing to provide services externally.
+
+The process of promoting a secondary node to primary node can be divided into two phases:
+
+1. **Phase 1**: Change replica role to primary role. This phase only involves role state switching, and the time consumed mainly depends on the response speed of the high-availability service.
+2. **Phase 2**: Execute `restore` operations on all databases in the AG to bring them into read-write state. The time for this phase is closely related to data volume size and current load conditions, and is not affected by the high-availability service itself.
+
+Since this article focuses on comparing the switching capabilities of different high-availability solutions, the test used 10,000 records (a small amount) to reduce the impact of phase 2 on overall results. For high load scenarios and more comprehensive test results, please refer to the complete test report published on the [KubeBlocks official website](https://kubeblocks.io/).
+
+|**Category** |**Test Content** |pacemaker |syncer |
+|---|---|---|---|
+|Connection Pressure |Connection Full |No switching |No switching |
+|CPU Pressure |Primary node CPU Full |No switching |No switching |
+| |Secondary node CPU Full |No switching |No switching |
+| |Primary and secondary nodes CPU Full |No switching |No switching |
+|Memory Pressure |Primary node memory OOM |<span style={{color: '#FF6666', fontWeight: 'bold'}}>RPO=0, RTO=25s</span> |<span style={{color: '#FF6666', fontWeight: 'bold'}}>RPO=0, RTO=15s</span> |
+| |Single secondary node memory OOM |No switching |No switching |
+| |Multiple secondary nodes memory OOM |No switching |No switching |
+| |Primary and secondary nodes memory OOM |Primary recovers first, no switching |Primary recovers first, no switching |
+| | |<span style={{color: '#FF6666', fontWeight: 'bold'}}>Secondary recovers first</span><span style={{color: '#FF6666', fontWeight: 'bold'}}>RPO=0, RTO=56s</span> |<span style={{color: '#FF6666', fontWeight: 'bold'}}>Secondary recovers first</span><span style={{color: '#FF6666', fontWeight: 'bold'}}>RPO=0, RTO=33s</span> |
+|Pod Failure |Primary node Pod Failure |<span style={{color: '#FF6666', fontWeight: 'bold'}}>RPO=0, RTO=24s</span> |<span style={{color: '#FF6666', fontWeight: 'bold'}}>RPO=0, RTO=1s</span> |
+| |Single secondary node Pod Failure |No switching |No switching |
+| |Multiple secondary nodes Pod Failure |No switching |No switching |
+| |Primary and secondary nodes Pod Failure |Primary recovers first, no switching |Primary recovers first, no switching |
+| | |<span style={{color: '#FF6666', fontWeight: 'bold'}}>Secondary recovers first</span><span style={{color: '#FF6666', fontWeight: 'bold'}}>RPO=0, RTO=54s</span> |Secondary recovers first<span style={{color: '#FF6666', fontWeight: 'bold'}}>RPO=0, RTO=33s</span> |
+|NTP Exception |Primary node clock offset |No switching |No switching |
+| |Secondary node clock offset |No switching |No switching |
+| |Primary and secondary nodes clock offset |No switching |No switching |
+|Network Failure |Primary node network delay |Short-term delay, no switching |Short-term delay, no switching |
+| | |<span style={{color: '#FF6666', fontWeight: 'bold'}}>Long-term delay</span><span style={{color: '#FF6666', fontWeight: 'bold'}}>RPO=0, RTO=37s</span> |<span style={{color: '#FF6666', fontWeight: 'bold'}}>Long-term delay</span><span style={{color: '#FF6666', fontWeight: 'bold'}}>RPO=0, RTO=15s</span> |
+| |Single secondary node network delay |No switching |No switching |
+| |Multiple secondary nodes network delay |No switching |No switching |
+| |Primary and secondary nodes network delay |Primary recovers first, no switching |Primary recovers first, no switching |
+| | |<span style={{color: '#FF6666', fontWeight: 'bold'}}>Secondary recovers first, primary-secondary switching</span><span style={{color: '#FF6666', fontWeight: 'bold'}}>RPO=0, RTO=28s</span> |<span style={{color: '#FF6666', fontWeight: 'bold'}}>Secondary recovers first, primary-secondary switching</span><span style={{color: '#FF6666', fontWeight: 'bold'}}>RPO=0, RTO=28s</span> |
+| |Primary node network packet loss |<span style={{color: '#FF6666', fontWeight: 'bold'}}>RPO=0, RTO=43s</span> |<span style={{color: '#FF6666', fontWeight: 'bold'}}>RPO=0, RTO=15s</span> |
+| |Single secondary node network packet loss |No switching |No switching |
+| |Multiple secondary nodes network packet loss |No switching |No switching |
+| |Primary and secondary nodes network packet loss |Primary recovers first, no switching |Primary recovers first, no switching |
+| | |<span style={{color: '#FF6666', fontWeight: 'bold'}}>Secondary recovers first</span><span style={{color: '#FF6666', fontWeight: 'bold'}}>RPO=0, RTO=82s</span> |<span style={{color: '#FF6666', fontWeight: 'bold'}}>Secondary recovers first</span><span style={{color: '#FF6666', fontWeight: 'bold'}}>RPO=0, RTO=65s</span> |
+|Kill Process |Primary node process kill |<span style={{color: '#FF6666', fontWeight: 'bold'}}>RPO=0, RTO=40s</span> |<span style={{color: '#FF6666', fontWeight: 'bold'}}>RPO=0, RTO=1s</span> |
+| |Single secondary node process kill |No switching |No switching |
+| |Multiple secondary nodes process kill |No switching |No switching |
+| |Primary and secondary nodes process kill |Primary recovers first, no switching |Primary recovers first, no switching |
+| | |<span style={{color: '#FF6666', fontWeight: 'bold'}}>Secondary recovers first</span><span style={{color: '#FF6666', fontWeight: 'bold'}}>RPO=0, RTO=74s</span> |<span style={{color: '#FF6666', fontWeight: 'bold'}}>Secondary recovers first</span><span style={{color: '#FF6666', fontWeight: 'bold'}}>RPO=0, RTO=28s</span> |
+
+# Summary and Outlook
+
+In cloud-native environments, MSSQL faces many challenges. Since it was originally designed for traditional physical or virtual machine environments, its architecture is not fully adapted to the resource scheduling and operational modes in cloud-native scenarios. Especially in high-availability architecture, limited by differences in resource scheduling methods and difficulty in completely guaranteeing Pod stability, MSSQL's existing high-availability mechanisms are difficult to achieve ideal results.
+
+KubeBlocks for MSSQL was born in this context. It effectively compensates for MSSQL's capability shortcomings in cloud-native scenarios and significantly improves its deployment efficiency and operational management experience. Through integration with Syncer, a lightweight distributed high-availability service, KubeBlocks successfully achieved cloud-native high-availability support for MSSQL, with stable and efficient performance in fault detection, role switching, self-healing, and other aspects.
+
+Of course, since MSSQL is a closed-source system with relatively limited official technical documentation, deep integration of its high-availability mechanisms faces significant challenges. Currently, we mainly rely on user manuals and database operational experience for derivation, combined with extensive experimental verification to ensure final implementation meets expectations. At the same time, MSSQL's functional modules are relatively closed, with fewer configuration items and status information exposed externally (such as SEED MODE configuration parameters and exception feedback), making system integration and operational management still appear "coarse-grained."
+
+We expect that MSSQL will open more internal configuration options and runtime status metrics in the future to support more fine-grained control and automated management, thereby better adapting to the complex needs of cloud-native platforms.
+
+Finally, [KubeBlocks Cloud official website](https://console.apecloud.cn/) has opened free trial for MSSQL, and also supports multiple mainstream database engines such as MySQL, PostgreSQL, Redis, etc. Welcome to experience and provide valuable suggestions!

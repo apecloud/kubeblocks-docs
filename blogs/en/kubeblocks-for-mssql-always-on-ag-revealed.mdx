@@ -1,0 +1,297 @@
+---
+slug: kubeblocks-for-mssql-always-on-ag-revealed
+title: KubeBlocks for MSSQL Always On AG Revealed
+description: Learn how KubeBlocks enables MSSQL Always On Availability Group containerization through its Addon architecture, addressing the challenges of running enterprise-grade MSSQL clusters in Kubernetes.
+authors:
+  name: dongming
+  url: https://github.com/ldming
+  image_url: https://avatars.githubusercontent.com/u/726412?v=4
+date: 2025-07-15
+tags: [MSSQL, Always On AG, KubeBlocks, containerization, Kubernetes, high availability, database]
+image: /img/blogs/thumbnails/blog-mssql-ag.png
+---
+
+# KubeBlocks for MSSQL Always On AG Revealed
+
+This blog is part of our ongoing series about running Microsoft SQL Server. Check out these related articles if you are looking for a way to run containerized MSSQL on Kubernetes. More blogs about MSSQL on Kubernetes will be published soon.
+
+1. [KubeBlocks for MSSQL Always On AG Revealed](./kubeblocks-for-mssql-always-on-ag-revealed)
+2. [KubeBlocks for MSSQL High Availability Implementation](./kubeblocks-for-mssql-high-availability-implementation)
+
+## Background
+
+### MSSQL and Always On AG
+
+Microsoft SQL Server (MSSQL) is an enterprise-level relational database management system developed by Microsoft. It has a history of over 30 years since its first version, SQL Server 1.0, was released in 1989. According to the [DB-Engines Ranking Trend](https://db-engines.com/en/ranking_trend), MSSQL has consistently ranked among the top three globally for the past decade, second only to Oracle and MySQL, making it one of the industry's recognized mainstream database products.
+
+![MSSQL consistently ranks among top 3 databases globally](/img/blogs/mssql-addon/1-mssql-db-ranking.png)
+
+
+In enterprise production environments, database high availability is a crucial guarantee for business continuity. MSSQL's Always On Availability Group (AG) technology provides enterprises with a mature high-availability solution through multi-replica synchronous replication and automatic failover, effectively preventing data loss and minimizing service downtime. Therefore, Always On AG has become a standard configuration for enterprise-level MSSQL deployments and an indispensable data protection technology for critical business systems.
+
+### Containerization Challenges
+
+With the rapid development of containerization technology, more and more enterprises are migrating their critical business systems to container environments. MSSQL officially began supporting the Linux platform with its 2017 version, laying the foundation for its containerized deployment. However, migrating the mature Always On AG high-availability architecture to a Kubernetes (K8s) environment has become a significant technical challenge for enterprises.
+
+#### Limitations of Official Containerization Solutions
+
+Although Microsoft provides deployment guidance for [running MSSQL in containers](https://learn.microsoft.com/en-us/sql/linux/sql-server-linux-docker-container-deployment) and [in Kubernetes](https://learn.microsoft.com/en-us/sql/linux/sql-server-linux-kubernetes-best-practices-statefulsets), its StatefulSet-based deployment solution is inadequate for enterprise scenarios with high requirements for availability and business continuity:
+
+* **Single-Replica Architecture Limitation**: It only supports single-instance deployment, failing to achieve true database-level high availability.
+* **Poor Availability**: Availability mainly relies on persistent storage and Pod reconstruction mechanisms. Fault recovery time typically takes several minutes, resulting in a long RTO that is difficult to meet the needs of critical businesses.
+* **High Operational Complexity**: It lacks a unified management interface and automated operations capabilities. Daily tasks like backup, monitoring, and performance tuning require extensive manual operations.
+
+#### Containerization Challenges of Always On AG
+
+Although Always On AG technology is quite mature in traditional environments, migrating it to a containerized K8s environment presents fundamental technical challenges:
+
+* **Missing High-Availability Components**: Traditional Always On AG relies on operating system-level cluster components (like WSFC or Pacemaker) for automatic failover to achieve database cluster high availability. However, the ephemeral and replaceable nature of containers makes these components unsuitable for container environment HA needs.
+* **Complex Networking and Service Discovery**: The dynamic nature of Pod IP addresses makes AG endpoint configuration difficult. Managing certificates and configuring secure communication across Pods is cumbersome.
+* **Complex Multi-Replica Management**: An AG typically includes multiple replicas, requiring consideration of startup order, role assignment, configuration parameter synchronization, and health status monitoring. An error in any of these steps can lead to service anomalies for the entire cluster.
+
+Against this backdrop, KubeBlocks offers a solution for containerizing MSSQL Always On AG. This article will introduce how to implement MSSQL containerization based on the open-source KubeBlocks, including its Addon integration mechanism, the implementation of the MSSQL Always On AG Addon, and finally, a demonstration of actual deployment and operational effects.
+
+## KubeBlocks and Addon
+
+KubeBlocks, as an open-source K8s Operator designed specifically for stateful applications, enables developers to implement MSSQL containerization based on a unified abstraction layer and automated operational capabilities. KubeBlocks has the following features:
+
+* **Open Source**: An open-source project based on the AGPL license.
+* **Cloud-Native Design**: Deeply integrated with the K8s ecosystem, fully leveraging the native advantages of container orchestration.
+* **Unified Management**: Provides a consistent database operations experience, simplifying the management complexity of multi-database environments.
+* **Extensible Architecture**: A plugin-based design that supports developers in custom-integrating various types of databases.
+
+The plugin-based design of KubeBlocks provides a set of interfaces for us to integrate MSSQL. By implementing these interfaces, KubeBlocks can run and manage MSSQL database clusters on K8s.
+
+These interfaces are like the connection points of Lego bricks: whether it's a block for building a house, a wheel for a car, or an arm for a robot, as long as your studs and sockets conform to the standard Lego specifications, they can connect perfectly with other bricks to build complex creations. Similarly, KubeBlocks defines a standard set of "database brick" interface specifications. Any database that "designs its connection points" according to these specifications can be seamlessly integrated into the KubeBlocks platform and work collaboratively with other components.
+
+In KubeBlocks, these interfaces correspond to a set of APIs, which are a group of K8s CRD definitions, as shown in the figure below with `ClusterDefinition`, `ComponentVersion`, and `ComponentDefinition`. By defining the corresponding CRs, you can integrate a database engine, which we also call an Addon (plugin). The purpose and description of these interfaces will be introduced in the context of the specific implementation for integrating MSSQL below.
+
+![KubeBlocks Addon architecture](/img/blogs/mssql-addon/2-kubeblocks-architecture.png)
+
+## MSSQL Addon Implementation
+
+This section describes how we implement features like MSSQL cluster management, high availability, parameter configuration, and backup/restore.
+
+### Cluster Management
+
+By implementing the following interfaces, you can manage the basic lifecycle and operations of an MSSQL cluster in KubeBlocks:
+
+* **ClusterDefinition**: An interface to define the database cluster topology, such as whether it's a cluster or a single instance, and which components are included in each topology.
+* **ComponentDefinition**: An interface to define a component. A component is a part of a database cluster, which is usually composed of one or more components. If a database cluster is like a Lego car, components represent different functional parts, like headlights, wheels, and the car body.
+* **ComponentVersion**: An interface to define component versions. Each component usually has many versions. This interface defines which major and minor versions we support, the corresponding images for each version, and the compatibility between versions.
+
+Here, we will mainly introduce the implementation of `ComponentDefinition`. Note that the MSSQL Addon described in this article is based on the KubeBlocks 0.9 API.
+
+The `ComponentDefinition` for MSSQL mainly includes the following parts:
+
+* **roles**: Defines the replica roles in the AG cluster, which are `primary` and `secondary`.
+* **services**: Defines two services for external access: one pointing to the primary replica for read-write services, and one pointing to the secondary replicas for read-only services.
+* **systemAccounts**: Defines the built-in system accounts `sa` and `kbadmin`, and their password generation policies. KubeBlocks will generate the corresponding account and password information into the respective secrets.
+* **scripts**: Specifies the ConfigMap for scripts, which KubeBlocks will mount to a specified directory in the container.
+* **vars**: Defines some variables, such as `MSSQL_SA_USER` for the database cluster system administrator account name, and `MSSQL_SERVER_PORT` for the service port number. These variables will eventually be rendered as environment variables in the Pod.
+* **lifecycleActions**: Defines some lifecycle management-related actions. MSSQL implements two Actions:
+  * `roleProbe`: Used to probe the role of a replica.
+  * `memberLeave`: Used to adjust the topological relationship between replicas during cluster scale-in.
+* **runtime**: Defines the container runtime-related configuration, including three containers:
+  * `init-syncer`: Copies necessary tools like Syncer.
+  * `mssql`: The container where the MSSQL service runs.
+  * `exporter`: Used to collect database monitoring metrics.
+
+With this, a basic MSSQL component is defined.
+
+### Always On AG Configuration
+
+Astute readers might wonder, how does the component start the MSSQL service? And how do the multiple replicas of the component form an AG cluster? How are the previously mentioned containerization challenges for Always On AG overcome?
+
+The key details and complexities lie in the startup script of the `mssql` container. When the container starts, it first launches the MSSQL process and then executes different flows depending on whether initialization has already been performed. During initialization, the Pod with the smallest serial number is chosen as the primary node, and the remaining Pods become secondary nodes.
+
+The initialization process for the primary node includes the following steps:
+
+1. Wait for the MSSQL process to start on all replicas.
+2. Create a certificate, which will be used for TDE encryption.
+3. Create an Endpoint.
+4. Create an AG that includes all replicas, using the Pod's FQDN as the connection address.
+5. Grant AG operation permissions to the management account `kbadmin`.
+6. Enable and configure service-level and database-level auditing.
+7. Create triggers and stored procedures for synchronizing accounts and databases.
+
+The initialization process for secondary nodes is similar, with the difference that they do not create the AG but join the one already created by the primary node. Once all nodes are initialized and have joined the same AG, they form an AG cluster.
+
+### High Availability
+
+However, the AG cluster itself does not have automatic failover capabilities and relies on external components. In a Linux environment, traditional automatic failover typically depends on Pacemaker and Corosync. However, these components are cumbersome to configure in a containerized environment and are not fully adapted to it, leading to high maintenance costs and questionable stability for the overall high-availability system. To address this, we independently developed a lightweight, multi-database engine-supported, cloud-native distributed high-availability component called Syncer. For more details on the high-availability design of KubeBlocks for MSSQL, the specific implementation of Syncer, and how to use Chaos Mesh to improve cluster availability, please refer to [KubeBlocks for MSSQL High Availability Implementation](./kubeblocks-for-mssql-high-availability-implementation).
+
+### Parameter Configuration
+
+Database engines usually have many parameters and configurations. Some need to be specified during initialization, some need to be specified in configuration files, some parameter changes require restart to take effect, and some can be modified dynamically. To facilitate integration of different types and formats of database parameter configurations, KubeBlocks defines parameter configuration-related interfaces:
+
+* Parameter template: Defines a parameter template. KubeBlocks will adaptively render it into configuration files based on cluster resources
+* ConfigConstraint: Configuration constraints that define the format of configuration files, dynamic and static parameters, and parameter value ranges, types, and other information
+
+In the MSSQL Addon, according to MSSQL startup requirements, parameter templates are defined to render the `mssql.conf` configuration file, which MSSQL will use when starting. At the same time, ConfigConstraint is defined to specify its supported configuration file format as `ini`, as well as dynamic parameters, static parameters, and immutable parameters.
+
+### Backup and Recovery
+
+The importance of backup for database systems is self-evident. In case of accidents such as mistaken deletion of databases/tables, hardware failures, natural disasters, etc., data loss and service interruption may occur, affecting online business. Through regular backups and saving backup data to different regions and different storage media, data can be recovered through backup in extreme situations.
+
+KubeBlocks defines two interfaces to implement backup for database systems:
+
+* BackupPolicyTemplate: Backup policy template used to define backup policies for specified components. When creating database clusters, cluster backup policies will be generated based on this template. It includes backup methods, default backup scheduling cycles, and default backup targets (i.e., whether to backup from primary or secondary nodes).
+* ActionSet: Defines actual behaviors corresponding to specific backup methods and backup types.
+
+We implemented three backup methods for the MSSQL Addon:
+
+* Full backup: Calls MSSQL commands to backup all databases
+* Differential backup: Differential backup only backs up modifications since the last full backup, which is more efficient than full backup. It's also implemented by calling MSSQL differential backup commands
+* Continuous log backup: Regularly calls the `BACKUP LOG` command to upload database log files to achieve point-in-time recovery
+
+With the help of KubeBlocks' abstraction of backup destinations, namely BackupRepo, the above backups can be easily uploaded to object storage provided by mainstream cloud vendors, including object storage services from Alibaba Cloud, Huawei Cloud, Tencent Cloud, AWS, Google Cloud, Microsoft Azure, Oracle Cloud, etc. For on-premise deployment scenarios, it also supports self-deployed storage services such as MinIO, XSKY, NAS, etc.
+
+## Deployment and Operational Practice
+
+Now, let's actually deploy an MSSQL Always On AG cluster and perform some operational change operations. (Note: The MSSQL Addon is currently only available in the enterprise edition and has not been open-sourced yet)
+
+### Cluster Deployment
+
+Create a three-replica MSSQL cluster by applying a cluster YAML file with kubectl command.
+
+```Bash
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1alpha1
+kind: Cluster
+metadata:
+  name: my-mssql
+  annotations:
+    kubeblocks.io/extra-env: '{"MSSQL_PID":"Developer","MSSQL_COLLATION":"SQL_Latin1_General_CP1_CI_AS"}'
+spec:
+  terminationPolicy: Delete
+  clusterDefinitionRef: mssql
+  componentSpecs:
+    - name: mssql
+      serviceVersion: 2022.19.0
+      replicas: 3
+      resources:
+        limits:
+          cpu: "1"
+          memory: "2Gi"
+        requests:
+          cpu: "1"
+          memory: "2Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+Check the cluster and pod status:
+
+![Cluster and pod status](/img/blogs/mssql-addon/3-cluster-pod-status.png)
+
+### Automatic Failover
+
+Simulate node failure by deleting a pod to check if roles automatically switch. As shown below, after deleting the current primary node my-mssql-mssql-0, my-mssql-mssql-1's role changes to primary within a few seconds.
+
+![Automatic failover](/img/blogs/mssql-addon/4-failover.png)
+
+Subsequently, the my-mssql-mssql-0 node's role changes to secondary, joining the cluster as a new secondary node.
+
+![Automatic failover](/img/blogs/mssql-addon/5-failover.png)
+
+### Vertical Scaling
+
+Execute the following OpsRequest to scale cpu/memory from 1C2G to 2C4G.
+
+```YAML
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: ops-vertical-scaling
+spec:
+  clusterName: my-mssql
+  type: VerticalScaling
+  verticalScaling:
+  - componentName: mssql
+    requests:
+      memory: "4Gi"
+      cpu: "2"
+    limits:
+      memory: "4Gi"
+      cpu: "2"
+EOF
+```
+
+Check the cluster status and Pod status, wait for the change to complete, and check Pod resources.
+
+![Vertical scaling](/img/blogs/mssql-addon/6-vertical-scaling.png)
+
+### Backup and Recovery
+
+Execute the following command to create a full backup:
+
+```YAML
+kubectl apply -f - <<EOF
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: Backup
+metadata:
+  name: mssql-cluster-backup
+spec:
+  backupMethod: full
+  backupPolicyName: my-mssql-mssql-backup-policy
+  deletionPolicy: Delete
+EOF
+```
+
+Check the backup as follows:
+
+![Backup](/img/blogs/mssql-addon/7-backup.png)
+
+Restore a brand new cluster based on this backup:
+
+```YAML
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: mssql-cluster-restore-ops
+spec:
+  clusterName: my-mssql-restored
+  force: false
+  restore:
+    backupName: mssql-cluster-backup
+    backupNamespace: demo
+  type: Restore
+EOF
+opsrequest.apps.kubeblocks.io/mssql-cluster-restore-ops created
+```
+
+Check the status of the restored cluster:
+
+![Restore](/img/blogs/mssql-addon/8-restore.png)
+
+![Restore](/img/blogs/mssql-addon/9-restore.png)
+
+### Other Operational Operations
+
+After integrating with KubeBlocks in Addon form, it naturally supports many cluster operational operations. Besides the automatic failover, vertical scaling, and backup and recovery introduced above, it also supports the following operational operations:
+
+* Horizontal scaling, increasing the number of cluster replicas
+* Storage scaling
+* Manual primary-secondary switching
+* Cluster restart, stop, and deletion
+* Parameter configuration, modifying cluster parameters
+* Minor version upgrades
+* Incremental backup
+* Point-in-time recovery
+* Monitoring (configuring Prometheus exporter to collect metrics)
+
+## Summary and Outlook
+
+Running MSSQL in cloud-native environments faces many challenges. KubeBlocks, as an open-source K8s Operator designed specifically for stateful applications, provides strong support for database containerization. This article detailed how to implement MSSQL Addon supporting Always On AG based on open-source KubeBlocks and demonstrated its advantages in containerized deployment, high availability, and automated operations. Currently, KubeBlocks for MSSQL has been launched in [KubeBlocks Enterprise Edition](https://www.apecloud.cn/products/kubeblocks-enterprise). Interested readers are welcome to apply for experience.
+
+Although KubeBlocks has solved many key problems of MSSQL Always On AG containerization, it still faces some challenges in enterprise application scenarios, such as existing tool ecosystem integration, AD domain integration, etc., which we are actively solving and improving. We believe that by continuously solving these practical pain points in enterprise scenarios, containerized MSSQL will truly become a trusted choice for enterprise data management.
