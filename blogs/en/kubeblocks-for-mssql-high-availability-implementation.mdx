@@ -119,7 +119,7 @@ spec:
     namespaces:
       - kubeblocks-cloud-ns
     labelSelectors:
-      app.kubernetes.io/instance: s4c16-6f6d9445b4
+      app.kubernetes.io/instance: s4c16-757b5769d7
       kubeblocks.io/role: primary
   mode: all
   containerNames:
@@ -136,16 +136,16 @@ EOF
 * Pod status shows OOMKilled
 
 ```Bash
-kubectl get pod -w -n kubeblocks-cloud-ns s4c16-6f6d9445b4-mssql-0
+kubectl get pod -w -n kubeblocks-cloud-ns s4c16-757b5769d7-mssql-0
 NAME                       READY   STATUS    RESTARTS   AGE
-s4c16-6f6d9445b4-mssql-0   3/4     OOMKilled   1 (56s ago)   151m
-s4c16-6f6d9445b4-mssql-0   2/4     OOMKilled   1 (65s ago)   151m
-s4c16-6f6d9445b4-mssql-0   2/4     CrashLoopBackOff   1 (11s ago)   151m
-s4c16-6f6d9445b4-mssql-0   3/4     Running            2 (11s ago)   151m
-s4c16-6f6d9445b4-mssql-0   4/4     Running            2 (17s ago)   151m
+s4c16-757b5769d7-mssql-0   3/4     OOMKilled   1 (2m21s ago)   4h3m
+s4c16-757b5769d7-mssql-0   2/4     OOMKilled   1 (2m23s ago)   4h3m
+s4c16-757b5769d7-mssql-0   2/4     CrashLoopBackOff   1 (5s ago)      4h3m
+s4c16-757b5769d7-mssql-0   3/4     Running            2 (16s ago)     4h3m
+s4c16-757b5769d7-mssql-0   4/4     Running            2 (30s ago)     4h3m
 ```
 
-* After the fault occurs, node 2 switches to new primary at 15s
+* After the fault occurs, node 1 switches to new primary at 15s
 
 ![Failover](/img/blogs/mssql-ha/4-failover-oom.png)
 
@@ -168,7 +168,7 @@ spec:
     namespaces:
       - kubeblocks-cloud-ns
     labelSelectors:
-      app.kubernetes.io/instance: s4c16-6f6d9445b4
+      app.kubernetes.io/instance: s4c16-757b5769d7
       kubeblocks.io/role: primary
   mode: all
   action: pod-failure
@@ -182,7 +182,7 @@ EOF
 
 ## Network Delay
 
-Simulate primary node network delay for two minutes, primary node service becomes inaccessible triggering primary-secondary switching, switching occurs after 15s.
+Simulate primary node network delay for five minutes, primary node service becomes inaccessible triggering primary-secondary switching, switching occurs after 15s.
 
 * Chaos Mesh simulates Pod network fault
 
@@ -198,7 +198,7 @@ spec:
     namespaces:
       - kubeblocks-cloud-ns
     labelSelectors:
-      app.kubernetes.io/instance: s4c16-6f6d9445b4
+      app.kubernetes.io/instance: s4c16-757b5769d7
       kubeblocks.io/role: primary
   mode: all
   action: delay
@@ -214,15 +214,15 @@ EOF
 * Pod memory service access abnormal
 
 ```YAML
-kubectl describe pod -n kubeblocks-cloud-ns s4c16-6f6d9445b4-mssql-0
+kubectl describe pod -n kubeblocks-cloud-ns s4c16-757b5769d7-mssql-0
 Events:
   Type     Reason          Age                  From               Message
   ----     ------          ----                 ----               -------
-  Normal   checkRole       5m43s                lorry              {"event":"Success","operation":"checkRole","originalRole":"waitForStart","role":"{\"term\":\"1749106874646075\",\"PodRoleNamePairs\":[{\"podName\":\"s4c16-6f6d9445b4-mssql-0\",\"roleName\":\"primary\",\"podUid\":\"c3a4f05f-cc25-48ca-9f16-30d4621b7393\"},{\"podName\":\"s4c16-6f6d9445b4-mssql-1\",\"podUid\":\"b2014bb1-848e-4ebc-900b-e5849b9b0104\"}]}"}
+  Normal   checkRole       5m43s                lorry              {"event":"Success","operation":"checkRole","originalRole":"waitForStart","role":"{\"term\":\"1749106874646075\",\"PodRoleNamePairs\":[{\"podName\":\"s4c16-757b5769d7-mssql-0\",\"roleName\":\"primary\",\"podUid\":\"c3a4f05f-cc25-48ca-9f16-30d4621b7393\"},{\"podName\":\"s4c16-757b5769d7-mssql-1\",\"podUid\":\"b2014bb1-848e-4ebc-900b-e5849b9b0104\"}]}"}
   Warning  Unhealthy       67s                  kubelet            Readiness probe failed: Get "http://10.30.237.94:3501/v1.0/checkrole": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
 ```
 
-* Node 0 is selected as new primary, old primary role returns to normal after network fault recovery
+* Node 1 is selected as new primary, old primary role returns to normal after network fault recovery
 
 ![Failover](/img/blogs/mssql-ha/6-failover-network-delay.png)
 
@@ -233,18 +233,20 @@ Kill primary node process 1, simulate process exception triggering Failover, pri
 * Kill process 1
 
 ```Bash
-echo "kill 1" | kubectl exec -it $(kubectl get pod -n kubeblocks-cloud-ns -l app.kubernetes.io/instance=s4c16-68bdc5d55d,kubeblocks.io/role=primary --no-headers| awk '{print $1}') -n kubeblocks-cloud-ns -- bash
+echo "kill 1" | kubectl exec -it $(kubectl get pod -n kubeblocks-cloud-ns -l app.kubernetes.io/instance=s4c16-757b5769d7,kubeblocks.io/role=primary --no-headers| awk '{print $1}') -n kubeblocks-cloud-ns -- bash
 ```
 
 * Pod events show CrashLoopBackOff
 
 ```Bash
-kubectl get pod -n kubeblocks-cloud-ns -w s4c16-68bdc5d55d-mssql-0
-s4c16-68bdc5d55d-mssql-0   0/4     Error              16               15h
-s4c16-68bdc5d55d-mssql-0   0/4     CrashLoopBackOff   16 (4s ago)      15h
-s4c16-68bdc5d55d-mssql-0   3/4     Running            20 (27s ago)     15h
-s4c16-68bdc5d55d-mssql-0   3/4     Running            20 (31s ago)     15h
-s4c16-68bdc5d55d-mssql-0   4/4     Running            20 (33s ago)     15h
+kubectl get pod -n kubeblocks-cloud-ns -w s4c16-757b5769d7-mssql-0
+NAME                       READY   STATUS    RESTARTS         AGE
+s4c16-757b5769d7-mssql-0   0/4     Error     10               5h30m
+s4c16-757b5769d7-mssql-0   0/4     CrashLoopBackOff   10 (5s ago)      5h30m
+s4c16-757b5769d7-mssql-0   0/4     CrashLoopBackOff   10 (17s ago)     5h31m
+s4c16-757b5769d7-mssql-0   3/4     Running            14 (18s ago)     5h31m
+s4c16-757b5769d7-mssql-0   3/4     Running            14 (23s ago)     5h31m
+s4c16-757b5769d7-mssql-0   4/4     Running            14 (25s ago)     5h31m
 ```
 
 * After old primary exception, node 1 is selected as new primary at 1s
