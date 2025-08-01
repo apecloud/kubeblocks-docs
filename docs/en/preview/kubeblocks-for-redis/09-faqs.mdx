@@ -1,0 +1,114 @@
+---
+title: FAQs
+description: FAQs of Redis
+keywords: [KubeBlocks, Redis, Kubernetes]
+sidebar_position: 9
+sidebar_label: FAQs
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Redis FAQs
+
+## 1. How to disable auth for 'default' user
+
+To disable auth for 'default' user, you can unset the environment variable `REDIS_DEFAULT_PASSWORD` when creating the cluster.
+```bash
+# unset REDIS_DEFAULT_PASSWORD to disable auth for 'default' user
+env:
+  - name: REDIS_DEFAULT_PASSWORD
+```
+
+for instance, when creating a replication cluster without auth, you use the following yaml:
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: redis-replication-without-auth
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: redis
+  topology: replication
+  componentSpecs:
+    - name: redis
+      env:
+        - name: REDIS_DEFAULT_PASSWORD # unset this env var to disable auth for default user
+          value: ""
+      serviceVersion: "7.2.4"
+      disableExporter: false
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+    - name: redis-sentinel
+      replicas: 3
+      serviceVersion: "7.2.4"
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+Similarly, you can disable auth for 'default' user when creating a sharding cluster:
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: redis-sharding-without-auth
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  shardings:
+  - name: shard
+    shards: 3
+    template:
+      name: redis
+      componentDef: redis-cluster-7
+      replicas: 2
+      env:
+        - name: REDIS_DEFAULT_PASSWORD # unset this env var to disable auth for default user
+          value: ""
+      resources:
+        limits:
+          cpu: '1'
+          memory: 1Gi
+        requests:
+          cpu: '1'
+          memory: 1Gi
+      serviceVersion: 7.2.4
+      volumeClaimTemplates:
+      - name: data
+        spec:
+          accessModes:
+          - ReadWriteOnce
+          resources:
+            requests:
+              storage: 20Gi
+```
