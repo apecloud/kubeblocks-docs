@@ -1,39 +1,42 @@
-"use client";
+'use client';
 
-import { Box, Stack, useTheme } from "@mui/material";
-import React from "react";
-import { alpha } from "@mui/material";
 import {
   ErrorOutlineOutlined,
   LightbulbOutlined,
   SmsFailedOutlined,
   ThumbUpOutlined,
-} from "@mui/icons-material";
+} from '@mui/icons-material';
+import { alpha, Box, Stack, useTheme } from '@mui/material';
+import React from 'react';
 
 export interface NoteBoxProps {
   title?: string;
-  type?: "default" | "success" | "info" | "warning" | "error";
+  type?: 'default' | 'success' | 'info' | 'warning' | 'error';
   children?: React.ReactNode;
 }
 
-export default function NoteBox({ children, title, type = "default" }: NoteBoxProps) {
+export default function NoteBox({
+  children,
+  title,
+  type = 'default',
+}: NoteBoxProps) {
   const theme = useTheme();
   let color: string;
   let icon;
   switch (type) {
-    case "success":
+    case 'success':
       color = theme.palette.success.main;
       icon = <ThumbUpOutlined />;
       break;
-    case "info":
+    case 'info':
       color = theme.palette.info.main;
       icon = <LightbulbOutlined />;
       break;
-    case "warning":
+    case 'warning':
       color = theme.palette.warning.main;
       icon = <SmsFailedOutlined />;
       break;
-    case "error":
+    case 'error':
       color = theme.palette.error.main;
       icon = <ErrorOutlineOutlined />;
       break;
@@ -46,7 +49,7 @@ export default function NoteBox({ children, title, type = "default" }: NoteBoxPr
         borderLeft: 4,
         borderColor: color,
         background: alpha(color, 0.15),
-        borderRadius: "4px",
+        borderRadius: '4px',
       }}
       p={2}
       pl={3}
@@ -58,7 +61,7 @@ export default function NoteBox({ children, title, type = "default" }: NoteBoxPr
           direction="row"
           gap={1}
           color={color}
-          sx={{ fontWeight: "bold" }}
+          sx={{ fontWeight: 'bold' }}
         >
           {icon}
           {title}

@@ -1,35 +1,35 @@
-import { Box, Typography } from "@mui/material";
+import { Box, Typography } from '@mui/material';
 import {
   IllustrationEmpty,
   IllustrationError,
   IllustrationNotFound,
-} from "./Illustration";
+} from './Illustration';
 
 export type ResultProps = {
-  status: "error" | "empty" | "notfound" | "forbidden";
+  status: 'error' | 'empty' | 'notfound' | 'forbidden';
   title?: string;
   description?: string;
   actions?: React.ReactNode;
 };
 
 export const Result = ({
-  status = "empty",
+  status = 'empty',
   title,
   description,
   actions,
 }: ResultProps) => {
   let icon;
   switch (status) {
-    case "empty":
+    case 'empty':
       icon = <IllustrationEmpty />;
       break;
-    case "error":
+    case 'error':
       icon = <IllustrationError />;
       break;
-    case "notfound":
+    case 'notfound':
       icon = <IllustrationNotFound />;
       break;
-    case "forbidden":
+    case 'forbidden':
       icon = <IllustrationError />;
       break;
     default:

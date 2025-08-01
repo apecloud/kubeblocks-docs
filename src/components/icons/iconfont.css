@@ -1,13 +1,14 @@
 @font-face {
-  font-family: "iconfont"; /* Project id 3761892 */
-  src: url('/fonts/iconfont.woff2?t=1740818148987') format('woff2'),
-       url('/fonts/iconfont.woff?t=1740818148987') format('woff'),
-       url('/fonts/iconfont.ttf?t=1740818148987') format('truetype'),
-       url('/fonts/iconfont.svg?t=1740818148987#iconfont') format('svg');
+  font-family: 'iconfont'; /* Project id 3761892 */
+  src:
+    url('/fonts/iconfont.woff2?t=1740818148987') format('woff2'),
+    url('/fonts/iconfont.woff?t=1740818148987') format('woff'),
+    url('/fonts/iconfont.ttf?t=1740818148987') format('truetype'),
+    url('/fonts/iconfont.svg?t=1740818148987#iconfont') format('svg');
 }
 
 .iconfont {
-  font-family: "iconfont" !important;
+  font-family: 'iconfont' !important;
   font-size: 16px;
   font-style: normal;
   -webkit-font-smoothing: antialiased;
@@ -15,134 +16,133 @@
 }
 
 .icon-goldendb:before {
-  content: "\e601";
+  content: '\e601';
 }
 
 .icon-rocketmq:before {
-  content: "\e70f";
+  content: '\e70f';
 }
 
 .icon-loki:before {
-  content: "\ebb0";
+  content: '\ebb0';
 }
 
 .icon-oceanbase:before {
-  content: "\e6b3";
+  content: '\e6b3';
 }
 
 .icon-oceanbase-proxy:before {
-  content: "\e663";
+  content: '\e663';
 }
 
 .icon-tidb:before {
-  content: "\e61b";
+  content: '\e61b';
 }
 
 .icon-mssql:before {
-  content: "\e858";
+  content: '\e858';
 }
 
 .icon-vastbase:before {
-  content: "\e79d";
+  content: '\e79d';
 }
 
 .icon-prometheus:before {
-  content: "\e6db";
+  content: '\e6db';
 }
 
 .icon-gaussdb:before {
-  content: "\e830";
+  content: '\e830';
 }
 
 .icon-minio:before {
-  content: "\e680";
+  content: '\e680';
 }
 
 .icon-kingbase:before {
-  content: "\e674";
+  content: '\e674';
 }
 
 .icon-damengdb:before {
-  content: "\e649";
+  content: '\e649';
 }
 
 .icon-zookeeper:before {
-  content: "\e693";
+  content: '\e693';
 }
 
 .icon-victoria-metrics:before {
-  content: "\e607";
+  content: '\e607';
 }
 
 .icon-rabbitmq:before {
-  content: "\e628";
+  content: '\e628';
 }
 
 .icon-apecloud-mysql:before {
-  content: "\e780";
+  content: '\e780';
 }
 
 .icon-kafka:before {
-  content: "\e784";
+  content: '\e784';
 }
 
 .icon-starrocks:before {
-  content: "\e606";
+  content: '\e606';
 }
 
 .icon-mogdb:before {
-  content: "\e652";
+  content: '\e652';
 }
 
 .icon-weaviate:before {
-  content: "\ea33";
+  content: '\ea33';
 }
 
 .icon-elasticsearch:before {
-  content: "\e653";
+  content: '\e653';
 }
 
 .icon-clickhouse:before {
-  content: "\e65f";
+  content: '\e65f';
 }
 
 .icon-pulsar:before {
-  content: "\e72d";
+  content: '\e72d';
 }
 
 .icon-polardbx:before {
-  content: "\e6dd";
+  content: '\e6dd';
 }
 
 .icon-oracle:before {
-  content: "\e6b0";
+  content: '\e6b0';
 }
 
 .icon-postgresql:before {
-  content: "\ec5d";
+  content: '\ec5d';
 }
 
 .icon-qdrant:before {
-  content: "\e605";
+  content: '\e605';
 }
 
 .icon-milvus:before {
-  content: "\e70a";
+  content: '\e70a';
 }
 
 .icon-apelcoud:before {
-  content: "\e604";
+  content: '\e604';
 }
 
 .icon-mongodb:before {
-  content: "\e63a";
+  content: '\e63a';
 }
 
 .icon-mysql:before {
-  content: "\e63b";
+  content: '\e63b';
 }
 
 .icon-redis:before {
-  content: "\e6a2";
+  content: '\e6a2';
 }
-

@@ -1,19 +1,19 @@
-import path from "path";
-import fs from "fs";
+import fs from 'fs';
+import path from 'path';
 
 import {
   Card,
   CardActionArea,
   CardContent,
-  Typography,
-  Grid2 as Grid,
   Chip,
-} from "@mui/material";
+  Grid2 as Grid,
+  Typography,
+} from '@mui/material';
 
-import * as cheerio from "cheerio";
-import { Link } from "@/components/Link";
-import Banner from "./banner";
-import { getStaticParams } from "@/locales/server";
+import { Link } from '@/components/Link';
+import { getStaticParams } from '@/locales/server';
+import * as cheerio from 'cheerio';
+import Banner from './banner';
 
 export async function generateStaticParams() {
   return getStaticParams();
@@ -25,7 +25,7 @@ export default async function ReportsList({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const REPORTS_DIR = path.join(process.cwd(), "reports", "kubeblocks", locale);
+  const REPORTS_DIR = path.join(process.cwd(), 'reports', 'kubeblocks', locale);
   const versions: string[] = fs.readdirSync(REPORTS_DIR);
 
   const reports: {
@@ -43,21 +43,21 @@ export default async function ReportsList({
       .readdirSync(path.join(REPORTS_DIR, version))
       .filter((file) => file.match(/\.html$/))
       .forEach((file) => {
-        const name = file.replace(/\.html$/, "");
+        const name = file.replace(/\.html$/, '');
         const content = String(
-          fs.readFileSync(path.join(REPORTS_DIR, version, file))
+          fs.readFileSync(path.join(REPORTS_DIR, version, file)),
         );
         const $ = cheerio.load(content);
         reports.push({
           url: `/reports/kubeblocks/${version}/${name}`,
-          title: $("h1").eq(0).text(),
+          title: $('h1').eq(0).text(),
           version,
-          tester: $("h4").eq(0).text(),
-          admin: $("h4").eq(1).text(),
-          owner: $("h4").eq(2).text(),
-          datetime: $("body > center").first().text(),
+          tester: $('h4').eq(0).text(),
+          admin: $('h4').eq(1).text(),
+          owner: $('h4').eq(2).text(),
+          datetime: $('body > center').first().text(),
         });
-      })
+      }),
   );
 
   return (
@@ -75,9 +75,9 @@ export default async function ReportsList({
           >
             <Card
               sx={{
-                position: "relative",
-                boxShadow: "none",
-                border: "1px solid var(--css-palette-divider)",
+                position: 'relative',
+                boxShadow: 'none',
+                border: '1px solid var(--css-palette-divider)',
               }}
             >
               <Chip
@@ -85,12 +85,12 @@ export default async function ReportsList({
                 color="primary"
                 size="small"
                 sx={{
-                  position: "absolute",
+                  position: 'absolute',
                   top: 0,
                   right: 0,
                   borderRadius: 1,
-                  fontWeight: "bold",
-                  fontSize: '1em'
+                  fontWeight: 'bold',
+                  fontSize: '1em',
                 }}
               />
               <CardActionArea
@@ -107,9 +107,9 @@ export default async function ReportsList({
                     variant="h6"
                     mb={2}
                     sx={{
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
                     }}
                   >
                     {report.title}

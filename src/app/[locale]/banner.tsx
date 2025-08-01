@@ -1,26 +1,26 @@
-"use client";
+'use client';
 
-import { Link } from "@/components/Link";
-import { ForwardToInboxOutlined } from "@mui/icons-material";
+import { Link } from '@/components/Link';
+import { ForwardToInboxOutlined } from '@mui/icons-material';
 import {
-  Box,
-  Container,
-  Typography,
-  Chip,
-  Stack,
-  Button,
-  useTheme,
   alpha,
-} from "@mui/material";
+  Box,
+  Button,
+  Chip,
+  Container,
+  Stack,
+  Typography,
+  useTheme,
+} from '@mui/material';
 
 export default function Banner() {
   const theme = useTheme();
-  const isDark = theme.palette.mode.includes("dark");
+  const isDark = theme.palette.mode.includes('dark');
 
   const bgDark = {
     backgroundImage: `url("/site/home-rectangles.svg")`,
-    backgroundPosition: "center center",
-    backgroundRepeat: "no-repeat",
+    backgroundPosition: 'center center',
+    backgroundRepeat: 'no-repeat',
     paddingBlock: 14,
   };
   const bgLight = {
@@ -35,11 +35,15 @@ export default function Banner() {
     <Box sx={isDark ? bgDark : bgLight}>
       <Container>
         <Box textAlign="center">
-          <Typography variant="h2" mb={6} sx={{ fontWeight: "bold", color: textColor }}>
+          <Typography
+            variant="h2"
+            mb={6}
+            sx={{ fontWeight: 'bold', color: textColor }}
+          >
             Run Any &nbsp;
             <Typography
               variant="h2"
-              sx={{ fontWeight: "bold" }}
+              sx={{ fontWeight: 'bold' }}
               component="span"
               color="primary"
             >
@@ -47,25 +51,30 @@ export default function Banner() {
             </Typography>
             &nbsp; on Kubernetes
           </Typography>
-          <Typography variant="h6" mb={1} sx={{color: textSecondaryColor}}>
+          <Typography variant="h6" mb={1} sx={{ color: textSecondaryColor }}>
             KubeBlocks is crafted for managing databases on Kubernetes, designed
             by domain experts with decades of experience.
           </Typography>
-          <Typography variant="h6" mb={1} sx={{color: textSecondaryColor}}>
+          <Typography variant="h6" mb={1} sx={{ color: textSecondaryColor }}>
             It supports a wide range of stateful workloads, including relational
             databases, NoSQL, message queues.
           </Typography>
-          <Typography variant="h6" mb={1} sx={{color: textSecondaryColor}}>
+          <Typography variant="h6" mb={1} sx={{ color: textSecondaryColor }}>
             By streamlining operations, enhancing flexibility, and offering
             extensions, KubeBlocks makes database.
           </Typography>
-          <Typography variant="h6" mb={2} sx={{color: textSecondaryColor}}>
+          <Typography variant="h6" mb={2} sx={{ color: textSecondaryColor }}>
             management easier in cloud-native environments.
           </Typography>
 
           <Chip
-            icon={<ForwardToInboxOutlined color="disabled" sx={{ scale: 0.6, color: textColor }} />}
-            sx={{ color: textColor, background: "rgba(255, 255, 255, 0.1)", }}
+            icon={
+              <ForwardToInboxOutlined
+                color="disabled"
+                sx={{ scale: 0.6, color: textColor }}
+              />
+            }
+            sx={{ color: textColor, background: 'rgba(255, 255, 255, 0.1)' }}
             label={
               <Box>
                 For technical questions, contact us by &nbsp;
@@ -92,7 +101,7 @@ export default function Banner() {
               sx={{
                 paddingInline: 4,
                 paddingBlock: 1.5,
-                fontWeight: "bold",
+                fontWeight: 'bold',
               }}
             >
               Documentation

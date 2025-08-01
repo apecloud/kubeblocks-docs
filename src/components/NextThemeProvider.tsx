@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { Box, Fade } from "@mui/material";
-import { ThemeProvider } from "next-themes";
-import { useEffect, useState } from "react";
+import { Box, Fade } from '@mui/material';
+import { ThemeProvider } from 'next-themes';
+import { useEffect, useState } from 'react';
 
 interface LayoutBasicProps {
   children?: React.ReactNode;

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import {
   Box,
   Container,
@@ -7,12 +7,12 @@ import {
   Stack,
   Typography,
   useTheme,
-} from "@mui/material";
-import Image from "next/image";
-import { useCallback, useMemo } from "react";
-import { Caveat } from "next/font/google";
+} from '@mui/material';
+import { Caveat } from 'next/font/google';
+import Image from 'next/image';
+import { useCallback, useMemo } from 'react';
 
-const caveat = Caveat({ subsets: ["latin"] });
+const caveat = Caveat({ subsets: ['latin'] });
 
 export const Evaluate = () => {
   const theme = useTheme();
@@ -20,7 +20,7 @@ export const Evaluate = () => {
   const isInChina = useCallback(() => {
     try {
       const timeZoneName = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      return timeZoneName === "Asia/Shanghai" || timeZoneName === "Asia/Urumqi";
+      return timeZoneName === 'Asia/Shanghai' || timeZoneName === 'Asia/Urumqi';
     } catch (err) {
       console.log(err);
       const timeZoneOffset = -new Date().getTimezoneOffset() / 60;
@@ -30,8 +30,8 @@ export const Evaluate = () => {
 
   const playerUrl = useMemo(() => {
     return isInChina()
-      ? "https://player.bilibili.com/player.html?bvid=BV1ew41137Sn"
-      : "https://www.youtube.com/embed/KNwpG51Whzg?si=wCQ-31H3OiI7aMtZ";
+      ? 'https://player.bilibili.com/player.html?bvid=BV1ew41137Sn'
+      : 'https://www.youtube.com/embed/KNwpG51Whzg?si=wCQ-31H3OiI7aMtZ';
   }, [isInChina]);
 
   return (
@@ -53,10 +53,10 @@ export const Evaluate = () => {
             <iframe
               src={playerUrl}
               style={{
-                width: "100%",
-                height: "320px",
-                borderRadius: "12px",
-                border: "none",
+                width: '100%',
+                height: '320px',
+                borderRadius: '12px',
+                border: 'none',
               }}
             />
           </Grid>
@@ -139,8 +139,8 @@ export const Evaluate = () => {
               width={460}
               height={300}
               style={{
-                maxWidth: "90%",
-                height: "auto",
+                maxWidth: '90%',
+                height: 'auto',
               }}
             />
           </Grid>

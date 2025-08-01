@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import {
   Box,
   ClickAwayListener,
@@ -6,17 +6,16 @@ import {
   Popper,
   PopperPlacementType,
   SxProps,
-} from "@mui/material";
-import { useRef, useState } from "react";
-import { Transitions } from "./Transitions";
-import React from "react";
+} from '@mui/material';
+import React, { useRef, useState } from 'react';
+import { Transitions } from './Transitions';
 
 export type DropDownProps = {
   children?: React.ReactNode;
   trigger?: React.ReactNode;
   offset?: number[];
   placement?: PopperPlacementType;
-  position?: string,
+  position?: string;
   onChange?: (open: boolean) => void;
   sx?: SxProps;
 };
@@ -24,8 +23,8 @@ export const DropDown = ({
   children,
   trigger,
   offset,
-  placement = "bottom-end",
-  position = "top",
+  placement = 'bottom-end',
+  position = 'top',
   onChange = () => {},
   sx,
 }: DropDownProps) => {
@@ -47,7 +46,7 @@ export const DropDown = ({
       <Box
         onClick={handleOpen}
         ref={anchorRef}
-        sx={{ display: "inline-block" }}
+        sx={{ display: 'inline-block' }}
       >
         {trigger}
       </Box>
@@ -59,12 +58,12 @@ export const DropDown = ({
         disablePortal
         onClick={handleClose}
         sx={{
-          zIndex: 1100
+          zIndex: 1100,
         }}
         popperOptions={{
           modifiers: [
             {
-              name: "offset",
+              name: 'offset',
               options: {
                 offset,
               },
@@ -85,9 +84,9 @@ export const DropDown = ({
                 sx={{
                   ...sx,
                   minWidth: 220,
-                  boxShadow: "none",
+                  boxShadow: 'none',
                   border: 1,
-                  borderColor: "divider",
+                  borderColor: 'divider',
                 }}
               >
                 {children}

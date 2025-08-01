@@ -21,7 +21,7 @@
     "paths": {
       "@/*": ["./src/*"],
       "@docs": ["./docs"],
-      "@blogs": ["./blogs"],
+      "@blogs": ["./blogs"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

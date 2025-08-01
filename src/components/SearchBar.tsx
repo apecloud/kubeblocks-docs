@@ -1,8 +1,15 @@
-"use client";
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import MiniSearch from "minisearch";
-import { Box, TextField, List, ListItem, ListItemText, Paper } from "@mui/material";
-import { useRouter } from "next/navigation";
+'use client';
+import {
+  Box,
+  List,
+  ListItem,
+  ListItemText,
+  Paper,
+  TextField,
+} from '@mui/material';
+import MiniSearch from 'minisearch';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
 // import SearchIcon from "@mui/icons-material/Search";
 
 interface SearchDocument {
@@ -32,14 +39,19 @@ const highlightText = (text: string, searchTerm: string) => {
 
   const parts = text.split(new RegExp(`(${searchTerm})`, 'gi'));
   return parts.map((part, i) =>
-    part.toLowerCase() === searchTerm.toLowerCase() ?
-      <mark key={i} style={{ backgroundColor: '#ffd700', padding: 0 }}>{part}</mark> :
+    part.toLowerCase() === searchTerm.toLowerCase() ? (
+      <mark key={i} style={{ backgroundColor: '#ffd700', padding: 0 }}>
+        {part}
+      </mark>
+    ) : (
       part
+    ),
   );
 };
 
 export const SearchBar = () => {
-  const [searchIndex, setSearchIndex] = useState<MiniSearch<SearchDocument> | null>(null);
+  const [searchIndex, setSearchIndex] =
+    useState<MiniSearch<SearchDocument> | null>(null);
   const [searchResults, setSearchResults] = useState<MiniSearchResult[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
@@ -58,8 +70,8 @@ export const SearchBar = () => {
           searchOptions: {
             boost: { title: 2, content: 1 },
             fuzzy: 0.2,
-            prefix: true
-          }
+            prefix: true,
+          },
         });
 
         index.addAll(documents);
@@ -73,23 +85,28 @@ export const SearchBar = () => {
   }, []);
 
   // 处理搜索
-  const handleSearch = useCallback((term: string) => {
-    setSearchTerm(term);
-    if (!searchIndex || !term.trim()) {
-      setSearchResults([]);
-      return;
-    }
+  const handleSearch = useCallback(
+    (term: string) => {
+      setSearchTerm(term);
+      if (!searchIndex || !term.trim()) {
+        setSearchResults([]);
+        return;
+      }
 
-    const results = searchIndex.search(term, {
-      filter: (result: SearchResult) => result.score > 0.1
-    }).map(result => ({
-      ...result,
-      title: (result as unknown as SearchDocument).title,
-      path: (result as unknown as SearchDocument).path
-    })) as MiniSearchResult[];
+      const results = searchIndex
+        .search(term, {
+          filter: (result: SearchResult) => result.score > 0.1,
+        })
+        .map((result) => ({
+          ...result,
+          title: (result as unknown as SearchDocument).title,
+          path: (result as unknown as SearchDocument).path,
+        })) as MiniSearchResult[];
 
-    setSearchResults(results);
-  }, [searchIndex]);
+      setSearchResults(results);
+    },
+    [searchIndex],
+  );
 
   // 处理结果点击
   const handleResultClick = (path: string) => {
@@ -101,7 +118,10 @@ export const SearchBar = () => {
   // 点击外部关闭搜索结果
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (searchBoxRef.current && !searchBoxRef.current.contains(event.target as Node)) {
+      if (
+        searchBoxRef.current &&
+        !searchBoxRef.current.contains(event.target as Node)
+      ) {
         setSearchResults([]);
       }
     };
@@ -111,7 +131,10 @@ export const SearchBar = () => {
   }, []);
 
   return (
-    <Box sx={{ position: 'relative', width: '100%', maxWidth: 600 }} ref={searchBoxRef}>
+    <Box
+      sx={{ position: 'relative', width: '100%', maxWidth: 600 }}
+      ref={searchBoxRef}
+    >
       <TextField
         fullWidth
         variant="outlined"

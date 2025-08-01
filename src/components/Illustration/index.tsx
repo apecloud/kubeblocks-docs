@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import { useTheme } from "@mui/material";
+import { useTheme } from '@mui/material';
 
-import notfound from "./not-found.svg";
-import notfoundDark from "./not-found-dark.svg";
-import error from "./error.svg";
-import errorDark from "./error-dark.svg";
-import users from "./users.svg";
-import usersDark from "./users-dark.svg";
-import empty from "./empty.svg";
-import emptyDark from "./empty-dark.svg";
-import Image from "next/image";
+import Image from 'next/image';
+import emptyDark from './empty-dark.svg';
+import empty from './empty.svg';
+import errorDark from './error-dark.svg';
+import error from './error.svg';
+import notfoundDark from './not-found-dark.svg';
+import notfound from './not-found.svg';
+import usersDark from './users-dark.svg';
+import users from './users.svg';
 
 export type IllustrationProps = {
   width?: number;
@@ -30,7 +30,9 @@ export const IllustrationBase = ({
 }: IllustrationBaseProps) => {
   const theme = useTheme();
   const isDark = new RegExp(/dark/).test(theme.palette.mode);
-  return <Image src={isDark ? dark : light} width={width} height={height} alt="" />;
+  return (
+    <Image src={isDark ? dark : light} width={width} height={height} alt="" />
+  );
 };
 
 export const IllustrationNotFound = (props: IllustrationProps) => (

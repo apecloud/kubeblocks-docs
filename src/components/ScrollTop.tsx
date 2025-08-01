@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { KeyboardArrowUp } from "@mui/icons-material";
-import { Box, Fab, Fade, useScrollTrigger } from "@mui/material";
-import { animateScroll } from "react-scroll";
+import { KeyboardArrowUp } from '@mui/icons-material';
+import { Box, Fab, Fade, useScrollTrigger } from '@mui/material';
+import { animateScroll } from 'react-scroll';
 interface Props {
   /**
    * Injected by the documentation to work in an iframe.
@@ -31,7 +31,7 @@ export default function ScrollTop(props: Props) {
           })
         }
         role="presentation"
-        sx={{ position: "fixed", bottom: 16, right: 16 }}
+        sx={{ position: 'fixed', bottom: 16, right: 16 }}
       >
         <Fab color="primary">
           <KeyboardArrowUp />

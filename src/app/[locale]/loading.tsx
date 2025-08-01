@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { Box, LinearProgress, styled } from "@mui/material";
+import { Box, LinearProgress, styled } from '@mui/material';
 
 const LoaderWrapperStyled = styled(Box)(() => {
   return {
-    position: "absolute",
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,

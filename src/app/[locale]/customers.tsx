@@ -1,36 +1,36 @@
-"use client";
+'use client';
 
-import { Box, BoxProps, Container, Typography, useTheme } from "@mui/material";
-import Image from "next/image";
+import { Box, BoxProps, Container, Typography, useTheme } from '@mui/material';
+import Image from 'next/image';
 
-import boncloud from "@/assets/customers/boncloud.svg";
-import ecloud from "@/assets/customers/ecloud.svg";
-import ctyun from "@/assets/customers/ctyun.svg";
-import tilaa from '@/assets/customers/tilaa.svg'
-import pingan from "@/assets/customers/pingan.svg"
-import kuaishou from "@/assets/customers/kuaishou.svg";
-import fastgpt from "@/assets/customers/fastgpt.svg";
-import kubesphere from "@/assets/customers/kubesphere.svg";
-import logo360 from "@/assets/customers/logo360.svg";
-import momenta from "@/assets/customers/momenta.svg";
-import sealos from "@/assets/customers/sealos.svg";
-import tencent from "@/assets/customers/tencent.svg";
-import weipinhui from "@/assets/customers/weipinhui.svg";
-import xiaomi from "@/assets/customers/xiaomi.svg";
-import zhongxinzhengquan from "@/assets/customers/zhongxinzhengquan.svg";
-import tigerbrokers from "@/assets/customers/tigerbrokers.svg";
+import boncloud from '@/assets/customers/boncloud.svg';
+import ctyun from '@/assets/customers/ctyun.svg';
+import ecloud from '@/assets/customers/ecloud.svg';
+import fastgpt from '@/assets/customers/fastgpt.svg';
+import kuaishou from '@/assets/customers/kuaishou.svg';
+import kubesphere from '@/assets/customers/kubesphere.svg';
+import logo360 from '@/assets/customers/logo360.svg';
+import momenta from '@/assets/customers/momenta.svg';
+import pingan from '@/assets/customers/pingan.svg';
+import sealos from '@/assets/customers/sealos.svg';
+import tencent from '@/assets/customers/tencent.svg';
+import tigerbrokers from '@/assets/customers/tigerbrokers.svg';
+import tilaa from '@/assets/customers/tilaa.svg';
+import weipinhui from '@/assets/customers/weipinhui.svg';
+import xiaomi from '@/assets/customers/xiaomi.svg';
+import zhongxinzhengquan from '@/assets/customers/zhongxinzhengquan.svg';
 
-import Slider from "react-slick";
-import { KeyboardArrowLeft, KeyboardArrowRight } from "@mui/icons-material";
+import { KeyboardArrowLeft, KeyboardArrowRight } from '@mui/icons-material';
+import Slider from 'react-slick';
 
 const customers = [
   {
     img: boncloud,
-    title: "BONC Cloud",
+    title: 'BONC Cloud',
   },
   {
     img: ecloud,
-    title: "China Mobile Cloud",
+    title: 'China Mobile Cloud',
   },
   {
     img: ctyun,
@@ -50,43 +50,43 @@ const customers = [
   },
   {
     img: kuaishou,
-    title: "Kwai",
+    title: 'Kwai',
   },
   {
     img: logo360,
-    title: "360",
+    title: '360',
   },
   {
     img: momenta,
-    title: "Momenta",
+    title: 'Momenta',
   },
   {
     img: sealos,
-    title: "SealOS",
+    title: 'SealOS',
   },
   {
     img: fastgpt,
-    title: "FastGPT",
+    title: 'FastGPT',
   },
   {
     img: tencent,
-    title: "Tencent",
+    title: 'Tencent',
   },
   {
     img: weipinhui,
-    title: "VIP.com",
+    title: 'VIP.com',
   },
   {
     img: xiaomi,
-    title: "Xiaomi",
+    title: 'Xiaomi',
   },
   {
     img: zhongxinzhengquan,
-    title: "CITIC",
+    title: 'CITIC',
   },
   {
     img: tigerbrokers,
-    title: "Tiger Brokers",
+    title: 'Tiger Brokers',
   },
 ];
 
@@ -95,8 +95,8 @@ const NextArrow = (props: BoxProps) => (
     className={props.className}
     onClick={props.onClick}
     sx={{
-      "&:before": {
-        display: "none",
+      '&:before': {
+        display: 'none',
       },
     }}
   >
@@ -108,8 +108,8 @@ const PrevArrow = (props: BoxProps) => (
     className={props.className}
     onClick={props.onClick}
     sx={{
-      "&:before": {
-        display: "none",
+      '&:before': {
+        display: 'none',
       },
     }}
   >
@@ -130,9 +130,9 @@ export default function Customers() {
     appendDots: (dots: never) => <Box component="ul">{dots}</Box>,
     customPaging: () => (
       <Box
-        component={"button"}
+        component={'button'}
         sx={{
-          "&:before": {
+          '&:before': {
             color: `${theme.palette.text.disabled} !important`,
           },
         }}
@@ -162,25 +162,23 @@ export default function Customers() {
           <Slider {...settings}>
             {customers.map((item, index) => (
               <Box key={index}>
-                <Box sx={{
-                  textAlign: "center",
-                  paddingInline: 1,
-                  paddingBlock: 2,
-                  marginInline: 1,
-                  "img": {
-                    display: "inline-block",
-                  },
-                  borderRadius: 2,
-                  transitionDuration: '0.3s',
-                  "&:hover": {
-                    bgcolor: theme.palette.action.hover,
-                  }
-                }}>
-                  <Image
-                    src={item.img}
-                    alt={item.title}
-                    height={40}
-                  />
+                <Box
+                  sx={{
+                    textAlign: 'center',
+                    paddingInline: 1,
+                    paddingBlock: 2,
+                    marginInline: 1,
+                    img: {
+                      display: 'inline-block',
+                    },
+                    borderRadius: 2,
+                    transitionDuration: '0.3s',
+                    '&:hover': {
+                      bgcolor: theme.palette.action.hover,
+                    },
+                  }}
+                >
+                  <Image src={item.img} alt={item.title} height={40} />
                   <Typography mt={2} sx={{ fontSize: 16 }}>
                     {item.title}
                   </Typography>

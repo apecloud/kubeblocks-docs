@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { Box, BoxProps } from "@mui/material";
+import { Box, BoxProps } from '@mui/material';
 
 interface Props {
-  label: string
+  label: string;
   children?: React.ReactNode;
 }
 

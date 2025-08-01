@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useGlobalStore } from "@/store/global";
-import { Menu, MenuOpen } from "@mui/icons-material";
-import { Drawer, IconButton, Toolbar, useTheme } from "@mui/material";
+import { useGlobalStore } from '@/store/global';
+import { Menu, MenuOpen } from '@mui/icons-material';
+import { Drawer, IconButton, Toolbar, useTheme } from '@mui/material';
 
 export default function Sidebar({ children }: { children: React.ReactNode }) {
   const width = 280;
@@ -20,7 +20,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
             toggleSidebarCollapsed(!sidebarCollapsed);
           }}
           sx={{
-            position: "fixed",
+            position: 'fixed',
             top: 12,
             left: 4,
             zIndex: theme.zIndex.drawer + 1,
@@ -30,7 +30,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
         </IconButton>
       ) : undefined}
       <Drawer
-        variant={isMobile ? "temporary" : "persistent"}
+        variant={isMobile ? 'temporary' : 'persistent'}
         open={!sidebarCollapsed}
         sx={{ width }}
         onClose={() => toggleSidebarCollapsed(true)}
@@ -38,7 +38,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
         PaperProps={{
           sx: {
             width,
-            background: "var(--css-palette-background-default)",
+            background: 'var(--css-palette-background-default)',
           },
         }}
       >

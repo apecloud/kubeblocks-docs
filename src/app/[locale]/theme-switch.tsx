@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { DarkModeOutlined, LightModeOutlined } from "@mui/icons-material";
-import { IconButton } from "@mui/material";
-import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { DarkModeOutlined, LightModeOutlined } from '@mui/icons-material';
+import { IconButton } from '@mui/material';
+import { useTheme } from 'next-themes';
+import { useEffect, useState } from 'react';
 
 export default function ThemeSwitcher() {
   const { setTheme, resolvedTheme } = useTheme();
@@ -20,10 +20,10 @@ export default function ThemeSwitcher() {
 
   let icon;
   switch (resolvedTheme) {
-    case "light":
+    case 'light':
       icon = <LightModeOutlined />;
       break;
-    case "dark":
+    case 'dark':
       icon = <DarkModeOutlined />;
       break;
     default:
@@ -34,7 +34,7 @@ export default function ThemeSwitcher() {
   return (
     <IconButton
       onClick={() => {
-        setTheme(resolvedTheme === "dark" ? "light" : "dark");
+        setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
       }}
     >
       {icon}

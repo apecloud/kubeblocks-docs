@@ -1,10 +1,10 @@
-import light from "./light";
-import dark from "./dark";
-import { Theme } from "@mui/material/styles";
+import { Theme } from '@mui/material/styles';
+import dark from './dark';
+import light from './light';
 
-export const THEME_AVAILABLE = ["dark", "light"] as const;
-export const THEME_DEFAULT = "dark" as const;
-export const THEME_COOKIE_NAME = "theme" as const;
+export const THEME_AVAILABLE = ['dark', 'light'] as const;
+export const THEME_DEFAULT = 'dark' as const;
+export const THEME_COOKIE_NAME = 'theme' as const;
 
 export const THEME_CONFIG = {
   light,

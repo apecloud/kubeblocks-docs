@@ -1,14 +1,14 @@
-import Footer from "@/components/Footer";
-import { Box, Divider } from "@mui/material";
-import WhyNeedKubeBlocks from "./why-need-kubeblocks";
-import Banner from "./banner";
-import Features from "./features";
-import Contact from "./contact";
-import BlogsPreview from "./blogs-preview";
-import { getBlogs } from "@/utils/markdown";
-import Customers from "./customers";
-import { getStaticParams } from "@/locales/server";
-import { Evaluate } from "./Evaluate";
+import Footer from '@/components/Footer';
+import { getStaticParams } from '@/locales/server';
+import { getBlogs } from '@/utils/markdown';
+import { Box, Divider } from '@mui/material';
+import Banner from './banner';
+import BlogsPreview from './blogs-preview';
+import Contact from './contact';
+import Customers from './customers';
+import { Evaluate } from './Evaluate';
+import Features from './features';
+import WhyNeedKubeBlocks from './why-need-kubeblocks';
 
 export async function generateStaticParams() {
   return getStaticParams();
@@ -25,7 +25,7 @@ export default async function HomePage({
 
   return (
     <>
-      <Box style={{ minHeight: "var(--container-min-height)" }}>
+      <Box style={{ minHeight: 'var(--container-min-height)' }}>
         <Banner />
         <Divider />
         <Customers />

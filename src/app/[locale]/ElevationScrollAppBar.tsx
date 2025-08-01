@@ -1,6 +1,14 @@
-"use client";
+'use client';
 
-import { useGlobalStore } from "@/store/global";
+import SearchModal from '@/components/SearchModal';
+import { SlackIconNoColor } from '@/components/icons';
+import { useI18n } from '@/locales/client';
+import { useGlobalStore } from '@/store/global';
+import {
+  GitHub,
+  LaunchOutlined,
+  Search as SearchIcon,
+} from '@mui/icons-material';
 import {
   AppBar,
   AppBarProps,
@@ -11,19 +19,15 @@ import {
   Toolbar,
   useMediaQuery,
   useTheme,
-} from "@mui/material";
-import useScrollTrigger from "@mui/material/useScrollTrigger";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import Image from "next/image";
-import DocumentationNav from "./nav-document";
-import DatabasesNav from "./nav-databases";
-import { GitHub, LaunchOutlined, Search as SearchIcon } from "@mui/icons-material";
-import ThemeSwitcher from "./theme-switch";
-import { useI18n } from "@/locales/client";
-import Link from "next/link";
-import SearchModal from "@/components/SearchModal";
-import { SlackIconNoColor } from "@/components/icons";
+} from '@mui/material';
+import useScrollTrigger from '@mui/material/useScrollTrigger';
+import Image from 'next/image';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import DatabasesNav from './nav-databases';
+import DocumentationNav from './nav-document';
+import ThemeSwitcher from './theme-switch';
 
 // import LocaleSwitcher from "./locale-switch";
 
@@ -38,7 +42,7 @@ export const ElevationScrollAppBar = (props: AppBarProps) => {
 
   const { isMobile, setIsMobile, toggleSidebarCollapsed } = useGlobalStore();
 
-  const mobile = useMediaQuery(theme.breakpoints.down("md"));
+  const mobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const [showSearch, setShowSearch] = useState(false);
 
@@ -50,20 +54,20 @@ export const ElevationScrollAppBar = (props: AppBarProps) => {
   useEffect(() => {
     window.scrollTo({
       top: 0,
-      behavior: "smooth",
+      behavior: 'smooth',
     });
   }, [pathname]);
 
   // 监听快捷键
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setShowSearch(true);
       }
     }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
   return (
@@ -71,7 +75,7 @@ export const ElevationScrollAppBar = (props: AppBarProps) => {
       <AppBar
         {...props}
         sx={{
-          boxShadow: trigger ? `0 10px 10px rgba(0,0,0, 0.1)` : "none",
+          boxShadow: trigger ? `0 10px 10px rgba(0,0,0, 0.1)` : 'none',
           zIndex: theme.zIndex.drawer + 1,
           paddingInline: isMobile ? 2 : 0,
         }}
@@ -79,17 +83,13 @@ export const ElevationScrollAppBar = (props: AppBarProps) => {
       >
         <Toolbar>
           <Stack direction="row" spacing={1}>
-            <Link
-              href="/"
-              style={{ display: "block" }}
-              color="textPrimary"
-            >
+            <Link href="/" style={{ display: 'block' }} color="textPrimary">
               <Image
                 src="/logo.png"
                 alt="KubeBlocks"
                 width={165}
                 height={36}
-                style={{ display: "block" }}
+                style={{ display: 'block' }}
               />
             </Link>
           </Stack>
@@ -112,12 +112,12 @@ export const ElevationScrollAppBar = (props: AppBarProps) => {
               href="/blog"
               sx={{
                 paddingInline: 2,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}
             >
-              {t("navigation.blogs")}
+              {t('navigation.blogs')}
             </Button>
             <Button
               component={Link}
@@ -128,9 +128,9 @@ export const ElevationScrollAppBar = (props: AppBarProps) => {
               endIcon={<LaunchOutlined />}
               sx={{
                 paddingInline: 2,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}
             >
               KubeBlocks Cloud
@@ -144,15 +144,12 @@ export const ElevationScrollAppBar = (props: AppBarProps) => {
           <Box
             sx={{
               gap: 2,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <IconButton
-              href="https://kubeblocks.slack.com"
-              target="_blank"
-            >
+            <IconButton href="https://kubeblocks.slack.com" target="_blank">
               <SlackIconNoColor />
             </IconButton>
             <IconButton

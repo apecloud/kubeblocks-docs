@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
 import { readFileSync, readdirSync } from 'fs';
-import { join } from 'path';
 import matter from 'gray-matter';
+import { NextResponse } from 'next/server';
+import { join } from 'path';
 
 interface SearchDocument {
   id: string;
@@ -46,7 +46,13 @@ function extractContent(filePath: string): SearchDocument {
 
   return {
     id: filePath,
-    title: data.title || filePath.split('/').pop()?.replace(/\.mdx?$/, '') || '',
+    title:
+      data.title ||
+      filePath
+        .split('/')
+        .pop()
+        ?.replace(/\.mdx?$/, '') ||
+      '',
     content: plainContent,
     path: filePath.replace(/\.mdx?$/, ''),
   };
@@ -57,8 +63,8 @@ export async function GET() {
     const docsDir = join(process.cwd(), 'docs');
     const mdxFiles = getAllMdxFiles(docsDir);
 
-    const documents = mdxFiles.map(filePath =>
-      extractContent(join(docsDir, filePath))
+    const documents = mdxFiles.map((filePath) =>
+      extractContent(join(docsDir, filePath)),
     );
 
     return NextResponse.json(documents);
@@ -66,7 +72,7 @@ export async function GET() {
     console.error('Error generating search index:', error);
     return NextResponse.json(
       { error: 'Failed to generate search index' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

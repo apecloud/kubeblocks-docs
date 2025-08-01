@@ -1,17 +1,22 @@
-"use client";
-import { IconButton, ListItemIcon, ListItemText, MenuItem, MenuList } from "@mui/material";
+'use client';
+import {
+  IconButton,
+  ListItemIcon,
+  ListItemText,
+  MenuItem,
+  MenuList,
+} from '@mui/material';
 
-import { Check, Language } from "@mui/icons-material";
-import { useChangeLocale, useCurrentLocale } from "@/locales/client";
-import { DropDown } from "@/components/DropDown";
+import { DropDown } from '@/components/DropDown';
+import { useChangeLocale, useCurrentLocale } from '@/locales/client';
+import { Check, Language } from '@mui/icons-material';
 
-
-type LangType = "en";
+type LangType = 'en';
 
 const lang: {
   [key in LangType]: string;
 } = {
-  en: "English",
+  en: 'English',
 } as const;
 
 export default function LocaleSwitcher() {
@@ -31,9 +36,17 @@ export default function LocaleSwitcher() {
         {Object.keys(lang).map((l) => {
           const locale = l as LangType;
           return (
-            <MenuItem key={locale} onClick={() => changeLocale(locale)} sx={{ paddingBlock: 1.2 }}>
+            <MenuItem
+              key={locale}
+              onClick={() => changeLocale(locale)}
+              sx={{ paddingBlock: 1.2 }}
+            >
               <ListItemIcon>
-                <Check sx={{ visibility: currentLocale === locale ? "visible" : "hidden" }} />
+                <Check
+                  sx={{
+                    visibility: currentLocale === locale ? 'visible' : 'hidden',
+                  }}
+                />
               </ListItemIcon>
               <ListItemText>{lang[locale]}</ListItemText>
             </MenuItem>

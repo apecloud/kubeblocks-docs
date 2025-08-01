@@ -1,13 +1,13 @@
-import path from "path";
-import fs from "fs";
-import readYamlFile from "read-yaml-file";
-import grayMatter from "gray-matter";
-import { SidebarMenuItem } from "@/components/SidebarMenu";
-import moment from "moment";
+import { SidebarMenuItem } from '@/components/SidebarMenu';
+import fs from 'fs';
+import grayMatter from 'gray-matter';
+import moment from 'moment';
+import path from 'path';
+import readYamlFile from 'read-yaml-file';
 
 export const ROOT_DIR = process.cwd();
-export const DOCS_DIR = path.join(ROOT_DIR, "docs");
-export const BLOGS_DIR = path.join(ROOT_DIR, "blogs");
+export const DOCS_DIR = path.join(ROOT_DIR, 'docs');
+export const BLOGS_DIR = path.join(ROOT_DIR, 'blogs');
 
 export const MARKDOWN_SUEFIX_REG = /\.(md|mdx)$/;
 
@@ -19,7 +19,7 @@ export type MarkdownPageParams = {
 };
 
 export const getFirstMenuItem = (
-  items?: SidebarMenuItem[]
+  items?: SidebarMenuItem[],
 ): SidebarMenuItem | undefined => {
   let result;
   try {
@@ -33,7 +33,7 @@ export const getFirstMenuItem = (
 };
 
 export const getMarkDownSideBar = async (
-  dir: string
+  dir: string,
 ): Promise<SidebarMenuItem[]> => {
   const fns: Promise<SidebarMenuItem>[] = [];
   fs.readdirSync(dir).forEach((child) => {
@@ -41,22 +41,22 @@ export const getMarkDownSideBar = async (
     const stat = fs.lstatSync(filepath);
     const item: SidebarMenuItem = { position: 0 };
     if (stat.isFile() && filepath.match(MARKDOWN_SUEFIX_REG)) {
-      if(child.match(/^_/)) return;
+      if (child.match(/^_/)) return;
       fns.push(
         new Promise(async (resolve) => {
           const metadata = await getMarkDownMetaData(filepath);
           const urlPath = filepath
-            .replace(DOCS_DIR, "")
-            .replace(MARKDOWN_SUEFIX_REG, "");
+            .replace(DOCS_DIR, '')
+            .replace(MARKDOWN_SUEFIX_REG, '');
           Object.assign(item, {
             position: metadata.sidebar_position || metadata.position || 0,
             label: metadata.sidebar_label || metadata.title,
-            href: urlPath.replace(/^\/(en)/, "/docs"),
+            href: urlPath.replace(/^\/(en)/, '/docs'),
             description: metadata.description,
             hidden: Boolean(metadata.hidden),
           });
           resolve(item);
-        })
+        }),
       );
     }
     if (stat.isDirectory()) {
@@ -75,7 +75,7 @@ export const getMarkDownSideBar = async (
             ...item,
             children,
           });
-        })
+        }),
       );
     }
   });
@@ -85,7 +85,7 @@ export const getMarkDownSideBar = async (
 export const getMarkDownMetaData = async (filepath: string) => {
   const isExists = fs.existsSync(filepath);
   if (isExists) {
-    const { data } = grayMatter(fs.readFileSync(filepath, "utf8"));
+    const { data } = grayMatter(fs.readFileSync(filepath, 'utf8'));
     return data;
   } else {
     return {};
@@ -93,39 +93,43 @@ export const getMarkDownMetaData = async (filepath: string) => {
 };
 
 export type BlogMetadata = {
-  name: string,
-  title: string,
-  description: string,
-  date: string,
-  image: string,
-  datetime: string,
+  name: string;
+  title: string;
+  description: string;
+  date: string;
+  image: string;
+  datetime: string;
   authors?: {
-    image_url: string,
-    name: string,
-  }
-}
+    image_url: string;
+    name: string;
+  };
+};
 
-export const getBlogs = async (locale: (string | undefined) = 'en'): Promise<BlogMetadata[]> => {
+export const getBlogs = async (
+  locale: string | undefined = 'en',
+): Promise<BlogMetadata[]> => {
   let blogsDir = path.join(BLOGS_DIR, locale);
   if (!fs.existsSync(blogsDir)) {
-    blogsDir = path.join(BLOGS_DIR, "en");
+    blogsDir = path.join(BLOGS_DIR, 'en');
   }
   moment.locale(locale);
   const files = fs
     .readdirSync(blogsDir)
-    .filter((file) => file.endsWith(".mdx"));
+    .filter((file) => file.endsWith('.mdx'));
 
   const blogs = (
     await Promise.all(
       files.map(async (file) => {
-        const data = (await getMarkDownMetaData(path.join(blogsDir, file))) as BlogMetadata;
-        data.name = file.replace(/\.mdx$/, "");
+        const data = (await getMarkDownMetaData(
+          path.join(blogsDir, file),
+        )) as BlogMetadata;
+        data.name = file.replace(/\.mdx$/, '');
         return data;
-      })
+      }),
     )
   )
     .map((blog) => {
-      blog.datetime = moment(blog.date).format("LL");
+      blog.datetime = moment(blog.date).format('LL');
       return blog;
     })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
