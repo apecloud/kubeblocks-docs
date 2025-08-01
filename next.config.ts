@@ -1,28 +1,28 @@
-import type { NextConfig } from "next";
-import createMDX from "@next/mdx";
-import { h } from "hastscript";
-import { visit } from "unist-util-visit";
-import _ from "lodash";
+import createMDX from '@next/mdx';
+import { h } from 'hastscript';
+import _ from 'lodash';
+import type { NextConfig } from 'next';
+import { visit } from 'unist-util-visit';
 
-import remarkGfm from "remark-gfm";
-import remarkHeaderId from "remark-heading-id";
-import remarkGithubAdmonitionsToDirectives from "remark-github-admonitions-to-directives";
-import remarkDirective from "remark-directive";
-import remarkFrontmatter from "remark-frontmatter";
-import remarkMdxFrontmatter from "remark-mdx-frontmatter";
+import remarkDirective from 'remark-directive';
+import remarkFrontmatter from 'remark-frontmatter';
+import remarkGfm from 'remark-gfm';
+import remarkGithubAdmonitionsToDirectives from 'remark-github-admonitions-to-directives';
+import remarkHeaderId from 'remark-heading-id';
+// import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 
-import rehypeHighlight from "rehype-highlight";
-import rehypeToc from "@jsdevtools/rehype-toc";
-import rehypeHighlightLines from "rehype-highlight-code-lines";
+import rehypeToc from '@jsdevtools/rehype-toc';
+import rehypeHighlight from 'rehype-highlight';
+import rehypeHighlightLines from 'rehype-highlight-code-lines';
 
 const nextConfig: NextConfig = {
   // Configure `pageExtensions` to include markdown and MDX files
-  pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
+  pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx'],
   // Optionally, add any other Next.js config below
   webpack: (config) => {
     Object.assign(config.resolve.alias, {
-      "@theme/Tabs": "@/components/MdxTabs",
-      "@theme/TabItem": "@/components/MdxTabItem",
+      '@theme/Tabs': '@/components/MdxTabs',
+      '@theme/TabItem': '@/components/MdxTabItem',
     });
     return config;
   },
@@ -47,18 +47,18 @@ const withMDX = createMDX({
     remarkPlugins: [
       remarkGfm,
       remarkFrontmatter,
-      remarkMdxFrontmatter,
+      // remarkMdxFrontmatter,
       remarkGithubAdmonitionsToDirectives,
       remarkDirective,
       () => {
         return (tree) => {
           visit(tree, (node) => {
             if (
-              node.type === "containerDirective" &&
-              _.includes(["note", "warning", "caution", "tip"], node.name)
+              node.type === 'containerDirective' &&
+              _.includes(['note', 'warning', 'caution', 'tip'], node.name)
             ) {
               const data = node.data || (node.data = {});
-              const tagName = "div";
+              const tagName = 'div';
               data.hName = tagName;
               data.hProperties = h(tagName, {
                 ...node.attributes,
@@ -75,10 +75,17 @@ const withMDX = createMDX({
         },
       ],
     ],
-    rehypePlugins: [rehypeHighlight, rehypeHighlightLines, [rehypeToc, {
-      // position: 'beforebegin', // "beforebegin" | "afterbegin" | "beforeend" | "afterend"
-      headings: ["h2", "h3", "h4", "h5", "h6"]
-    }]],
+    rehypePlugins: [
+      rehypeHighlight,
+      rehypeHighlightLines,
+      [
+        rehypeToc,
+        {
+          // position: 'beforebegin', // "beforebegin" | "afterbegin" | "beforeend" | "afterend"
+          headings: ['h2', 'h3', 'h4', 'h5', 'h6'],
+        },
+      ],
+    ],
   },
 });
 

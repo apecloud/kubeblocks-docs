@@ -6,8 +6,8 @@ This repo contains the source code of kubeblocks docs. It's built by [Next.js](h
 
 Requirements:
 
-* Install [Node.js](https://nodejs.org/en/download/) version >= 20.0.0, which can be checked by running `node -v`.
-* yarn
+- Install [Node.js](https://nodejs.org/en/download/) version >= 20.0.0, which can be checked by running `node -v`.
+- yarn
 
 First, run the development server:
 
@@ -18,7 +18,6 @@ yarn dev
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the docs by modifying `/docs`. The page auto-updates as you edit the file.
-
 
 ## The structure of files
 
@@ -60,7 +59,6 @@ kubeblocks-docs
 ```
 
 ## Deploy
-
 
 ### build
 

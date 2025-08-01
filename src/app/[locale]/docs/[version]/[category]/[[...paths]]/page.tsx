@@ -1,20 +1,20 @@
-import { redirect } from "next/navigation";
-import path from "path";
-import fs from "fs";
+import { SidebarMenuItem } from '@/components/SidebarMenu';
+import { getStaticParams } from '@/locales/server';
 import {
-  MarkdownPageParams,
   DOCS_DIR,
+  getFirstMenuItem,
   getMarkDownMetaData,
   getMarkDownSideBar,
-  getFirstMenuItem,
-} from "@/utils/markdown";
-import _ from "lodash";
-import { SidebarMenuItem } from "@/components/SidebarMenu";
-import { getStaticParams } from "@/locales/server";
+  MarkdownPageParams,
+} from '@/utils/markdown';
+import fs from 'fs';
+import _ from 'lodash';
+import { redirect } from 'next/navigation';
+import path from 'path';
 
 export async function generateStaticParams() {
   const data: MarkdownPageParams[] = [];
-  const docsDir = path.join(process.cwd(), "docs");
+  const docsDir = path.join(process.cwd(), 'docs');
 
   const getPaths = (dir: string, initData: string[] = []): string[] => {
     fs.readdirSync(dir).forEach((f) => {
@@ -23,7 +23,7 @@ export async function generateStaticParams() {
       if (stat.isDirectory()) {
         getPaths(d, initData);
       }
-      if (stat.isFile() && f.endsWith(".mdx")) {
+      if (stat.isFile() && f.endsWith('.mdx')) {
         initData.push(d);
       }
     });
@@ -41,10 +41,10 @@ export async function generateStaticParams() {
         // categories
         const cateDir = path.join(versionDir, category);
         const paths: string[] = getPaths(cateDir).map((item) =>
-          item.replace(cateDir+"/", "").replace(".mdx", "")
+          item.replace(cateDir + '/', '').replace('.mdx', ''),
         );
 
-        paths.forEach(p => {
+        paths.forEach((p) => {
           const items = p.split('/');
           data.push({
             locale: item.locale,
@@ -52,9 +52,7 @@ export async function generateStaticParams() {
             category,
             paths: items,
           });
-        })
-
-
+        });
       });
     });
   });
@@ -72,7 +70,7 @@ export default async function MarkdownPage({
    * redirect to default document when docs path is empty;
    */
   const dir = path.join(DOCS_DIR, locale, version, category);
-  const defaultEnDir = path.join(DOCS_DIR, "en", version, category);
+  const defaultEnDir = path.join(DOCS_DIR, 'en', version, category);
   let menu: SidebarMenuItem[] = [];
   if (fs.existsSync(dir)) {
     menu = await getMarkDownSideBar(dir);
@@ -91,7 +89,7 @@ export default async function MarkdownPage({
   const relativePath = path.join(locale, version, category, ...paths);
   const mdxPath = path.join(DOCS_DIR, `${relativePath}.mdx`);
 
-  const defaultRelativeEnPath = path.join("en", version, category, ...paths);
+  const defaultRelativeEnPath = path.join('en', version, category, ...paths);
   const defaultMdxEnPath = path.join(DOCS_DIR, `${defaultRelativeEnPath}.mdx`);
 
   if (fs.existsSync(mdxPath)) {
@@ -114,10 +112,10 @@ export async function generateMetadata({
 }) {
   const { locale, version, category, paths = [] } = await params;
   const mdxPath =
-    path.join(DOCS_DIR, locale, version, category, ...paths) + ".mdx";
+    path.join(DOCS_DIR, locale, version, category, ...paths) + '.mdx';
 
   const defaultDdxEnPath =
-    path.join(DOCS_DIR, "en", version, category, ...paths) + ".mdx";
+    path.join(DOCS_DIR, 'en', version, category, ...paths) + '.mdx';
 
   if (fs.existsSync(mdxPath)) {
     return await getMarkDownMetaData(mdxPath);

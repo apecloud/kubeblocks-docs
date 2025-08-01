@@ -1,10 +1,10 @@
-import { createTheme } from "@mui/material/styles";
-import { alpha } from "@mui/material";
-const borderColor = "#E7EAEE";
+import { alpha } from '@mui/material';
+import { createTheme } from '@mui/material/styles';
+const borderColor = '#E7EAEE';
 
 export default createTheme({
   cssVariables: {
-    cssVarPrefix: "css",
+    cssVarPrefix: 'css',
   },
   // breakpoints: {
   //   values: {
@@ -16,13 +16,13 @@ export default createTheme({
   //   },
   // },
   palette: {
-    mode: "light",
+    mode: 'light',
     primary: {
-      main: "#0165CB",
+      main: '#0165CB',
     },
     background: {
-      default: "#FFF",
-      paper: "#FFF",
+      default: '#FFF',
+      paper: '#FFF',
     },
     action: {},
     text: {},
@@ -30,7 +30,8 @@ export default createTheme({
   },
   typography: {
     fontSize: 14,
-    fontFamily: 'Geist, "Geist Fallback", "Roboto","Helvetica","Arial",sans-serif',
+    fontFamily:
+      'Geist, "Geist Fallback", "Roboto","Helvetica","Arial",sans-serif',
   },
   mixins: {
     toolbar: {
@@ -41,10 +42,10 @@ export default createTheme({
     MuiAppBar: {
       styleOverrides: {
         root: {
-          background: alpha("#FFF", 0.7),
-          color: "inherit",
-          backdropFilter: "blur(10px)",
-          boxShadow: "none",
+          background: alpha('#FFF', 0.7),
+          color: 'inherit',
+          backdropFilter: 'blur(10px)',
+          boxShadow: 'none',
           borderBottom: `1px solid ${borderColor}`,
         },
       },
@@ -66,15 +67,15 @@ export default createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          textTransform: "none",
+          textTransform: 'none',
         },
       },
     },
     MuiPaper: {
       styleOverrides: {
         root: ({ theme }) => ({
-          backgroundImage: "none",
-          boxShadow: "none",
+          backgroundImage: 'none',
+          boxShadow: 'none',
           border: `1px solid ${theme.palette.divider}`,
         }),
       },
@@ -82,8 +83,8 @@ export default createTheme({
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
-          "& > fieldset": {
-            transition: "border-color 0.3s",
+          '& > fieldset': {
+            transition: 'border-color 0.3s',
           },
         },
       },
@@ -97,7 +98,7 @@ export default createTheme({
     },
     MuiLink: {
       defaultProps: {
-        underline: "hover",
+        underline: 'hover',
       },
     },
   },

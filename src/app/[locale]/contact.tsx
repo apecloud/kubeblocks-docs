@@ -1,6 +1,7 @@
-"use client";
-import { Link } from "@/components/Link";
+'use client';
+import { Link } from '@/components/Link';
 import {
+  alpha,
   Box,
   Button,
   Container,
@@ -8,8 +9,7 @@ import {
   Stack,
   Typography,
   useTheme,
-} from "@mui/material";
-import { alpha } from "@mui/material";
+} from '@mui/material';
 
 export default function Contact() {
   const theme = useTheme();
@@ -21,9 +21,11 @@ export default function Contact() {
     <Box
       sx={{
         backgroundImage: `url("/site/home-rectangles.svg")`,
-        backgroundColor: theme.palette.mode.includes('dark') ? darken(background, 0.3) : background,
-        backgroundPosition: "center center",
-        backgroundSize: "cover",
+        backgroundColor: theme.palette.mode.includes('dark')
+          ? darken(background, 0.3)
+          : background,
+        backgroundPosition: 'center center',
+        backgroundSize: 'cover',
         paddingBlock: 6,
       }}
     >
@@ -39,7 +41,7 @@ export default function Contact() {
                 direction="row"
                 spacing={3}
                 alignItems="center"
-                sx={{ width: "100%" }}
+                sx={{ width: '100%' }}
                 justifyContent="center"
               >
                 <Typography sx={{ color: colorSecondary }}>MySQL</Typography>
@@ -59,13 +61,13 @@ export default function Contact() {
               color="warning"
               sx={{
                 border: 1,
-                borderColor: "#FFF",
+                borderColor: '#FFF',
                 paddingInline: 4,
                 borderRadius: 100,
-                background: "none",
-                color: "#FFF",
-                boxShadow: "none",
-                fontSize: "1.1em",
+                background: 'none',
+                color: '#FFF',
+                boxShadow: 'none',
+                fontSize: '1.1em',
               }}
             >
               Start Now, at No Cost!

@@ -1,22 +1,22 @@
-"use client";
+'use client';
 
-import { DropDown } from "@/components/DropDown";
-import { Link } from "@/components/Link";
-import { useI18n } from "@/locales/client";
-import { DoneOutlined, ExpandMore } from "@mui/icons-material";
+import { DropDown } from '@/components/DropDown';
+import { Link } from '@/components/Link';
+import { useI18n } from '@/locales/client';
+import { DoneOutlined, ExpandMore } from '@mui/icons-material';
 import {
-  MenuItem,
-  ListItemText,
-  ListItemIcon,
   Box,
   Button,
-  useTheme,
-  MenuList,
   Chip,
-} from "@mui/material";
-import _ from "lodash";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+  ListItemIcon,
+  ListItemText,
+  MenuItem,
+  MenuList,
+  useTheme,
+} from '@mui/material';
+import _ from 'lodash';
+import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 
 type Props = {
   version: string;
@@ -27,8 +27,8 @@ export default function VersionList({ version, versions }: Props) {
   const t = useI18n();
   const theme = useTheme();
   const pathnames = usePathname()
-    .split("/")
-    .filter((item) => !_.includes(["en"], item));
+    .split('/')
+    .filter((item) => !_.includes(['en'], item));
 
   return (
     <DropDown
@@ -38,7 +38,7 @@ export default function VersionList({ version, versions }: Props) {
           sx={{
             borderBottomWidth: 1,
             borderBottomStyle: 'solid',
-            borderBottomColor: "divider",
+            borderBottomColor: 'divider',
             paddingBlock: 1,
           }}
         >
@@ -47,17 +47,17 @@ export default function VersionList({ version, versions }: Props) {
             sx={{
               paddingInline: 2,
               paddingBlock: 1.2,
-              bgcolor: open ? theme.palette.action.hover : "transparent",
-              "&:hover": { bgcolor: theme.palette.action.hover },
+              bgcolor: open ? theme.palette.action.hover : 'transparent',
+              '&:hover': { bgcolor: theme.palette.action.hover },
               borderRadius: 0,
-              width: "100%",
-              justifyContent: "space-between",
+              width: '100%',
+              justifyContent: 'space-between',
             }}
             endIcon={
               <ExpandMore
                 sx={{
-                  transition: "rotate, 0.3s",
-                  transform: open ? "rotate(-180deg)" : "rotate(0deg)",
+                  transition: 'rotate, 0.3s',
+                  transform: open ? 'rotate(-180deg)' : 'rotate(0deg)',
                   scale: 0.6,
                   opacity: 0.8,
                 }}
@@ -65,11 +65,11 @@ export default function VersionList({ version, versions }: Props) {
             }
           >
             <Box>
-              {t("text.version")}:{" "}
+              {t('text.version')}:{' '}
               <Chip
                 color="primary"
                 size="small"
-                label={version.replace(/_/g, ".")}
+                label={version.replace(/_/g, '.')}
               />
             </Box>
           </Button>
@@ -87,11 +87,11 @@ export default function VersionList({ version, versions }: Props) {
               key={v}
               dense
               component={Link}
-              href={pathnames.join("/")}
+              href={pathnames.join('/')}
               sx={{ paddingBlock: 1.2 }}
             >
               <ListItemIcon>{v === version && <DoneOutlined />}</ListItemIcon>
-              <ListItemText>{v.replace(/_/, ".")}</ListItemText>
+              <ListItemText>{v.replace(/_/, '.')}</ListItemText>
             </MenuItem>
           );
         })}

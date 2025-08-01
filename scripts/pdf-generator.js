@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-const puppeteer = require("puppeteer");
-const path = require("path");
-const fs = require("fs");
+const puppeteer = require('puppeteer');
+const path = require('path');
+const fs = require('fs');
 
 const ROOT_DIR = process.cwd();
 const INPUT_DIR = path.join(ROOT_DIR, '/docs/en/preview');
@@ -14,8 +14,8 @@ const getPaths = (dir, initData = []) => {
     if (stat.isDirectory()) {
       getPaths(d, initData);
     }
-    if (stat.isFile() && f.endsWith(".mdx")) {
-      initData.push(d.replace(/\.mdx/ ,'').replace(INPUT_DIR, ''));
+    if (stat.isFile() && f.endsWith('.mdx')) {
+      initData.push(d.replace(/\.mdx/, '').replace(INPUT_DIR, ''));
     }
   });
   return initData;
@@ -35,18 +35,21 @@ async function generatePdf() {
       // waitUntil: 'networkidle2',
     });
     await page.pdf({
-      path: path.join(OUTPUT_DIR, `${p.replace(/^\//, '').replace(/\//g, '.')}.pdf`),
+      path: path.join(
+        OUTPUT_DIR,
+        `${p.replace(/^\//, '').replace(/\//g, '.')}.pdf`,
+      ),
       printBackground: true,
     });
   }
   await browser.close();
 }
 
-if(!fs.existsSync(OUTPUT_DIR)) {
+if (!fs.existsSync(OUTPUT_DIR)) {
   fs.mkdirSync(OUTPUT_DIR);
 } else {
   fs.readdirSync(OUTPUT_DIR).forEach((pdf) => {
-    fs.rmSync(path.join(OUTPUT_DIR, pdf))
-  })
+    fs.rmSync(path.join(OUTPUT_DIR, pdf));
+  });
 }
-generatePdf()
+generatePdf();

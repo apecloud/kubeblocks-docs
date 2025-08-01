@@ -1,8 +1,7 @@
-"use client";
+'use client';
 
-import { Box, Tabs, Tab } from "@mui/material";
-import React from "react";
-import { useEffect, useState } from "react";
+import { Box, Tab, Tabs } from '@mui/material';
+import React, { useEffect, useState } from 'react';
 
 interface Props {
   children?: React.ReactNode;
@@ -23,12 +22,12 @@ export default function MdxTabs({ children }: Props) {
     if (activeIndex !== -1) {
       setValue(activeIndex);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <>
-      <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs value={value} onChange={handleChange}>
           {items.map((item, index) => {
             return <Tab key={index} label={item?.props?.label} />;
@@ -37,7 +36,7 @@ export default function MdxTabs({ children }: Props) {
       </Box>
       {items.map((item, index) => {
         return (
-          <Box key={index} sx={{ display: value === index ? "block" : "none" }}>
+          <Box key={index} sx={{ display: value === index ? 'block' : 'none' }}>
             {item}
           </Box>
         );

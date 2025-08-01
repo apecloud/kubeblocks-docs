@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { Box, Stack, Tooltip, Typography, useTheme } from "@mui/material";
-import { Link } from "./Link";
-import { useEffect, useState } from "react";
-import _ from "lodash";
-import Collapse from "@mui/material/Collapse";
-import { ExpandMore } from "@mui/icons-material";
-import { usePathname } from "next/navigation";
+import { ExpandMore } from '@mui/icons-material';
+import { Box, Stack, Tooltip, Typography, useTheme } from '@mui/material';
+import Collapse from '@mui/material/Collapse';
+import _ from 'lodash';
+import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { Link } from './Link';
 
 export type SidebarMenuItem = {
   label?: string;
@@ -14,8 +14,8 @@ export type SidebarMenuItem = {
   href?: string;
   position: number;
   description?: string;
-  hidden?: boolean,
-  collapsed?: boolean,
+  hidden?: boolean;
+  collapsed?: boolean;
 };
 
 type SidebatMenuItemProps = {
@@ -25,34 +25,36 @@ type SidebatMenuItemProps = {
 };
 
 const isActive = (pathname: string, href?: string) => {
-  return href && href === pathname.replace(/^\/(en)/, "");
+  return href && href === pathname.replace(/^\/(en)/, '');
 };
 
 const checkOpen = (pathname: string, item: SidebarMenuItem): boolean => {
   const child = item.children?.find(
-    (d) => isActive(pathname, d.href) || checkOpen(pathname, d)
+    (d) => isActive(pathname, d.href) || checkOpen(pathname, d),
   );
   return Boolean(child);
 };
 
 export function SidebarMenuItem({ level = 1, item }: SidebatMenuItemProps) {
   const pathname = usePathname();
-  const [open, setOpen] = useState<boolean>(checkOpen(pathname, item) || !Boolean(item.collapsed));
+  const [open, setOpen] = useState<boolean>(
+    checkOpen(pathname, item) || !Boolean(item.collapsed),
+  );
   const theme = useTheme();
   const sx = {
-    display: item.hidden ? "none" : "block",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
+    display: item.hidden ? 'none' : 'block',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
     padding: 1.2,
-    marginBlock: "1px",
+    marginBlock: '1px',
     paddingLeft: level * 2,
-    cursor: "pointer",
+    cursor: 'pointer',
     color: theme.palette.text.primary,
-    "&:hover": {
+    '&:hover': {
       background: theme.palette.action.hover,
     },
-    "&.active": {
+    '&.active': {
       background: theme.palette.action.hover,
     },
   };
@@ -65,14 +67,17 @@ export function SidebarMenuItem({ level = 1, item }: SidebatMenuItemProps) {
   }, [pathname, item]);
 
   return (
-    <Box className="item" sx={{
-      display: item.hidden ? 'none' : 'block'
-    }}>
+    <Box
+      className="item"
+      sx={{
+        display: item.hidden ? 'none' : 'block',
+      }}
+    >
       <Box>
         {item.href && _.isEmpty(item.children) ? (
           <Tooltip title={item.description} placement="right" arrow>
             <Link
-              className={isActive(pathname, item.href) ? "active" : undefined}
+              className={isActive(pathname, item.href) ? 'active' : undefined}
               href={item.href}
               sx={sx}
               underline="none"
@@ -85,7 +90,7 @@ export function SidebarMenuItem({ level = 1, item }: SidebatMenuItemProps) {
             direction="row"
             sx={{
               ...sx,
-              display: "flex",
+              display: 'flex',
             }}
             justifyContent="space-between"
             onClick={() => setOpen(!open)}
@@ -93,17 +98,17 @@ export function SidebarMenuItem({ level = 1, item }: SidebatMenuItemProps) {
           >
             <Typography
               sx={{
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}
             >
               {item.label}
             </Typography>
             <ExpandMore
               sx={{
-                transition: "rotate, 0.3s",
-                transform: open ? "rotate(0)" : "rotate(-90deg)",
+                transition: 'rotate, 0.3s',
+                transform: open ? 'rotate(0)' : 'rotate(-90deg)',
                 scale: 0.6,
                 opacity: 0.8,
               }}

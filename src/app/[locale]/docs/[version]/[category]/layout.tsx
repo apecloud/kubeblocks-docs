@@ -1,16 +1,16 @@
-import { Box, Container, Stack } from "@mui/material";
-import fs from "fs";
-import { SidebarMenu, SidebarMenuItem } from "@/components/SidebarMenu";
-import path from "path";
+import Footer from '@/components/Footer';
+import Sidebar from '@/components/Sidebar';
+import { SidebarMenu, SidebarMenuItem } from '@/components/SidebarMenu';
 import {
-  MarkdownPageParams,
   DOCS_DIR,
   getMarkDownSideBar,
-} from "@/utils/markdown";
-import Footer from "@/components/Footer";
-import { setStaticParamsLocale } from "next-international/server";
-import VersionList from "./version";
-import Sidebar from "@/components/Sidebar";
+  MarkdownPageParams,
+} from '@/utils/markdown';
+import { Box, Container, Stack } from '@mui/material';
+import fs from 'fs';
+import { setStaticParamsLocale } from 'next-international/server';
+import path from 'path';
+import VersionList from './version';
 
 export default async function DocsLayout({
   children,
@@ -24,7 +24,7 @@ export default async function DocsLayout({
   setStaticParamsLocale(locale);
 
   const dir = path.join(DOCS_DIR, locale, version, category);
-  const defaultEnDir = path.join(DOCS_DIR, "en", version, category);
+  const defaultEnDir = path.join(DOCS_DIR, 'en', version, category);
 
   let menu: SidebarMenuItem[] = [];
 
@@ -45,7 +45,7 @@ export default async function DocsLayout({
             <Box
               flex={1}
               sx={{
-                overflow: "auto",
+                overflow: 'auto',
               }}
               pb={1}
               pt={1}
@@ -58,7 +58,7 @@ export default async function DocsLayout({
         <Container sx={{ paddingBlock: 3 }}>
           <Box
             className="markdown-body with-sidebar"
-            sx={{ minHeight: "var(--container-min-height)" }}
+            sx={{ minHeight: 'var(--container-min-height)' }}
           >
             {children}
           </Box>

@@ -1,5 +1,5 @@
-import { getBlogs } from "@/utils/markdown";
-import { NextResponse } from "next/server";
+import { getBlogs } from '@/utils/markdown';
+import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-static'; // force-dynamic | force-static
 

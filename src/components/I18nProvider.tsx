@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { I18nProviderClient } from "@/locales/client";
+import { I18nProviderClient } from '@/locales/client';
 
 interface Props {
-  locale:  "en";
+  locale: 'en';
   children?: React.ReactNode;
 }
 export default function I18nProvider({ locale, children }: Props) {

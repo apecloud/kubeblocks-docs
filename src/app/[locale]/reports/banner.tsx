@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useScopedI18n } from "@/locales/client";
-import { Box, Typography, useTheme } from "@mui/material";
+import { useScopedI18n } from '@/locales/client';
+import { Box, Typography, useTheme } from '@mui/material';
 
 export default function Banner() {
   const theme = useTheme();
@@ -13,28 +13,28 @@ export default function Banner() {
         marginBottom: 4,
         borderRadius: 2,
         backgroundImage: 'url("/site/home-rectangles.svg")',
-        backgroundRepeat: "no-repeat",
-        backgroundPosition: "center center",
-        backgroundSize: "cover",
-        position: "relative",
-        overflow: "hidden",
-        "&:before": {
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center center',
+        backgroundSize: 'cover',
+        position: 'relative',
+        overflow: 'hidden',
+        '&:before': {
           content: '" "',
-          position: "absolute",
+          position: 'absolute',
           width: 200,
           height: 200,
-          background: "rgba(255, 255, 255, 0.1)",
-          borderRadius: "50%",
-          top: "-30%",
+          background: 'rgba(255, 255, 255, 0.1)',
+          borderRadius: '50%',
+          top: '-30%',
           right: -20,
         },
-        "&:after": {
+        '&:after': {
           content: '" "',
-          position: "absolute",
+          position: 'absolute',
           width: 100,
           height: 100,
-          background: "rgba(255, 255, 255, 0.1)",
-          borderRadius: "50%",
+          background: 'rgba(255, 255, 255, 0.1)',
+          borderRadius: '50%',
           top: -30,
           right: 140,
         },
@@ -42,8 +42,8 @@ export default function Banner() {
         paddingBlock: 4,
       }}
     >
-      <Typography variant="h4" sx={{ color: "#FFF" }}>
-        {t("report")}
+      <Typography variant="h4" sx={{ color: '#FFF' }}>
+        {t('report')}
       </Typography>
     </Box>
   );

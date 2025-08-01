@@ -1,8 +1,15 @@
-"use client";
+'use client';
 
-import React, { createContext, useContext, useEffect, useState, ReactNode, useMemo } from "react";
-import { usePathname } from "next/navigation";
-import { versionOptions, getVersionFromPath } from "@/constants/versions";
+import { getVersionFromPath, versionOptions } from '@/constants/versions';
+import { usePathname } from 'next/navigation';
+import React, {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
 const VersionContext = createContext({
   version: versionOptions[0].value,
@@ -12,46 +19,61 @@ const VersionContext = createContext({
 });
 
 // 递归替换 React 元素中的版本号
-function replaceVersionInElement(element: React.ReactNode, version: string): React.ReactNode {
+function replaceVersionInElement(
+  element: React.ReactNode,
+  version: string,
+): React.ReactNode {
   if (typeof element === 'string') {
     return element.replace(/\{\{VERSION\}\}/g, version);
   }
-  
-  if (typeof element === 'number' || typeof element === 'boolean' || element == null) {
+
+  if (
+    typeof element === 'number' ||
+    typeof element === 'boolean' ||
+    element == null
+  ) {
     return element;
   }
-  
+
   if (Array.isArray(element)) {
     return element.map((child, index) => {
       const processedChild = replaceVersionInElement(child, version);
       // If it's a React element, add a key prop
       if (React.isValidElement(processedChild)) {
-        return React.cloneElement(processedChild, { 
-          key: processedChild.key || `version-replace-${index}`
+        return React.cloneElement(processedChild, {
+          key: processedChild.key || `version-replace-${index}`,
         });
       }
       return processedChild;
     });
   }
-  
+
   if (React.isValidElement(element)) {
     const props = element.props || {};
-    const { children, ...otherProps } = props as { children?: React.ReactNode; [key: string]: unknown };
-    
+    const { children, ...otherProps } = props as {
+      children?: React.ReactNode;
+      [key: string]: unknown;
+    };
+
     // 替换 props 中的字符串值
     const newProps: { [key: string]: unknown } = { ...otherProps };
-    Object.keys(newProps).forEach(key => {
+    Object.keys(newProps).forEach((key) => {
       if (typeof newProps[key] === 'string') {
-        newProps[key] = (newProps[key] as string).replace(/\{\{VERSION\}\}/g, version);
+        newProps[key] = (newProps[key] as string).replace(
+          /\{\{VERSION\}\}/g,
+          version,
+        );
       }
     });
-    
+
     // 递归处理 children
-    const newChildren = children ? replaceVersionInElement(children, version) : children;
-    
+    const newChildren = children
+      ? replaceVersionInElement(children, version)
+      : children;
+
     return React.cloneElement(element, newProps, newChildren);
   }
-  
+
   return element;
 }
 
@@ -72,7 +94,9 @@ export const VersionProvider = ({ children }: { children: ReactNode }) => {
   }, [children, version]);
 
   return (
-    <VersionContext.Provider value={{ version, setVersion, options: versionOptions }}>
+    <VersionContext.Provider
+      value={{ version, setVersion, options: versionOptions }}
+    >
       {processedChildren}
     </VersionContext.Provider>
   );
@@ -84,4 +108,4 @@ export const Version = () => {
   return <>{version}</>;
 };
 
-export const useVersion = () => useContext(VersionContext); 
+export const useVersion = () => useContext(VersionContext);

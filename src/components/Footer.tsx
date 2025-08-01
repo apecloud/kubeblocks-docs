@@ -1,16 +1,7 @@
-"use client";
-import {
-  Box,
-  Container,
-  Typography,
-  useTheme,
-} from "@mui/material";
+'use client';
+import { Box, Container, Typography, useTheme } from '@mui/material';
 
-export default function Footer({
-  border = true
-}: {
-  border?: boolean
-}) {
+export default function Footer({ border = true }: { border?: boolean }) {
   const theme = useTheme();
   return (
     <Box
@@ -18,7 +9,7 @@ export default function Footer({
       sx={{
         padding: 4,
         borderTop: border ? 1 : 0,
-        borderColor: "divider",
+        borderColor: 'divider',
         background: theme.palette.background.default,
       }}
     >
@@ -43,7 +34,7 @@ export default function Footer({
           </Box>
         </Stack> */}
         <Typography align="center" color="textDisabled">
-          © {(new Date()).getFullYear()} ApeCloud PTE. Ltd.
+          © {new Date().getFullYear()} ApeCloud PTE. Ltd.
         </Typography>
       </Container>
     </Box>

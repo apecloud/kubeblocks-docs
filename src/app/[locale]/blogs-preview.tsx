@@ -1,5 +1,9 @@
-"use client";
+'use client';
+import { Link } from '@/components/Link';
+import { BlogMetadata } from '@/utils/markdown';
+import { KeyboardArrowLeft, KeyboardArrowRight } from '@mui/icons-material';
 import {
+  alpha,
   Box,
   BoxProps,
   Card,
@@ -9,23 +13,19 @@ import {
   Tooltip,
   Typography,
   useTheme,
-  alpha,
-} from "@mui/material";
-import Slider from "react-slick";
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
-import { Link } from "@/components/Link";
-import { KeyboardArrowLeft, KeyboardArrowRight } from "@mui/icons-material";
-import { BlogMetadata } from "@/utils/markdown";
-import Image from "next/image";
+} from '@mui/material';
+import Image from 'next/image';
+import Slider from 'react-slick';
+import 'slick-carousel/slick/slick-theme.css';
+import 'slick-carousel/slick/slick.css';
 
 const NextArrow = (props: BoxProps) => (
   <Box
     className={props.className}
     onClick={props.onClick}
     sx={{
-      "&:before": {
-        display: "none",
+      '&:before': {
+        display: 'none',
       },
     }}
   >
@@ -37,8 +37,8 @@ const PrevArrow = (props: BoxProps) => (
     className={props.className}
     onClick={props.onClick}
     sx={{
-      "&:before": {
-        display: "none",
+      '&:before': {
+        display: 'none',
       },
     }}
   >
@@ -59,9 +59,9 @@ export default function BlogsPreview({ blogs }: { blogs: BlogMetadata[] }) {
     appendDots: (dots: never) => <Box component="ul">{dots}</Box>,
     customPaging: () => (
       <Box
-        component={"button"}
+        component={'button'}
         sx={{
-          "&:before": {
+          '&:before': {
             color: `${theme.palette.text.disabled} !important`,
           },
         }}
@@ -96,9 +96,9 @@ export default function BlogsPreview({ blogs }: { blogs: BlogMetadata[] }) {
                 <Tooltip title={blog.title} placement="top" arrow>
                   <Card
                     sx={{
-                      boxShadow: "none",
+                      boxShadow: 'none',
                       border: 1,
-                      borderColor: "divider",
+                      borderColor: 'divider',
                     }}
                   >
                     <CardActionArea
@@ -107,16 +107,22 @@ export default function BlogsPreview({ blogs }: { blogs: BlogMetadata[] }) {
                       underline="none"
                       target="_blank"
                     >
-                      <Box sx={{ height: 140, width: "100%", position: 'relative' }}>
+                      <Box
+                        sx={{
+                          height: 140,
+                          width: '100%',
+                          position: 'relative',
+                        }}
+                      >
                         <Image fill src={blog.image} alt={blog.title} />
                       </Box>
                       <CardContent>
                         <Typography
                           gutterBottom
                           sx={{
-                            overflow: "hidden",
-                            whiteSpace: "nowrap",
-                            textOverflow: "ellipsis",
+                            overflow: 'hidden',
+                            whiteSpace: 'nowrap',
+                            textOverflow: 'ellipsis',
                           }}
                         >
                           {blog.title}
@@ -124,7 +130,7 @@ export default function BlogsPreview({ blogs }: { blogs: BlogMetadata[] }) {
                         <Typography
                           variant="body2"
                           color="textSecondary"
-                          sx={{ height: 40, overflow: "hidden" }}
+                          sx={{ height: 40, overflow: 'hidden' }}
                         >
                           {blog.description}
                         </Typography>

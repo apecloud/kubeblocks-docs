@@ -1,0 +1,9 @@
+node_modules
+.next
+public
+assets
+helm
+.github
+blogs
+docs
+reports

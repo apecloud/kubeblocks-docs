@@ -1,6 +1,6 @@
 'use client';
 
-import { Slide, useScrollTrigger } from "@mui/material";
+import { Slide, useScrollTrigger } from '@mui/material';
 
 interface Props {
   /**

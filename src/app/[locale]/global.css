@@ -10,10 +10,11 @@ code {
   font-size: 0.9rem;
 }
 
-.hljs, pre > code {
+.hljs,
+pre > code {
   border-radius: var(--css-shape-borderRadius);
-  background: #1A1E22;
-  color: #FFF;
+  background: #1a1e22;
+  color: #fff;
   overflow: auto;
   display: block;
   overflow-x: auto;
@@ -108,7 +109,6 @@ code {
   border-top: none;
 }
 
-
 .markdown-body table:not(.MuiTable-root) {
   display: block;
   overflow: auto;
@@ -135,7 +135,8 @@ code {
   border-bottom: none;
 }
 
-.markdown-body table th, .markdown-body table td {
+.markdown-body table th,
+.markdown-body table td {
   border-bottom: 1px solid var(--css-palette-divider);
   text-align: left;
   padding: 16px;
@@ -143,7 +144,8 @@ code {
   line-height: 1.5rem;
   border-right: 1px solid var(--css-palette-divider);
 }
-.markdown-body table th p, .markdown-body table td p {
+.markdown-body table th p,
+.markdown-body table td p {
   margin: 0;
 }
 
