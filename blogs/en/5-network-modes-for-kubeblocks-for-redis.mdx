@@ -1,0 +1,424 @@
+---
+slug: 5-network-modes-for-kubeblocks-for-redis
+title: 5 Network Modes for KubeBlocks for Redis
+description: This blog introduces 5 different network modes for Redis clusters managed by KubeBlocks, including Headless Service, Fixed Pod IP, HostNetwork, NodePort Service, and LoadBalancer Service.
+date: 2025-07-15
+authors:
+  name: Wang Yelei
+  url: https://github.com/wangyelei
+  image_url: https://avatars.githubusercontent.com/u/29418692?v=4
+tags: [KubeBlocks, Redis, networking, Kubernetes, service mesh, cluster networking]
+image: /img/blogs/thumbnails/blog-redis-network-modes.png
+---
+
+# 5 Network Modes for KubeBlocks for Redis
+
+## I. Introduction: KubeBlocks and the Importance of Networking
+
+### 1.1 What is KubeBlocks?
+
+KubeBlocks is a cloud-native solution designed specifically for managing databases on Kubernetes, developed by domain experts with decades of experience. It supports a wide range of stateful workloads, including common components such as relational databases, NoSQL databases, and message queues. By simplifying operations, enhancing deployment flexibility, and providing powerful scalability, KubeBlocks significantly improves the efficiency and convenience of managing and running databases in a cloud-native environment.
+
+### 1.2 Why are Network Modes So Critical?
+
+- **Cluster Member Discovery**: Topology configuration and high-availability failover rely on stable network communication.
+- **Cluster Service Exposure**: Client access requires the cluster to provide fixed access addresses.
+- **Performance Requirements**: Development testing, production environments, edge businesses, and core businesses have varying requirements for network throughput and RT.
+
+## II. Kubernetes Service Core Concepts Review
+
+Before delving into KubeBlocks' network modes, let's briefly review some Kubernetes network-related concepts:
+
+### Pod IP
+
+Kubernetes assigns a unique IP address to each Pod, which can be directly accessed by other Pods within the cluster.
+
+### HostNetwork
+
+Containers can directly use the host's network namespace, granting them host network privileges.
+
+### Service
+
+A Service provides a stable access point for a group of Pods, typically used for load balancing, and includes the following 4 service types:
+
+- **ClusterIP**: Assigns an IP address from a reserved IP address pool within the cluster. This is suitable for services that are only called by other Pods or services within the Kubernetes cluster.
+
+  **Headless Service**: When `.spec.clusterIP` is set to `None`, Kubernetes does not assign an IP address to it. A Headless Service can report the endpoint IP addresses of individual Pods through internal DNS records.
+
+- **NodePort**: Opens a specified port on each node (default: 30000-32767, Kubernetes can specify the port range via the `--service-node-port-range` flag), allowing external access to the service via any `<NodeIP>:<NodePort>`.
+
+- **LoadBalancer**: A third-party provided external load balancer that assigns an external IP address to the service.
+
+- **ExternalName**: Maps a service to an external DNS name (such as an API gateway, third-party database, external service, etc.), and does not point to any Pod.
+
+## III. In-depth Analysis of Redis's 5 Network Modes
+
+### 3.1 Headless Service (Default Mode)
+
+#### 3.1.1 Overview
+
+Headless Service is the standard network mode for cloud-native stateful services and is suitable for most databases. KubeBlocks creates an InstanceSet Workload (similar to StatefulSet but more powerful) for each Component, and by default creates a Headless Service pointing to this Workload. This allows the Pod to obtain its exclusive DNS subdomain, in the format:
+
+```
+${podName}.${headlessSvcName}.${namespace}.${clusterDomain}
+```
+
+#### 3.1.2 How to Use
+
+The following is a YAML configuration example for Redis Sentinel:
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  # Specify the component names that need to use Headless Service mode
+  annotations:
+    kubeblocks.io/headless-service: "redis,redis-sentinel"
+  name: redis-replication
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: redis
+  topology: replication
+  componentSpecs:
+    - name: redis
+      serviceVersion: "7.2.4"
+      disableExporter: false
+      replicas: 2
+      resources:
+        limits:
+          cpu: 1
+          memory: 1Gi
+        requests:
+          cpu: 1
+          memory: 1Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+    - name: redis-sentinel
+      serviceVersion: "7.2.4"
+      replicas: 3
+      resources:
+        limits:
+          cpu: 1
+          memory: 1Gi
+        requests:
+          cpu: 1
+          memory: 1Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+#### 3.1.3 Applicable Scenarios
+
+- For native Redis Sentinel/Redis Shard Cluster, this mode can only be accessed within the same Kubernetes cluster.
+
+#### 3.1.4 Considerations
+
+When a client accesses a Redis Sentinel cluster from outside the Kubernetes cluster, the request first reaches the Sentinel. The Sentinel then returns the announced IP of the registered Redis master node (i.e., the Pod FQDN of the Headless Service). If this address is unreachable in the client's network, the connection will fail.
+
+### 3.2 Fixed Pod IP
+
+#### 3.2.1 Overview
+
+Fixed Pod IP mode is suitable for databases that rely on IP addresses as unique node identifiers for internal communication. Kubernetes assigns a unique IP address to each Pod, but Pod IPs can be reallocated in the following scenarios, for example:
+- Pod deletion and recreation
+- Rescheduling due to node failure where the Pod was located
+- Manually triggered Pod restarts
+- Rolling updates caused by cluster upgrades or configuration changes
+
+This IP address instability is not suitable for database internal communication addresses. Fixed Pod IP can solve this problem. There are many solutions in the open-source community, such as [SpiderPool](https://github.com/spidernet-io/spiderpool). KubeBlocks has added support for [InstanceSet controller](https://github.com/apecloud/spiderpool/tree/support/preserve-pod-ip-until-sts-is-deleted) based on this solution.
+
+#### 3.2.2 How to Use
+
+The following is a YAML configuration example for a Redis primary-replica cluster:
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: redis-replication
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: redis
+  topology: replication
+  componentSpecs:
+    - name: redis
+      serviceVersion: "7.2.4"
+      disableExporter: false
+      replicas: 2
+      # Enable fixed pod IP mode
+      # Note: This option can only be enabled if the current Kubernetes cluster has deployed a fixed IP network solution (e.g., SpiderPool)
+      env:
+        - name: FIXED_POD_IP_ENABLED
+          value: "true"
+      resources:
+        limits:
+          cpu: 1
+          memory: 1Gi
+        requests:
+          cpu: 1
+          memory: 1Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+    - name: redis-sentinel
+      replicas: 3
+      # Enable fixed pod IP mode
+      # Note: This option can only be enabled if the current Kubernetes cluster has deployed a fixed IP network solution (e.g., SpiderPool)
+      env:
+        - name: FIXED_POD_IP_ENABLED
+          value: "true"
+      resources:
+        limits:
+          cpu: 1
+          memory: 1Gi
+        requests:
+          cpu: 1
+          memory: 1Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+#### 3.2.3 Applicable Scenarios
+
+- **Container network and physical network are interconnected**: For Redis clusters, if the user's Kubernetes cluster has been interconnected via macvlan or ipvlan, making the container network and physical network on the same plane, then Fixed Pod IP would be a good choice.
+
+#### 3.2.4 Considerations
+
+- **Dependency on SpiderPool plugin**: Ensure that SpiderPool is deployed and configured in the cluster.
+- **Scheduling limitations**: Spiderpool does not guarantee that newly scaled-up Pods can acquire the IP addresses of previously scaled-down Pods.
+
+### 3.3 HostNetwork
+
+#### 3.3.1 Overview
+
+HostNetwork is a Kubernetes network mode where, when a Pod sets `hostNetwork` to `true`, the Pod uses the host's network namespace, sharing the host's IP and ports. KubeBlocks maintains a global Host Port allocation table, with a default port range of 1025-65536, excluding some common ports (including NodePort range 30000-32767, 6443, etc.). Users can customize the port range via environment variables `HOST_PORT_INCLUDE_RANGES` and `HOST_PORT_EXCLUDE_RANGES`.
+
+#### 3.3.2 How to Use
+
+The following is a YAML configuration example for a Redis primary-replica cluster:
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: redis-replication
+  namespace: demo
+  annotations:
+    # Specify the component names that need to use hostNetwork mode via annotation, separated by commas for multiple component names
+    kubeblocks.io/host-network: "redis,redis-sentinel"
+spec:
+  terminationPolicy: Delete
+  clusterDef: redis
+  topology: replication
+  componentSpecs:
+    - name: redis
+      serviceVersion: "7.2.4"
+      disableExporter: false
+      replicas: 2
+      resources:
+        limits:
+          cpu: 1
+          memory: 1Gi
+        requests:
+          cpu: 1
+          memory: 1Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+    - name: redis-sentinel
+      serviceVersion: "7.2.4"
+      replicas: 3
+      resources:
+        limits:
+          cpu: 1
+          memory: 1Gi
+        requests:
+          cpu: 1
+          memory: 1Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+#### 3.3.3 Applicable Scenarios
+
+- **High-performance requirements**: Suitable for scenarios that require direct use of the host network stack to achieve higher performance or avoid network virtualization overhead.
+- **Edge computing scenarios**: The host needs to directly expose services.
+- **Direct port connection requirements**: Such as managing with traditional firewall rules.
+
+#### 3.3.4 Considerations
+
+- **Port conflict risk**: Since KubeBlocks can only manage the Host Ports it allocates, if other services on the physical host occupy ports allocated by KubeBlocks, it will lead to port conflicts. It must be ensured that the host ports are not occupied by other services.
+
+- **Scheduling limitations**: Database engines communicate via Host IP + Host Port. After a Pod is rebuilt, it may need to be scheduled to the same node, otherwise it may fail to start. It is recommended to use Local PV (e.g., Redis Sentinel cluster) to ensure Pods are scheduled to the same node. For Redis Shard clusters, once the cluster is built, each node will be assigned a unique node ID. As long as the `nodes.conf` file remains unchanged, the node will automatically broadcast new Cluster Announce information to other nodes in the cluster after restarting, achieving dynamic address updates and automatic cluster topology repair.
+
+- **Port range limitations**: Some enterprise security teams limit the host port range, which indirectly restricts the number of services each host can provide in this case.
+
+### 3.4 NodePort Service
+
+#### 3.4.1 Overview
+
+NodePort is a Kubernetes Service type that opens a static port on each node in the cluster (usually 30000-32767), allowing external access to the service via any `<NodeIP>:<NodePort>`. KubeBlocks supports creating corresponding Services for each Pod and injecting Service information into the Pod container via environment variables, which Addon developers can use to build clusters.
+
+#### 3.4.2 How to Use
+
+The advertise port is the service port that a Redis or Sentinel node announces to other nodes or clients for external access. This is particularly important in containerized, NAT, or port-mapped environments, as the actual listening port inside the container may differ from the port exposed to external services. This service can be set to NodePort type. When a Redis node starts, it reads these NodePort information to configure the cluster-announce parameter.
+
+The following is a YAML configuration example for a Redis primary-replica cluster:
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: redis-replication
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: redis
+  topology: replication
+  componentSpecs:
+    - name: redis
+      serviceVersion: "7.2.4"
+      disableExporter: false
+      replicas: 2
+      services:
+        - name: redis-advertised
+          # Use NodePort type Service
+          serviceType: NodePort
+          # Create independent Service for each Pod
+          # Redis node will read these environment variables to configure cluster-announce parameter when starting
+          podService: true
+      resources:
+        limits:
+          cpu: 1
+          memory: 1Gi
+        requests:
+          cpu: 1
+          memory: 1Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+    - name: redis-sentinel
+      serviceVersion: "7.2.4"
+      replicas: 3
+      services:
+        - name: sentinel-advertised
+          # Use NodePort type Service
+          serviceType: NodePort
+          # Create independent Service for each Pod
+          # Sentinel node will read these environment variables to configure cluster-announce parameter when starting
+          podService: true
+      resources:
+        limits:
+          cpu: 1
+          memory: 1Gi
+        requests:
+          cpu: 1
+          memory: 1Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+#### 3.4.3 Applicable Scenarios
+
+- **External access**: Suitable for scenarios requiring external access to services from a Kubernetes cluster, such as development and testing environments or production environments.
+
+#### 3.4.4 Considerations
+
+- **Scheduling limitations**: Database engines communicate via Host IP + NodePort. After a Pod is rebuilt, it may need to be scheduled to the same node, otherwise it may fail to start. It is recommended to use Local PV (e.g., Redis Sentinel cluster) to ensure Pods are scheduled to the same node. For Redis Shard clusters, once the cluster is built, each node will be assigned a unique node ID. As long as the `nodes.conf` file remains unchanged, the node will automatically broadcast new Cluster Announce information to other nodes in the cluster after restarting, achieving dynamic address updates and automatic cluster topology repair.
+
+### 3.5 LoadBalancer Service
+
+#### 3.5.1 Overview
+
+LoadBalancer is a Kubernetes Service type that provides an external load balancer outside the cluster to distribute traffic to backend Pods. KubeBlocks supports creating corresponding LoadBalancer Services for each Pod and injecting Service information into the Pod container via environment variables, which Addon developers can use to build clusters.
+
+#### 3.5.2 How to Use
+
+The usage is similar to NodePort: replace `serviceType` with `LoadBalancer` and add the necessary annotations for the load balancer. With this mode, Redis Sentinel clusters will not be forced to rely on Local PV, thereby improving deployment flexibility and cross-node scheduling capabilities.
+
+#### 3.5.3 Applicable Scenarios
+
+- **External access**: Suitable for scenarios requiring external access to services from a Kubernetes cluster, mainly in production environments.
+- **Shared storage/cloud disk**: After using this mode, Redis clusters do not need to rely on Local PV, improving deployment flexibility and cross-node scheduling capabilities.
+
+#### 3.5.4 Considerations
+
+- **Higher cost**: If using a cloud provider's LoadBalancer, each LoadBalancer costs money, so the cost needs to be weighed for large-scale deployments.
+- **Too much IP consumption**: If using MetaLB, each SVC corresponds one-to-one with an IP, which will consume a large number of IP addresses in large-scale deployments.
+
+## IV. Summary of Network Mode Comparison
+
+To help you better choose the appropriate network mode, the following table summarizes the key features of the 5 network modes supported by KubeBlocks for Redis:
+
+| Network Mode | Access Scope | Performance Characteristics | Key Advantages | Main Limitations | Applicable Scenarios |
+|---|---|---|---|---|---|
+| **Headless Service** | Cluster internal | Standard container network performance | - Cloud-native standard<br/>- Simple configuration<br/>- Stable DNS resolution | - Limited to cluster internal access<br/>- External client connection restricted | - Cluster internal communication<br/>- Development and testing environments |
+| **Fixed Pod IP** | Depends on network configuration | Standard container network performance | - Fixed IP addresses<br/>- Suitable for IP-dependent scenarios<br/>- Stable cross-node communication | - Depends on SpiderPool<br/>- Complex IP address management<br/>- Scaling limitations | - Container network and physical network interconnected<br/>- Applications requiring fixed IPs<br/>- Containerization of traditional applications |
+| **HostNetwork** | Direct host network connection | Highest network performance | - Best network performance<br/>- Direct use of host network<br/>- Avoids network virtualization overhead | - Port conflict risk<br/>- Scheduling limitations<br/>- Reduced security | - High-performance requirements<br/> |
+| **NodePort Service** | External cluster access | Standard network performance | - Simple external access<br/>- Load balancing<br/>- Flexible configuration | - Port range limitations<br/>- Scheduling dependency<br/> | - Development and testing environments<br/>- Small-scale external access<br/>- Simple external exposure |
+| **LoadBalancer Service** | External cluster access | Standard network performance | - Production-grade external access<br/>- Automatic load balancing<br/>- No Local PV dependency | - Higher cost<br/>- IP address consumption<br/>- Depends on cloud provider support | - Production environments<br/>- Large-scale external access<br/>- Cloud-native deployment |
+
+### Selection Suggestions
+
+- **Development and Testing**: Recommended to use **Headless Service** or **NodePort Service**
+- **Production Environment**: Recommended to use **LoadBalancer Service** or **NodePort Service**
+- **Requires Fixed IP**: Consider using **Fixed Pod IP**
+- **Cost-Sensitive**: Prioritize **Headless Service** or **NodePort Service**
+- **Performance First**: Choose **HostNetwork** mode
+
+## V. Conclusion
+
+The 5 network modes supported by KubeBlocks fully cover various scenarios from development and testing to production deployment. A deep understanding of the characteristics and applicable scope of each mode helps us make more reasonable architectural choices in actual projects. Whether you are building high-concurrency OLTP systems, internet-facing services, or private cloud deployments, KubeBlocks can provide solid support for your database services with its flexible and powerful networking capabilities. If you need further information about a specific network mode, feel free to ask!
+
+
+## References
+
+- [1] SpiderPool: https://github.com/spidernet-io/spiderpool
+- [2] InstanceSet controller:https://github.com/apecloud/spiderpool/tree/support/preserve-pod-ip-until-sts-is-deleted
