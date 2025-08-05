@@ -2,7 +2,7 @@
 
 import { Link } from '@/components/Link';
 import { BlogMetadata } from '@/utils/markdown';
-
+import FilterListIcon from '@mui/icons-material/FilterList';
 import {
   Avatar,
   Box,
@@ -13,6 +13,7 @@ import {
   Chip,
   Divider,
   Grid2 as Grid,
+  IconButton,
   Stack,
   Tooltip,
   Typography,
@@ -23,6 +24,7 @@ import { useMemo, useState } from 'react';
 
 export const BlogList = ({ blogs }: { blogs: BlogMetadata[] }) => {
   const [checkedTags, setCheckedTags] = useState<string[]>([]);
+  const [sort, setSort] = useState<'asc' | 'desc'>('desc');
 
   const handleTagClick = (tag: string) => {
     setCheckedTags((items) => {
@@ -38,45 +40,56 @@ export const BlogList = ({ blogs }: { blogs: BlogMetadata[] }) => {
   );
 
   const filterBlogs = useMemo(() => {
-    if (checkedTags.length === 0) {
-      return blogs;
+    let data: BlogMetadata[] = [...blogs];
+    if (checkedTags.length !== 0) {
+      data = data.filter((blog) =>
+        blog.tags.some((t) => checkedTags.includes(t)),
+      );
     }
-    return blogs.filter((blog) =>
-      blog.tags.some((t) => checkedTags.includes(t)),
-    );
-  }, [blogs, checkedTags]);
+    if (sort === 'asc') {
+      data.reverse();
+    }
+    return data;
+  }, [blogs, checkedTags, sort]);
 
   return (
     <>
-      <Stack direction="row" spacing={1} mb={4}>
-        <Chip
-          label="All Tags"
-          color={
-            checkedTags.length === 0 || checkedTags.length === filterTags.length
-              ? 'primary'
-              : 'default'
-          }
-          onClick={() => setCheckedTags([])}
-        />
-        {filterTags.map((tag, index) => (
+      <Stack mb={2} direction="row" alignItems="start">
+        <Stack flex={1} flexWrap="wrap" direction="row">
           <Chip
-            key={index}
-            label={tag}
-            color={checkedTags.includes(tag) ? 'primary' : 'default'}
-            onClick={() => handleTagClick(tag)}
+            label="All Tags"
+            color={
+              checkedTags.length === 0 ||
+              checkedTags.length === filterTags.length
+                ? 'primary'
+                : 'default'
+            }
+            sx={{ m: 0.25 }}
+            onClick={() => setCheckedTags([])}
           />
-        ))}
+          {filterTags.map((tag, index) => (
+            <Chip
+              key={index}
+              label={tag}
+              color={checkedTags.includes(tag) ? 'primary' : 'default'}
+              onClick={() => handleTagClick(tag)}
+              sx={{ m: 0.25 }}
+            />
+          ))}
+        </Stack>
+        <Tooltip title="Sort by creation time" placement="top" arrow>
+          <IconButton onClick={() => setSort(sort === 'desc' ? 'asc' : 'desc')}>
+            <FilterListIcon
+              sx={{ transform: `rotate(${sort === 'desc' ? 0 : 180}deg)` }}
+            />
+          </IconButton>
+        </Tooltip>
       </Stack>
       <Grid container spacing={3}>
         {filterBlogs.map((blog, index) => {
           return (
             <Grid key={index} size={{ lg: 4, md: 4, sm: 6, xs: 12 }}>
-              <Card
-                sx={{
-                  boxShadow: 'none',
-                  border: '1px solid var(--css-palette-divider)',
-                }}
-              >
+              <Card variant="outlined">
                 <CardActionArea
                   component={Link}
                   href={`/blog/${blog.name}`}
