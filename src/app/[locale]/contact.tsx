@@ -33,9 +33,14 @@ export default function Contact() {
         <Box>
           <Stack spacing={4} alignItems="center">
             <Stack flex={1}>
-              <Typography textAlign="center" variant="h4" sx={{ color }} gutterBottom>
-                Get started with KubeBlocks, with risk-free trial and
-                migration support.
+              <Typography
+                textAlign="center"
+                variant="h4"
+                sx={{ color }}
+                gutterBottom
+              >
+                Get started with KubeBlocks, with risk-free trial and migration
+                support.
               </Typography>
               <Stack
                 direction="row"

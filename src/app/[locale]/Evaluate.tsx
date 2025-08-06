@@ -58,7 +58,7 @@ export const Evaluate = () => {
             />
           </Grid>
           <Grid size={{ md: 6, sm: 12, xs: 12 }}>
-            <Typography variant='subtitle1'>
+            <Typography variant="subtitle1">
               &quot;Whether or not to run a database on Kubernetes is a topic
               that is often discussed. From my perspective, if you&apos;re
               already using containers and don&apos;t want to use a fully
@@ -104,7 +104,7 @@ export const Evaluate = () => {
         <Divider sx={{ marginBlock: 4 }} />
         <Grid container spacing={4}>
           <Grid size={{ md: 6, sm: 12, xs: 12 }}>
-            <Typography variant='subtitle1'>
+            <Typography variant="subtitle1">
               &quot;The minor version of KubeBlocks has a very short release
               cycle and is very actively developed...... I strongly believe that
               KubeBlocks&apos; Addon concept and documentation on how to create

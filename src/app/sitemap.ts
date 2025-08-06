@@ -2,7 +2,7 @@ import { BLOGS_DIR } from '@/utils/markdown';
 import fs from 'fs';
 import type { MetadataRoute } from 'next';
 
-const lastModified = new Date()
+const lastModified = new Date();
 
 import { getStaticParams } from '@/locales/server';
 import path from 'path';
