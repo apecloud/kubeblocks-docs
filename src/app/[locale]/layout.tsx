@@ -20,7 +20,7 @@ const geist = Geist({
 
 export const metadata: Metadata = {
   title: 'KubeBlocks',
-  description: 'Run Any Database on Kubernetes',
+  description: 'Meet KubeBlocks, the open-source, unified database operator for Kubernetes. Simplify cloud-native data management with a single API for MySQL, PostgreSQL, MongoDB, Kafka, and more. Tame operator sprawl and streamline Day-2 operations.',
 };
 
 export default async function RootLayout({

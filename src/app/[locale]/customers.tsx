@@ -150,7 +150,7 @@ export default function Customers() {
   };
 
   return (
-    <Box sx={{ paddingBlock: 12 }}>
+    <Box sx={{ paddingBlock: 6 }}>
       <Container>
         <Box textAlign="center" mb={4}>
           <Typography color="primary" gutterBottom>

@@ -8,11 +8,8 @@ import {
   Typography,
   useTheme,
 } from '@mui/material';
-import { Caveat } from 'next/font/google';
 import Image from 'next/image';
 import { useCallback, useMemo } from 'react';
-
-const caveat = Caveat({ subsets: ['latin'] });
 
 export const Evaluate = () => {
   const theme = useTheme();
@@ -61,7 +58,7 @@ export const Evaluate = () => {
             />
           </Grid>
           <Grid size={{ md: 6, sm: 12, xs: 12 }}>
-            <Box sx={{ fontSize: 22 }} className={caveat.className}>
+            <Typography variant='subtitle1'>
               &quot;Whether or not to run a database on Kubernetes is a topic
               that is often discussed. From my perspective, if you&apos;re
               already using containers and don&apos;t want to use a fully
@@ -72,7 +69,7 @@ export const Evaluate = () => {
               solution for a wide range of databases. It can be a great fit for
               Kubernetes users who want to migrate their databases to run on
               Kubernetes without wanting to lose control.&quot;
-            </Box>
+            </Typography>
 
             <Stack direction="row-reverse" alignItems="center" mt={4} gap={2}>
               <Image
@@ -107,7 +104,7 @@ export const Evaluate = () => {
         <Divider sx={{ marginBlock: 4 }} />
         <Grid container spacing={4}>
           <Grid size={{ md: 6, sm: 12, xs: 12 }}>
-            <Box sx={{ fontSize: 22 }} className={caveat.className}>
+            <Typography variant='subtitle1'>
               &quot;The minor version of KubeBlocks has a very short release
               cycle and is very actively developed...... I strongly believe that
               KubeBlocks&apos; Addon concept and documentation on how to create
@@ -115,7 +112,7 @@ export const Evaluate = () => {
               KubeBlocks also provides support for AI, such as Xinference and
               MilvusDB, which are part of a modern large model technology
               stack.&quot;
-            </Box>
+            </Typography>
             <Stack direction="row-reverse" alignItems="center" mt={4} gap={2}>
               <Image
                 style={{ borderRadius: 56 }}
@@ -132,12 +129,12 @@ export const Evaluate = () => {
               </Box>
             </Stack>
           </Grid>
-          <Grid size={{ md: 6, sm: 12, xs: 12 }} textAlign="right">
+          <Grid size={{ md: 6, sm: 12, xs: 12 }} textAlign="center">
             <Image
               alt="KubeBlocks"
               src={`/site/kb_radar_${theme.palette.mode}.png`}
-              width={460}
-              height={300}
+              width={400}
+              height={240}
               style={{
                 maxWidth: '90%',
                 height: 'auto',

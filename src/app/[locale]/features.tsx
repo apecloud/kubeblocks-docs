@@ -4,84 +4,79 @@ import {
   AssessmentOutlined,
   AutoModeOutlined,
   BackupOutlined,
-  ChatOutlined,
   DatasetLinkedOutlined,
   EnhancedEncryptionOutlined,
   MedicationLiquidOutlined,
   SecurityOutlined,
   TerminalOutlined,
 } from '@mui/icons-material';
-import {
-  Box,
-  Container,
-  Grid2 as Grid,
-  Typography,
-  useTheme,
-} from '@mui/material';
+import { Box, Container, Grid2 as Grid, Stack, Typography } from '@mui/material';
+import React from 'react';
 
 export default function Features() {
-  const theme = useTheme();
-
   const FeatureList = [
     {
       title: 'Intuitive CLI',
-      icon: <TerminalOutlined color="primary" sx={{ fontSize: 40 }} />,
+      icon: TerminalOutlined,
+      description: "Streamline operations with a user-friendly command-line interface for effortless database management."
     },
     {
       title: 'Instant Backup',
-      icon: <BackupOutlined color="primary" sx={{ fontSize: 40 }} />,
+      icon: BackupOutlined,
+      description: "Safeguard your data with rapid, reliable backup capabilities."
     },
     {
-      title: 'Point-in-Time Recovery',
-      icon: <AddToDriveOutlined color="primary" sx={{ fontSize: 40 }} />,
+      title: 'Point-in-Time Recovery (PITR) ',
+      icon: AddToDriveOutlined,
+      description: "Restore databases to any specific moment with precision."
     },
     {
       title: 'Delete Protection',
-      icon: <SecurityOutlined color="primary" sx={{ fontSize: 40 }} />,
+      icon: SecurityOutlined,
+      description: "Prevent accidental data loss with built-in safeguards."
     },
     {
-      title: 'Metrics',
-      icon: <AssessmentOutlined color="primary" sx={{ fontSize: 40 }} />,
+      title: 'Metrics & Logs',
+      icon: AssessmentOutlined,
+      description: "Gain deep visibility with comprehensive monitoring and logging."
     },
     {
-      title: 'Logs',
-      icon: <ChatOutlined color="primary" sx={{ fontSize: 40 }} />,
-    },
-    {
-      title: 'Transport Layer Security',
-      icon: (
-        <EnhancedEncryptionOutlined color="primary" sx={{ fontSize: 40 }} />
-      ),
+      title: 'Transport Layer Security (TLS)',
+      icon: EnhancedEncryptionOutlined,
+      description: "Ensure secure data transmission with robust encryption."
     },
     {
       title: 'Data-at-Rest Encryption',
-      icon: <DatasetLinkedOutlined color="primary" sx={{ fontSize: 40 }} />,
+      icon: DatasetLinkedOutlined,
+      description: "Protect sensitive information with encrypted storage."
     },
     {
       title: 'Slow SQL Analysis',
-      icon: <MedicationLiquidOutlined color="primary" sx={{ fontSize: 40 }} />,
+      icon: MedicationLiquidOutlined,
+      description: "Identify and optimize inefficient queries for peak performance."
     },
     {
       title: 'Automatic Failure Recovery',
-      icon: <AutoModeOutlined color="primary" sx={{ fontSize: 40 }} />,
+      icon: AutoModeOutlined,
+      description: "Minimize downtime with self-healing capabilities."
     },
   ];
 
   return (
-    <Box sx={{ paddingBlock: 16 }}>
+    <Box sx={{ paddingBlock: 12 }} mb={8}>
       <Container>
-        <Box textAlign="center" mb={4}>
-          <Typography color="primary" gutterBottom>
-            ALMOST COVERED EVERYTHING
+        <Box textAlign="center" mb={8}>
+          <Typography variant="h3" mb={2}>
+            Key Features & Benefits
           </Typography>
-          <Typography variant="h4">
-            Other Amazing Features & Flexibility Provided
+          <Typography variant='h6' color="textSecondary">
+            KubeBlocks empowers DevOps and DBAs with a unified, scalable, and secure database operations experience on Kubernetes.
           </Typography>
         </Box>
 
         <Grid
           container
-          textAlign="center"
+
           sx={{
             '--Grid-borderWidth': '1px',
             borderTop: '1px solid',
@@ -101,21 +96,17 @@ export default function Features() {
                 xs: 12,
                 sm: 6,
                 md: 4,
-                lg: 3,
               }}
               sx={{
-                transition: 'scale 0.2s',
-                '&:hover': {
-                  background: theme.palette.background.paper,
-                  boxShadow: `inset 0 0 0 1px ${theme.palette.primary.main}`,
-                  scale: 1.05,
-                },
                 paddingBlock: 3,
                 paddingInline: 2,
               }}
             >
-              <Box mb={2}>{feature.icon}</Box>
-              <Typography color="textSecondary">{feature.title}</Typography>
+              <Stack direction="row" mb={2} alignItems="center" spacing={1}>
+                {React.createElement(feature.icon, { sx: {fontSize: '1rem'} })}
+                <Typography variant='h6'>{feature.title}</Typography>
+              </Stack>
+              <Typography color="textSecondary">{feature.description}</Typography>
             </Grid>
           ))}
         </Grid>

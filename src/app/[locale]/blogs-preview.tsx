@@ -81,7 +81,7 @@ export default function BlogsPreview({ blogs }: { blogs: BlogMetadata[] }) {
   return (
     <Box
       sx={{
-        paddingBlock: 10,
+        paddingBlock: 12,
         background: alpha(theme.palette.background.paper, 0.2),
       }}
     >

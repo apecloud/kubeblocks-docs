@@ -7,18 +7,33 @@ import {
   NetworkCheckOutlined,
   WebhookOutlined,
 } from '@mui/icons-material';
-import { Avatar, Stack } from '@mui/material';
+import { Avatar, Grid2 as Grid, Stack } from '@mui/material';
 
-import {
-  Box,
-  Card,
-  CardContent,
-  Container,
-  Typography,
-  useTheme,
-} from '@mui/material';
+import { Box, Container, Typography, useTheme } from '@mui/material';
 
 const mainData = [
+  {
+    title: 'Unified API',
+    icon: <CableOutlined sx={{ color: '#FFF' }} />,
+    description: `KubeBlocks provides a unified API for operating and managing
+                different types of databases, significantly reducing the
+                complexity and learning curve associated with database
+                management. This standardized approach ensures that
+                administrators can efficiently interact with various database
+                systems in the same way, streamlining operations and improving
+                productivity.`,
+  },
+  {
+    title: 'Extensible Addon',
+    icon: <ExtensionOutlined sx={{ color: '#FFF' }} />,
+    description: `KubeBlocks' standardized API design provides robust
+                extensibility, enabling low-code integration for both in-house
+                and open-source databases. This approach eliminates the need for
+                extensive custom Golang coding, turns your database knowledge
+                into productivity efficiently, and significantly speeds up
+                development times. KubeBlocks currently supports over 40
+                database engines. Welcome to join our community.`,
+  },
   {
     title: 'High Availability',
     icon: <NetworkCheckOutlined sx={{ color: '#FFF' }} />,
@@ -47,28 +62,6 @@ const mainData = [
                 in-place Pod updates, and takes individual database instances
                 offline for proactive maintenance.`,
   },
-  {
-    title: 'Unified API',
-    icon: <CableOutlined sx={{ color: '#FFF' }} />,
-    description: `KubeBlocks provides a unified API for operating and managing
-                different types of databases, significantly reducing the
-                complexity and learning curve associated with database
-                management. This standardized approach ensures that
-                administrators can efficiently interact with various database
-                systems in the same way, streamlining operations and improving
-                productivity.`,
-  },
-  {
-    title: 'Extensible Addon',
-    icon: <ExtensionOutlined sx={{ color: '#FFF' }} />,
-    description: `KubeBlocks' standardized API design provides robust
-                extensibility, enabling low-code integration for both in-house
-                and open-source databases. This approach eliminates the need for
-                extensive custom Golang coding, turns your database knowledge
-                into productivity efficiently, and significantly speeds up
-                development times. KubeBlocks currently supports over 40
-                database engines. Welcome to join our community.`,
-  },
 ];
 
 export default function WhyNeedKubeBlocks() {
@@ -80,46 +73,34 @@ export default function WhyNeedKubeBlocks() {
       }}
     >
       <Container>
-        <Box textAlign="center" mb={4}>
-          <Typography variant="h4" mb={2}>
+        <Box textAlign="center" mb={8}>
+          <Typography variant="h3" mb={2}>
             Why you need KubeBlocks
           </Typography>
-          <Typography variant="h5" color="textSecondary">
-            Run Databases on Kubernetes? Run with KubeBlocks.
+          <Typography variant="h5">
+            A Database Operator Born for Building a Unified Cloud-Native
           </Typography>
         </Box>
 
-        <Stack mb={4} spacing={3}>
+        <Grid container spacing={6}>
           {mainData.map((item, index) => (
-            <Card
+            <Grid
+              size={{ md: 6, sm: 12 }}
               key={index}
-              sx={{
-                borderRadius: 2,
-                padding: 2,
-                border: 1,
-                borderColor: 'divider',
-                boxShadow: `none`,
-                background: 'none',
-                '&:hover': {
-                  background: theme.palette.background.paper,
-                  borderColor: theme.palette.primary.main,
-                },
-              }}
+              sx={{ borderBottom: '1px solid', borderColor: 'divider' }}
             >
-              <CardContent>
-                <Stack direction="row" alignItems="center" spacing={2} mb={2}>
-                  <Avatar sx={{ bgcolor: theme.palette.primary.main }}>
-                    {item.icon}
-                  </Avatar>
-                  <Typography variant="h5">{item.title}</Typography>
-                </Stack>
-                <Typography color="textSecondary">
-                  {item.description}
-                </Typography>
-              </CardContent>
-            </Card>
+              <Stack direction="row" alignItems="center" spacing={2} mb={2}>
+                <Avatar sx={{ bgcolor: theme.palette.primary.main }}>
+                  {item.icon}
+                </Avatar>
+                <Typography variant="h5">{item.title}</Typography>
+              </Stack>
+              <Typography color="textSecondary" mb={4}>
+                {item.description}
+              </Typography>
+            </Grid>
           ))}
-        </Stack>
+        </Grid>
       </Container>
     </Box>
   );

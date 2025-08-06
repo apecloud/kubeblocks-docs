@@ -29,11 +29,9 @@ export default async function HomePage({
         <Banner />
         <Divider />
         <Customers />
-        <Divider />
         <Evaluate />
         <Divider />
         <WhyNeedKubeBlocks />
-        <Divider />
         <Features />
         <Contact />
         <BlogsPreview blogs={blogs} />

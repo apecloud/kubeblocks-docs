@@ -38,33 +38,23 @@ export default function Banner() {
           <Typography
             variant="h2"
             mb={6}
-            sx={{ fontWeight: 'bold', color: textColor }}
+            ml="auto"
+            mr="auto"
+            sx={{ fontWeight: 'bold', color: textColor, maxWidth: 1000 }}
           >
-            Run Any &nbsp;
+            The Unified &nbsp;
             <Typography
               variant="h2"
               sx={{ fontWeight: 'bold' }}
               component="span"
               color="primary"
             >
-              Database
+              Database Operator
             </Typography>
-            &nbsp; on Kubernetes
+            &nbsp; for Kubernetes
           </Typography>
-          <Typography variant="h6" mb={1} sx={{ color: textSecondaryColor }}>
-            KubeBlocks is crafted for managing databases on Kubernetes, designed
-            by domain experts with decades of experience.
-          </Typography>
-          <Typography variant="h6" mb={1} sx={{ color: textSecondaryColor }}>
-            It supports a wide range of stateful workloads, including relational
-            databases, NoSQL, message queues.
-          </Typography>
-          <Typography variant="h6" mb={1} sx={{ color: textSecondaryColor }}>
-            By streamlining operations, enhancing flexibility, and offering
-            extensions, KubeBlocks makes database.
-          </Typography>
-          <Typography variant="h6" mb={2} sx={{ color: textSecondaryColor }}>
-            management easier in cloud-native environments.
+          <Typography mb={8} sx={{ color: textSecondaryColor, fontSize: 22 }}>
+            Stop juggling multiple operators. KubeBlocks provides a single, production-grade control plane to run, manage, and scale any database—from MySQL and Postgres to Kafka and MongoDB—with a consistent, unified API.
           </Typography>
 
           <Chip
