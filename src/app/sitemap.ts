@@ -2,6 +2,8 @@ import { BLOGS_DIR } from '@/utils/markdown';
 import fs from 'fs';
 import type { MetadataRoute } from 'next';
 
+const lastModified = new Date()
+
 import { getStaticParams } from '@/locales/server';
 import path from 'path';
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -42,7 +44,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
             url: `https://kubeblocks.io/docs/${version}/${category}/${items?.join(
               '/',
             )}`,
-            lastModified: new Date(),
+            lastModified,
             changeFrequency: 'weekly',
             priority: 0.5,
           });
@@ -59,7 +61,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         .forEach((f) => {
           sitemap.push({
             url: `https://kubeblocks.io/blog/${f.replace(/\.mdx/, '')}`,
-            lastModified: new Date(),
+            lastModified,
             changeFrequency: 'weekly',
             priority: 0.5,
           });
