@@ -67,17 +67,98 @@ export const BlogList = ({
     .filter((b) => b.tags.some((t) => ['Addons'].includes(t)))
     .splice(0, 6);
 
+  const engineering = blogs
+    .filter((b) => b.tags.some((t) => ['Addons'].includes(t)))
+    .splice(0, 4);
+
   return (
     <>
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }} mt={6} mb={8}>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider' }} mt={6} mb={4}>
         <Tabs value={value} onChange={(e, newValue) => setValue(newValue)}>
           <Tab label="Featured Posts" />
           <Tab label="All Posts" />
         </Tabs>
       </Box>
 
-      <Box hidden={value !== 0} mb={12}>
-        <Box mb={12}>
+      <Box hidden={value !== 0} mb={12} mt={8}>
+        <Box mb={16}>
+          <Typography variant="h4" mb={2} textAlign="center">
+            Database Deep Dives
+          </Typography>
+          <Typography mb={8} color="textSecondary" textAlign="center">
+            This series gives developers and engineers practical insights on
+            database scalability, fault tolerance, and performance tuning.
+            Combining theory with real-world examples, it helps teams optimize
+            and troubleshoot databases across on-prem, cloud, and Kubernetes
+            environments like KubeBlocks.
+          </Typography>
+
+          {engineering.map((blog, index) => {
+            return (
+              <Grid
+                key={index}
+                container
+                spacing={4}
+                sx={{
+                  borderBottom: '1px solid',
+                  borderColor: 'divider',
+                  paddingBlock: 4,
+                }}
+              >
+                <Grid size={{ sm: 4, md: 3 }} sx={{ position: 'relative' }}>
+                  <Image
+                    src={blog.image}
+                    fill
+                    alt={blog.title}
+                    style={{ borderRadius: 8, maxWidth: '100%' }}
+                  />
+                </Grid>
+                <Grid size={{ sm: 8, md: 9 }}>
+                  <Typography variant="h5" mb={2} noWrap>
+                    {blog.title}
+                  </Typography>
+                  <Typography
+                    height={70}
+                    overflow="hidden"
+                    mb={1}
+                    color="textSecondary"
+                  >
+                    {_.truncate(blog.description, { length: 200 })}
+                  </Typography>
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                  >
+                    <Stack direction="row" gap={1} alignItems="center">
+                      <Avatar
+                        src={blog.authors?.image_url || '/apecloud.png'}
+                      />
+                      <Typography
+                        variant="body2"
+                        sx={{ color: 'text.secondary' }}
+                      >
+                        {blog.authors?.name || 'KubeBlocks'}
+                      </Typography>
+                    </Stack>
+                    <Button
+                      LinkComponent={Link}
+                      href={`/blog/${blog.name}`}
+                      target="_blank"
+                      sx={{ paddingInline: 3 }}
+                      variant="outlined"
+                    >
+                      Read More
+                      <KeyboardArrowRightIcon />
+                    </Button>
+                  </Stack>
+                </Grid>
+              </Grid>
+            );
+          })}
+        </Box>
+
+        <Box mb={16}>
           <Typography variant="h4" mb={2} textAlign="center">
             Customer Success Stories
           </Typography>
@@ -88,7 +169,6 @@ export const BlogList = ({
             the tangible impact we deliver. Explore inspiring testimonials and
             case studies to see how we can empower your success too.
           </Typography>
-
           <Grid container spacing={6}>
             {useCases.map((blog, index) => {
               return (
@@ -181,6 +261,7 @@ export const BlogList = ({
           </Grid>
         </Box>
       </Box>
+
       <Box hidden={value !== 1}>
         <Stack mb={2} direction="row" alignItems="start">
           <Stack flex={1} flexWrap="wrap" direction="row">
