@@ -5,11 +5,11 @@ import { NextThemeProvider } from '@/components/NextThemeProvider';
 import ScrollTop from '@/components/ScrollTop';
 import { Box, CssBaseline, Toolbar } from '@mui/material';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter';
+import { GoogleAnalytics } from '@next/third-parties/google';
 import type { Metadata } from 'next';
 import { setStaticParamsLocale } from 'next-international/server';
 import { Geist } from 'next/font/google';
 import { ElevationScrollAppBar } from './ElevationScrollAppBar';
-import { GoogleAnalytics } from '@next/third-parties/google'
 
 import 'highlight.js/styles/github-dark.css';
 import './global.css';
@@ -51,7 +51,7 @@ export default async function RootLayout({
           </AppRouterCacheProvider>
         </I18nProvider>
       </body>
-       <GoogleAnalytics gaId="G-1P80WT42PB" />
+      <GoogleAnalytics gaId="G-1P80WT42PB" />
     </html>
   );
 }
