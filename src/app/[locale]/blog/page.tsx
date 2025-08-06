@@ -6,11 +6,12 @@ import {
   Container,
   Grid2 as Grid,
   Link,
+  Stack,
   Typography,
 } from '@mui/material';
+import _ from 'lodash';
 import Image from 'next/image';
 import { BlogList } from './BlogList';
-
 export async function generateStaticParams() {
   return getStaticParams();
 }
@@ -27,15 +28,15 @@ export default async function BlogsPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const blogs = await getBlogs(locale);
-
-  const latest = blogs.splice(0, 1)[0];
+  const allBlogs = await getBlogs(locale);
+  const tags = _.uniq(_.flattenDeep(allBlogs.map((blog) => blog.tags || [])));
+  const latest = allBlogs.splice(0, 1)[0];
 
   return (
     <Container
       sx={{ minHeight: 'var(--container-min-height)', paddingBlock: 6 }}
     >
-      <Card variant="outlined" sx={{ mb: 8 }}>
+      <Card variant="outlined">
         <Grid container>
           <Grid p={4} size={{ md: 8 }}>
             <Typography variant="h4" gutterBottom>
@@ -44,15 +45,19 @@ export default async function BlogsPage({
             <Typography sx={{ color: 'text.secondary' }} mb={4}>
               {latest.description}
             </Typography>
-            <Button
-              variant="contained"
-              LinkComponent={Link}
-              href={`/blog/${latest.name}`}
-              size="large"
-              sx={{ boxShadow: 'none', paddingInline: 4 }}
-            >
-              Read More
-            </Button>
+
+            <Stack direction="row" spacing={4}>
+              <Button
+                variant="contained"
+                LinkComponent={Link}
+                href={`/blog/${latest.name}`}
+                size="large"
+                sx={{ boxShadow: 'none', paddingInline: 4 }}
+                target="_blank"
+              >
+                Read More
+              </Button>
+            </Stack>
           </Grid>
           <Grid p={2} size={{ md: 4 }}>
             <Image
@@ -66,7 +71,7 @@ export default async function BlogsPage({
         </Grid>
       </Card>
 
-      <BlogList blogs={blogs} />
+      <BlogList blogs={allBlogs} tags={tags} />
     </Container>
   );
 }
