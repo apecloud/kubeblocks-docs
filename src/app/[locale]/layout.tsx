@@ -12,6 +12,7 @@ import { ElevationScrollAppBar } from './ElevationScrollAppBar';
 
 import 'highlight.js/styles/github-dark.css';
 import './global.css';
+import Script from 'next/script';
 
 const geist = Geist({
   subsets: ['latin'],
@@ -35,6 +36,22 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning className={geist.className}>
       <body>
+        <Script
+        src="https://www.googletagmanager.com/gtag/js?id=G-1P80WT42PB"
+        strategy="afterInteractive"
+      />
+      <Script
+        id="google-analytics"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{
+          __html: `
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-1P80WT42PB');
+          `,
+        }}
+      />
         <I18nProvider locale={locale}>
           <AppRouterCacheProvider options={{ key: 'css' }}>
             <NextThemeProvider>
