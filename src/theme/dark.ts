@@ -75,10 +75,8 @@ export default createTheme({
     },
     MuiPaper: {
       styleOverrides: {
-        root: ({ theme }) => ({
+        root: () => ({
           backgroundImage: 'none',
-          boxShadow: 'none',
-          border: `1px solid ${theme.palette.divider}`,
         }),
       },
     },

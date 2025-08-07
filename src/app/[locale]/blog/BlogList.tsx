@@ -23,7 +23,6 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import _ from 'lodash';
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
 
@@ -105,25 +104,28 @@ export const BlogList = ({
                   paddingBlock: 4,
                 }}
               >
-                <Grid size={{ sm: 4, md: 3 }} sx={{ position: 'relative' }}>
+                <Grid
+                  size={{ xs: 0, sm: 5, md: 3 }}
+                  sx={{ position: 'relative' }}
+                >
                   <Image
                     src={blog.image}
-                    fill
                     alt={blog.title}
-                    style={{ borderRadius: 8, maxWidth: '100%' }}
+                    width={300}
+                    height={180}
+                    style={{
+                      borderRadius: 8,
+                      width: '100%',
+                      height: 'auto',
+                    }}
                   />
                 </Grid>
-                <Grid size={{ sm: 8, md: 9 }}>
+                <Grid size={{ xs: 12, sm: 7, md: 9 }}>
                   <Typography variant="h5" mb={2} noWrap>
                     {blog.title}
                   </Typography>
-                  <Typography
-                    height={70}
-                    overflow="hidden"
-                    mb={1}
-                    color="textSecondary"
-                  >
-                    {_.truncate(blog.description, { length: 200 })}
+                  <Typography mb={1} color="textSecondary">
+                    {blog.description}
                   </Typography>
                   <Stack
                     direction="row"
@@ -146,7 +148,7 @@ export const BlogList = ({
                       href={`/blog/${blog.name}`}
                       target="_blank"
                       sx={{ paddingInline: 3 }}
-                      variant="outlined"
+                      variant="text"
                     >
                       Read More
                       <KeyboardArrowRightIcon />
@@ -169,36 +171,73 @@ export const BlogList = ({
             the tangible impact we deliver. Explore inspiring testimonials and
             case studies to see how we can empower your success too.
           </Typography>
-          <Grid container spacing={6}>
-            {useCases.map((blog, index) => {
-              return (
-                <Grid key={index} size={{ md: 6 }}>
-                  <Tooltip title={blog.title} placement="top" arrow>
-                    <Typography variant="h5" mb={2} noWrap>
-                      {blog.title}
-                    </Typography>
-                  </Tooltip>
-                  <Typography
-                    height={70}
-                    overflow="hidden"
-                    mb={1}
-                    color="textSecondary"
-                  >
-                    {_.truncate(blog.description, { length: 200 })}
-                  </Typography>
-                  <Button
-                    LinkComponent={Link}
-                    href={`/blog/${blog.name}`}
-                    target="_blank"
-                  >
-                    View Full Story
-                    <KeyboardArrowRightIcon />
-                  </Button>
-                  <Divider sx={{ mt: 6 }} />
+
+          {useCases.map((blog, index) => {
+            return (
+              <Grid
+                key={index}
+                container
+                spacing={4}
+                sx={{
+                  borderBottom: '1px solid',
+                  borderColor: 'divider',
+                  paddingBlock: 4,
+                }}
+              >
+                <Grid
+                  size={{ xs: 0, sm: 5, md: 3 }}
+                  sx={{ position: 'relative' }}
+                >
+                  <Image
+                    src={blog.image}
+                    alt={blog.title}
+                    width={300}
+                    height={180}
+                    style={{
+                      borderRadius: 8,
+                      width: '100%',
+                      height: 'auto',
+                    }}
+                  />
                 </Grid>
-              );
-            })}
-          </Grid>
+                <Grid size={{ xs: 12, sm: 7, md: 9 }}>
+                  <Typography variant="h5" mb={2} noWrap>
+                    {blog.title}
+                  </Typography>
+                  <Typography mb={1} color="textSecondary">
+                    {blog.description}
+                  </Typography>
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                  >
+                    <Stack direction="row" gap={1} alignItems="center">
+                      <Avatar
+                        src={blog.authors?.image_url || '/apecloud.png'}
+                      />
+                      <Typography
+                        variant="body2"
+                        sx={{ color: 'text.secondary' }}
+                      >
+                        {blog.authors?.name || 'KubeBlocks'}
+                      </Typography>
+                    </Stack>
+                    <Button
+                      LinkComponent={Link}
+                      href={`/blog/${blog.name}`}
+                      target="_blank"
+                      sx={{ paddingInline: 3 }}
+                      variant="text"
+                    >
+                      View Full Story
+                      <KeyboardArrowRightIcon />
+                    </Button>
+                  </Stack>
+                </Grid>
+              </Grid>
+            );
+          })}
         </Box>
 
         <Box>
