@@ -1,0 +1,309 @@
+---
+slug: kubeblocks-for-oracle
+title: KubeBlocks for Oracle A Containerization Journey
+description: This blog introduces the journey of containerizing Oracle clusters using KubeBlocks, including the challenges and solutions in the process.
+date: 2025-08-05
+authors:
+  name: Yang Huigen
+  url: https://github.com/kizuna-lek
+  image_url: https://avatars.githubusercontent.com/u/39260018?v=4
+tags: [Oracle, Addons]
+image: /img/blogs/thumbnails/blog-oracle-containerization.png
+---
+
+# KubeBlocks for Oracle: A Containerization Journey
+## Introduction
+
+### Oracle Data Guard
+
+Oracle Data Guard (DG for short) is a high availability and disaster recovery solution provided by Oracle. It provides a complete set of services for maintaining, managing, and monitoring one or more standby databases, enabling Oracle databases to withstand disasters and data corruption. DG maintains these standby databases as replicas of the production database. When the production database becomes unavailable due to planned or unplanned outages, DG can switch any standby database to the production role, thereby minimizing downtime caused by interruptions.
+
+### KubeBlocks
+
+KubeBlocks is an open-source Operator that supports multi-engine management, running and managing multiple database engines on K8s through unified code and APIs. New engines can be added by simply writing KubeBlocks Addons. At its core, KubeBlocks is a K8s Operator that defines a set of CRs to abstract common attributes of various database engines and uses these abstractions to manage the engine lifecycle and daily operations.
+
+### Current State and Challenges of Containerization
+
+Oracle has made some efforts in containerization, providing images from 11g to 23ai free versions, and has also open-sourced the official Oracle Database Operator. However, its deployment and management on K8s still have some limitations:
+
+1. Incomplete feature support: Compared to traditional physical machine environments, Oracle has limited feature support in containerized environments, such as incomplete support for backup and recovery, log management, configuration changes, monitoring and alerting.
+2. High operational complexity: The lack of unified operational tools and management interfaces requires operators to switch between multiple tools, with much operational work needing to be done manually, increasing operational complexity.
+3. Limited version support: Currently, officially provided image versions are limited, and many features are only developed and tested for new versions, with insufficient support for older versions still used by many users.
+
+Taking Oracle 12c as an example, although its deployment and operations in traditional environments are quite mature, migrating to containerized environments still requires overcoming many issues:
+
+1. Cluster topology: DG cluster topology is relatively complex, involving communication and data synchronization between Oracle and Observer nodes, which requires special attention to network configuration and persistent storage in containerized environments.
+2. Multi-replica management: DG clusters typically contain multiple database replicas with one primary and multiple standbys. Data synchronization between replicas, startup order, role switching, and other aspects all affect normal cluster service. Ensuring these replicas run correctly in containerized environments is crucial.
+3. Configuration management: In traditional environments, Oracle adjusts configuration by sensing physical machine resources, while in containerized environments, older Oracle versions may not sense container resource limits, leading to unreasonable configurations.
+4. Failover: In containerized environments, failover strategies differ from traditional environments. It's necessary to ensure quick and accurate failover in various container failure scenarios to ensure service continuity.
+
+Addressing the above current state and challenges, this article will leverage KubeBlocks capabilities to demonstrate how KubeBlocks solves these pain points and explore some details of Oracle database containerization, understanding the design philosophy and implementation mechanisms of KubeBlocks and Addons.
+
+## Deployment and Operations Examples
+
+First, with a practical operation example, this article will demonstrate the process of creating an Oracle 12c DG cluster and some operational operations. The example cluster architecture is as follows:
+
+![](/img/blogs/oracle-addon/VThTbRGlOoVLzOxzrlccJnqdnOe.png)
+
+### Creating a Cluster
+
+Using kubectl apply with the following Cluster YAML will create a cluster with one primary, two standbys, and two Observer nodes:
+
+```YAML
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1alpha1
+kind: Cluster
+metadata:
+  name: my-oracle
+  labels:
+    helm.sh/chart: oracle-cluster-0.9.0
+    app.kubernetes.io/name: oracle-cluster
+    app.kubernetes.io/instance: my-oracle
+    app.kubernetes.io/version: "12.2.0.1"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  clusterDefinitionRef: oracle
+  terminationPolicy: Delete
+  topology: replication
+  affinity:
+    podAntiAffinity: Preferred
+    topologyKeys:
+      - kubernetes.io/hostname
+    tenancy: SharedNode
+  componentSpecs:
+    - name: oracle
+      replicas: 3
+      componentDef: oracle-12c
+      monitor: true
+      disableExporter: false
+      serviceVersion: 12.2.0
+      resources:
+        limits:
+          cpu: "2"
+          memory: "4Gi"
+        requests:
+          cpu: "1"
+          memory: "1Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+        - name: fra
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 10Gi
+    - name: observer
+      replicas: 2
+      componentDef: oracle-observer-12c
+      serviceVersion: 12.2.0
+
+      resources:
+        limits:
+          cpu: "1"
+          memory: "1Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+EOF
+```
+
+As you can see in the above Cluster, it specifies the components of this cluster and some related definitions. Even readers who haven't previously worked with KubeBlocks can get a relatively intuitive understanding of this cluster through the descriptive API fields (key API fields will be explained in detail later). After applying, a complete Oracle 12c DG cluster is created. Check the cluster and pod status:
+
+![](/img/blogs/oracle-addon/VZ2ZbBL69oShrrxUwGNci5v3nCb.png)
+
+![](/img/blogs/oracle-addon/WWeobo6g8ohJdWx6ErEcaizSnMd.png)
+
+You can see that observer-related pods have no roles, while oracle-related pods are set as primary or secondary. Roles are very important in stateful clusters managed by KubeBlocks. They not only represent the replication relationships between database instances but also represent KubeBlocks' abstraction of these relationships. These relationships directly affect KubeBlocks' behavioral expectations in various operational operations.
+
+### Configuration Changes
+
+Using sqlplus to check the Oracle parameter `open_cursors`, we find the value is 300:
+
+![](/img/blogs/oracle-addon/CGxxbLNUCoEUrSx1NC3cbukInYe.png)
+
+Apply the following OpsRequest YAML using kubectl apply:
+
+```YAML
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: my-oracle-reconfiguring
+  namespace: default
+spec:
+  clusterName: my-oracle
+  force: false
+  reconfigure:
+    componentName: oracle
+    configurations:
+    - keys:
+      - key: init.ora
+        parameters:
+        - key: open_cursors
+          value: '301'
+      name: oracle-config
+  preConditionDeadlineSeconds: 0
+  type: Reconfiguring
+EOF
+```
+
+Checking the parameter `open_cursors` again, we find the value has been successfully changed to 301:
+
+![](/img/blogs/oracle-addon/Iks8buvbXoCq7AxQwlHcugy8n0f.png)
+
+### Fast-Start Failover
+
+Oracle's Fast-Start Failover feature enables automatic failover to a standby database when the primary database fails, ensuring quick and reliable business recovery. By deleting pods to simulate node failure, we can check if the Oracle standby node is automatically promoted to primary. For example, when deleting the current primary node my-oracle-oracle-0, after a few seconds, my-oracle-oracle-1's role changes to primary, while my-oracle-oracle-0 rejoins the cluster with a secondary role.
+
+![](/img/blogs/oracle-addon/GJ4lb2ksDojkoSxw0K3cM63Jn4d.png)
+
+During this process, KubeBlocks continuously maintains role detection for Oracle to ensure the service cluster state recovers quickly and provides normal external services.
+
+Additionally, KubeBlocks designs various abnormal scenarios for supported databases using Chaos Mesh to verify database high availability. For details, see: [Practical Experience in Validating KubeBlocks Addon Availability with Chaos Mesh](./validating-kubeblocks-addon-availability-with-chaos-mesh).
+
+### Backup and Recovery
+
+Backup is key to data protection. In KubeBlocks, using predefined backup methods, you can create a full backup by simply applying the following YAML:
+
+```YAML
+kubectl apply -f - <<EOF
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: Backup
+metadata:
+  name: my-oracle-cluster-backup
+spec:
+  backupMethod: oracle-rman
+  backupPolicyName: my-oracle-oracle-backup-policy
+  deletionPolicy: Delete
+EOF
+```
+
+This will call Oracle's rman tool to perform a full backup of the current cluster and upload the resulting backup to the specified storage.
+
+View the backup as follows:
+
+![](/img/blogs/oracle-addon/VMqob7hNYosYUxxXxZJcHZIKnob.png)
+
+After obtaining this complete backup, you can restore a brand new cluster based on this backup, again with just a simple YAML:
+
+```YAML
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: my-oracle-cluster-restore
+spec:
+  clusterName: my-oracle-restored
+  force: false
+  restore:
+    backupName: my-oracle-cluster-backup
+    backupNamespace: default
+  type: Restore
+EOF
+```
+
+Check the status of the restored cluster:
+
+![](/img/blogs/oracle-addon/Ig3fb4xvgo7OOixzCC9cnknonPb.png)
+
+This completes the backup and recovery operation. You can also define backup frequency, timing, and other strategies.
+
+### Other Operations
+
+After integrating with KubeBlocks, Oracle Addon naturally supports many other operations. In addition to the automatic failover, configuration changes, and backup recovery introduced above, it also supports the following operations:
+
+* Observer horizontal scaling: can increase or decrease the number of Observer nodes
+* Vertical scaling
+* Storage expansion
+* Manual primary-standby switchover
+* Cluster restart, stop, and deletion
+* Minor version upgrades
+* Monitoring (configuring Prometheus exporter to collect metrics)
+
+## Oracle Addon Implementation
+
+How is such a complete Addon implemented? The following will introduce some APIs in detail to help understand the principles and design philosophy. Readers can read this part together with the operational examples. For more detailed API interpretation, you can directly check the API annotation section in the KubeBlocks source code.
+
+### KubeBlocks and Addon Mechanism
+
+KubeBlocks can conveniently extend its functionality through the Addon mechanism, supporting multiple databases and middleware. For detailed documentation, refer to: [KubeBlocks Addon Documentation](https://kubeblocks.io/docs/preview/user_docs/overview/introduction)
+
+### Oracle Addon
+
+KubeBlocks provides a set of abstract APIs for defining and managing database instances. Oracle Addon is based on these APIs, providing a complete solution for Oracle DG clusters.
+
+### Cluster Management
+
+Oracle Addon mainly defines cluster-level lifecycle management and operations through 3 CRs:
+
+* ComponentDefinition: Abbreviated as **CMPD**, used to define a basic component in a database cluster. In database clusters managed by KubeBlocks, the basic components in the cluster are usually called Components. For example, in an Oracle DG cluster, it can be divided into two basic components: Oracle and Observer, so two **CMPDs** are needed to define these two components.
+* ComponentVersion: Abbreviated as **CMPV**, used to define specific versions of Components, such as Oracle-12c and Oracle-19c.
+* ClusterDefinition: Abbreviated as **CD**, used to define the topology structure of database clusters and relationships between components. For example, in an Oracle DG cluster, a standalone cluster only needs the Oracle component, while a primary-standby cluster needs both Oracle and Observer components, so **CD** is needed to define the cluster topology.
+
+Among the above 3 CRs, the most important and complex CR is **CMPD**. Like using LEGO blocks to build models, as long as you have basic blocks (Components), you can build various complex models (Clusters).
+
+Oracle's **CMPD** mainly includes the following parts:
+
+* roles: Defines Oracle roles, such as Primary and Secondary databases, and the read-write capabilities corresponding to roles.
+* service: Defines how Oracle provides external services. Read-only and read-write services can be distinguished through roles to achieve read-write separation.
+* systemAccounts: Defines Oracle system accounts and initial passwords. In systemAccounts, you can customize password generation strategies, including length and complexity. KubeBlocks will store the generated account passwords in Secrets for Oracle reference.
+* scripts: Specifies the ConfigMap for scripts, which KubeBlocks will mount to the specified directory in the container.
+* vars: Used to reference some dynamic resources and information related to instances, such as the account `ORACLE_SYS_USER` and password `ORACLE_SYS_PASSWORD` defined in systemAccounts, and the connection strings `ALL_ORACLE_FQDN` for all Oracle replicas in the entire cluster. Based on these vars, Oracle's TNS and listener configurations can be completed.
+* lifecycleActions: Defines some lifecycle management-related actions. Oracle implements three Actions:
+  * roleProbe: Used to detect replica roles
+  * postProvision: Used to execute custom scripts after instance initialization is complete, such as configuring DG Broker after both Oracle primary and standby instances are created.
+  * switchover: Used to execute primary-standby switchover operations.
+* runtime: Defines container runtime-related configurations, including three containers:
+  * oracle-init-container: Completes permission settings for Oracle's data directory
+  * oracle: Oracle service running container
+  * exporter: Used to collect database monitoring metrics
+
+In addition to the explicitly defined containers above, KubeBlocks will also inject two sidecar containers for each Pod:
+  * lorry: used to execute some lifecycleActions such as roleProbe
+  * config-manager: used to manage configuration files and execute configuration changes
+
+After completing the above core configurations and some related configurations, a complete Oracle component is defined. For the Observer component, it can be defined in the same way. After both components are defined, the complete topology of the entire cluster can be completed through **CD**.
+
+### DG Configuration
+
+How does Oracle Addon complete the configuration between primary and standby nodes in a DG cluster? The logic related to node initialization is completed in Oracle's startup script. Initially, some general initialization operations are performed based on cluster specifications and configuration information, such as adjusting kernel parameters based on instance specifications, setting listeners, and configuring TNS. Then different operations are performed based on the node's role: if it's a primary node, the DBCA tool is used to create the database; if it's a standby node, the RMAN tool is used to recover the database from the primary node.
+
+After both primary and standby nodes are set up, the postProvision lifecycleAction mentioned earlier is used to complete the DG Broker configuration between primary and standby nodes, creating and enabling the DG Broker Configuration. At this point, the Oracle Component is built.
+
+Finally, KubeBlocks creates the Observer Component according to the Order configured in CD, configuring Fast-Start Failover (FSFO) for the cluster, and only then is the entire cluster creation complete.
+
+At this point, the cluster has high availability. When the primary node fails, the Observer will detect the anomaly and trigger failover, promoting the standby node to primary, thus ensuring business continuity.
+
+### Parameter Configuration
+
+To facilitate parameter management for various databases, KubeBlocks defines parameter configuration-related APIs:
+
+* Parameter template: Defines a parameter template. This template can define specific parameter values, or configure parameter calculation rules based on Go Template and built-in functions provided by KubeBlocks, thereby dynamically calculating the most suitable parameter values based on instance specifications.
+* ConfigConstraint: Parameter constraints, which mainly include three parts:
+  * Supported configuration file formats: such as yaml, toml, ini, etc.
+  * Parameter types and value ranges: KubeBlocks uses CUE files to describe parameter types and value ranges.
+  * Parameter effective scope: Parameters can be divided into dynamic parameters, static parameters, and immutable parameters. Dynamic parameters can be modified and take effect immediately, static parameters require instance restart to take effect, and immutable parameters cannot be modified once set.
+
+Oracle mainly uses pfile and spfile to configure database parameters. To facilitate user configuration, Oracle Addon sets some parameters from pfile to KubeBlocks' parameter template. After the instance starts, spfile is generated based on this dynamically rendered pfile.
+
+### Backup and Recovery
+
+Backup and recovery are important aspects of database operations. KubeBlocks provides flexible backup-related APIs for various databases to implement different backup and recovery mechanisms, including full backup, incremental backup, and point-in-time recovery. Addons only need to implement the following two APIs:
+
+* BackupPolicyTemplate: A backup policy template used to define the backup policy for specified components. When creating a database cluster, the cluster's backup policy is generated based on this template. It includes backup methods, default backup scheduling cycles, and default backup targets.
+* ActionSet: Defines specific backup methods used by different databases. Actual backup behavior can be implemented in this API.
+
+Taking the full backup implemented in Oracle Addon as an example, an ActionSet named `oracle-rman` is defined with a backupType of `Full`, indicating this is a full backup. Then a BackupPolicyTemplate named `oracle-backup-policy-template` is defined, which specifies using the `oracle-rman` ActionSet for full backup and sets the default backup scheduling cycle through a Cron expression. With these definitions, KubeBlocks can automatically execute backups and upload them to specified storage locations, which can be local storage or cloud storage services like AWS S3.
+
+## Summary and Outlook
+
+Running Oracle clusters stably and efficiently in Kubernetes environments is not simple, but KubeBlocks provides an insightful and effective solution. This article detailed the specifics of supporting Oracle Addon based on the KubeBlocks Operator and introduced its supported features and advantages. Currently, KubeBlocks for Oracle has been launched in [KubeBlocks Enterprise Edition](https://www.apecloud.cn/products/kubeblocks-enterprise). Interested readers are welcome to apply for a trial.
+
+We will continue to optimize and iterate KubeBlocks for Oracle to support more features and improve stability, while also adding support for more Oracle versions, making KubeBlocks for Oracle the best choice for more enterprise users.
