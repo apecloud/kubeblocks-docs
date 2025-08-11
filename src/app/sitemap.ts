@@ -38,6 +38,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
           item.replace(cateDir + '/', '').replace('.mdx', ''),
         );
 
+        // ignore some category
+        if(["release_notes"].includes(category)) {
+          return;
+        }
+
         paths.forEach((p) => {
           const items = p.split('/');
           sitemap.push({
