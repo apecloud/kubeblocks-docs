@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'fs';
+import { readFileSync, readdirSync, existsSync } from 'fs';
 import matter from 'gray-matter';
 import { NextResponse } from 'next/server';
 import { join } from 'path';
@@ -140,14 +140,14 @@ export async function GET() {
 
     // 获取docs/en/preview下的文件
     const previewDir = join(rootDir, 'docs', 'en', 'preview');
-    if (require('fs').existsSync(previewDir)) {
+    if (existsSync(previewDir)) {
       const previewFiles = getAllMdxFiles(previewDir, 'docs/en/preview');
       allFiles.push(...previewFiles.map(file => join(rootDir, file)));
     }
 
     // 获取blogs/en下的文件
     const blogsEnDir = join(rootDir, 'blogs', 'en');
-    if (require('fs').existsSync(blogsEnDir)) {
+    if (existsSync(blogsEnDir)) {
       const blogFiles = getAllMdxFiles(blogsEnDir, 'blogs/en');
       allFiles.push(...blogFiles.map(file => join(rootDir, file)));
     }

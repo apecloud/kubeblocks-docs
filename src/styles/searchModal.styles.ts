@@ -1,4 +1,4 @@
-import { SxProps, Theme } from '@mui/material/styles';
+// Style definitions for SearchModal component
 
 export const searchModalStyles = {
   overlay: {

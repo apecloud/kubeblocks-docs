@@ -10,7 +10,7 @@ import {
 import { searchBarComponentStyles } from '@/styles/searchBarComponent.styles';
 import MiniSearch from 'minisearch';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 // import SearchIcon from "@mui/icons-material/Search";
 
 interface SearchDocument {
