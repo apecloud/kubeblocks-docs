@@ -4,6 +4,7 @@ import SearchModal from '@/components/SearchModal';
 import { SlackIconNoColor } from '@/components/icons';
 import { useI18n } from '@/locales/client';
 import { useGlobalStore } from '@/store/global';
+import { searchBarStyles } from '@/styles/searchBar.styles';
 import {
   GitHub,
   LaunchOutlined,
@@ -16,6 +17,7 @@ import {
   Button,
   IconButton,
   Stack,
+  TextField,
   Toolbar,
   useMediaQuery,
   useTheme,
@@ -135,10 +137,26 @@ export const ElevationScrollAppBar = (props: AppBarProps) => {
             >
               KubeBlocks Cloud
             </Button>
-            <Box sx={{ minWidth: 36, maxWidth: 40, flex: 0 }}>
-              <IconButton onClick={() => setShowSearch(true)}>
-                <SearchIcon />
-              </IconButton>
+            <Box sx={searchBarStyles.container}>
+              <TextField
+                size="small"
+                placeholder={mobile ? "Search..." : "Search docs..."}
+                variant="outlined"
+                onClick={() => setShowSearch(true)}
+                InputProps={{
+                  startAdornment: <SearchIcon sx={searchBarStyles.searchIcon} />,
+                  endAdornment: !mobile && (
+                    <Box sx={searchBarStyles.shortcutContainer}>
+                      <Box component="kbd" sx={searchBarStyles.shortcutKey}>
+                        ⌘K
+                      </Box>
+                    </Box>
+                  ),
+                  readOnly: true,
+                  sx: searchBarStyles.inputRoot,
+                }}
+                sx={searchBarStyles.textField}
+              />
             </Box>
           </Stack>
           <Box
