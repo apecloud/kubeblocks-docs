@@ -1,0 +1,168 @@
+---
+title: Quick Start
+sidebar_position: 2
+sidebar_label: Quick Start
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Quick Start for ClickHouse
+
+This guide walks you through deploying a ClickHouse cluster using KubeBlocks.
+
+## Prerequisites
+
+import Prerequisites from './_tpl/_prerequisites.mdx';
+
+<Prerequisites />
+
+## Install ClickHouse Addon
+
+```bash
+# Add KubeBlocks Helm repository
+helm repo add kubeblocks https://apecloud.github.io/helm-charts
+helm repo update
+
+# Install ClickHouse addon
+helm install clickhouse kubeblocks/clickhouse --version 1.0.1
+```
+
+## Create a ClickHouse Cluster
+
+import CreateCluster from './_tpl/_create-cluster.mdx';
+
+<CreateCluster />
+
+## Verify the Cluster
+
+import VerifyCluster from './_tpl/_verify-cluster.mdx';
+
+<VerifyCluster />
+
+## Connect to ClickHouse
+
+Once the cluster is running, you can connect to ClickHouse using various methods:
+
+<Tabs>
+<TabItem value="kubectl" label="kubectl exec" default>
+
+```bash
+# Connect to ClickHouse using kubectl exec
+kubectl exec -it ch-cluster-clickhouse-shard-0-0 -n default -- clickhouse-client
+
+# Run a test query
+:) SELECT version()
+```
+
+</TabItem>
+<TabItem value="port-forward" label="Port Forward">
+
+```bash
+# Forward ClickHouse port to localhost
+kubectl port-forward svc/ch-cluster-clickhouse 9000:9000 -n default
+
+# Connect using ClickHouse client
+clickhouse-client --host localhost --port 9000
+```
+
+</TabItem>
+<TabItem value="external" label="External Access">
+
+```bash
+# Expose ClickHouse service
+kubectl expose service ch-cluster-clickhouse \
+  --type=LoadBalancer \
+  --name=ch-cluster-external \
+  -n default
+
+# Get external IP
+kubectl get svc ch-cluster-external -n default
+```
+
+</TabItem>
+</Tabs>
+
+## Basic Operations
+
+### Create a Test Database
+
+```sql
+-- Create a database
+CREATE DATABASE IF NOT EXISTS test_db;
+
+-- Use the database
+USE test_db;
+
+-- Create a replicated table
+CREATE TABLE test_table ON CLUSTER '{cluster}'
+(
+    id UInt64,
+    name String,
+    created_at DateTime DEFAULT now()
+)
+ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/{database}/{table}', '{replica}')
+ORDER BY id;
+```
+
+### Insert Sample Data
+
+```sql
+-- Insert data
+INSERT INTO test_table (id, name) VALUES 
+    (1, 'Alice'),
+    (2, 'Bob'),
+    (3, 'Charlie');
+
+-- Query data
+SELECT * FROM test_table;
+```
+
+### Create a Distributed Table
+
+```sql
+-- Create distributed table for sharded queries
+CREATE TABLE test_table_distributed ON CLUSTER '{cluster}'
+AS test_table
+ENGINE = Distributed('{cluster}', currentDatabase(), test_table, rand());
+
+-- Query across all shards
+SELECT count() FROM test_table_distributed;
+```
+
+## Monitor the Cluster
+
+Check cluster status and metrics:
+
+```bash
+# View cluster status
+kubectl get cluster ch-cluster -n default
+
+# View pod status
+kubectl get pods -l app.kubernetes.io/instance=ch-cluster -n default
+
+# Check ClickHouse Keeper status
+kubectl exec -it ch-cluster-clickhouse-keeper-0 -- clickhouse-keeper-client -q "srvr"
+
+# View logs
+kubectl logs ch-cluster-clickhouse-shard-0-0 -n default
+```
+
+## Clean Up
+
+To delete the ClickHouse cluster:
+
+```bash
+# Delete the cluster
+helm uninstall ch-cluster -n default
+
+# Verify deletion
+kubectl get cluster -n default
+```
+
+## What's Next?
+
+- Learn about [ClickHouse Topologies](./03-topologies/01-standalone.mdx)
+- Explore [Cluster Operations](./04-operations/01-stop-start-restart.mdx)
+- Configure [Backup and Restore](./05-backup-restore/01-create-backuprepo.mdx)
+- Set up [Monitoring](./08-monitoring/01-integrate-with-prometheus-operator.mdx)

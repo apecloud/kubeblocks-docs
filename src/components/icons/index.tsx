@@ -41,6 +41,9 @@ export const ElasticSearchIcon = (props: BoxProps) => (
 export const RedisIcon = (props: BoxProps) => (
   <Box {...props} className="iconfont icon-redis" />
 );
+export const ClickHouseIcon = (props: BoxProps) => (
+  <Box {...props} className="iconfont icon-clickhouse" />
+);
 
 export const SlackIconColor = (props: SvgIconProps) => (
   <SvgIcon {...props} viewBox="0 0 24 24">

@@ -1,0 +1,23 @@
+### Verify Cluster Status
+
+Check that your ClickHouse cluster is running:
+
+```bash
+# Check cluster status
+kubectl get cluster ch-cluster -n default
+
+# Expected output:
+# NAME         CLUSTER-DEFINITION   VERSION   TERMINATION-POLICY   STATUS    AGE
+# ch-cluster   clickhouse           24.3.8    Delete               Running   5m
+
+# Check all pods
+kubectl get pods -l app.kubernetes.io/instance=ch-cluster -n default
+
+# Check ClickHouse Keeper pods
+kubectl get pods -l app.kubernetes.io/component=clickhouse-keeper -n default
+
+# Check ClickHouse shard pods
+kubectl get pods -l app.kubernetes.io/component=clickhouse -n default
+```
+
+Wait until all pods are in `Running` status and the cluster status shows `Running`.

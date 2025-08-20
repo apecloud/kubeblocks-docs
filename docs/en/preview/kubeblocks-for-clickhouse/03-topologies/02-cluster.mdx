@@ -1,0 +1,162 @@
+---
+title: Cluster
+sidebar_position: 2
+sidebar_label: Cluster
+---
+
+# Cluster Deployment
+
+The cluster deployment mode provides a production-ready, distributed ClickHouse setup with sharding and replication.
+
+## Architecture
+
+### Components
+
+1. **ClickHouse Keeper Cluster**
+   - 3 or 5 nodes for consensus
+   - Manages metadata and coordination
+   - Raft-based consensus protocol
+
+2. **ClickHouse Shards**
+   - Horizontal data partitioning
+   - Each shard handles a subset of data
+   - Scales write and storage capacity
+
+3. **Replicas per Shard**
+   - Data redundancy within each shard
+   - Automatic failover
+   - Read scalability
+
+## Deployment Examples
+
+### Small Cluster (3 shards × 2 replicas)
+
+```bash
+helm install ch-cluster kubeblocks/clickhouse-cluster \
+  --version 1.0.1-beta.0 \
+  --set shards=3 \
+  --set replicas=2 \
+  --set keeper.replicas=3
+```
+
+### Medium Cluster (6 shards × 3 replicas)
+
+```bash
+helm install ch-cluster kubeblocks/clickhouse-cluster \
+  --version 1.0.1-beta.0 \
+  --set shards=6 \
+  --set replicas=3 \
+  --set keeper.replicas=5 \
+  --set resources.requests.cpu=2 \
+  --set resources.requests.memory=4Gi \
+  --set storage.size=100Gi
+```
+
+### Large Cluster (12 shards × 3 replicas)
+
+```bash
+helm install ch-cluster kubeblocks/clickhouse-cluster \
+  --version 1.0.1-beta.0 \
+  --set shards=12 \
+  --set replicas=3 \
+  --set keeper.replicas=5 \
+  --set resources.requests.cpu=4 \
+  --set resources.requests.memory=8Gi \
+  --set storage.size=500Gi
+```
+
+## Data Distribution
+
+### Sharding Strategy
+
+ClickHouse uses the Distributed table engine to route queries:
+
+```sql
+-- Local table on each shard
+CREATE TABLE events_local ON CLUSTER '{cluster}'
+(
+    timestamp DateTime,
+    user_id UInt64,
+    event String
+)
+ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/events', '{replica}')
+ORDER BY (timestamp, user_id);
+
+-- Distributed table for queries
+CREATE TABLE events ON CLUSTER '{cluster}'
+AS events_local
+ENGINE = Distributed('{cluster}', currentDatabase(), events_local, user_id);
+```
+
+### Replication
+
+Within each shard, data is replicated using ReplicatedMergeTree:
+
+- Synchronous metadata replication via Keeper
+- Asynchronous data replication
+- Automatic replica recovery
+- Quorum writes support
+
+## High Availability Features
+
+1. **Automatic Failover**
+   - Keeper manages leader election
+   - Replicas take over on failure
+   - No data loss with proper replication
+
+2. **Rolling Updates**
+   - Zero-downtime upgrades
+   - Gradual rollout across shards
+   - Automatic health checks
+
+3. **Self-Healing**
+   - Automatic Pod restart on failure
+   - Data re-synchronization
+   - Keeper consensus recovery
+
+## Best Practices
+
+### Sizing Guidelines
+
+| Workload | Shards | Replicas | Keeper Nodes |
+|----------|--------|----------|--------------|
+| Small (< 10TB) | 3-6 | 2 | 3 |
+| Medium (10-100TB) | 6-12 | 2-3 | 3-5 |
+| Large (> 100TB) | 12+ | 3 | 5 |
+
+### Resource Recommendations
+
+| Component | CPU | Memory | Storage |
+|-----------|-----|--------|---------|
+| Keeper | 1-2 cores | 2-4 GB | 10-50 GB SSD |
+| ClickHouse (small) | 2-4 cores | 4-8 GB | 100-500 GB |
+| ClickHouse (medium) | 4-8 cores | 8-16 GB | 500 GB - 2 TB |
+| ClickHouse (large) | 8-16 cores | 16-64 GB | 2 TB+ NVMe |
+
+## Monitoring
+
+Monitor cluster health with these key metrics:
+
+```bash
+# Check shard distribution
+kubectl exec -it ch-cluster-clickhouse-shard-0-0 -- clickhouse-client -q "
+SELECT 
+    shard_num,
+    replica_num,
+    host_name,
+    is_local
+FROM system.clusters
+WHERE cluster = 'default'
+"
+
+# Check replication status
+kubectl exec -it ch-cluster-clickhouse-shard-0-0 -- clickhouse-client -q "
+SELECT 
+    database,
+    table,
+    is_leader,
+    total_replicas,
+    active_replicas
+FROM system.replicas
+"
+```

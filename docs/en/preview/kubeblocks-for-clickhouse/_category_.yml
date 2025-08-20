@@ -1,0 +1,8 @@
+position: 10
+label: ClickHouse
+collapsible: true
+collapsed: true
+className: sidebar-clickhouse
+link:
+  type: doc
+  id: kubeblocks-for-clickhouse/01-overview

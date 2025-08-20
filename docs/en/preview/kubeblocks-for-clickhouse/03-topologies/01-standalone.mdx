@@ -1,0 +1,42 @@
+---
+title: Standalone
+sidebar_position: 1
+sidebar_label: Standalone
+---
+
+# Standalone Deployment
+
+The standalone deployment mode is suitable for development, testing, and small-scale deployments.
+
+## Architecture
+
+In standalone mode:
+- Single ClickHouse instance
+- Embedded ClickHouse Keeper (or external ZooKeeper)
+- All data stored on a single node
+- No high availability
+
+## Create Standalone Cluster
+
+```bash
+helm install ch-standalone kubeblocks/clickhouse-cluster \
+  --version 1.0.1-beta.0 \
+  --set topology=standalone \
+  --set shards=1 \
+  --set replicas=1 \
+  --set keeper.replicas=1
+```
+
+## Use Cases
+
+- Development environments
+- Testing and CI/CD pipelines
+- Small datasets (< 1TB)
+- Non-critical workloads
+
+## Limitations
+
+- No fault tolerance
+- Limited scalability
+- Single point of failure
+- Not recommended for production

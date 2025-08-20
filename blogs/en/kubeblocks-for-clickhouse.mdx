@@ -1,0 +1,291 @@
+---
+slug: kubeblocks-for-clickhouse-revealed
+title: KubeBlocks for ClickHouse Revealed
+description: This blog introduces ClickHouse and its cloud-native deployment implementation on KubeBlocks, covering cluster management, high availability, parameter configuration, and backup/recovery capabilities.
+date: 2025-08-20
+authors:
+  name: Gan Yiwei
+  url: https://github.com/loomts
+  image_url: https://avatars.githubusercontent.com/u/137465026?s=200&v=4
+tags: [ClickHouse, OLAP, Database, Addons, Cloud-Native]
+image: /img/blogs/thumbnails/clickhouse_kubeblocks_thumbnail.png
+---
+
+# KubeBlocks for ClickHouse Revealed
+
+## Background: An Introduction to ClickHouse
+
+Open-sourced by Yandex in 2016, ClickHouse is a high-performance, column-oriented OLAP database. Thanks to its columnar storage, vectorized execution, and high compression rates, it excels in scenarios like log analysis, ad serving, and financial risk control. ClickHouse's high performance is rooted in the partitioning and indexing designs of its MergeTree family of table engines, which allow for parallel query and background merge processing. Combined with a native distributed architecture for sharding and replication, it can maintain millisecond-level response times even with petabytes of data.
+
+![ClickHouse Architecture](/img/blogs/clickhouse-addon/clickbench-clickhouse-rank.png)
+
+However, this extreme performance comes at the cost of high operational complexity. Many teams find that deploying ClickHouse in an enterprise-grade production environment is challenging. The main challenges are:
+
+- **Complex Distributed Architecture**: Planning shards and replicas, and managing metadata consistency with Keeper/ZooKeeper.
+- **High Operational Overhead**: Cumbersome parameter configuration, and manual intervention required for scaling and failure recovery.
+- **Difficult Performance Tuning**: A vast parameter system, complex resource coordination, and continuous iteration needed for query optimization.
+
+Simply containerizing ClickHouse using StatefulSets is not enough to solve these inherent operational problems related to cluster management and data reliability.
+
+## The Need for Kubernetes Operators
+
+To effectively use ClickHouse in a production environment, the key is to automate complex operational knowledge. This is where a Kubernetes Operator comes in. It standardizes and automates operations like cluster configuration, scaling, and failure recovery, significantly reducing the need for manual intervention.
+
+Kubernetes Operators encode operational knowledge into software, providing declarative management of complex stateful applications. For ClickHouse, this means automating tasks like cluster setup, configuration management, scaling operations, version upgrades, and monitoring integration.
+
+## Introducing KubeBlocks
+
+KubeBlocks is also a Kubernetes Operator, but it provides a unified API for different database engines. By defining CRDs like ClusterDefinition, ComponentDefinition, ShardingDefinition, and ComponentVersion, it abstracts database clusters, allowing users to build and manage them flexibly, like building blocks.
+
+For ClickHouse, KubeBlocks provides an out-of-the-box solution, including:
+
+- High-availability cluster deployment and automatic leader election
+- Full lifecycle management for shards and replicas
+- Built-in backup and recovery mechanisms
+- Monitoring and alerting integrated with Prometheus/Grafana
+- Elastic scaling and rolling upgrades
+
+With these capabilities, users don't need to write complex operational scripts or learn a specialized ClickHouse Operator. They can use KubeBlocks' unified API to achieve a production-grade ClickHouse cluster management experience on Kubernetes.
+
+## KubeBlocks Architecture Philosophy
+
+KubeBlocks adopts a horizontal abstraction design pattern. The core is a unified Cluster API, with pluggable database engine support enabled by ComponentDefinition and Addon mechanisms. KubeBlocks' InstanceSet extends StatefulSets with specialized enhancements for managing stateful workloads. It provides Pod role awareness, flexible definition of shard/replica topologies, and enables parallel rolling updates and self-healing, providing greater operational autonomy. This design allows operational teams to manage heterogeneous database environments with a single interface, significantly reducing learning curves and operational complexity.
+
+## Implementation of the ClickHouse Addon
+
+This section describes how KubeBlocks 1.0 API implements ClickHouse cluster management, high availability, parameter configuration, and backup/recovery. We've applied KubeBlocks' building block philosophy by splitting ClickHouse and ClickHouse Keeper into two components to create a basic, production-ready ClickHouse Addon.
+
+### Cluster Management
+
+ClickHouse cluster lifecycle management and operations mainly involve the following objects and responsibilities:
+
+- **ClusterDefinition**: Defines the topology and component orchestration.
+  - Standalone mode: Only includes a clickhouse component.
+  - Cluster mode: Includes clickhouse-keeper and clickhouse components with sharding. The order is defined to ensure ClickHouse Keeper is created first, followed by concurrent creation of each ClickHouse shard.
+
+- **ShardingDefinition**: Associates with the clickhouse component, sets the minimum/maximum shard count, and configures concurrent creation/update policies for parallel operations during scaling and topology changes.
+
+- **ComponentVersion**: Declares supported versions and their image mappings.
+
+- **ComponentDefinition** (for clickhouse and clickhouse-keeper): Precisely defines the component's form and lifecycle management.
+  - Services: Exposes service ports, including the ClickHouse query port, the inter-component port for ClickHouse and ClickHouse Keeper, and the metrics collection port. The ClickHouse Keeper component also exposes the Raft member communication port.
+  - Volumes/ConfigMap: Mounts data volumes and configuration templates (including XML files for ClickHouse service/user/client). Scripts are mounted inside the container via ConfigMaps.
+  - SystemAccounts: Built-in admin account. KubeBlocks generates a Secret and injects it as environment variables for container use.
+  - TLS: Optional. Unifies certificate mount paths and links them to port and TLS configurations.
+  - LifecycleActions:
+    - ClickHouse: Implements memberJoin (replicates database and table metadata when a new replica joins).
+    - ClickHouse Keeper: Implements roleProbe, switchover, memberJoin, and memberLeave (role probing, failover, and member addition/removal).
+  - Runtime/Entrypoint: Container entrypoints are bootstrap-server.sh and bootstrap-keeper.sh, which ensure proper initialization and monitor changes to ConfigMap mounted files inside the container.
+  - Vars: Registers environment variables for ports, TLS status, shard/replica FQDN lists, cluster name, replica count, etc., used for dynamically rendering configurations like remote_servers and macros (shard/replica).
+
+Underpinning all this is the InstanceSet, which is the core driver of the orchestration. Both the ClickHouse and Keeper components rely on it to ensure the orderly deployment and automatic recovery of shards and replicas, enabling lifecycle operations like scaling and rolling upgrades to proceed correctly based on roles and topology.
+
+When these "LEGO blocks" are assembled, an autonomous ClickHouse cluster begins to take shape.
+
+![KubeBlocks ClickHouse Architecture](/img/blogs/clickhouse-addon/kubeblocks-clickhouse-architecture.png)
+
+### Sharding and Replication
+
+To discuss ClickHouse's topology, we must first talk about its table engines. ClickHouse's table engines can be grouped into three categories:
+
+1. **MergeTree Family**: Stores data on local or external storage, using an LSM-Tree-like principle where background tasks continuously merge ordered data blocks. They support columnar storage, partitioning, sorting, and sparse primary key indices.
+   - **ReplicatedMergeTree**: Maintains table metadata and replication queues via Keeper. It synchronizes data parts, merge operations, and mutations between replicas to ensure data consistency.
+   - **Variants**: Provide different aggregation/deduplication semantics based on MergeTree's data organization capabilities.
+     - ReplacingMergeTree: Deduplicates by primary key, with new versions overwriting old ones.
+     - SummingMergeTree: Performs sum aggregation on specified columns.
+     - AggregatingMergeTree: Stores pre-aggregated function states for materialized views.
+
+2. **Special Purpose Engines**:
+   - **Distributed**: A logical distributed table that handles query routing and parallel execution. It's typically used with local MergeTree tables in a "local table & distributed table" mode.
+   - **View**: A view engine with data stored in memory.
+
+3. **Virtual Table Engines**: Used to access external data sources like MySQL/PostgreSQL.
+
+![ClickHouse Table Engines](/img/blogs/clickhouse-addon/clickhouse-table-engines.png)
+
+In practice, ReplicatedMergeTree and Distributed are a common engine combination, and their collaboration showcases ClickHouse's distributed architecture:
+
+- **ReplicatedMergeTree** provides replica-level data replication. Based on the cluster topology defined in the configuration, it creates replicated tables. When data is written, it automatically syncs to all replicas within the same shard, ensuring data consistency and high availability.
+- **Distributed** acts as a shard-level router, typically paired with a local ReplicatedMergeTree table to form a two-layer "local table & distributed table" architecture. The Distributed table routes queries and write requests to the local tables of different shards, with data non-overlapping between shards to enable horizontal scaling.
+
+When executing DDL operations, the `ON CLUSTER <clusterName>` clause automatically distributes the statement to all nodes in the cluster. In the KubeBlocks implementation, the cluster name is dynamically injected via the `INIT_CLUSTER_NAME` environment variable, as shown in the Go template snippet below:
+
+```xml
+<remote_servers>
+  <{{ .INIT_CLUSTER_NAME }}>
+    {{- range $key, $value := . }}
+    {{- if and (hasPrefix "ALL_SHARDS_POD_FQDN_LIST" $key) (ne $value "") }}
+    <shard>
+      <internal_replication>true</internal_replication>
+      {{- range $_, $host := splitList "," $value }}
+      <replica>
+        <host>{{ $host }}</host>
+        {{- if eq (index $ "TLS_ENABLED") "true" }}
+        <port replace="replace" from_env="CLICKHOUSE_TCP_SECURE_PORT"/>
+        <secure>1</secure>
+        {{- else }}
+        <port replace="replace" from_env="CLICKHOUSE_TCP_PORT"/>
+        {{- end }}
+        <user from_env="CLICKHOUSE_ADMIN_USER"></user>
+        <password from_env="CLICKHOUSE_ADMIN_PASSWORD"></password>
+      </replica>
+      {{- end }}
+    </shard>
+    {{- end }}
+    {{- end }}
+  </{{ .INIT_CLUSTER_NAME }}>
+</remote_servers>
+```
+
+### High Availability
+
+ClickHouse's high-availability capabilities are primarily implemented through KubeBlocks' LifecycleActions interface. For example, a Switchover action can execute a custom script to switch the leader node when a ClickHouse Keeper leader needs to be taken offline, ensuring service continuity.
+
+Additionally, KubeBlocks provides OpsDefinition to handle node failure scenarios. When a Pod is migrated to another node, the system automatically fetches and rebuilds the database and table schema from a live node, simplifying cluster recovery after a physical machine failure.
+
+#### LifecycleActions
+
+LifecycleActions are used to define the actions that the ClickHouse and ClickHouse Keeper components must perform at different lifecycle stages.
+
+Since ClickHouse typically uses a Shared-Nothing architecture (users can also configure an S3 storage plugin for a Shared-Disk setup) and relies on Keeper for metadata management, the ClickHouse component itself requires relatively few LifecycleActions.
+
+ClickHouse Keeper, as a Raft-based distributed coordination service, needs additional LifecycleActions related to the cluster's consensus state to ensure consistency is correctly maintained among Raft members during node changes.
+
+- **ClickHouse Member Join**: Horizontal scaling for ClickHouse can be either replica scaling or shard scaling. The core task is to replicate the table schema. For tables in the ReplicatedMergeTree family, the replication mechanism automatically backfills historical data.
+  
+  - Replica Scaling Process:
+    - Source Node Selection: The first healthy replica is selected as the synchronization source via environment variables.
+    - Database Sync: It enumerates databases from system.databases (excluding system/INFORMATION_SCHEMA), generates DDL using `SHOW CREATE DATABASE ... FORMAT TabSeparatedRaw`, and executes it on the new replica, verifying successful creation.
+    - Table Schema Sync: Reads table information (database, name, uuid) from system.tables and creates tables in reverse order of dependencies_table to ensure correct dependencies. Internal tables (containing .inner_id. or .inner.) are automatically skipped.
+  
+  - Shard Scaling Process: Similar to replica scaling, but an instance from a different shard is selected as the synchronization source for database and table schemas.
+
+- **Keeper Member Join**: ClickHouse Keeper is a Raft-based distributed coordination service. Horizontal scaling requires adding the new Pod as a participant to the Raft cluster, following the NuRaft (C++ Raft library) specification, and having it enter a follower/observer state.
+  - Leader Discovery: The leader is probed from the CH_KEEPER_POD_FQDN_LIST after excluding the new member. If no leader is found, the operation fails.
+  - Node Identification: The ordinal is extracted from the Pod name, and a server_id is calculated (ordinal + 1). It's verified that the configuration already includes this FQDN.
+  - Cluster Join: `reconfig add "server.<id>=<fqdn>:<raft_port>;participant;1"` is executed.
+  - State Verification: Confirms via `get '/keeper/config'` that the new FQDN appears in the configuration and the new member's role is follower or observer.
+
+- **Keeper Member Leave**: A node is considered to have left when `get '/keeper/config'` no longer includes its FQDN.
+  - It finds the leader node and retrieves the leaving member's server_id. If the member doesn't exist in the configuration, the operation is idempotent.
+  - Execute `reconfig remove <server_id>` and verify the configuration no longer contains the FQDN.
+
+- **Keeper Role Probe**: Uses the Keeper four-letter word (4LW) `srvr` to query the node's role: leader/follower/observer (a standalone node is treated as a leader).
+
+- **Keeper Switchover**: Switchover is a mechanism for a stateful service to actively switch leader, used to quickly elect a new leader when the current one is scheduled for shutdown, shortening the RTO (Recovery Time Objective).
+  - Role Check: If the current instance is not the leader, it exits immediately (the KubeBlocks Operator ensures this is only triggered on the leader).
+  - Candidate Determination: Fetches the current configuration and identifies a candidate node. If none is specified, any participant is chosen.
+  - Priority Adjustment: Sets the candidate's priority to 8 and others to 1 (by adjusting election priority via `reconfig add <base_config;priority>`).
+  - Switchover Execution: Removes the current leader, polls until the candidate becomes the new leader, and finally adds the original leader back to the Keeper cluster with a priority of 1.
+
+### Parameter Configuration
+
+KubeBlocks 1.0 API offers two configuration management methods: the ComponentDefinition's config controller and the parameter controller. The former is the default mode. If `externalManaged: true` and ParamConfigRenderer are set in the component definition, the parameter controller takes over configuration changes. The ClickHouse Addon uses the latter for more precise configuration management.
+
+- **Configuration Templates**: ClickHouse and Keeper use template variables to dynamically render configurations for ports, TLS, remote_servers/zookeeper, Prometheus, OpenSSL/gRPC, and more.
+- **Parameter Constraints**: ParametersDefinition combined with CUE validation rules declare parameter types, value ranges, and immutable items (e.g., ports, listen_host, macros).
+- **Configuration Rendering**: ParamConfigRenderer registers configuration files as rendering targets. It automatically triggers a re-render during horizontal and shard scaling, ensuring consistent configuration after topology changes.
+
+The following code block shows the configuration definition in the clickhouse ComponentDefinition. `externalManaged: true` indicates that the parameter controller is used for configuration management.
+
+```yaml
+configs:
+  - name: clickhouse-tpl
+    template: {{ include "clickhouse.configurationTplName" . }}
+    volumeName: config
+    namespace: {{ .Release.Namespace }}
+    externalManaged: true
+  - name: clickhouse-user-tpl
+    template: {{ include "clickhouse.userTplName" . }}
+    volumeName: user-config
+    namespace: {{ .Release.Namespace }}
+    externalManaged: true
+  - name: clickhouse-client-tpl
+    template: {{ include "clickhouse.clientTplName" . }}
+    volumeName: client-config
+    namespace: {{ .Release.Namespace }}
+    restartOnFileChange: false
+```
+
+ParamConfigRenderer defines configuration file types, specifies events that trigger re-rendering, and binds a set of ParametersDefinitions for fine-grained control over parameter rendering and value constraints.
+
+```yaml
+apiVersion: parameters.kubeblocks.io/v1alpha1
+kind: ParamConfigRenderer
+spec:
+  componentDef: clickhouse-1.0.1-beta.0
+  configs:
+  - fileFormatConfig:
+      format: xml
+    name: user.xml
+    templateName: clickhouse-user-tpl
+  - fileFormatConfig:
+      format: xml
+    name: 00_default_overrides.xml
+    reRenderResourceTypes:
+    - hscale
+    - shardingHScale
+    templateName: clickhouse-tpl
+  parametersDefs:
+  - clickhouse-user-pd
+  - clickhouse-config-pd
+```
+
+### Backup and Recovery
+
+The ClickHouse Addon integrates the open-source Altinity clickhouse-backup tool to provide full and incremental backup/recovery capabilities. For a clustered ClickHouse deployment, the KubeBlocks Operator selects the first Pod in each shard to perform the backup/recovery operation.
+
+- **Backup Strategy**: Each shard independently backs up its complete schema, RBAC, and data. Backup entries are generated in S3 storage, corresponding to the number of shards.
+- **Recovery Process**:
+  - Schema Recovery: Based on the ReplicatedMergeTree replication path constraints (`{layer}/{shard}/{replica}`) and macros configuration, DDL is not distributed with `ON CLUSTER`. Instead, the table schema is recovered for each shard separately.
+  - Data Recovery: Based on the internal shard FQDN list provided by KubeBlocks environment variables, the first Pod of each shard is selected to recover data and RBAC.
+  - Replica Synchronization: The ReplicatedMergeTree engine's replication mechanism automatically distributes the data to other replicas within the shard.
+
+The RBAC synchronization mechanism relies on the `user_directories.replicated.zookeeper_path` configuration. It uses Keeper as the distributed storage for user permission data, ensuring permissions are automatically synced across the cluster.
+
+```xml
+<clickhouse>
+  <user_directories>
+    <replicated>
+      <!-- Keeper-based replicated user directory -->
+      <zookeeper_path>/clickhouse/access</zookeeper_path>
+    </replicated>
+  </user_directories>
+</clickhouse>
+```
+
+## Hands-On: Getting Started
+
+Steps for installing KubeBlocks 1.0 are omitted here for brevity.
+
+### Deploying a Cluster
+
+```bash
+# Add the Helm repository
+helm repo add kubeblocks https://apecloud.github.io/helm-charts
+helm repo update
+
+# Install the ClickHouse addon
+helm install clickhouse kubeblocks/clickhouse --version 1.0.1
+
+# Create a ClickHouse cluster (3 shards x 2 replicas + 3-replica Keeper)
+helm install ch-cluster kubeblocks/clickhouse-cluster \
+  --version 1.0.1-beta.0 \
+  --set shards=3 \
+  --set replicas=2 \
+  --set keeper.replicas=3
+```
+
+![ClickHouse Cluster Deployment](/img/blogs/clickhouse-addon/clickhouse-cluster-deployment.png)
+
+You can find various example scenarios in the repository: [kubeblocks-addons/clickhouse](https://github.com/apecloud/kubeblocks-addons/tree/main/examples/clickhouse).
+
+## Conclusion and Outlook
+
+This article demonstrates KubeBlocks' comprehensive solution for the cloud-native adoption of ClickHouse.
+
+In today's increasingly competitive OLAP landscape, emerging engines like DuckDB have outperformed ClickHouse in specific scenarios. However, in enterprise-grade distributed data processing, ClickHouse remains irreplaceable due to its mature distributed architecture, diverse table engines, and powerful query optimization. Cloud-native transformation is crucial for reducing ClickHouse's operational complexity and improving ease of use.
+
+As an open-source Kubernetes Operator for stateful services, KubeBlocks abstracts complex database operational tasks through a standardized, declarative API. Its unified cluster management model, flexible component orchestration, and deep support for core ClickHouse scenarios—including Keeper high availability, shard management, parameter configuration, and backup/recovery—provide enterprises with a production-grade cloud-native solution for ClickHouse.
+
+In the future, we hope to validate and optimize KubeBlocks for ClickHouse in more production scenarios. We welcome you to join our community, exchange ideas, and contribute to the project!

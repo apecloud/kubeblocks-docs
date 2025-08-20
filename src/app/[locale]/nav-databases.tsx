@@ -11,6 +11,7 @@ import {
   QdrantIcon,
   RabbitMQIcon,
   RedisIcon,
+  ClickHouseIcon,
 } from '@/components/icons';
 import { Link } from '@/components/Link';
 import { useI18n } from '@/locales/client';
@@ -60,6 +61,11 @@ export default function DatabasesNav() {
       href: '/docs/preview/kubeblocks-for-kafka',
     },
     {
+      title: 'ClickHouse',
+      icon: <ClickHouseIcon {...iconProps} />,
+      href: '/docs/preview/kubeblocks-for-clickhouse',
+    },
+    {
       title: 'Milvus',
       icon: <MilvusIcon {...iconProps} />,
       href: '/docs/preview/kubeblocks-for-milvus',
@@ -78,7 +84,7 @@ export default function DatabasesNav() {
       title: 'ElasticSearch',
       icon: <ElasticSearchIcon {...iconProps} />,
       href: '/docs/preview/kubeblocks-for-elasticsearch',
-    },
+    }
   ];
 
   return (
