@@ -78,7 +78,7 @@ export default function DatabasesNav() {
       title: 'ElasticSearch',
       icon: <ElasticSearchIcon {...iconProps} />,
       href: '/docs/preview/kubeblocks-for-elasticsearch',
-    }
+    },
   ];
 
   return (
