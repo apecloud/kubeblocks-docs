@@ -11,7 +11,6 @@ import {
   QdrantIcon,
   RabbitMQIcon,
   RedisIcon,
-  ClickHouseIcon,
 } from '@/components/icons';
 import { Link } from '@/components/Link';
 import { useI18n } from '@/locales/client';
@@ -59,11 +58,6 @@ export default function DatabasesNav() {
       title: 'Kafka',
       icon: <KafkaIcon {...iconProps} />,
       href: '/docs/preview/kubeblocks-for-kafka',
-    },
-    {
-      title: 'ClickHouse',
-      icon: <ClickHouseIcon {...iconProps} />,
-      href: '/docs/preview/kubeblocks-for-clickhouse',
     },
     {
       title: 'Milvus',
