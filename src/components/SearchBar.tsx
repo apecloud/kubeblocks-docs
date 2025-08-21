@@ -1,4 +1,5 @@
 'use client';
+import { searchBarComponentStyles } from '@/styles/searchBarComponent.styles';
 import {
   Box,
   List,
@@ -7,7 +8,6 @@ import {
   Paper,
   TextField,
 } from '@mui/material';
-import { searchBarComponentStyles } from '@/styles/searchBarComponent.styles';
 import MiniSearch from 'minisearch';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -100,38 +100,58 @@ export const SearchBar = () => {
 
         const index = new MiniSearch<SearchDocument>({
           // 扩展搜索字段
-          fields: ['title', 'content', 'summary', 'keywordsText', 'headingsText', 'category', 'tagsText'],
+          fields: [
+            'title',
+            'content',
+            'summary',
+            'keywordsText',
+            'headingsText',
+            'category',
+            'tagsText',
+          ],
           // 存储更多字段
-          storeFields: ['id', 'title', 'path', 'summary', 'category', 'docType', 'wordCount'],
+          storeFields: [
+            'id',
+            'title',
+            'path',
+            'summary',
+            'category',
+            'docType',
+            'wordCount',
+          ],
           searchOptions: {
             // 优化权重
-                        boost: {
+            boost: {
               title: 3,
               summary: 2,
               keywordsText: 2,
               headingsText: 1.5,
               category: 1.5,
               tagsText: 1.2,
-              content: 1
+              content: 1,
             },
             fuzzy: 0.2,
             prefix: true,
           },
           // 自定义分词器
           tokenize: (string) => {
-            return string
-              .toLowerCase()
-              .replace(/([a-z])([A-Z])/g, '$1 $2')
-              .replace(/[-_]/g, ' ')
-              .match(/\b\w+\b/g) || [];
+            return (
+              string
+                .toLowerCase()
+                .replace(/([a-z])([A-Z])/g, '$1 $2')
+                .replace(/[-_]/g, ' ')
+                .match(/\b\w+\b/g) || []
+            );
           },
         });
 
         // 处理数据，转换字段为搜索友好的格式
-        const processedDocs = documents.map(doc => ({
+        const processedDocs = documents.map((doc) => ({
           ...doc,
           keywordsText: doc.keywords ? doc.keywords.join(' ') : '',
-          headingsText: doc.headings ? doc.headings.map((h: any) => h.text).join(' ') : '',
+          headingsText: doc.headings
+            ? doc.headings.map((h: any) => h.text).join(' ')
+            : '',
           tagsText: doc.tags ? doc.tags.join(' ') : '',
         }));
 
@@ -231,7 +251,7 @@ export const SearchBar = () => {
                 sx={searchBarComponentStyles.resultItem}
               >
                 <ListItemText
-                                    primary={
+                  primary={
                     <div style={searchBarComponentStyles.primaryContainer}>
                       <span>{highlightText(result.title, searchTerm)}</span>
                       {result.category && (
@@ -244,15 +264,18 @@ export const SearchBar = () => {
                   secondary={
                     <div>
                       <div style={searchBarComponentStyles.secondaryContainer}>
-                        {result.summary ?
-                          highlightText(result.summary.slice(0, 100) + '...', searchTerm) :
-                          highlightText(result.path, searchTerm)
-                        }
+                        {result.summary
+                          ? highlightText(
+                              result.summary.slice(0, 100) + '...',
+                              searchTerm,
+                            )
+                          : highlightText(result.path, searchTerm)}
                       </div>
                       <div style={searchBarComponentStyles.resultMeta}>
                         {result.docType === 'blog' ? '📝 Blog' : '📚 Docs'}
                         {result.wordCount && ` • ${result.wordCount} words`}
-                        {result.score && ` • ${Math.round(result.score * 100)}% match`}
+                        {result.score &&
+                          ` • ${Math.round(result.score * 100)}% match`}
                       </div>
                     </div>
                   }

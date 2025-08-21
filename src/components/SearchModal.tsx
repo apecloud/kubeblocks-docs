@@ -1,7 +1,7 @@
+import { searchModalStyles } from '@/styles/searchModal.styles';
 import SearchIcon from '@mui/icons-material/Search';
 import MiniSearch from 'minisearch';
 import { useEffect, useRef, useState } from 'react';
-import { searchModalStyles } from '@/styles/searchModal.styles';
 
 interface SearchResult {
   id: string;
@@ -44,13 +44,33 @@ export default function SearchModal({
       .then((res) => res.json())
       .then((json) => {
         const ms = new MiniSearch({
-          // 扩展搜索字段，包含更多元数据
-          fields: ['title', 'content', 'summary', 'keywords', 'headings', 'category', 'tags'],
-          // 存储更多字段用于显示
-          storeFields: ['id', 'title', 'path', 'content', 'description', 'summary', 'keywords', 'category', 'docType', 'headings', 'wordCount'],
-          // 优化搜索选项
+          // Expand search fields to include more metadata
+          fields: [
+            'title',
+            'content',
+            'summary',
+            'keywords',
+            'headings',
+            'category',
+            'tags',
+          ],
+          // Store more fields for display
+          storeFields: [
+            'id',
+            'title',
+            'path',
+            'content',
+            'description',
+            'summary',
+            'keywords',
+            'category',
+            'docType',
+            'headings',
+            'wordCount',
+          ],
+          // Optimize search options
           searchOptions: {
-            // 字段权重：标题最重要，然后是摘要和关键词
+            // Field weights: title is most important, then summary and keywords
             boost: {
               title: 3,
               summary: 2,
@@ -58,31 +78,33 @@ export default function SearchModal({
               headings: 1.5,
               category: 1.5,
               tags: 1.2,
-              content: 1
+              content: 1,
             },
-            // 启用模糊搜索，容忍拼写错误
+            // Enable fuzzy search, tolerate spelling errors
             fuzzy: 0.2,
-            // 启用前缀匹配
+            // Enable prefix matching
             prefix: true,
-            // 组合多个字段的匹配
+            // Combine multiple field matches
             combineWith: 'AND',
           },
-          // 自定义分词器，处理驼峰命名和特殊字符
+          // Custom tokenizer, handle camel case and special characters
           tokenize: (string) => {
-            return string
-              .toLowerCase()
-              // 处理驼峰命名
-              .replace(/([a-z])([A-Z])/g, '$1 $2')
-              // 处理连字符和下划线
-              .replace(/[-_]/g, ' ')
-              // 提取单词
-              .match(/\b\w+\b/g) || [];
+            return (
+              string
+                .toLowerCase()
+                // Handle camel case
+                .replace(/([a-z])([A-Z])/g, '$1 $2')
+                // Handle hyphens and underscores
+                .replace(/[-_]/g, ' ')
+                // Extract words
+                .match(/\b\w+\b/g) || []
+            );
           },
-          // 自定义处理器，提取更多有用信息
+          // Custom processor, extract more useful information
           processTerm: (term) => {
-            // 保留原词和词根
+            // Preserve original term and root
             const processed = [term];
-            // 简单的词根提取（移除常见后缀）
+            // Simple root extraction (remove common suffixes)
             if (term.length > 4) {
               const stemmed = term.replace(/(ing|ed|er|est|ly|tion|sion)$/, '');
               if (stemmed !== term && stemmed.length > 2) {
@@ -90,14 +112,16 @@ export default function SearchModal({
               }
             }
             return processed;
-          }
+          },
         });
 
-        // 处理数据，确保keywords和headings是可搜索的文本
+        // Process data, ensure keywords and headings are searchable text
         const processedDocs = json.map((doc: any) => ({
           ...doc,
           keywords: doc.keywords ? doc.keywords.join(' ') : '',
-          headings: doc.headings ? doc.headings.map((h: any) => h.text).join(' ') : '',
+          headings: doc.headings
+            ? doc.headings.map((h: any) => h.text).join(' ')
+            : '',
           tags: doc.tags ? doc.tags.join(' ') : '',
         }));
 
@@ -108,19 +132,19 @@ export default function SearchModal({
 
   useEffect(() => {
     if (miniSearch && query.trim()) {
-      // 使用优化的搜索选项
+      // Use optimized search options
       const rawResults = miniSearch.search(query, {
         prefix: true,
         fuzzy: 0.2,
-        // 根据查询长度调整策略
+        // Adjust strategy based on query length
         combineWith: query.length > 10 ? 'OR' : 'AND',
-        // 提高结果质量阈值
+        // Increase result quality threshold
         filter: (result) => result.score > 0.5,
       });
 
-      // 处理和增强搜索结果
+      // Process and enhance search results
       const enhancedResults = rawResults.map((r) => {
-        // 生成上下文摘要
+        // Generate context summary
         const contextSummary = generateContextSummary(r.content, query);
 
         return {
@@ -148,14 +172,14 @@ export default function SearchModal({
     }
   }, [miniSearch, query]);
 
-  // 生成包含查询上下文的摘要
+  // Generate context summary with query context
   const generateContextSummary = (content: string, query: string) => {
     if (!content || !query) return '';
 
     const queryWords = query.toLowerCase().split(/\s+/);
     const sentences = content.split(/[.!?]+/).filter((s: string) => s.trim());
 
-    // 找到包含查询词的句子
+    // Find sentences containing query words
     const relevantSentences = sentences.filter((sentence: string) => {
       const lowerSentence = sentence.toLowerCase();
       return queryWords.some((word: string) => lowerSentence.includes(word));
@@ -165,11 +189,11 @@ export default function SearchModal({
       return content.slice(0, 200) + '...';
     }
 
-    // 返回最相关的句子
+    // Return most relevant sentence
     return relevantSentences[0].trim().slice(0, 200) + '...';
   };
 
-  // 关闭逻辑和键盘导航
+  // Close logic and keyboard navigation
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose();
@@ -207,7 +231,10 @@ export default function SearchModal({
 
   return (
     <div style={searchModalStyles.overlay} onClick={onClose}>
-      <div style={searchModalStyles.container} onClick={(e) => e.stopPropagation()}>
+      <div
+        style={searchModalStyles.container}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div style={searchModalStyles.searchInputContainer}>
           <SearchIcon style={searchModalStyles.searchIcon} />
           <input
@@ -228,7 +255,11 @@ export default function SearchModal({
           {results.length > 0 ? (
             <ul ref={resultsRef} style={searchModalStyles.resultsList}>
               {results.slice(0, 10).map((r, idx) => {
-                const summary = r.contextSummary || r.description || r.content?.slice(0, 300) || '';
+                const summary =
+                  r.contextSummary ||
+                  r.description ||
+                  r.content?.slice(0, 300) ||
+                  '';
                 return (
                   <li
                     key={r.id}
@@ -237,9 +268,7 @@ export default function SearchModal({
                     onClick={() => (window.location.href = `/${r.path}`)}
                   >
                     <div style={searchModalStyles.resultHeader}>
-                      <div style={searchModalStyles.resultTitle}>
-                        {r.title}
-                      </div>
+                      <div style={searchModalStyles.resultTitle}>{r.title}</div>
                       {r.category && (
                         <span style={searchModalStyles.categoryTag}>
                           {r.category}
@@ -266,14 +295,10 @@ export default function SearchModal({
               })}
             </ul>
           ) : (
-            <div style={searchModalStyles.noResults}>
-              No results
-            </div>
+            <div style={searchModalStyles.noResults}>No results</div>
           )}
         </div>
       </div>
     </div>
   );
 }
-
-
