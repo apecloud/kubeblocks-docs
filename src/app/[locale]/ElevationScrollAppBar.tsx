@@ -6,6 +6,7 @@ import { useI18n } from '@/locales/client';
 import { useGlobalStore } from '@/store/global';
 import { searchBarStyles } from '@/styles/searchBar.styles';
 import {
+  Email,
   GitHub,
   LaunchOutlined,
   Search as SearchIcon,
@@ -167,6 +168,9 @@ export const ElevationScrollAppBar = (props: AppBarProps) => {
               justifyContent: 'center',
             }}
           >
+            <IconButton href="mailto:marcom@apecloud.com">
+              <Email />
+            </IconButton>
             <IconButton href="https://kubeblocks.slack.com" target="_blank">
               <SlackIconNoColor />
             </IconButton>
