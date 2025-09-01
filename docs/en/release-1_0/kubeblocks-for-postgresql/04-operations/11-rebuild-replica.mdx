@@ -186,6 +186,11 @@ postgrel> select * from t1;
   1 | John Doe
 (1 row)
 ```
+Delete the rebuild ops:
+
+```
+kubectl delete ops pg-rebuild-replica-inplace -n demo
+```
 
 ### Non-In-Place Rebuild
 
@@ -266,6 +271,12 @@ postgrel> select * from t1;
 ----+----------
   1 | John Doe
 (1 row)
+```
+
+Delete the rebuild ops:
+
+```
+kubectl delete ops pg-rebuild-replica-non-inplace -n demo
 ```
 
 ### Rebuild from Backups
