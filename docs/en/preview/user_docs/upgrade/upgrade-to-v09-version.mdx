@@ -1,7 +1,7 @@
 ---
 title: Upgrade to v0.9.x
 description: Upgrade to KubeBlocks v0.9.x, operation, tips and notes
-keywords: [upgrade, 0.9.3]
+keywords: [upgrade, kubeblocks]
 sidebar_position: 1
 sidebar_label: Upgrade to v0.9.x
 ---
@@ -9,289 +9,394 @@ sidebar_label: Upgrade to v0.9.x
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
+export const LATEST_VERSION = "v0.9.5";
+
+{/* Custom component to render code blocks with variable substitution */}
+export const VersionedCodeBlock = ({ children, language = "bash" }) => (
+  <pre>
+    <code className={`language-${language}`}>
+      {children.replace(/{LATEST_VERSION}/g, LATEST_VERSION)}
+    </code>
+  </pre>
+);
+
 # Upgrade to KubeBlocks v0.9.x
 
-:::note
+This guide walks you through upgrading KubeBlocks to version 0.9.x. The v0.9.x release series delivers significant improvements in performance, stability, and introduces powerful new features to enhance your database management experience.
 
-- Before upgrading, check your current KubeBlocks version:
+## Before You Begin
 
-   Run `helm -n kb-system list | grep kubeblocks` or `kbcli version`.
-- For upgrading to different versions:
+### Verify Your Current Version
 
-   - For v0.9.2 and v0.9.1, follow this upgrade tutorial, replacing the version number with v0.9.2 or v0.9.1 respectively.
-   - [v0.9.0 upgrade guide](./upgrade-to-0_9_0)
-   - [v0.8.x upgrade guide](./upgrade-to-0_8).
+First, check which version of KubeBlocks you're currently running:
 
-   Installing the latest version is recommended for better performance and features.
+```bash
+# Using helm
+helm -n kb-system list | grep kubeblocks
 
+# Using kbcli
+kbcli version
+```
+
+### Choose Your Upgrade Path
+
+Select the appropriate upgrade path based on your current version:
+
+| Current Version | Target: v0.9.x | Upgrade Path |
+|-----------------|----------------|---------------|
+| v0.9.x | ✅ Direct upgrade | Follow [Upgrade from KubeBlocks v0.9.x](#upgrade-from-kubeblocks-v09x) |
+| v0.8.x | ✅ Direct upgrade | Follow [Upgrade from KubeBlocks v0.8.x](#upgrade-from-kubeblocks-v08x) |
+| v0.7.x or earlier | ⚠️ Multi-step upgrade | Upgrade to v0.8.x first, then to v0.9.x |
+
+:::tip
+We recommend upgrading to the latest stable version for optimal performance and access to the newest features.
 :::
-
-## Compatibility
-
-KubeBlocks v0.9.3 is compatible with KubeBlocks v0.8 APIs, but compatibility with APIs from versions prior to v0.8 is not guaranteed. If you are using Addons from KubeBlocks v0.7 or earlier (v0.6, etc), DO [upgrade KubeBlocks and all Addons to v0.8 first](./upgrade-to-0_8) to ensure service availability before upgrading to v0.9.
-
-If you are upgrading from v0.8 to v0.9, it's recommended to enable webhook to ensure the availability.
 
 ## Upgrade from KubeBlocks v0.9.x
 
+This section covers upgrading between v0.9.x versions (for example, from v0.9.1 to v0.9.5). Since these are patch releases within the same major version, the upgrade process is straightforward.
+
+:::note
+**Version Placeholder:**
+
+Throughout this section, replace {LATEST_VERSION} with your target version number (e.g., `v0.9.5`, `v0.9.4`).
+:::
+
 <Tabs>
 
-<TabItem value="Helm" label="Helm" default>
+  <TabItem value="Helm" label="Helm" default>
 
-1. View Addon and check whether the `"helm.sh/resource-policy": "keep"` annotation exists.
+  **Step 1: Update Custom Resource Definitions (CRDs)**
 
-    KubeBlocks streamlines the default installed engines. Add the `"helm.sh/resource-policy": "keep"` annotation to avoid deleting Addon resources that are already in use during the upgrade.
+  KubeBlocks separates CRDs from the Helm chart to reduce chart size. Start by updating the CRDs:
 
-    Check whether the `"helm.sh/resource-policy": "keep"` annotation is added.
+  <VersionedCodeBlock>
+{`kubectl replace -f https://github.com/apecloud/kubeblocks/releases/download/{LATEST_VERSION}/kubeblocks_crds.yaml`}
+  </VersionedCodeBlock>
 
-    ```bash
-    kubectl get addon -o json | jq '.items[] | {name: .metadata.name, resource_policy: .metadata.annotations["helm.sh/resource-policy"]}'
-    ```
+  **Step 2: Upgrade KubeBlocks Core**
 
-    If the annotation doesn't exist, run the command below to add it. You can replace `-l app.kubernetes.io/name=kubeblocks` with your actual filter name.
+  First, update your Helm repository to get the latest chart information:
+  ```bash
+  helm repo add kubeblocks https://apecloud.github.io/helm-charts
+  helm repo update kubeblocks
+  ```
 
-    ```bash
-    kubectl annotate addons.extensions.kubeblocks.io -l app.kubernetes.io/name=kubeblocks helm.sh/resource-policy=keep
-    ```
+  Then upgrade KubeBlocks to the target version:
+  <VersionedCodeBlock>
+{`helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version {LATEST_VERSION} --set crd.enabled=false`}
+  </VersionedCodeBlock>
 
-2. Install CRD.
+  :::note
+  **Why `crd.enabled=false`?**
 
-    To reduce the size of Helm chart, KubeBlocks v0.8 removes CRD from the Helm chart. Before upgrading, you need to install CRD.
+  Since we're upgrading within the same v0.9.x series, no API conversion is needed. Setting `crd.enabled=false` skips the CRD upgrade task for faster deployment.
+  :::
 
-    ```bash
-    kubectl replace -f https://github.com/apecloud/kubeblocks/releases/download/v0.9.3/kubeblocks_crds.yaml
-    ```
+  **Step 3: (Optional) Upgrade Addons**
 
-3. Upgrade KubeBlocks.
+  :::warning
+  **Addon Upgrade Impact:**
 
-    ```bash
-    helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version 0.9.3 --set crd.enabled=false
-    ```
+  Upgrading Addons may restart existing database clusters and affect availability. Only proceed during maintenance windows, or upgrade Addons individually as needed.
+  :::
 
-    Upgrading from v0.9.0/v0.9.1/v0.9.2 to v0.9.3 doesn't include API change, so you can set `--set crd.enabled=false` to skip the API upgrade task.
+  To upgrade Addons to the versions bundled with the new KubeBlocks version:
 
-    :::warning
+  <VersionedCodeBlock>
+{`helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version {LATEST_VERSION} \\
+  --set upgradeAddons=true \\
+  --set crd.enabled=false`}
+  </VersionedCodeBlock>
 
-    To avoid affecting existing database clusters, when upgrading to KubeBlocks v0.9.3, the versions of already-installed Addons will not be upgraded by default. If you want to upgrade the Addons to the versions built into KubeBlocks v0.9.3, execute the following command. Note that this may restart existing clusters and affect availability. Please proceed with caution.
+  </TabItem>
 
-    ```bash
-    helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version 0.9.3 \
-      --set upgradeAddons=true \
-      --set crd.enabled=false
-    ```
+  <TabItem value="kbcli" label="kbcli">
 
-    :::
+  **Step 1: Update kbcli**
 
-</TabItem>
+  Download and install the matching version of kbcli:
 
-<TabItem value="kbcli" label="kbcli">
+  <VersionedCodeBlock>
+{`curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash -s {LATEST_VERSION}`}
+  </VersionedCodeBlock>
 
-1. Download kbcli v0.9.3.
+  **Step 2: Upgrade KubeBlocks Core**
 
-    ```bash
-    curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash -s 0.9.3
-    ```
+  Perform the core upgrade without updating Addons:
 
-2. Upgrade KubeBlocks.
+  <VersionedCodeBlock>
+{`kbcli kb upgrade --version {LATEST_VERSION}`}
+  </VersionedCodeBlock>
 
-    ```bash
-    kbcli kb upgrade --version 0.9.3
-    ```
+  **Step 3: (Optional) Upgrade Addons**
 
-    :::warning
+  :::warning
+  **Addon Upgrade Impact:**
 
-    To avoid affecting existing database clusters, when upgrading to KubeBlocks v0.9.3, the versions of already-installed Addons will not be upgraded by default. If you want to upgrade the Addons to the versions built into KubeBlocks v0.9.3, execute the following command. Note that this may restart existing clusters and affect availability. Please proceed with caution.
+  Upgrading Addons may restart existing database clusters and affect availability. Only proceed during maintenance windows, or upgrade Addons individually as needed.
+  :::
 
-    ```bash
-    kbcli kb upgrade --version 0.9.3 --set upgradeAddons=true
-    ```
+  To upgrade Addons to the versions bundled with the new KubeBlocks version:
 
-    :::
+  <VersionedCodeBlock>
+{`kbcli kb upgrade --version {LATEST_VERSION} --set upgradeAddons=true`}
+  </VersionedCodeBlock>
 
-   `kbcli` will automatically add the annotation `"helm.sh/resource-policy": "keep"` to ensure that existing Addons are not deleted during the upgrade.
-
-</TabItem>
+  </TabItem>
 
 </Tabs>
 
 ## Upgrade from KubeBlocks v0.8.x
 
-<Tabs>
-
-<TabItem value="Helm" label="Helm" default>
-
-1. View Addon and check whether the `"helm.sh/resource-policy": "keep"` annotation exists.
-
-    KubeBlocks streamlines the default installed engines. Add the `"helm.sh/resource-policy": "keep"` annotation to avoid deleting Addon resources that are already in use during the upgrade.
-
-    Check whether the `"helm.sh/resource-policy": "keep"` annotation is added.
-
-    ```bash
-    kubectl get addon -o json | jq '.items[] | {name: .metadata.name, resource_policy: .metadata.annotations["helm.sh/resource-policy"]}'
-    ```
-
-    If the annotation doesn't exists, run the command below to add it. You can replace `-l app.kubernetes.io/name=kubeblocks` with your actual filter name.
-
-    ```bash
-    kubectl annotate addons.extensions.kubeblocks.io -l app.kubernetes.io/name=kubeblocks helm.sh/resource-policy=keep
-    ```
-
-2. Delete the incompatible OpsDefinition.
-
-   ```bash
-   kubectl delete opsdefinitions.apps.kubeblocks.io kafka-quota kafka-topic kafka-user-acl switchover
-   ```
-
-3. Install CRD.
-
-    To reduce the size of Helm chart, KubeBlocks v0.8 removed CRD from the Helm chart and changed the group of StorageProvider. Before upgrading, you need to install StorageProvider CRD first.
-
-    If the network is slow, it's recommended to download the CRD YAML file on your localhost before further operations.
-
-    ```bash
-    kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/v0.9.3/dataprotection.kubeblocks.io_storageproviders.yaml
-    ```
-
-4. Upgrade KubeBlocks.
-
-    Here are some options that need your attention before the upgrade.
-
-    - Setting `admissionWebhooks.enabled=true` enables the webhook, supporting the multi-version conversion of the ConfigConstraint API.
-    - Setting `admissionWebhooks.ignoreReplicasCheck=true` enables the webhook by default only when KubeBlocks is deployed with 3 replicas. If only a single replica is deployed, you can configure this variable to bypass the check.
-    - If the KubeBlocks you are running uses the image registry starting with `infracreate-registry`, it is recommended to explicitly configure the image registry during the upgrade.
-
-    ```bash
-    helm repo add kubeblocks https://apecloud.github.io/helm-charts
-
-    helm repo update kubeblocks
-
-    helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version 0.9.3 \
-      --set admissionWebhooks.enabled=true \
-      --set admissionWebhooks.ignoreReplicasCheck=true
-    ```
-
-    :::warning
-
-    To avoid affecting existing database clusters, when upgrading to KubeBlocks v0.9.3, the versions of already-installed Addons will not be upgraded by default. If you want to upgrade the Addons to the versions built into KubeBlocks v0.9.3, execute the following command. Note that this may restart existing clusters and affect availability. Please proceed with caution.
-
-    ```bash
-    helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version 0.9.3 \
-      --set upgradeAddons=true \
-      --set admissionWebhooks.enabled=true \
-      --set admissionWebhooks.ignoreReplicasCheck=true
-    ```
-
-    :::
-
-</TabItem>
-
-<TabItem value="kbcli" label="kbcli">
-
-1. Download kbcli v0.9.3.
-
-    ```bash
-    curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash -s 0.9.3
-    ```
-
-2. Upgrade KubeBlocks.
-
-    Check the kbcli version and make sure you're using kbcli v0.9.3.
-
-    ```bash
-    kbcli version
-    ```
-
-    Here are some options that need your attention before the upgrade.
-
-    - Setting `admissionWebhooks.enabled=true` enables the webhook, supporting the multi-version conversion of the ConfigConstraint API.
-    - Setting `admissionWebhooks.ignoreReplicasCheck=true` enables the webhook by default only when KubeBlocks is deployed with 3 replicas. If only a single replica is deployed, you can configure this variable to bypass the check.
-    - If the KubeBlocks you are running uses the image registry starting with `infracreate-registry`, it is recommended to explicitly configure the image registry during the upgrade.
-
-    ```bash
-    kbcli kb upgrade --version 0.9.3 \
-      --set admissionWebhooks.enabled=true \
-      --set admissionWebhooks.ignoreReplicasCheck=true
-    ```
-
-    :::warning
-
-    To avoid affecting existing database clusters, when upgrading to KubeBlocks v0.9.3, the versions of already-installed Addons will not be upgraded by default. If you want to upgrade the Addons to the versions built into KubeBlocks v0.9.3, execute the following command. Note that this may restart existing clusters and affect availability. Please proceed with caution.
-
-    ```bash
-    kbcli kb upgrade --version 0.9.3 \
-      --set upgradeAddons=true \
-      --set admissionWebhooks.enabled=true \
-      --set admissionWebhooks.ignoreReplicasCheck=true
-    ```
-
-    :::
-
-    `kbcli` will automatically add the annotation `"helm.sh/resource-policy": "keep"` to ensure that existing Addons are not deleted during the upgrade.
-
-</TabItem>
-
-</Tabs>
-
-## Upgrade Addons
-
-If you didn't specify `upgradeAddons` as `true` or your Addon is not included in the default installed Addons, you can upgrade Addons by running the commands provided below to use the v0.9.x API.
+This section covers upgrading from v0.8.x to v0.9.x. This is a major version upgrade that requires additional preparation steps due to API changes.
 
 :::note
+**Key API Changes in v0.9.x:**
 
-- If the Addon you want to upgrade is `mysql`, you need to upgrade this Addon and restart the cluster. Otherwise, the cluster created in KubeBlocks v0.8.x cannot be used in v0.9.x.
-
-- If the Addon you want to use is `clickhouse/milvus/elasticsearch/llm`, you need to upgrade KubeBlocks first and then upgrade this Addon. Otherwise, these Addons cannot be used in KubeBlocks v0.9.x normally.
-
+- Storage provider group updated from `storage.kubeblocks.io` to `dataprotection.kubeblocks.io`
+- Enhanced ConfigConstraint API with multi-version support
 :::
 
 <Tabs>
 
-<TabItem value="Helm" label="Helm" default>
+  <TabItem value="Helm" label="Helm" default>
 
-```bash
-# Add Helm repo
-helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
+  **Step 1: Add the `"helm.sh/resource-policy": "keep"` annotation to Addons**
 
-# If github is not accessible or the network is very slow for you, please use following repo instead
-helm repo add kubeblocks-addons https://jihulab.com/api/v4/projects/150246/packages/helm/stable
+  KubeBlocks v0.9 changed the default installed Addons, so you need to add the `"helm.sh/resource-policy": "keep"` annotation to Addons to avoid deleting them during the upgrade.
 
-# Update helm repo
-helm repo update
+  ```bash
+  kubectl get addons -oname | xargs -I {} kubectl annotate {} helm.sh/resource-policy=keep
+  ```
 
-# Search the available Addon versions
-helm search repo kubeblocks-addons/{addon-name} --versions --devel
+  **Step 2: Clean Up Incompatible Resources**
 
-# Update addon version
-helm upgrade -i {addon-release-name} kubeblocks-addons/{addon-name} --version x.y.z -n kb-system
-```
+  Remove OpsDefinition that are incompatible with v0.9.x:
 
-</TabItem>
+  ```bash
+  # Delete specific incompatible OpsDefinitions
+  kubectl delete opsdefinitions.apps.kubeblocks.io kafka-quota kafka-topic kafka-user-acl switchover
 
-<TabItem value="kbcli" label="kbcli">
+  # Alternative: Delete all OpsDefinitions (they will be recreated during upgrade)
+  kubectl delete opsdefinitions.apps.kubeblocks.io --all
+  ```
 
-```bash
-# View the Addon index list
-kbcli addon index list
+  **Step 3: Update Custom Resource Definitions (CRDs)**
 
-# Update one index and the default index is kubeblocks
-kbcli addon index update kubeblocks
+  Install the new Storage Provider CRD required for v0.9.x and update all KubeBlocks CRDs to the new version:
 
-# Search available Addon versions
-kbcli addon search {addon-name}
+  <VersionedCodeBlock>
+{`kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/{LATEST_VERSION}/kubeblocks_crds.yaml || kubectl replace -f https://github.com/apecloud/kubeblocks/releases/download/{LATEST_VERSION}/kubeblocks_crds.yaml`}
+  </VersionedCodeBlock>
 
-# Install an Addon
-kbcli addon install {addon-name} --version x.y.z
+  :::note
+  **Network Optimization:**
 
-# Upgrade this Addon to a specified version
-kbcli addon upgrade {addon-name} --version x.y.z
+  Or download the CRD YAML files locally first, then apply them using `kubectl create -f <local-file-path> || kubectl replace -f <local-file-path>`.
+  :::
 
-# Force to upgrade to a specified version
-kbcli addon upgrade {addon-name} --version x.y.z --force
+  **Step 3: Update Helm Repository and Upgrade KubeBlocks**
 
-# View the available Addon versions
-kbcli addon list | grep {addon-name}
-```
+  Update your Helm repository to get the latest chart information:
 
-</TabItem>
+  ```bash
+  helm repo add kubeblocks https://apecloud.github.io/helm-charts
+  helm repo update kubeblocks
+  ```
+
+  Enable webhooks for multi-version conversion (it will convert ConfigConstraint API to the new version):
+
+  <VersionedCodeBlock>
+{`helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version {LATEST_VERSION} \\
+  --set admissionWebhooks.enabled=true \\
+  --set admissionWebhooks.ignoreReplicasCheck=true`}
+  </VersionedCodeBlock>
+
+  :::note
+  **Configuration Options Explained:**
+
+  - `admissionWebhooks.enabled=true`: Enables webhook for ConfigConstraint API multi-version conversion
+  - `admissionWebhooks.ignoreReplicasCheck=true`: Allows webhook to run with single replica deployments
+  :::
+
+  **Step 4: (Optional) Upgrade Addons**
+
+  :::warning
+  **Addon Upgrade Impact:**
+
+  Upgrading Addons may restart existing database clusters and affect availability. Only proceed during maintenance windows. Or you can upgrade Addons individually.
+  :::
+
+  <VersionedCodeBlock>
+{`helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version {LATEST_VERSION} \\
+  --set upgradeAddons=true \\
+  --set admissionWebhooks.enabled=true \\
+  --set admissionWebhooks.ignoreReplicasCheck=true`}
+  </VersionedCodeBlock>
+
+  </TabItem>
+
+  <TabItem value="kbcli" label="kbcli">
+
+  **Step 1: Update kbcli**
+
+  Download and install kbcli for the target version:
+
+  <VersionedCodeBlock>
+{`curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash -s {LATEST_VERSION}`}
+  </VersionedCodeBlock>
+
+  Verify the installation:
+  ```bash
+  kbcli version
+  ```
+
+  **Step 2: Upgrade KubeBlocks with Webhook Support**
+
+  Upgrade KubeBlocks with enhanced API validation and multi-version support:
+
+  <VersionedCodeBlock>
+{`kbcli kb upgrade --version {LATEST_VERSION} \\
+  --set admissionWebhooks.enabled=true \\
+  --set admissionWebhooks.ignoreReplicasCheck=true`}
+  </VersionedCodeBlock>
+
+  :::note
+  **Configuration Options Explained:**
+
+  - `admissionWebhooks.enabled=true`: Enables webhook for ConfigConstraint API multi-version conversion
+  - `admissionWebhooks.ignoreReplicasCheck=true`: Allows webhook to run with single replica deployments (useful for development environments)
+  :::
+
+  **Step 3: (Optional) Upgrade Addons**
+
+  :::warning
+  **Addon Upgrade Impact:**
+
+  Upgrading Addons may restart existing database clusters and affect availability. Only proceed during maintenance windows, or upgrade Addons individually as needed.
+  :::
+
+  To upgrade Addons along with KubeBlocks:
+
+  <VersionedCodeBlock>
+{`kbcli kb upgrade --version {LATEST_VERSION} \\
+  --set upgradeAddons=true \\
+  --set admissionWebhooks.enabled=true \\
+  --set admissionWebhooks.ignoreReplicasCheck=true`}
+  </VersionedCodeBlock>
+
+  </TabItem>
 
 </Tabs>
+
+Some Addons require special handling when upgrading from v0.8.x to v0.9.x.
+
+- **Required**: The `mysql` Addon must be upgraded when moving from v0.8.x to v0.9.x. Clusters created in v0.8.x will not function properly in v0.9.x without this upgrade.
+- **Recommended**: For `clickhouse`, `milvus`, `elasticsearch`, and `llm` Addons, upgrade KubeBlocks first, then upgrade these Addons for optimal functionality.
+
+## Individual Addon Upgrades
+
+If you chose not to upgrade Addons during the KubeBlocks upgrade, or if you need to upgrade specific Addons, follow these steps to upgrade Addons individually.
+
+### Upgrade Methods
+
+<Tabs>
+
+  <TabItem value="Helm" label="Helm" default>
+
+  **Step 1: Configure Addon Repository**
+
+  ```bash
+  # Add the primary Addon repository
+  helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
+
+  # Alternative repository for users in regions with limited GitHub access
+  # helm repo add kubeblocks-addons https://jihulab.com/api/v4/projects/150246/packages/helm/stable
+
+  # Update repository information
+  helm repo update
+  ```
+
+  **Step 2: Find Available Versions**
+
+  ```bash
+  # Search for available versions of a specific Addon
+  helm search repo kubeblocks-addons/{addon-name} --versions --devel
+  # Example: helm search repo kubeblocks-addons/mysql --versions --devel
+  ```
+
+  **Step 3: Upgrade the Addon**
+
+  Select a version that is compatible (same major version) with your KubeBlocks release and upgrade:
+
+  ```bash
+  # Upgrade to a specific version
+  helm upgrade -i {addon-release-name} kubeblocks-addons/{addon-name} --version x.y.z -n kb-system
+  ```
+
+  :::note
+  **Parameter Reference:**
+  - `{addon-name}`: Replace with the actual Addon name (e.g., `mysql`, `postgresql`)
+  - `{addon-release-name}`: The release name of the installed Addon (e.g., `kb-addon-mysql`, `kb-addon-postgresql`)
+  - `x.y.z`: The target version number, compatible with your KubeBlocks release
+  :::
+
+  </TabItem>
+
+  <TabItem value="kbcli" label="kbcli">
+
+  **Step 1: Update Addon Index**
+
+  ```bash
+  # List available Addon indexes (the default index is `kubeblocks`)
+  kbcli addon index list
+
+  # Update the default KubeBlocks index
+  kbcli addon index update kubeblocks
+  ```
+
+  **Step 2: Search for Available Addon Versions**
+
+  ```bash
+  # Search for available versions of a specific Addon
+  kbcli addon search {addon-name}
+
+  # View currently installed Addons and their versions
+  kbcli addon list | grep {addon-name}
+  ```
+
+  **Step 3: Upgrade the Addon**
+
+  Select a version that is compatible (same major version) with your KubeBlocks release and upgrade:
+
+  ```bash
+  kbcli addon upgrade {addon-name} --version x.y.z
+  ```
+
+  **Force upgrade (use with caution):**
+  ```bash
+  kbcli addon upgrade {addon-name} --version x.y.z --force
+  ```
+
+  **Fresh installation (if not previously installed):**
+  ```bash
+  kbcli addon install {addon-name} --version x.y.z
+  ```
+
+  :::note
+  **When to use `--force`:**
+  - You need to downgrade to a previous version
+  - Use with caution as it bypasses compatibility checks
+  :::
+
+  </TabItem>
+
+</Tabs>
+
+## Getting Help
+
+If you encounter issues during the upgrade process:
+
+- **Check the logs**: Review upgrade logs using `kubectl -n kb-system logs deployment/kubeblocks`
+- **Community Support**: Visit the [KubeBlocks GitHub Issues](https://github.com/apecloud/kubeblocks/issues) for known issues and community help
