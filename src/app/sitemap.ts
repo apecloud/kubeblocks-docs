@@ -39,7 +39,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         );
 
         // ignore some category
-        if(["release_notes"].includes(category)) {
+        if (['release_notes'].includes(category)) {
           return;
         }
 

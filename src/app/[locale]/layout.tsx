@@ -1,3 +1,4 @@
+import AIChatBox from '@/components/AIChatBox';
 import I18nProvider from '@/components/I18nProvider';
 import MessageBox from '@/components/MessageBox';
 import { MuiThemeProvider } from '@/components/MuiThemeProvider';
@@ -47,6 +48,7 @@ export default async function RootLayout({
                 <Toolbar />
                 <Box component="main">{children}</Box>
                 <ScrollTop />
+                <AIChatBox />
               </MuiThemeProvider>
             </NextThemeProvider>
           </AppRouterCacheProvider>
