@@ -9,6 +9,17 @@ sidebar_label: Upgrade to v0.9.x
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
+export const LATEST_VERSION = "v0.9.5";
+
+{/* Custom component to render code blocks with variable substitution */}
+export const VersionedCodeBlock = ({ children, language = "bash" }) => (
+  <pre>
+    <code className={`language-${language}`}>
+      {children.replace(/{LATEST_VERSION}/g, LATEST_VERSION)}
+    </code>
+  </pre>
+);
+
 # Upgrade to KubeBlocks v0.9.x
 
 This guide walks you through upgrading KubeBlocks to version 0.9.x. The v0.9.x release series delivers significant improvements in performance, stability, and introduces powerful new features to enhance your database management experience.
@@ -48,7 +59,7 @@ This section covers upgrading between v0.9.x versions (for example, from v0.9.1 
 :::note
 **Version Placeholder:**
 
-Throughout this section, replace `{VERSION}` with your target version number (e.g., `v0.9.5`, `v0.9.4`).
+Throughout this section, replace {LATEST_VERSION} with your target version number (e.g., `v0.9.5`, `v0.9.4`).
 :::
 
 <Tabs>
@@ -59,9 +70,9 @@ Throughout this section, replace `{VERSION}` with your target version number (e.
 
   KubeBlocks separates CRDs from the Helm chart to reduce chart size. Start by updating the CRDs:
 
-  ```bash
-  kubectl replace -f https://github.com/apecloud/kubeblocks/releases/download/{VERSION}/kubeblocks_crds.yaml
-  ```
+  <VersionedCodeBlock>
+{`kubectl replace -f https://github.com/apecloud/kubeblocks/releases/download/{LATEST_VERSION}/kubeblocks_crds.yaml`}
+  </VersionedCodeBlock>
 
   **Step 2: Upgrade KubeBlocks Core**
 
@@ -72,9 +83,9 @@ Throughout this section, replace `{VERSION}` with your target version number (e.
   ```
 
   Then upgrade KubeBlocks to the target version:
-  ```bash
-  helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version {VERSION} --set crd.enabled=false
-  ```
+  <VersionedCodeBlock>
+{`helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version {LATEST_VERSION} --set crd.enabled=false`}
+  </VersionedCodeBlock>
 
   :::note
   **Why `crd.enabled=false`?**
@@ -92,11 +103,11 @@ Throughout this section, replace `{VERSION}` with your target version number (e.
 
   To upgrade Addons to the versions bundled with the new KubeBlocks version:
 
-  ```bash
-  helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version {VERSION} \
-    --set upgradeAddons=true \
-    --set crd.enabled=false
-  ```
+  <VersionedCodeBlock>
+{`helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version {LATEST_VERSION} \\
+  --set upgradeAddons=true \\
+  --set crd.enabled=false`}
+  </VersionedCodeBlock>
 
   </TabItem>
 
@@ -106,17 +117,17 @@ Throughout this section, replace `{VERSION}` with your target version number (e.
 
   Download and install the matching version of kbcli:
 
-  ```bash
-  curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash -s {VERSION}
-  ```
+  <VersionedCodeBlock>
+{`curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash -s {LATEST_VERSION}`}
+  </VersionedCodeBlock>
 
   **Step 2: Upgrade KubeBlocks Core**
 
   Perform the core upgrade without updating Addons:
 
-  ```bash
-  kbcli kb upgrade --version {VERSION}
-  ```
+  <VersionedCodeBlock>
+{`kbcli kb upgrade --version {LATEST_VERSION}`}
+  </VersionedCodeBlock>
 
   **Step 3: (Optional) Upgrade Addons**
 
@@ -128,9 +139,9 @@ Throughout this section, replace `{VERSION}` with your target version number (e.
 
   To upgrade Addons to the versions bundled with the new KubeBlocks version:
 
-  ```bash
-  kbcli kb upgrade --version {VERSION} --set upgradeAddons=true
-  ```
+  <VersionedCodeBlock>
+{`kbcli kb upgrade --version {LATEST_VERSION} --set upgradeAddons=true`}
+  </VersionedCodeBlock>
 
   </TabItem>
 
@@ -175,9 +186,9 @@ This section covers upgrading from v0.8.x to v0.9.x. This is a major version upg
 
   Install the new Storage Provider CRD required for v0.9.x and update all KubeBlocks CRDs to the new version:
 
-  ```bash
-  kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/{VERSION}/kubeblocks_crds.yaml || kubectl replace -f https://github.com/apecloud/kubeblocks/releases/download/{VERSION}/kubeblocks_crds.yaml
-  ```
+  <VersionedCodeBlock>
+{`kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/{LATEST_VERSION}/kubeblocks_crds.yaml || kubectl replace -f https://github.com/apecloud/kubeblocks/releases/download/{LATEST_VERSION}/kubeblocks_crds.yaml`}
+  </VersionedCodeBlock>
 
   :::note
   **Network Optimization:**
@@ -196,11 +207,11 @@ This section covers upgrading from v0.8.x to v0.9.x. This is a major version upg
 
   Enable webhooks for multi-version conversion (it will convert ConfigConstraint API to the new version):
 
-  ```bash
-  helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version {VERSION} \
-    --set admissionWebhooks.enabled=true \
-    --set admissionWebhooks.ignoreReplicasCheck=true
-  ```
+  <VersionedCodeBlock>
+{`helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version {LATEST_VERSION} \\
+  --set admissionWebhooks.enabled=true \\
+  --set admissionWebhooks.ignoreReplicasCheck=true`}
+  </VersionedCodeBlock>
 
   :::note
   **Configuration Options Explained:**
@@ -217,12 +228,12 @@ This section covers upgrading from v0.8.x to v0.9.x. This is a major version upg
   Upgrading Addons may restart existing database clusters and affect availability. Only proceed during maintenance windows. Or you can upgrade Addons individually.
   :::
 
-  ```bash
-  helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version {VERSION} \
-    --set upgradeAddons=true \
-    --set admissionWebhooks.enabled=true \
-    --set admissionWebhooks.ignoreReplicasCheck=true
-  ```
+  <VersionedCodeBlock>
+{`helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version {LATEST_VERSION} \\
+  --set upgradeAddons=true \\
+  --set admissionWebhooks.enabled=true \\
+  --set admissionWebhooks.ignoreReplicasCheck=true`}
+  </VersionedCodeBlock>
 
   </TabItem>
 
@@ -232,9 +243,9 @@ This section covers upgrading from v0.8.x to v0.9.x. This is a major version upg
 
   Download and install kbcli for the target version:
 
-  ```bash
-  curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash -s {VERSION}
-  ```
+  <VersionedCodeBlock>
+{`curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash -s {LATEST_VERSION}`}
+  </VersionedCodeBlock>
 
   Verify the installation:
   ```bash
@@ -245,11 +256,11 @@ This section covers upgrading from v0.8.x to v0.9.x. This is a major version upg
 
   Upgrade KubeBlocks with enhanced API validation and multi-version support:
 
-  ```bash
-  kbcli kb upgrade --version {VERSION} \
-    --set admissionWebhooks.enabled=true \
-    --set admissionWebhooks.ignoreReplicasCheck=true
-  ```
+  <VersionedCodeBlock>
+{`kbcli kb upgrade --version {LATEST_VERSION} \\
+  --set admissionWebhooks.enabled=true \\
+  --set admissionWebhooks.ignoreReplicasCheck=true`}
+  </VersionedCodeBlock>
 
   :::note
   **Configuration Options Explained:**
@@ -268,12 +279,12 @@ This section covers upgrading from v0.8.x to v0.9.x. This is a major version upg
 
   To upgrade Addons along with KubeBlocks:
 
-  ```bash
-  kbcli kb upgrade --version {VERSION} \
-    --set upgradeAddons=true \
-    --set admissionWebhooks.enabled=true \
-    --set admissionWebhooks.ignoreReplicasCheck=true
-  ```
+  <VersionedCodeBlock>
+{`kbcli kb upgrade --version {LATEST_VERSION} \\
+  --set upgradeAddons=true \\
+  --set admissionWebhooks.enabled=true \\
+  --set admissionWebhooks.ignoreReplicasCheck=true`}
+  </VersionedCodeBlock>
 
   </TabItem>
 
