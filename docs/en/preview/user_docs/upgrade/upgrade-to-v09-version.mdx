@@ -33,14 +33,13 @@ Select the appropriate upgrade path based on your current version:
 
 | Current Version | Target: v0.9.x | Upgrade Path |
 |-----------------|----------------|---------------|
-| v0.9.x | ✅ Direct upgrade | Follow [v0.9.x to v0.9.x upgrade](#upgrade-from-kubeblocks-v09x) |
-| v0.8.x | ✅ Direct upgrade | Follow [v0.8.x to v0.9.x upgrade](#upgrade-from-kubeblocks-v08x) |
+| v0.9.x | ✅ Direct upgrade | Follow [Upgrade from KubeBlocks v0.9.x](#upgrade-from-kubeblocks-v09x) |
+| v0.8.x | ✅ Direct upgrade | Follow [Upgrade from KubeBlocks v0.8.x](#upgrade-from-kubeblocks-v08x) |
 | v0.7.x or earlier | ⚠️ Multi-step upgrade | Upgrade to v0.8.x first, then to v0.9.x |
 
 :::tip
 We recommend upgrading to the latest stable version for optimal performance and access to the newest features.
 :::
-
 
 ## Upgrade from KubeBlocks v0.9.x
 
@@ -152,9 +151,17 @@ This section covers upgrading from v0.8.x to v0.9.x. This is a major version upg
 
   <TabItem value="Helm" label="Helm" default>
 
-  **Step 1: Clean Up Incompatible Resources**
+  **Step 1: Add the `"helm.sh/resource-policy": "keep"` annotation to Addons**
 
-  Remove OpsDefinitions that are incompatible with v0.9.x:
+  KubeBlocks v0.9 changed the default installed Addons, so you need to add the `"helm.sh/resource-policy": "keep"` annotation to Addons to avoid deleting them during the upgrade.
+
+  ```bash
+  kubectl get addons -oname | xargs -I {} kubectl annotate {} helm.sh/resource-policy=keep
+  ```
+
+  **Step 2: Clean Up Incompatible Resources**
+
+  Remove OpsDefinition that are incompatible with v0.9.x:
 
   ```bash
   # Delete specific incompatible OpsDefinitions
@@ -164,24 +171,18 @@ This section covers upgrading from v0.8.x to v0.9.x. This is a major version upg
   kubectl delete opsdefinitions.apps.kubeblocks.io --all
   ```
 
-  **Step 2: Update Custom Resource Definitions (CRDs)**
+  **Step 3: Update Custom Resource Definitions (CRDs)**
 
-  Install the new Storage Provider CRD required for v0.9.x:
-
-  ```bash
-  kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/{VERSION}/dataprotection.kubeblocks.io_storageproviders.yaml
-  ```
-
-  Update all KubeBlocks CRDs to the new version:
+  Install the new Storage Provider CRD required for v0.9.x and update all KubeBlocks CRDs to the new version:
 
   ```bash
-  kubectl replace -f https://github.com/apecloud/kubeblocks/releases/download/{VERSION}/kubeblocks_crds.yaml
+  kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/{VERSION}/kubeblocks_crds.yaml || kubectl replace -f https://github.com/apecloud/kubeblocks/releases/download/{VERSION}/kubeblocks_crds.yaml
   ```
 
   :::note
   **Network Optimization:**
 
-  For better network performance, download the CRD YAML files locally first, then apply them using `kubectl create -f <local-file-path>`.
+  Or download the CRD YAML files locally first, then apply them using `kubectl create -f <local-file-path> || kubectl replace -f <local-file-path>`.
   :::
 
   **Step 3: Update Helm Repository and Upgrade KubeBlocks**
@@ -374,7 +375,6 @@ If you chose not to upgrade Addons during the KubeBlocks upgrade, or if you need
 
   :::note
   **When to use `--force`:**
-  - The standard upgrade fails due to version conflicts
   - You need to downgrade to a previous version
   - Use with caution as it bypasses compatibility checks
   :::
@@ -383,168 +383,9 @@ If you chose not to upgrade Addons during the KubeBlocks upgrade, or if you need
 
 </Tabs>
 
-### Handling Addon Compatibility Issues
-
-Starting with v0.9.x, some APIs have been deprecated to improve the system architecture. The `ClusterVersion` CRD is marked as deprecated, and many Addons now use the new APIs: `ComponentDefinition`, `ComponentVersion`, and the updated `ClusterDefinition`.
-
-**Example: Kafka Addon Upgrade**
-
-When upgrading the Kafka Addon from v0.9.0 to v0.9.2, you'll notice that the newer version no longer includes the `ClusterVersion` custom resource. This requires updating existing clusters to use the new API structure.
-
-**Cluster Upgrade Requirements:**
-
-To upgrade clusters to work with the new Addon version, you need to:
-1. Remove the deprecated `clusterVersionRef` field from the cluster spec
-2. Remove the `componentDefRef` field from each component spec
-3. Add the new `componentDef` field
-4. Add the `serviceVersion` field where necessary
-
-**Step-by-Step Example: Kafka Cluster Upgrade**
-
-The following example demonstrates upgrading Kafka clusters from the old API structure to the new one:
-
-**Step 1: Identify Current ComponentDefRefs**
-
-First, get the list of ComponentDefRefs used by your current Kafka installation:
-
-```bash
-kubectl get clusterdefinition kafka -oyaml | yq '.spec.componentDefs[].name'
-```
-
-Expected output:
-```bash
-kafka-server
-kafka-broker
-controller
-kafka-exporter
-```
-
-**Step 2: Upgrade the Addon**
-
-Upgrade the Kafka Addon to the new version:
-
-```bash
-kbcli addon upgrade kafka --version 0.9.2
-```
-
-**Step 3: Map Old to New ComponentDefinitions**
-
-After upgrading, list the new ComponentDefinitions available:
-
-```bash
-kubectl get cmpd -l app.kubernetes.io/name=kafka
-```
-
-Expected output:
-```bash
-NAME               SERVICE            SERVICE-VERSION   STATUS      AGE
-kafka-broker-2.8   kafka              2.8.2             Available   37m
-kafka-broker-3.2   kafka              3.3.2             Available   37m
-kafka-combine      kafka              3.3.2             Available   24h
-kafka-controller   kafka-controller   3.3.2             Available   24h
-kafka-exporter     kafka-exporter     1.6.0             Available   24h
-kafka-zookeeper    kafka-zookeeper    3.7.2             Available   37m
-```
-
-We can list the mapping between old componentDefRef and new ComponentDefinition as follows:
-
-| v0.9.0 componentDefRef | v0.9.2 ComponentDefinition | serviceVersion |
-|------------------------|----------------------------|----------------|
-| kafka-broker | kafka-broker-3.2 | 3.3.2 |
-| kafka-server | kafka-combine | 3.3.2 |
-| controller | kafka-controller | 3.3.2 |
-| kafka-exporter | kafka-exporter | 1.6.0 |
-
-Remember the mapping table is just an example, you may need to modify it based on your actual Addon version.
-
-**Step 4: Identify Clusters to Upgrade**
-
-List all Kafka clusters that need to be updated:
-
-```bash
-# List all Kafka clusters
-kubectl get cluster --all-namespaces -l clusterdefinition.kubeblocks.io/name=kafka
-```
-
-Each cluster needs to be updated to use the new ComponentDefinition format.
-
-**Step 5: Update Cluster Specifications**
-
-Use the following script to update your Kafka clusters to the new API format. Replace `<clustername>` and `<namespace>` with your actual values:
-
-```bash
-#!/bin/bash
-cluster="<clustername>"
-namespace="<namespace>"
-
-echo "Upgrading Kafka cluster: $cluster"
-
-# Get current componentDefRef values to build the patch
-arr=($(kubectl get -n $namespace cluster $cluster -o jsonpath="{.spec.componentSpecs[*].componentDefRef}"))
-
-# Build the patch operations array
-patch_ops="["
-
-# Remove deprecated cluster-level references
-patch_ops+='{
-  "op": "remove",
-  "path": "/spec/clusterDefinitionRef"
-},'
-
-patch_ops+='{
-  "op": "remove",
-  "path": "/spec/clusterVersionRef"
-},'
-
-# Remove deprecated label (optional)
-patch_ops+='{
-  "op": "remove",
-  "path": "/metadata/labels/clusterversion.kubeblocks.io~1name"
-},'
-
-# Update each component specification
-for i in "${!arr[@]}"; do
-    case "${arr[i]}" in
-        "kafka-broker")
-            patch_ops+="{\"op\": \"remove\", \"path\": \"/spec/componentSpecs/$i/componentDefRef\"},"
-            patch_ops+="{\"op\": \"add\", \"path\": \"/spec/componentSpecs/$i/componentDef\", \"value\": \"kafka-broker-3.2\"},"
-            patch_ops+="{\"op\": \"add\", \"path\": \"/spec/componentSpecs/$i/serviceVersion\", \"value\": \"3.3.2\"},"
-            ;;
-        "kafka-server")
-            patch_ops+="{\"op\": \"remove\", \"path\": \"/spec/componentSpecs/$i/componentDefRef\"},"
-            patch_ops+="{\"op\": \"add\", \"path\": \"/spec/componentSpecs/$i/componentDef\", \"value\": \"kafka-combine\"},"
-            patch_ops+="{\"op\": \"add\", \"path\": \"/spec/componentSpecs/$i/serviceVersion\", \"value\": \"3.3.2\"},"
-            ;;
-        "controller")
-            patch_ops+="{\"op\": \"remove\", \"path\": \"/spec/componentSpecs/$i/componentDefRef\"},"
-            patch_ops+="{\"op\": \"add\", \"path\": \"/spec/componentSpecs/$i/componentDef\", \"value\": \"kafka-controller\"},"
-            patch_ops+="{\"op\": \"add\", \"path\": \"/spec/componentSpecs/$i/serviceVersion\", \"value\": \"3.3.2\"},"
-            ;;
-        "kafka-exporter")
-            patch_ops+="{\"op\": \"remove\", \"path\": \"/spec/componentSpecs/$i/componentDefRef\"},"
-            patch_ops+="{\"op\": \"add\", \"path\": \"/spec/componentSpecs/$i/componentDef\", \"value\": \"kafka-exporter\"},"
-            patch_ops+="{\"op\": \"add\", \"path\": \"/spec/componentSpecs/$i/serviceVersion\", \"value\": \"1.6.0\"},"
-            ;;
-    esac
-done
-
-# Apply the patch
-patch_ops="${patch_ops%,}]"
-kubectl patch -n $namespace cluster "$cluster" --type='json' -p="$patch_ops"
-```
-
-:::important
-**Script Customization Required**
-
-You may need to modify this script based on the specific changes in your Addon version, particularly the `componentDefRef` to `ComponentDefinition` mapping table shown in Step 3.
-:::
-
----
-
 ## Getting Help
 
 If you encounter issues during the upgrade process:
 
 - **Check the logs**: Review upgrade logs using `kubectl -n kb-system logs deployment/kubeblocks`
 - **Community Support**: Visit the [KubeBlocks GitHub Issues](https://github.com/apecloud/kubeblocks/issues) for known issues and community help
-- **Documentation**: Refer to the [KubeBlocks documentation](https://kubeblocks.io/docs/) for additional guidance
