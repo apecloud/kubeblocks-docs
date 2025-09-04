@@ -1,17 +1,18 @@
 ---
 slug: A-testing-report-for-optimizing-PG-performance-on-Kubernetes
-title: A testing report for optimizing PG performance on Kubernetes
-description: A testing report for optimizing PG performance on Kubernetes
+title: PostgreSQL Performance Tuning on Kubernetes: A KubeBlocks Deep Dive
+description: A detailed performance benchmark of PostgreSQL (PG) on Kubernetes. This report investigates and solves critical performance issues like TPS drops and CPU fluctuations by tuning WAL settings (wal_init_zero, full_page_write), IO bandwidth, and checkpoints.
 date: 2023-09-21
 authors:
   name: dullboy
   url: https://github.com/nayutah
   image_url: https://avatars.githubusercontent.com/u/111858489?v=4
-tags: [Postgres, Addons, Benchmark]
+tags: [PostgresSQL, Addons, Benchmark, Profiling]
+Keywords: PostgreSQL, Kubernetes Operator, KubeBlocks, Performance Tuning, Benchmark, WAL, Checkpoint, IO Contention, TPS, wal_init_zero, full_page_write, Stateful Workloads, pgBouncer, XFS, Database on Kubernetes
 image: /img/blogs/thumbnails/blog-pg.png
 ---
 
-# A testing report for optimizing PG performance on Kubernetes
+# PostgreSQL Performance Tuning on Kubernetes: A KubeBlocks Deep Dive
 
 ## Introduction
 
