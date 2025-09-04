@@ -1,17 +1,18 @@
 ---
-slug: manage-redis-on-k8s
-title: Streamlining Redis Cluster for Kubernetes with KubeBlocks and Solving Network Compatibility Problems
-description: How we solve problems when managing redis on K8s with KubeBlocks.
+slug: kubeblocks-x-redis-streaming-redis-cluster-and-solving-network-compatibility
+title: 'KubeBlocks x Redis: Streamlining Redis Cluster and Solving Network Compatibility'
+description: How we manage/operatorize Redis Cluster on Kubernetes with KubeBlocks and solve network compatibility issues (CNI, NodePort, announce-ip) when using Redis Cluster.
 date: 2024-05-28
 authors:
   name: dullboy
   url: https://github.com/nayutah
   image_url: https://avatars.githubusercontent.com/u/111858489?v=4
 tags: [Addons, Redis]
+keywords: redis, kubeblocks, operator, operatorization, redis cluster, kubernetes operator, cni, flannel, calico, nodeport, announce-ip, cluster-announce, network nat, high availability, statefulset
 image: /img/blogs/thumbnails/blog-redis-on-kb.png
 ---
 
-# Streamlining Redis Cluster for Kubernetes with KubeBlocks and Solving Network Compatibility Problems
+# KubeBlocks x Redis: Streamlining Redis Cluster and Solving Network Compatibility
 
 Redis Cluster is the distributed solution for the Redis database, used to distribute data across multiple nodes to provide high availability and scalability. It allows storing a large amount of data sharded across multiple nodes and automatically handles data sharding and migration.
 Redis Cluster uses the hash slots to manage data distribution. Data is divided into a fixed number of hash slots, and each slot can be assigned to a different node. Each node is responsible for handling a portion of the data within the assigned hash slots. Clients can directly connect to any node without the need for an intermediate proxy.
@@ -22,7 +23,7 @@ Redis Cluster provides the following features:
 2. High availability: Redis Cluster uses a master-slave replication mechanism, where each master node has multiple slave nodes. When a master node fails, a slave node can automatically take over, providing high availability.
 3. Load balancing: Redis Cluster implements automatic load balancing between clients and nodes. Clients can directly connect to any node, and the nodes will automatically forward requests, achieving load balancing.
 By distributing data across multiple nodes and providing automatic failover and load balancing mechanisms, Redis Cluster enables applications to handle large-scale data sets and high-concurrency access requirements. It is a powerful distributed solution commonly used in scenarios that require high performance and scalability, such as caching, session storage, and real-time counting.
-Many of Kubeblocks' clients have a strong demand for Redis Cluster, so we have adapted Redis Cluster based on Kubeblocks. During the adaptation process, we also discovered some network standard compatibility issues that Redis Cluster faces in the Kubernetes container scenario.
+Many of Kubeblocks' clients have a strong demand for Redis Cluster, so we have adapted Redis Cluster based on Kubeblocks. During the adaptation process, we also discovered some network standard compatibility issues that Redis Cluster faces in the Kubernetes operatorized scenario.
 
 ## Reproducing the Issue
 
@@ -45,7 +46,7 @@ Although Redis cluster addon is installed by default, the network standard compa
 slc@slcmac addons % kbcli addon disable redis
 # Install the latest addon on the branch
 slc@slcmac addons % git clone git@github.com:apecloud/kubeblocks-addons.git
-slc@slcmac addons % cd kubeblocks-addons/addons/redis 
+slc@slcmac addons % cd kubeblocks-addons/addons/redis
 slc@slcmac addons % helm dependency build && cd ..
 slc@slcmac addons % helm install redis ./redis
 slc@slcmac addons % helm list
@@ -97,12 +98,12 @@ kubectl exec -it redisc-shard-xwz-0 -c redis-cluster -- redis-cli -a O3605v7HsS 
 Cluster Meet
 
 ```
-# login to one of the primary nodes 
+# login to one of the primary nodes
 slc@slcmac redis % kubectl exec -it redisc-shard-5g8-0 -c redis-cluster -- /bin/bash
 root@redisc-shard-5g8-0:/# redis-cli -a O3605v7HsS
 127.0.0.1:6379> cluster nodes
 ff935854b7626a7e4374598857d5fbe998297799 172.18.0.2:30039@32461 myself,master - 0 0 0 connected 0-5461
-# Only one node found, we have to meet other two nodes. 
+# Only one node found, we have to meet other two nodes.
 slc@slcmac redis %  kubectl exec -it redisc-shard-5g8-0 -c redis-cluster -- redis-cli -a O3605v7HsS cluster meet 172.18.0.2 30182 31879
 OK
 slc@slcmac redis %  kubectl exec -it redisc-shard-5g8-0 -c redis-cluster -- redis-cli -a O3605v7HsS cluster meet 172.18.0.2 31993 30105
@@ -199,7 +200,7 @@ root@redisc-shard-5g8-0:/data# grep 16379 running.log
 **10 times repeated**
 30e6d55c687bfc08e4a2fcd2ef586ba5458d801f at 10.42.0.1:16379 failed: Connection refused
 ```
-Therefore, actually this `cluster meet` operation is failed. But why? 
+Therefore, actually this `cluster meet` operation is failed. But why?
 
 ## Troubleshooting
 
@@ -210,7 +211,7 @@ The default Redis Cluster bus port is 16379 = 6379 + 10000. If the bus port is n
 slc@slcmac redis %  kg pods -A -o wide | grep redisc-shard-5g8-1
 default       redisc-shard-5g8-1                             3/3     Running     0              72m    10.42.0.237   k3d-k3s-default-server-0
 ```
-Continuing the investigation, it was found that 10.42.0.1 is actually the address of the k3d (the Kubernetes version we use in the development environment) CNI0. 
+Continuing the investigation, it was found that 10.42.0.1 is actually the address of the k3d (the Kubernetes version we use in the development environment) CNI0.
 ```
 slc@slcmac redis % docker ps
 CONTAINER ID   IMAGE                            COMMAND                  CREATED        STATUS        PORTS                             NAMES
@@ -285,7 +286,7 @@ Mapping relationship between two links:
 05:40:04.819269 IP k3d-k3s-default-server-0.31879 > redisc-shard-5g8-0.redisc-shard-5g8-headless.default.svc.cluster.local.58412: Flags [P.], seq 7081:9441, ack 9336, win 501, options [nop,nop,TS val 867569233 ecr 4191410578], length 2360
 05:40:04.819309 IP redisc-shard-5g8-0.redisc-shard-5g8-headless.default.svc.cluster.local.58412 > k3d-k3s-default-server-0.31879: Flags [.], ack 9441, win 10026, options [nop,nop,TS val 4191410580 ecr 867569233], length 0
 
-# On primary-2 redisc-shard-hxx-0, capture packets on local Port 24780 (primary-1 redisc-shard-5g8-0): 
+# On primary-2 redisc-shard-hxx-0, capture packets on local Port 24780 (primary-1 redisc-shard-5g8-0):
 05:40:04.818178 IP 10.42.0.1.24780 > redisc-shard-hxx-0.redisc-shard-hxx-headless.default.svc.cluster.local.16379: Flags [P.], seq 32624:34984, ack 32937, win 10027, options [nop,nop,TS val 4191410578 ecr 867568717], length 2360
 05:40:04.818371 IP redisc-shard-hxx-0.redisc-shard-hxx-headless.default.svc.cluster.local.16379 > 10.42.0.1.24780: Flags [.], ack 34984, win 498, options [nop,nop,TS val 867569232 ecr 4191410578], length 0
 05:40:04.819239 IP redisc-shard-hxx-0.redisc-shard-hxx-headless.default.svc.cluster.local.16379 > 10.42.0.1.24780: Flags [P.], seq 32937:35297, ack 34984, win 501, options [nop,nop,TS val 867569233 ecr 4191410578], length 2360
@@ -336,7 +337,7 @@ ff935854b7626a7e4374598857d5fbe998297799 172.18.0.2:30039@32461 myself,master - 
 e4d9b914e7ee7c4fd399bdf3dd1c98f7a0a1791b 172.18.0.2:31993@30105 master - 0 1713334506133 2 connected 10923-16383
 a54e8fa9474c620154f4c1abc9628116deb3dc7e 172.18.0.2:30182@31879 master - 0 1713334506233 1 connected 5462-10922
 ```
-A gossip link for secondary-1 can be found on primary-1. 
+A gossip link for secondary-1 can be found on primary-1.
 
 ```
 root@redisc-shard-5g8-0:/data# netstat -anop | grep redis
@@ -492,7 +493,7 @@ tcp6       0      0 :::16379                :::*                    LISTEN      
 tcp6       0      0 :::6379                 :::*                    LISTEN      1/redis-server *:63  off (0.00/0/0)
 ```
 
-On Node 10.128.0.52, the are two devices. 
+On Node 10.128.0.52, the are two devices.
 
 ```
 ens4: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1460

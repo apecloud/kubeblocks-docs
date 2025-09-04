@@ -1,6 +1,6 @@
 ---
-slug: kubeblocks-for-mssql-high-availability-implementation
-title: KubeBlocks for MSSQL High Availability Implementation
+slug: kubeblocks-x-mssql-high-availability-implementation
+title: 'KubeBlocks x MSSQL: High Availability Implementation'
 description: Deep dive into how KubeBlocks implements high availability for MSSQL using the lightweight Syncer framework, comparing it with traditional Pacemaker solutions and demonstrating fault tolerance capabilities.
 authors:
   name: xuanchi
@@ -11,29 +11,30 @@ tags: [Addons, MSSQL]
 image: /img/blogs/thumbnails/blog-mssql-ha.png
 ---
 
-# KubeBlocks for MSSQL High Availability Implementation
+# KubeBlocks x MSSQL: High Availability Implementation
 
-This blog is part of our ongoing series about running Microsoft SQL Server. Check out these related articles if you are looking for a way to run containerized MSSQL on Kubernetes. More blogs about MSSQL on Kubernetes will be published soon.
+This blog is part of our ongoing series about running Microsoft SQL Server. Check out these related articles if you are looking for a way to run MSSQL on Kubernetes using an operator. More blogs about MSSQL on Kubernetes will be published soon.
 
-1. [KubeBlocks for MSSQL Always On AG Revealed](./kubeblocks-for-mssql-always-on-ag-revealed)
-2. [KubeBlocks for MSSQL High Availability Implementation](./kubeblocks-for-mssql-high-availability-implementation)
+1. [KubeBlocks x MSSQL: Operator-based Always On AG Revealed](./kubeblocks-x-mssql-operator-based-always-on-ag-revealed)
+2. [KubeBlocks x MSSQL: High Availability Implementation](./kubeblocks-x-mssql-high-availability-implementation)
 
+KubeBlocks can be used as an optional alternative to dedicated operators. For example, Percona XtraDB Cluster Operator (MySQL) and MongoDB Community Kubernetes Operator (MongoDB) are popular dedicated operators that KubeBlocks can complement or replace depending on operational preferences.
 
 # Background
 
-Microsoft SQL Server (MSSQL) is a relational database management system developed by Microsoft. Initially supporting only Windows platforms, MSSQL began supporting Linux systems starting with the 2017 version, which made containerized deployment of MSSQL possible.
+Microsoft SQL Server (MSSQL) is a relational database management system developed by Microsoft. Initially supporting only Windows platforms, MSSQL began supporting Linux systems starting with the 2017 version, which made operator-based deployment of MSSQL on Kubernetes possible.
 
 MSSQL provides a multi-database replication management feature called Availability Group (AG), which supports implementing multi-replica redundancy across multiple nodes, thereby improving data reliability and service continuity. On Windows platforms, MSSQL achieves complete high-availability capabilities through integration with Windows Server Failover Cluster (WSFC).
 
-On Linux platforms, MSSQL provides an alternative solution based on Pacemaker + Corosync to build high-availability architecture. However, in cloud-native and containerized scenarios, Microsoft has not yet provided corresponding high-availability solutions, and currently recommends using the third-party commercial solution DH2I for implementation.
+On Linux platforms, MSSQL provides an alternative solution based on Pacemaker + Corosync to build high-availability architecture. However, in cloud-native and operator-based scenarios, Microsoft has not yet provided corresponding high-availability solutions, and currently recommends using the third-party commercial solution DH2I for implementation.
 
 When KubeBlocks integrates MSSQL, it faces the choice of how to build high-availability capabilities on its platform. There are mainly two implementation paths:
 
-The first solution is to build a "rich container" architecture based on Pacemaker, packaging components like Pacemaker, Corosync, and MSSQL into the same container. The advantage is that it can reuse existing open-source components without additional development work; however, the disadvantages include higher operational complexity, more cumbersome configuration of Pacemaker and Corosync, and in containerized environments where Pod stability cannot be completely guaranteed, it may lead to high management costs for the overall high-availability system and difficulty ensuring stability.
+The first solution is to build a "rich cotainer" architecture based on Pacemaker, packaging components like Pacemaker, Corosync, and MSSQL together. The advantage is that it can reuse existing open-source components without additional development work; however, the disadvantages include higher operational complexity, more cumbersome configuration of Pacemaker and Corosync, and in operator-managed environments where Pod stability cannot be completely guaranteed, it may lead to high management costs for the overall high-availability system and difficulty ensuring stability.
 
 The second solution is to independently develop a lightweight, cloud-native-oriented distributed high-availability framework to simulate the core functions of WSFC. Although this solution has relatively higher upfront development costs and technical difficulty, it offers higher autonomy and controllability, can avoid dependence on Pacemaker, and provides a more concise and consistent user experience.
 
-Considering that KubeBlocks has already built a unified high-availability management framework—Syncer, new engines only need to implement several key interfaces to quickly complete high-availability capability integration, and the overall development and maintenance costs are within controllable ranges. At the same time, this approach can also provide MSSQL with a high-availability experience consistent with other databases (such as MySQL, MongoDB, etc.).
+Considering that KubeBlocks has already built a unified high-availability management framework-Syncer, new engines only need to implement several key interfaces to quickly complete high-availability capability integration, and the overall development and maintenance costs are within controllable ranges. At the same time, this approach can also provide MSSQL with a high-availability experience consistent with other databases (such as MySQL, MongoDB, etc.).
 
 Therefore, KubeBlocks ultimately chose to implement MSSQL's high-availability capabilities based on the Syncer framework.
 
@@ -62,7 +63,7 @@ On Kubernetes, Syncer uses the API server as a distributed lock mechanism, combi
 
 ## More Accurate and Faster Local Detection
 
-Syncer uses local detection methods, which can discover anomalies more accurately and quickly, unaffected by container network fluctuations. At the same time, it can also make more reliable judgments by combining system information:
+Syncer uses local detection methods, which can discover anomalies more accurately and quickly, unaffected by Kubernetes network fluctuations. At the same time, it can also make more reliable judgments by combining system information:
 
 * When database connections are abnormal, Syncer can obtain current CPU and memory usage in real-time to determine if it's caused by excessive load;
 * If database writes are abnormal, Syncer can also check if the disk is full or if the file system has become read-only.
@@ -257,7 +258,7 @@ s4c16-757b5769d7-mssql-0   4/4     Running            14 (25s ago)     5h31m
 
 Pacemaker is the recommended high-availability solution for MSSQL on Linux. It is an open-source and mature cluster resource manager widely used for managing various resources in high-availability clusters.
 
-Syncer, as the default high-availability solution provided by KubeBlocks, references Pacemaker in design but is mainly oriented towards cloud-native scenarios. To achieve higher levels of high-availability, Syncer adopts Plugin mode in integration, rather than the Agent mode used by Pacemaker. At the same time, Syncer has built-in cluster node management logic, making it more lightweight and efficient in health detection and role switching.
+Syncer, as the default high-availability solution provided by KubeBlocks, references Pacemaker in design but is mainly oriented towards cloud-native and operator-based scenarios. To achieve higher levels of high-availability, Syncer adopts Plugin mode in integration, rather than the Agent mode used by Pacemaker. At the same time, Syncer has built-in cluster node management logic, making it more lightweight and efficient in health detection and role switching.
 
 Next, we will specifically compare the capability differences between Pacemaker and Syncer.
 
@@ -325,7 +326,7 @@ Since this article focuses on comparing the switching capabilities of different 
 
 In cloud-native environments, MSSQL faces many challenges. Since it was originally designed for traditional physical or virtual machine environments, its architecture is not fully adapted to the resource scheduling and operational modes in cloud-native scenarios. Especially in high-availability architecture, limited by differences in resource scheduling methods and difficulty in completely guaranteeing Pod stability, MSSQL's existing high-availability mechanisms are difficult to achieve ideal results.
 
-KubeBlocks for MSSQL was born in this context. It effectively compensates for MSSQL's capability shortcomings in cloud-native scenarios and significantly improves its deployment efficiency and operational management experience. Through integration with Syncer, a lightweight distributed high-availability service, KubeBlocks successfully achieved cloud-native high-availability support for MSSQL, with stable and efficient performance in fault detection, role switching, self-healing, and other aspects.
+KubeBlocks for MSSQL was born in this context. It effectively compensates for MSSQL's capability shortcomings in cloud-native scenarios and significantly improves its deployment efficiency and operational management experience. Through integration with Syncer, a lightweight distributed high-availability service, KubeBlocks successfully achieved cloud-native operator-based high-availability support for MSSQL, with stable and efficient performance in fault detection, role switching, self-healing, and other aspects.
 
 Of course, since MSSQL is a closed-source system with relatively limited official technical documentation, deep integration of its high-availability mechanisms faces significant challenges. Currently, we mainly rely on user manuals and database operational experience for derivation, combined with extensive experimental verification to ensure final implementation meets expectations. At the same time, MSSQL's functional modules are relatively closed, with fewer configuration items and status information exposed externally (such as SEED MODE configuration parameters and exception feedback), making system integration and operational management still appear "coarse-grained."
 
