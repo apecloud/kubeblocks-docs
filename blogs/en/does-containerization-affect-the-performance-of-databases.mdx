@@ -1,6 +1,6 @@
 ---
 slug: Does-containerization-affect-the-performance-of-databases
-title: How Containerization Affects Database Performance: A Benchmark of runC, Kata, and gVisor
+title: 'How Containerization Affects Database Performance: A Benchmark of runC, Kata, and gVisor'
 description: An in-depth analysis of containerization's impact on database performance. This article benchmarks CPU, memory, and I/O for container runtimes like runC, Kata Containers, and gVisor, and investigates common bottlenecks like I/O hangs and OOM errors in a Kubernetes environment.
 date: 2024-01-26
 authors:
@@ -29,14 +29,14 @@ Kubernetes (K8s), is a game-changer in the world of container orchestration. Thi
 ### Advantages of containerization
 
 1. Flexibility and portability.
-  
+
    The deployment and migration of databases are simpler and more reliable. With containerization, the runtime environment and version of databases can be claimed through declarative API in the form of IaC (Infrastructure as Code).
 
 2. Resource isolation and scalability.
 
-   By leveraging container runtime engines, containerization ensures that each database instance operates in its own isolated environment with dedicated resources. This separation minimizes interference between workloads, allowing for more efficient use of computing power and enhancing both performance and reliability. 
+   By leveraging container runtime engines, containerization ensures that each database instance operates in its own isolated environment with dedicated resources. This separation minimizes interference between workloads, allowing for more efficient use of computing power and enhancing both performance and reliability.
 
-3. More user-friendly scheduling strategies. 
+3. More user-friendly scheduling strategies.
 
    Containerization's fine-grained resource management paves the way for smarter scheduling strategies. It enables tailored deployment tactics for different scenarios, such as blending offline and online workloads to balance resource usage or combining various database workloads to boost overall efficiency. Additionally, increasing deployment density can lead to significant reductions in computational costs.
 
@@ -106,7 +106,7 @@ Fig. 5. Architecture of gVisor
 4. Firecracker
 
    Firecracker is a specialized virtualization solution tailored for serverless computing and light workloads. It leverages the concept of micro-VMs, treating each container as a standalone virtual machine.
-   
+
    At its core, Firecracker uses KVM (Kernel-based Virtual Machine) for virtualization. Every container runs in its own VM, with its own kernel and root filesystem, and it interacts with the host system through separate virtual device emulators. This approach ensures a higher level of security and isolation. However, when compared to conventional container runtimes, Firecracker might result in a higher overhead for syscalls and I/O operations.
 
 <img src='/img/blogs/Architecture-of-Firecracker.png'  alt="Architecture of Firecracker"   />
@@ -121,13 +121,13 @@ Table. 1. Overview of implementations of virtualization and isolation in Contain
 
 |        | Containerd-RunC  | Kata-Container |gVisor  |FireCracker-Containerd  |
 |:----------------|:---------| :---------| :---------| :---------|
-| Isolation Mechanisms | Namespace + Cgroup| Guest Kernel| Sandboxed Kernel| microVM| 
-| OCI Runtime| RunC| Clear Container + runv| runsc| RunC| 
-| Virtualization| Namespace| QEMU/Cloud Hypervisor+KVM| Rule-Based Execution| rust-VMM + KVM| 
-| vCPU| Cgroup| Cgroup| Cgroup| Cgroup| 
-| Memory| Cgroup| Cgroup| Cgroup| Cgroup| 
-| Syscall| Host| Guest + Host| Sentry| Guest + Host| 
-| Disk I/O| Host| virtio| Gofer| virtio| 
+| Isolation Mechanisms | Namespace + Cgroup| Guest Kernel| Sandboxed Kernel| microVM|
+| OCI Runtime| RunC| Clear Container + runv| runsc| RunC|
+| Virtualization| Namespace| QEMU/Cloud Hypervisor+KVM| Rule-Based Execution| rust-VMM + KVM|
+| vCPU| Cgroup| Cgroup| Cgroup| Cgroup|
+| Memory| Cgroup| Cgroup| Cgroup| Cgroup|
+| Syscall| Host| Guest + Host| Sentry| Guest + Host|
+| Disk I/O| Host| virtio| Gofer| virtio|
 | Network I/O| Host + veth| tc + veth| netstack| tap + virtio-net
 
 Additionally, some have analyzed how container engines like Containerd and CRI-O differ in their approach<sup>[3][5]</sup>. These comparisons, however, are beyond the scope of this discussion and are left for curious readers to investigate further.
@@ -301,9 +301,9 @@ Case:
 Table. 2. Overview of different service routing paths in K8s
 
 |        | Network  | Source |Target  |
-|:----------------|:---------| :---------| :---------| 
-| NodeLocal2HostPod	  | Hostnetwork  | 	Node  | 	Local Pod  | 
-| NodeLocal	  | Ethernet	  | Node  | 	Local Process  | 
+|:----------------|:---------| :---------| :---------|
+| NodeLocal2HostPod	  | Hostnetwork  | 	Node  | 	Local Pod  |
+| NodeLocal	  | Ethernet	  | Node  | 	Local Process  |
 | PodLocal2Pod|	Pod|	Pod	|Local Pod|
 |Node2HostPod	|Hostnetwork|	Node	|Remote Pod|
 |NodeLocal2NodePort	|NodePort	|Node	|Local| NodePort|
@@ -374,7 +374,7 @@ Imagine a Pod that's designed to operate with a memory budget of 1 GB for both i
 
 But the real horror isn't the Out of Memory (OOM) error itself; it's the agonizingly slow descent into failure that happens before the OOM even occurs. It is an endless nightmare for databases and other Pods residential on same Node. Before the system finally falls to OOM, the page reclaim mechanism desperately tries to reclaim enough memory, engaging in a lengthy and inefficient slow path. It tirelessly repeats this cycle, again and again, until it hits a set limit and gives up. Throughout this process, clients connected to the database might experience a frustrating number of transaction timeouts and abrupt disconnections.
 
-The process known as "page reclaim slow path" doesn't just disrupt a single Cgroup Namespace; it has broader implications across the operating system. This is because the OS shares many data structures at the host level. Take a Pod's memory, for example: it may be part of a specific Cgroup Namespace in theory, but in reality, the Host Kernel manages it through a unified Buddy System that relies on a global lock. This means that if one Pod is under heavy memory strain and initiates the slow path for page reclaim, it can inadvertently slow down memory management subsystem for other Pods that are otherwise functioning well. In extreme cases, this can lead to a slowdown of databases across the entire Node, all because one Pod's memory limit is too restrictive. 
+The process known as "page reclaim slow path" doesn't just disrupt a single Cgroup Namespace; it has broader implications across the operating system. This is because the OS shares many data structures at the host level. Take a Pod's memory, for example: it may be part of a specific Cgroup Namespace in theory, but in reality, the Host Kernel manages it through a unified Buddy System that relies on a global lock. This means that if one Pod is under heavy memory strain and initiates the slow path for page reclaim, it can inadvertently slow down memory management subsystem for other Pods that are otherwise functioning well. In extreme cases, this can lead to a slowdown of databases across the entire Node, all because one Pod's memory limit is too restrictive.
 
 Solving this problem for good would require more sophisticated isolation strategies, such as those using microkernels or virtual machines, which would allocate separate memory management spaces for different Pods. Additionally, an alternative approach is to proactively monitor and assess various performance metrics within the database when OOM is unavoidable, therefore to ensure a "fail fast" approach.
 
@@ -386,7 +386,7 @@ For multi-process model databases like Postgresql and Oracle, each connection to
 
 Typically, there are two strategies to address this issue. The first strategy involves deploying a proxy layer in front of the database. The layer intercepts numerous incoming connections and maintains a much smaller number of connections to the actual database backend. For instance, if the proxy holds P connections to the backend database but can handle C connections from the application (C >> P), the connection reuse can significantly ease the load on the database. The second strategy employs Hugepages, which, if with a size of 2M, changes the page table to buffer pool ratio to 1/256k (from 8/2M). This adjustment nearly eliminates the page table overhead and allows a multi-process model to support a far greater number of connections. However, Hugepages come with their own set of complications and can add considerable strain to resource management. As a result, the proxy-based approach is often seen as the more favorable and user-friendly option.
 
-There are two main approaches to multi-threading. The first approach assigns one thread per connection. While this avoids the issue of duplicating page tables as connections multiply, it can lead to problems like resource conflicts and too many context switches, which in turn can worsen performance. Nevertheless, these problems can be mitigated by introducing a proxy. The second approach uses a Thread Pool, where many connections (C) are handled by fewer threads (P) (C >> P). This method is used by systems like Percona MySQL. 
+There are two main approaches to multi-threading. The first approach assigns one thread per connection. While this avoids the issue of duplicating page tables as connections multiply, it can lead to problems like resource conflicts and too many context switches, which in turn can worsen performance. Nevertheless, these problems can be mitigated by introducing a proxy. The second approach uses a Thread Pool, where many connections (C) are handled by fewer threads (P) (C >> P). This method is used by systems like Percona MySQL.
 
 Both Proxies and Thread Pools aim to reuse connections, albeit through different implementations. Additionally, combining these strategies can enhance system capacity and reduce overall load.
 
@@ -446,7 +446,7 @@ The interval from when a process is set to "running" until it's truly executed i
 
 #### Lock & latch
 
-In database technology, a Lock is designed to safeguard resources, while a Latch is meant to secure critical regions. Despite their different purposes, both rely on the same underlying mechanisms at the operating system level. In Linux, for example, futexes are often employed to create mutexes and condition variables that operate at a higher level. 
+In database technology, a Lock is designed to safeguard resources, while a Latch is meant to secure critical regions. Despite their different purposes, both rely on the same underlying mechanisms at the operating system level. In Linux, for example, futexes are often employed to create mutexes and condition variables that operate at a higher level.
 
 When resources like CPU, I/O, and memory are abundantly available, the scalability of databases is typically limited by their own transaction and locking systems. Take the TPC-C benchmark as an example: most standalone databases hit a scalability ceiling somewhere between 32 Cores (64 Hyper Threads) ~ 64 Cores (128 Hyper Threads). Beyond 32 Cores, the additional CPUs contribute less and less to the overall performance of the database.
 

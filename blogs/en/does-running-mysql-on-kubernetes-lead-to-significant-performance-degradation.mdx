@@ -1,6 +1,6 @@
 ---
 slug: Does-running-MySQL-on-Kubernetes-lead-to-significant-performance-degradation
-title: MySQL on Kubernetes Performance: A Benchmark of KubeBlocks, Percona, and Oracle Operators vs. Amazon RDS
+title: 'MySQL on Kubernetes Performance: A Benchmark of KubeBlocks, Percona, and Oracle Operators vs. Amazon RDS'
 description: Does running MySQL on Kubernetes degrade performance? This report answers the question with a detailed benchmark comparing KubeBlocks, Percona, and Oracle operators against Amazon RDS. We analyze throughput and latency, revealing how factors like parameter tuning and IOPS are the real performance drivers.
 date: 2023-08-18
 authors:
@@ -13,7 +13,7 @@ image: /img/blogs/thumbnails/blog-mysql.png
 ---
 
 # Does running MySQL on Kubernetes lead to significant performance degradation?
- 
+
 Does running MySQL on Kubernetes lead to significant performance degradation? Although concerns about this have been raised recently, few tests have been conducted, and results have rarely been shared publicly.
 To answer this question, we used a popular benchmarking tool to evaluate MySQL throughput and latency in the following typical scenarios and tried to give a report and our insights:
 - MySQL and the benchmarking tool are deployed in the same K8s cluster to simulate the application and database running in the same K8s cluster.
@@ -35,13 +35,13 @@ We have chosen [sysbench](https://github.com/akopytov/sysbench) as our benchmark
 ### The Open Source MySQL Operators
 
 For K8s, MySQL is a complex stateful application that requires deployment and configuration with an operator. We have selected several open-source MySQL operators for testing, and their information is as follows:
-- [MySQL Operator for Kubernetes](https://github.com/mysql/mysql-operator) by the Oracle team  
+- [MySQL Operator for Kubernetes](https://github.com/mysql/mysql-operator) by the Oracle team
 The MySQL Operator for Kubernetes is an operator for managing MySQL InnoDB Cluster setups inside a Kubernetes Cluster. It manages the full lifecycle with set up and maintenance that includes automating upgrades and backup.
 
-- [XtraDB Cluster Operator](https://github.com/percona/percona-xtradb-cluster-operator) by the Percona team  
+- [XtraDB Cluster Operator](https://github.com/percona/percona-xtradb-cluster-operator) by the Percona team
 Based on our best practices for deployment and configuration, Percona Operator for MySQL based on Percona XtraDB Cluster contains everything you need to quickly and consistently deploy and scale Percona XtraDB Cluster instances in a Kubernetes-based environment on-premises or in the cloud.
 
-- [KubeBlocks](https://github.com/apecloud/kubeblocks) by the ApeCloud team  
+- [KubeBlocks](https://github.com/apecloud/kubeblocks) by the ApeCloud team
 KubeBlocks is an open-source Kubernetes operator that manages relational, NoSQL, vector, and streaming databases on the public cloud or on-premise. It is designed for production purposes, providing reliable, performant, observable, and cost-effective data infrastructure for most scenarios.
 
 
