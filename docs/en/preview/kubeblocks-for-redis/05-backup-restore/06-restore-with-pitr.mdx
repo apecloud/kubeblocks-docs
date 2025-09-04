@@ -101,9 +101,6 @@ spec:
     - name: redis
       serviceVersion: "14.7.2"
       disableExporter: true
-      labels:
-        # NOTE: update the label accordingly
-        apps.kubeblocks.postgres.patroni/scope: pg-restore-pitr-redis
       replicas: 1
       resources:
         limits:

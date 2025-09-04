@@ -61,7 +61,7 @@ end: "2025-05-07T09:22:50Z"
 ### 3. Identify Full Backup
 Find available full backups that meet:
 - Status: Completed
-- Completion time after continuous backup start time
+- Completion time **AFTER** continuous backup start time
 
 ```bash
 # expect one or more Full backups
@@ -101,9 +101,6 @@ spec:
     - name: postgresql
       serviceVersion: "14.7.2"
       disableExporter: true
-      labels:
-        # NOTE: update the label accordingly
-        apps.kubeblocks.postgres.patroni/scope: pg-restore-pitr-postgresql
       replicas: 1
       resources:
         limits:
@@ -134,12 +131,37 @@ kubectl get restore -n demo -w
 kubectl get cluster -n demo -w
 ```
 
-:::note
-Restore PostgreSQL cluster through `kbcli` or `OpsRequest` is not supported for now.
+## Option 2: OpsRequest API Restoration
 
-You can restore PostgreSQL cluster through `kubectl` as the steps above.
+### Step 1: Initiate Restore Operation
+Create restore request via OpsRequest API:
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-restore-pitr-ops
+  namespace: demo
+spec:
+  clusterName: pg-pitr-restore   # restored cluster name
+  restore:
+    backupName: <CONTINUOUS_BACKUP_NAME>  # replace it with your continuous backup name
+    restorePointInTime: <RESTORE_POINT_TIME> # replace it with a valid time within the backup timeRange, e.g. 2025-09-03T12:34:56Z
+  type: Restore
+```
 
-:::
+### Step 2: Monitor Restoration
+Track restore progress with:
+
+```bash
+# Watch opsrequest status, goes from Running to Succeeded
+kubectl get opsrequest -n demo -w
+
+# Watch restore CR status
+kubectl get restore -n demo -w
+
+# Watch cluster CR status
+kubectl get cluster -n demo -w
+```
 
 ## Cleanup
 To remove all created resources, delete the PostgreSQL cluster along with its namespace:

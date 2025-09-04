@@ -50,8 +50,6 @@ spec:
   componentSpecs:
     - name: postgresql
       serviceVersion: 14.7.2  # use 14.7.2 here to test minor version upgrade
-      labels:
-        apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
       disableExporter: true
       replicas: 2
       resources:
@@ -209,8 +207,6 @@ To upgrade the PostgreSQL version, modify the serviceVersion field in the Cluste
     componentSpecs:
       - name: postgresql
         serviceVersion: 14.8.0  # set to 14.8.0 for upgrading
-        labels:
-          apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
         disableExporter: true
         replicas: 2
         resources:

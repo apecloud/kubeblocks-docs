@@ -96,8 +96,6 @@ spec:
   componentSpecs:
     - name: postgresql
       serviceVersion: 16.4.0
-      labels:
-        apps.kubeblocks.postgres.patroni/scope: test-pg-postgresql
       disableExporter: true
       replicas: 2
       resources:

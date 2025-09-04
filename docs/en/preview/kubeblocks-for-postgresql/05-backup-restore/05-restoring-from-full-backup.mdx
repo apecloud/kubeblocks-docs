@@ -38,6 +38,8 @@ kubectl get backup -n demo -l dataprotection.kubeblocks.io/backup-type=Full,app.
 
 Pick ONE of the Backups whose status is `Completed`.
 
+## Option 1: Cluster Annotation Restoration
+
 ### Step 1: Create Restored Cluster
 Create a new cluster with restore configuration:
 
@@ -63,8 +65,6 @@ spec:
     - name: postgresql
       serviceVersion: 16.4.0
       disableExporter: true
-      labels:
-        apps.kubeblocks.postgres.patroni/scope: pg-restored-postgresql
       replicas: 2
       resources:
         limits:
@@ -84,7 +84,7 @@ spec:
                 storage: 20Gi
 ```
 
-### Step 3: Monitor Restoration
+### Step 2: Monitor Restoration
 Track restore progress with:
 
 ```bash
@@ -95,13 +95,37 @@ kubectl get restore -n demo -w
 kubectl get cluster -n demo -w
 ```
 
-:::note
-Restore PostgreSQL cluster through `kbcli` or `OpsRequest` is not supported for now.
+## Option 2: OpsRequest API Restoration
 
-You can restore PostgreSQL cluster through `kubectl` as the steps above.
+### Step 1: Initiate Restore Operation
+Create restore request via OpsRequest API:
 
-:::
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-restore-ops
+  namespace: demo
+spec:
+  clusterName: pg-restore   # restored cluster name
+  restore:
+    backupName: <FULL_BACKUP_NAME>  # replace it with your full backup name
+  type: Restore
+```
 
+### Step 2: Monitor Restoration
+Track restore progress with:
+
+```bash
+# Watch opsrequest status, goes from Running to Succeeded
+kubectl get opsrequest -n demo -w
+
+# Watch restore CR status
+kubectl get restore -n demo -w
+
+# Watch cluster CR status
+kubectl get cluster -n demo -w
+```
 
 ## Cleanup
 To remove all created resources, delete the PostgreSQL cluster along with its namespace:

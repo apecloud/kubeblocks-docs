@@ -98,8 +98,6 @@ spec:
           ca: ca.crt
           cert: tls.crt
           key: tls.key
-      labels:
-        apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
       disableExporter: true
       replicas: 2
       resources:

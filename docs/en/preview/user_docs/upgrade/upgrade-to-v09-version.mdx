@@ -182,6 +182,17 @@ This section covers upgrading from v0.8.x to v0.9.x. This is a major version upg
   kubectl delete opsdefinitions.apps.kubeblocks.io --all
   ```
 
+  :::note
+  1. If you have created any OpsDefinition, you need to delete them before the upgrade.
+  2. If you forget to delete the OpsDefinition before upgrading CRDs, these OpsDefinitions will be INVALID and cannot be updated or deleted. You must patch and delete them before the upgrade.
+    ```bash
+    # patch opsdef with a mock action to make it valid
+    kubectl get opsdefinitions.apps.kubeblocks.io -oname | xargs -I {} kubectl patch {} --type=merge -p '{"spec":{"actions":[{"name":"mock","exec":{"podInfoExtractorName":"test","command":["echo 1"]}}]}}'
+    # delete them
+    kubectl delete opsdefinitions.apps.kubeblocks.io --all
+    ```
+  :::
+
   **Step 3: Update Custom Resource Definitions (CRDs)**
 
   Install the new Storage Provider CRD required for v0.9.x and update all KubeBlocks CRDs to the new version:
