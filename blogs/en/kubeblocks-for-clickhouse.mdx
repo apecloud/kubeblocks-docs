@@ -1,17 +1,18 @@
 ---
-slug: kubeblocks-for-clickhouse-revealed
-title: KubeBlocks for ClickHouse Revealed
-description: This blog introduces ClickHouse and its cloud-native deployment implementation on KubeBlocks, covering cluster management, high availability, parameter configuration, and backup/recovery capabilities.
+slug: kubeblocks-x-clickhouse-production-ready-operator-on-kubernetes
+title: 'KubeBlocks x Clickhouse: Production-Ready Operator on Kubernetes'
+description: 'How to operatorize ClickHouse with KubeBlocks: cluster management, sharding, Keeper integration, HA, parameter control, and backup/recovery using an operator-first approach.'
 date: 2025-08-20
 authors:
   name: Gan Yiwei
   url: https://github.com/loomts
   image_url: https://avatars.githubusercontent.com/u/47490569?v=4
-tags: [ClickHouse, OLAP, Database, Addons, Cloud-Native]
+tags: [ClickHouse, OLAP, Addons]
+keywords: kubeblocks,clickhouse,operator,operatorization,operator化,clickhouse-operator,altinity,cloud-native,clickhouse-addon,sharding,keeper,raft,backup,recovery,kubernetes-operator
 image: /img/blogs/thumbnails/clickhouse_kubeblocks_thumbnail.png
 ---
 
-# KubeBlocks for ClickHouse Revealed
+# KubeBlocks x Clickhouse: Production-Ready Operator on Kubernetes
 
 ## Background: An Introduction to ClickHouse
 
@@ -25,7 +26,7 @@ However, this extreme performance comes at the cost of high operational complexi
 - **High Operational Overhead**: Cumbersome parameter configuration, and manual intervention required for scaling and failure recovery.
 - **Difficult Performance Tuning**: A vast parameter system, complex resource coordination, and continuous iteration needed for query optimization.
 
-Simply containerizing ClickHouse using StatefulSets is not enough to solve these inherent operational problems related to cluster management and data reliability.
+Simply packaging ClickHouse as container images and deploying them with StatefulSets is not enough to solve these inherent operational problems related to cluster management and data reliability — an operator-first approach is required.
 
 ## The Need for Kubernetes Operators
 
@@ -152,12 +153,12 @@ Since ClickHouse typically uses a Shared-Nothing architecture (users can also co
 ClickHouse Keeper, as a Raft-based distributed coordination service, needs additional LifecycleActions related to the cluster's consensus state to ensure consistency is correctly maintained among Raft members during node changes.
 
 - **ClickHouse Member Join**: Horizontal scaling for ClickHouse can be either replica scaling or shard scaling. The core task is to replicate the table schema. For tables in the ReplicatedMergeTree family, the replication mechanism automatically backfills historical data.
-  
+
   - Replica Scaling Process:
     - Source Node Selection: The first healthy replica is selected as the synchronization source via environment variables.
     - Database Sync: It enumerates databases from system.databases (excluding system/INFORMATION_SCHEMA), generates DDL using `SHOW CREATE DATABASE ... FORMAT TabSeparatedRaw`, and executes it on the new replica, verifying successful creation.
     - Table Schema Sync: Reads table information (database, name, uuid) from system.tables and creates tables in reverse order of dependencies_table to ensure correct dependencies. Internal tables (containing .inner_id. or .inner.) are automatically skipped.
-  
+
   - Shard Scaling Process: Similar to replica scaling, but an instance from a different shard is selected as the synchronization source for database and table schemas.
 
 - **Keeper Member Join**: ClickHouse Keeper is a Raft-based distributed coordination service. Horizontal scaling requires adding the new Pod as a participant to the Raft cluster, following the NuRaft (C++ Raft library) specification, and having it enter a follower/observer state.
@@ -286,6 +287,6 @@ This article demonstrates KubeBlocks' comprehensive solution for the cloud-nativ
 
 In today's increasingly competitive OLAP landscape, emerging engines like DuckDB have outperformed ClickHouse in specific scenarios. However, in enterprise-grade distributed data processing, ClickHouse remains irreplaceable due to its mature distributed architecture, diverse table engines, and powerful query optimization. Cloud-native transformation is crucial for reducing ClickHouse's operational complexity and improving ease of use.
 
-As an open-source Kubernetes Operator for stateful services, KubeBlocks abstracts complex database operational tasks through a standardized, declarative API. Its unified cluster management model, flexible component orchestration, and deep support for core ClickHouse scenarios—including Keeper high availability, shard management, parameter configuration, and backup/recovery—provide enterprises with a production-grade cloud-native solution for ClickHouse.
+As an open-source Kubernetes Operator for stateful services, KubeBlocks abstracts complex database operational tasks through a standardized, declarative API. Its unified cluster management model, flexible component orchestration, and deep support for core ClickHouse scenarios-including Keeper high availability, shard management, parameter configuration, and backup/recovery-provide enterprises with a production-grade cloud-native solution for ClickHouse.
 
 In the future, we hope to validate and optimize KubeBlocks for ClickHouse in more production scenarios. We welcome you to join our community, exchange ideas, and contribute to the project!
