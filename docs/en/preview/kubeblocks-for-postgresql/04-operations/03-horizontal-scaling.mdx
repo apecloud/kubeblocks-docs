@@ -102,8 +102,6 @@ import VerifyPGCluster from '../_tpl/_verify-pg-replication-cluster.mdx'
     componentSpecs:
       - name: postgresql
         serviceVersion: 16.4.0
-        labels:
-          apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
         disableExporter: true
         replicas: 3 # increase replicas to scale-out
         resources:
@@ -233,8 +231,6 @@ If the replica being scaled-in happens to be a primary replica, KubeBlocks will 
     componentSpecs:
       - name: postgresql
         serviceVersion: 16.4.0
-        labels:
-          apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
         disableExporter: true
         replicas: 1 # decrease replicas to scale-in
         resources:

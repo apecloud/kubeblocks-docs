@@ -38,7 +38,11 @@ kubectl get backup -n demo -l dataprotection.kubeblocks.io/backup-type=Full,app.
 
 Pick ONE of the Backups whose status is `Completed`.
 
-### Step 1: Create Restored Cluster
+
+## Step 1: Initiate a Restore
+
+### Option 1: Restore a Cluster via Cluster Annotation
+
 Create a new cluster with restore configuration:
 
 Key parameters:
@@ -53,8 +57,10 @@ metadata:
   name: pg-restored
   namespace: demo
   annotations:
-    # NOTE: replcae <FULL_BACKUP_NAME> with the backup name
-    kubeblocks.io/restore-from-backup: '{"postgresql":{"name":"<FULL_BACKUP_NAME>","namespace":"demo","volumeRestorePolicy":"Parallel"}}'
+    # NOTE:
+    # - replcae <FULL_BACKUP_NAME> with the backup name
+    # - specify the namespace of the backup using <BACKUP_NAMESPACE>
+    kubeblocks.io/restore-from-backup: '{"postgresql":{"name":"<FULL_BACKUP_NAME>","namespace":"<BACKUP_NAMESPACE>","volumeRestorePolicy":"Parallel"}}'
 spec:
   terminationPolicy: Delete
   clusterDef: postgresql
@@ -63,8 +69,6 @@ spec:
     - name: postgresql
       serviceVersion: 16.4.0
       disableExporter: true
-      labels:
-        apps.kubeblocks.postgres.patroni/scope: pg-restored-postgresql
       replicas: 2
       resources:
         limits:
@@ -84,31 +88,111 @@ spec:
                 storage: 20Gi
 ```
 
-### Step 3: Monitor Restoration
-Track restore progress with:
+The json string in the annotation is of structure:
+```json
+{
+  "postgresql": {
+    "name": "<FULL_BACKUP_NAME>",
+    "namespace": "<BACKUP_NAMESPACE>",
+    "volumeRestorePolicy": "Parallel"
+  }
+}
+```
+- `postgresql`: the component name in the cluster (check `cluster.spec.componentSpecs[].name`)
+- `name`: the full backup name
+- `namespace`: the namespace of the backup
+- `volumeRestorePolicy`: the volume restore policy, `Parallel` or `Serial`
 
-```bash
-# Watch restore status
-kubectl get restore -n demo -w
+### Option 2: Restore a Cluster via Restore OpsRequest
 
-# Watch cluster status
-kubectl get cluster -n demo -w
+Create a `Restore` OpsRequest:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-restore-ops
+  namespace: demo
+spec:
+  clusterName: pg-restore   # restored cluster name
+  restore:
+    backupName: <FULL_BACKUP_NAME>  # replace it with your full backup name
+    backupNamespace: <BACKUP_NAMESPACE> # replace it with your backup namespace
+  type: Restore
 ```
 
-:::note
-Restore PostgreSQL cluster through `kbcli` or `OpsRequest` is not supported for now.
+## Step 2: Monitor Restoration
 
-You can restore PostgreSQL cluster through `kubectl` as the steps above.
+1. Check component events:
 
-:::
+    ```bash
+    # describe component postgresql
+    kubectl describe cmp pg-restored-postgresql -n demo
+    ```
 
+    It will show the following events. When all the restore tasks are completed, the component will be in `Running` state.
+    ```bash
+    Events:
+      Type     Reason                    Age                    From                  Message
+      ----     ------                    ----                   ----                  -------
+      Warning  Warning                   2m28s                  component-controller  config/script template has no template specified: postgresql-configuration
+      Normal   NeedWaiting               2m19s (x7 over 2m28s)  component-controller  waiting for restore "pg-restored-postgresql-53bf2e93-preparedata" successfully
+      Normal   Unknown                   2m19s                  component-controller  the component phase is unknown
+      Normal   ComponentPhaseTransition  2m19s (x2 over 2m19s)  component-controller  component is Creating
+      Normal   Unavailable               2m19s (x2 over 2m19s)  component-controller  the component phase is Creating
+      Normal   ComponentPhaseTransition  119s                   component-controller  component is Running
+      Normal   Available                 119s                   component-controller  the component phase is Running
+      Normal   NeedWaiting               119s                   component-controller  waiting for restore "pg-restored-postgresql-53bf2e93-postready" successfully
+    ```
+
+2. Check restore status:
+
+    ```bash
+    # Watch restore status
+    kubectl get restore -n demo
+    ```
+
+    There will be two restore resources created, one is for the data preparation, and the other is for the post-ready tasks.
+    ```bash
+    NAME                                          BACKUP                     RESTORE-TIME   STATUS       DURATION   CREATION-TIME          COMPLETION-TIME
+    pg-restored-postgresql-5e9dd0bd-postready     pg-cluster-pg-basebackup                  Completed    1s         2025-05-16T07:32:11Z   2025-05-16T07:32:11Z
+    pg-restored-postgresql-5e9dd0bd-preparedata   pg-cluster-pg-basebackup                  Completed    9s         2025-05-16T07:31:42Z   2025-05-16T07:31:51Z
+    ```
+
+## Troubleshooting
+
+If the restoration is stuck, you can check the status
+
+1. Check the status of the OpsRequest if any
+    ```bash
+    kubectl get opsrequest pg-restore-ops -n demo
+    ```
+
+2. Describe the component, check if there is any error message
+    ```bash
+    kubectl describe cmp pg-restored-postgresql -n demo
+    ```
+
+3. Describe restore resource
+    ```bash
+    kubectl describe restore <RESTORE_RESOURCE_NAME> -n demo
+    ```
+    It will show the status of restore and the Job created if any, for example:
+    ```text
+    Normal  CreateRestoreJob  44m   restore-controller  created job demo/restore-preparedata-cbdbbf60-backup-demo-pg-cluster
+    ```
+
+4. Check restore jobs and its logs
+    ```bash
+    kubectl logs <JOB_NAME> -n demo  # job name found in previous step
+    ```
 
 ## Cleanup
 To remove all created resources, delete the PostgreSQL cluster along with its namespace:
 
 ```bash
 kubectl delete cluster pg-cluster -n demo
-kubectl delete cluster pg-cluster-restored -n demo
+kubectl delete cluster pg-restored -n demo
 kubectl delete ns demo
 ```
 
@@ -117,7 +201,6 @@ kubectl delete ns demo
 This guide covered two restoration methods:
 
 1. **Cluster Annotation** - Simple YAML-based approach
-   - Retrieve system credentials
    - Create cluster with restore annotation
    - Monitor progress
 

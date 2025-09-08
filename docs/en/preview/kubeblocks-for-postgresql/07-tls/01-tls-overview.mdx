@@ -44,8 +44,6 @@ spec:
       tls: true  # Enable TLS encryption
       issuer:
         name: KubeBlocks  # Use KubeBlocks' built-in certificate authority
-      labels:
-        apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
       disableExporter: true
       replicas: 2
       resources:
