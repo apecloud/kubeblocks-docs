@@ -48,20 +48,30 @@ namespace/demo created
    - Cluster must be in `Running` state
    - No ongoing operations (scaling, upgrades etc.)
 
+3. Check the list of backup methods.
 
-## List of Backup methods
+    As introduced in the [Create Full Backup](./02-create-full-backup) guide, KubeBlocks PostgreSQL supports these backup methods:
 
-KubeBlocks PostgreSQL supports these backup methods:
+    | Feature           | Method          | Description |
+    |-------------------|-----------------|-------------|
+    | Full Backup       | pg-basebackup   | Uses `pg_basebackup`, a PostgreSQL utility to create a base backup |
+    | Full Backup       | wal-g           | Uses `wal-g` to create a full backup (requires WAL-G configuration) |
+    | Continuous Backup | archive-wal     | Uploads PostgreSQL Write-Ahead Logging (WAL) files periodically to the backup repository, usually paired with `pg-basebackup`|
+    | Continuous Backup | wal-g-archive   | Uploads PostgreSQL Write-Ahead Logging (WAL) files periodically to the backup repository, usually paired with `wal-g`|
 
-| Feature           | Method          | Description |
-|-------------------|-----------------|-------------|
-| Full Backup       | pg-basebackup   | Uses `pg_basebackup`, a PostgreSQL utility to create a base backup |
-| Full Backup       | wal-g  | Uses `wal-g` to create a full backup (Recommended)|
-| Continuous Backup | archive-wal   | Uploads PostgreSQL Write-Ahead Logging (WAL) files periodically to the backup repository using `datasafed`|
-| Continuous Backup | wal-g-archive | Uploads PostgreSQL Write-Ahead Logging (WAL) files periodically to the backup repository using `wal-g` (Recommended) |
+    :::note
+
+    - It is recommended to pair `pg-basebackup` with `archive-wal`, and pair `wal-g` with `wal-g-archive`.
+    - Method `pg-basebackup` can be enabled alone to create a full backup.
+    - Method `wal-g` cannot be enabled alone. It must be paired with `wal-g-archive`.
+
+    :::
+    In this guide, we will show how to deploy a PostgreSQL cluster with different combinations of backup methods. You may choose one of the following combinations.
+    - pg-basebackup and archive-wal
+    - wal-g and wal-g-archive (**Recommended**)
 
 
-## Deploy a PostgreSQL Cluster with Backup APIs
+## Deploy a PostgreSQL Cluster, with pg-basebackup and archive-wal
 
 Deploy a 2-node PostgreSQL replication cluster (1 primary, 1 secondary) and specify backup information.
 
@@ -98,9 +108,155 @@ spec:
   backup:
     retentionPeriod: 7d
     # for full backup
+    method: pg-basebackup # full backup methnod name
+    enabled: true
+    cronExpression: 0 18 * * * # full backup scheuler
+    # for continuous backup
+    continuousMethod: archive-wal # continuous backup method
+    pitrEnabled: true # enable continous method or not
+    repoName: s3-repo # specify backuprepo, if not specified, the BackupRepo annotated as `default` will be used.
+```
+
+Or you can patch an existing cluster to enable scheduled continuous backup:
+```bash
+kubectl patch cluster pg-cluster -n demo --type='merge' -p='
+{
+  "spec": {
+    "backup": {
+      "retentionPeriod": "7d",
+      "method": "pg-basebackup",
+      "enabled": true,
+      "cronExpression": "0 18 * * *",
+      "continuousMethod": "archive-wal",
+      "pitrEnabled": true,
+      "repoName": "s3-repo"
+    }
+  }
+}'
+```
+
+**Key Configuration Fields Explained**
+
+| Field | Value | Description |
+|-------|-------|-------------|
+| `backup.enabled` | `true` | Enables scheduled backups |
+| `method` | `pg-basebackup` | Full backup method using PostgreSQL's native utility |
+| `cronExpression` | `0 18 * * *` | Daily full backup at 6PM UTC |
+| `retentionPeriod` | `7d` | Retains backups for 7 days |
+| `repoName` | `s3-repo` | Backup repository name (S3-compatible storage) |
+| `pitrEnabled` | `true` | Enables continuous WAL archiving for PITR |
+| `continuousMethod` | `archive-wal` | Method for continuous WAL archiving |
+
+## Verifying the Deployment
+
+### Monitor the Cluster Status
+Monitor the cluster status until it transitions to the Running state:
+```bash
+kubectl get cluster pg-cluster -n demo -w
+```
+
+Example Output:
+
+```bash
+NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+pg-cluster   postgresql           Delete               Creating   50s
+pg-cluster   postgresql           Delete               Running    4m2s
+```
+
+Once the cluster status becomes Running, your PostgreSQL cluster is ready for use.
+
+### Check Backups are Scheduled Correctly
+
+Verify full backup and continuous backups are configured correctly:
+1. Check full backup task is scheduled correctly. KubeBlocks create CronJob to schedule full backup.
+    ```bash
+    kubectl get cronjob -l app.kubernetes.io/instance=pg-cluster,app.kubernetes.io/managed-by=kubeblocks-dataprotection -n demo
+    ```
+
+2. Check continuous backup is RUNNING correctly. KubeBlocks create a StatefulSet to run continuous backup.
+    ```bash
+    kubectl get sts -l app.kubernetes.io/instance=pg-cluster,app.kubernetes.io/managed-by=kubeblocks-dataprotection -n demo
+    ```
+
+3. Check continuous Backup resource is created correctly.
+
+    ```bash
+    kubectl get backup -l app.kubernetes.io/instance=pg-cluster,app.kubernetes.io/managed-by=kubeblocks-dataprotection,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
+    ```
+
+    Example Output:
+    ```bash
+    NAME                                         POLICY                                METHOD        REPO            STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
+    b387c27b-pg-cluster-postgresql-archive-wal   pg-cluster-postgresql-backup-policy   archive-wal   <BACKUP_REPO>   Running                             Delete            2025-05-16T02:58:10Z
+    ```
+
+### Verify Backup Configuration
+
+KubeBlocks automatically creates a `BackupSchedule` resource. Inspect the configuration:
+
+```bash
+kubectl get backupschedule pg-cluster-postgresql-backup-schedule  -n demo -oyaml
+```
+
+Example Output:
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: BackupSchedule
+...
+spec:
+  backupPolicyName: pg-cluster-postgresql-backup-policy
+  schedules:
+  - backupMethod: pg-basebackup
+    cronExpression: 0 18 * * *
+    enabled: true
+    retentionPeriod: 7d
+  - backupMethod: archive-wal
+    cronExpression: '*/5 * * * *'
+    enabled: true
+    name: archive-wal
+    retentionPeriod: 7d
+```
+
+## Deploy a PostgreSQL Cluster, with wal-g and wal-g-archive
+
+Deploy a 2-node PostgreSQL replication cluster (1 primary, 1 secondary)
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: pg-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: postgresql
+  topology: replication
+  componentSpecs:
+    - name: postgresql
+      serviceVersion: 16.4.0
+      disableExporter: true
+      replicas: 2
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+  backup:
+    retentionPeriod: 7d
+    # for full backup
     method: wal-g # full backup methnod name
     enabled: true
-    cronExpression: 0 18 * * * # full backup scheduler
+    cronExpression: 0 18 * * * # full backup scheuler
     # for continuous backup
     continuousMethod: wal-g-archive # continuous backup method
     pitrEnabled: true # enable continous method or not
@@ -108,6 +264,7 @@ spec:
 ```
 
 Or you can patch an existing cluster to enable scheduled continuous backup:
+
 ```bash
 kubectl patch cluster pg-cluster -n demo --type='merge' -p='
 {
@@ -125,92 +282,143 @@ kubectl patch cluster pg-cluster -n demo --type='merge' -p='
 }'
 ```
 
-**Key Configuration Fields Explained**
+You may use the steps introduced in the [Deploy a PostgreSQL Cluster, with wal-g and wal-g-archive](#deploy-a-postgresql-cluster-with-wal-g-and-wal-g-archive) section to check the deployment of the cluster.
 
-| Field | Value | Description |
-|-------|-------|-------------|
-| `backup.enabled` | `true` | Enables scheduled backups |
-| `method` | `wal-g` | Full backup method using `wal-g` |
-| `cronExpression` | `0 18 * * *` | Daily full backup at 6PM UTC |
-| `retentionPeriod` | `7d` | Retains backups for 7 days |
-| `repoName` | `s3-repo` | Backup repository name (S3-compatible storage) |
-| `pitrEnabled` | `true` | Enables continuous WAL archiving for PITR |
-| `continuousMethod` | `wal-g-archive` | Method for continuous WAL archiving using `wal-g` (Recommended) |
+Apart from that, you need to check if `archive_command` is configured correctly.
 
+:::note
 
-## Verifying the Deployment
+Method `wal-g` and `wal-g-archive` work only when PostgreSQL's `archive_command` is configured properly.
 
-Monitor the cluster status until it transitions to the Running state:
+Kubeblocks will do it automatically for you when method `wal-g-archive` is enabled.
+
+:::
+
+KubeBlocks will create a Reconfiguration OpsRequest to set the `archive_command` to `envdir /home/postgres/pgdata/wal-g/env /home/postgres/pgdata/wal-g/wal-g wal-push %p`
+
+To monitor the progress of the reconfiguration, you can check the status of the OpsRequest:
 ```bash
-kubectl get cluster pg-cluster -n demo -w
+kubectl get opsrequest -l app.kubernetes.io/instance=pg-cluster,operations.kubeblocks.io/ops-type=Reconfiguring -n demo
 ```
 
-Example Output:
+If the OpsRequest is `Failed` or is `Pending` for quite a long time, you need to check the logs of the OpsRequest to see the error message. Otherwise the wal-g-archive and wal-g will not work.
 
-```bash
-NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
-pg-cluster   postgresql           Delete               Creating   50s
-pg-cluster   postgresql           Delete               Running    4m2s
-```
-Once the cluster status becomes Running, your PostgreSQL cluster is ready for use.
 
-## Monitoring Continuous Backups
+## How to check the progress of continuous backup
 
-Verify continuous backup operation with these commands:
-```bash
-# get continuous backup
-kubectl get backup -l app.kubernetes.io/instance=pg-cluster,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
-# get stateful set working for continuous backup
-kubectl get sts -l app.kubernetes.io/instance=pg-cluster,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
-# get pod working for continuous backup
-kubectl get pod -l app.kubernetes.io/instance=pg-cluster,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
-```
+Each continuous backup methods upload WAL files to the backup repository periodically (every few seconds).
 
-Where labels
-- `app.kubernetes.io/instance=pg-cluster` is used to identify resources by cluster name
-- `dataprotection.kubeblocks.io/backup-type=Continuous` is used to identify backup by type (Continuous/Full)
+:::tip
 
-## Verifying Backup Configuration
+If there is no wal log to upload, the backup pod has nothing to do. Then backup's total-size won't increase and backup's `timeRange` won't change.
 
-KubeBlocks automatically creates a `BackupSchedule` resource. Inspect the configuration:
+You may perform a sysbench benchmark against the cluster or you can run the python script [pg_benchmark.py](https://github.com/apecloud/kubeblocks-addons/blob/main/examples/postgresql/test/pg_benchmark.py) to benchmark the cluster.
 
-```bash
-kubectl get backupschedule pg-cluster-postgresql-backup-schedule  -n demo -oyaml
-```
+:::
 
-Example Output:
-```yaml
-apiVersion: dataprotection.kubeblocks.io/v1alpha1
-kind: BackupSchedule
-...
-spec:
-  backupPolicyName: pg-cluster-postgresql-backup-policy
-  schedules:
-  - backupMethod: wal-g
-    cronExpression: 0 18 * * *
-    enabled: true #
-    retentionPeriod: 7d
-  - backupMethod: wal-g-archive
-    cronExpression: '*/5 * * * *'
-    enabled: true
-    name: wal-g-archive
-    retentionPeriod: 7d
-```
+Check the progress of continuous backup by following the steps below:
 
-## Verifying the Progress of Backup
+1. checking the backup resource.
 
-Once configured, the full backup will be performed on the scheduled time, and the continuous backup runs continuously and archives the WAL files to the backup repository periodically.
+    ```bash
+    kubectl get backup -l app.kubernetes.io/instance=pg-cluster,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
+    ```
 
-You can verify the progress of backup with the following command:
-```bash
-kubectl get backup -l app.kubernetes.io/instance=pg-cluster,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
-```
+    Example Output:
+    ```bash
+    NAME                                         POLICY                                METHOD        REPO            STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
+    b387c27b-pg-cluster-postgresql-archive-wal   pg-cluster-postgresql-backup-policy   archive-wal   <BACKUP_REPO>   Running     104325519               Delete            2025-05-16T02:58:10Z
+    ```
 
+    - `TOTAL-SIZE` is the total size of the WAL files uploaded to the backup repository. It will increase over time.
+
+2. checking the backup pod logs.
+
+    <Tabs>
+
+      <TabItem value="archive-wal" label="archive-wal">
+
+      ```bash
+      kubectl logs b387c27b-pg-cluster-postgresql-archive-wal-0 -n demo -c backupdata
+      ```
+      where `b387c27b-pg-cluster-postgresql-archive-wal-0` is the name of the backup pod, and `backupdata` is the container name.
+
+      Example Output:
+      ```bash
+      2025-05-16 06:36:12 INFO: start to upload the wal log which maybe misses
+      2025-05-16 06:36:13 INFO: start to archive wal logs
+      2025-05-16 06:46:14 INFO: start to switch wal file
+      2025-05-16 06:56:16 INFO: start to switch wal file
+      2025-05-16 07:05:18 INFO: upload 000000010000000000000004
+      2025-05-16 07:05:20 INFO: upload 000000010000000000000005
+      2025-05-16 07:06:17 INFO: upload 000000010000000000000006
+      2025-05-16 07:09:44 INFO: upload 000000010000000000000007
+      2025-05-16 07:09:46 INFO: upload 000000010000000000000008
+      2025-05-16 07:09:48 INFO: upload 000000010000000000000009
+      ...
+      ```
+      </TabItem>
+
+      <TabItem value="wal-g-archive" label="wal-g-archive">
+
+      ```bash
+      kubectl logs b387c27b-pg-cluster-postgresql-wal-g-archive-0 -n demo -c backupdata
+      ```
+
+      Where `b387c27b-pg-cluster-postgresql-wal-g-archive-0` is the name of the backup pod, and `backupdata` is the container name.
+
+      Example Output:
+      ```bash
+      2025-05-16 08:16:59 INFO: start to archive and update wal infos
+      2025-05-16 08:16:59 INFO: config wal-g environment variables...
+      2025-05-16 08:25:18 INFO: upload 000000010000000000000022 ...
+      INFO: 2025/09/08 08:25:18.904842 Files will be uploaded to storage: default
+      INFO: 2025/09/08 08:25:22.729796 FILE PATH: 000000010000000000000023.zst
+      INFO: 2025/09/08 08:25:22.845932 FILE PATH: 000000010000000000000022.zst
+      2025-05-16 08:25:22 INFO: WAL-G upload succeeded for 000000010000000000000022
+      2025-05-16 08:25:22 INFO: upload 000000010000000000000023 ...
+      INFO: 2025/09/08 08:25:22.883391 Files will be uploaded to storage: default
+      2025-05-16 08:25:22 INFO: WAL-G upload succeeded for 000000010000000000000023
+      2025-05-16 08:25:24 INFO: start time of the oldest wal: 2025-05-16T08:09:45Z, end time of the latest wal: 2025-05-16T08:25:17Z, total size: 14938340
+      2025-05-16 08:26:23 INFO: upload 000000010000000000000024 ...
+      INFO: 2025/09/08 08:26:23.166320 Files will be uploaded to storage: default
+      INFO: 2025/09/08 08:26:25.738435 FILE PATH: 000000010000000000000025.zst
+      INFO: 2025/09/08 08:26:25.784766 FILE PATH: 000000010000000000000024.zst
+      2025-05-16 08:26:25 INFO: WAL-G upload succeeded for 000000010000000000000024
+      2025-05-16 08:26:25 INFO: upload 000000010000000000000025 ...
+      INFO: 2025/09/08 08:26:25.822544 Files will be uploaded to storage: default
+      2025-05-16 08:26:25 INFO: WAL-G upload succeeded for 000000010000000000000025
+      2025-05-16 08:26:27 INFO: start time of the oldest wal: 2025-05-16T08:09:45Z, end time of the latest wal: 2025-05-16T08:26:20Z, total size: 29775523
+      ```
+      </TabItem>
+    </Tabs>
+
+3. checking the backup's `timeRange`, it should increase over time.
+
+    ```bash
+    kubectl get backup b387c27b-pg-cluster-postgresql-archive-wal -n demo -oyaml  | yq '.status.timeRange'
+    ```
+    where `b387c27b-pg-cluster-postgresql-archive-wal` is the name of the continuous backup.
+
+    Example Output:
+    ```bash
+    timeRange:
+      end: "2025-05-16T07:09:48Z"
+      start: "2025-05-16T06:36:12Z"
+    ```
+
+    - `timeRange.start` is the start time of the backup (earliest PostgreSQL transaction time).
+    - `timeRange.end` is the end time of the backup (latest PostgreSQL transaction time).
 
 ## Summary
 
 This guide covered:
-1. Configuring scheduled full backups using `wal-g`
-2. Enabling continuous WAL archiving with wal-g-archive (Recommended)
+1. Configuring scheduled full backups with pg-basebackup
+2. Enabling continuous WAL archiving with wal-g-archive
 3. Setting up Point-In-Time Recovery (PITR) capabilities
-4. Monitoring backup operation
+4. Monitoring backup operations
+
+Key Benefits:
+- Scheduled full backups ensure regular recovery points
+- Continuous WAL archiving minimizes potential data loss
+- PITR enables recovery to any moment in time

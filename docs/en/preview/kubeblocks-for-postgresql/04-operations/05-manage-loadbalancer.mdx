@@ -148,8 +148,6 @@ External service addresses enable public internet access to PostgreSQL, while in
     componentSpecs:
       - name: postgresql
         serviceVersion: 16.4.0
-        labels:
-          apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
         disableExporter: true
         replicas: 2
         resources:

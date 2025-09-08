@@ -107,8 +107,6 @@ To decommission a specific Pod (e.g., 'pg-cluster-postgresql-1'), you can use on
     componentSpecs:
       - name: postgresql
         serviceVersion: 16.4.0
-        labels:
-          apps.kubeblocks.postgres.patroni/scope: pg-cluster-postgresql
         disableExporter: true
         replicas: 1
         offlineInstances:

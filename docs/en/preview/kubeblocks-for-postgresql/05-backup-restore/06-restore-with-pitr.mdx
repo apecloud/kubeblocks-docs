@@ -69,13 +69,15 @@ kubectl get backup -n demo -l dataprotection.kubeblocks.io/backup-type=Full,app.
 ```
 
 :::tip
-KubeBlocks automatically selects the most recent qualifying full backup as the base.
+KubeBlocks automatically selects the **most recent** qualifying full backup as the base.
+
 Make sure there is a full backup meets the condition: its `stopTime`/`completionTimestamp` must **AFTER** Continuous backup's `startTime`, otherwise PITR restoration will fail.
 :::
 
-## Option 1: Cluster Annotation Restoration
+## Restore a Cluster from Continuous Backup
 
-### Step 1: Create Restored Cluster
+### Option 1: Restore a Cluster via Cluster Annotation
+
 Configure PITR parameters in cluster annotation:
 
 Key parameters:
@@ -90,18 +92,20 @@ metadata:
   name: pg-restore-pitr
   namespace: demo
   annotations:
-    # NOTE: replace <CONTINUOUS_BACKUP_NAME> with the continuouse backup name
-    # NOTE: replace <RESTORE_POINT_TIME>  with a valid time within the backup timeRange.
-    kubeblocks.io/restore-from-backup: '{"postgresql":{"name":"<CONTINUOUS_BACKUP_NAME>","namespace":"demo","restoreTime":"<RESTORE_POINT_TIME>","volumeRestorePolicy":"Parallel"}}'
+    # NOTE:
+    # 1. replace <CONTINUOUS_BACKUP_NAME> with the continuouse backup name
+    # 2. replace <RESTORE_POINT_TIME>  with a valid time within the backup timeRange.
+    # 3. replace <BACKUP_NAMESPACE> with the namespace of the backup
+    kubeblocks.io/restore-from-backup: '{"postgresql":{"name":"<CONTINUOUS_BACKUP_NAME>","namespace":"<BACKUP_NAMESPACE>","restoreTime":"<RESTORE_POINT_TIME>","volumeRestorePolicy":"Parallel"}}'
 spec:
   terminationPolicy: Delete
   clusterDef: postgresql
   topology: replication
   componentSpecs:
     - name: postgresql
-      serviceVersion: "14.7.2"
+      serviceVersion: "16.4.0"
       disableExporter: true
-      replicas: 1
+      replicas: 2
       resources:
         limits:
           cpu: "0.5"
@@ -120,21 +124,27 @@ spec:
                 storage: 20Gi
 ```
 
-### Step 2: Monitor Restoration
-Track restore progress with:
-
-```bash
-# Watch restore status
-kubectl get restore -n demo -w
-
-# Watch cluster status
-kubectl get cluster -n demo -w
+The json string in the annotation is of structure:
+```json
+{
+  "postgresql": {
+    "name": "<CONTINUOUS_BACKUP_NAME>",
+    "namespace": "<BACKUP_NAMESPACE>",
+    "restoreTime": "<RESTORE_POINT_TIME>",
+    "volumeRestorePolicy": "Parallel"
+  }
+}
 ```
+- `postgresql`: the component name in the cluster (check `cluster.spec.componentSpecs[].name`)
+- `name`: the continuous backup name
+- `namespace`: the namespace of the backup
+- `restoreTime`: the restore time, must be within the continuous backup `timeRange`
+- `volumeRestorePolicy`: the volume restore policy, `Parallel` or `Serial`
 
-## Option 2: OpsRequest API Restoration
+### Option 2: Restore a Cluster via Restore OpsRequest
 
-### Step 1: Initiate Restore Operation
-Create restore request via OpsRequest API:
+Create a `Restore` OpsRequest:
+
 ```yaml
 apiVersion: operations.kubeblocks.io/v1alpha1
 kind: OpsRequest
@@ -142,40 +152,92 @@ metadata:
   name: pg-restore-pitr-ops
   namespace: demo
 spec:
-  clusterName: pg-pitr-restore   # restored cluster name
+  clusterName: pg-restore-pitr   # restored cluster name
   restore:
     backupName: <CONTINUOUS_BACKUP_NAME>  # replace it with your continuous backup name
+    backupNamespace: <BACKUP_NAMESPACE> # replace it with the namespace of the backup
     restorePointInTime: <RESTORE_POINT_TIME> # replace it with a valid time within the backup timeRange, e.g. 2025-09-03T12:34:56Z
   type: Restore
 ```
 
-### Step 2: Monitor Restoration
-Track restore progress with:
+## Step 2: Monitor Restoration
 
-```bash
-# Watch opsrequest status, goes from Running to Succeeded
-kubectl get opsrequest -n demo -w
+1. Check component events:
 
-# Watch restore CR status
-kubectl get restore -n demo -w
+    ```bash
+    # describe component postgresql
+    kubectl describe cmp pg-restore-pitr-postgresql -n demo
+    ```
 
-# Watch cluster CR status
-kubectl get cluster -n demo -w
-```
+    It will show the following events. When all the restore tasks are completed, the component will be in `Running` state.
+    ```bash
+    Events:
+      Type     Reason                    Age                    From                  Message
+      ----     ------                    ----                   ----                  -------
+      Warning  Warning                   6m51s                  component-controller  config/script template has no template specified: postgresql-configuration
+      Normal   NeedWaiting               6m44s (x7 over 6m51s)  component-controller  waiting for restore "pg-restore-pitr-postgresql-a6b02251-preparedata" successfully
+      Normal   Unknown                   6m31s                  component-controller  the component phase is unknown
+      Normal   ComponentPhaseTransition  6m30s (x4 over 6m31s)  component-controller  component is Creating
+      Normal   Unavailable               6m30s (x4 over 6m31s)  component-controller  the component phase is Creating
+      Normal   ComponentPhaseTransition  6m                     component-controller  component is Running
+      Normal   Available                 6m                     component-controller  the component phase is Running
+      Normal   NeedWaiting               6m (x3 over 6m)        component-controller  waiting for restore "pg-restore-pitr-postgresql-a6b02251-postready" successfully
+    ```
+
+2. Check restore status:
+
+    ```bash
+    # Watch restore status
+    kubectl get restore -n demo
+    ```
+
+    There will be two restore resources created, one is for the data preparation, and the other is for the post-ready tasks.
+    ```bash
+    NAME                                              BACKUP                                       RESTORE-TIME           STATUS      DURATION   CREATION-TIME          COMPLETION-TIME
+    pg-restore-pitr-postgresql-a6b02251-postready     b387c27b-pg-cluster-postgresql-archive-wal   2025-05-16T08:03:50Z   Completed   4s         2025-05-16T08:07:57Z   2025-05-16T08:08:00Z
+    pg-restore-pitr-postgresql-a6b02251-preparedata   b387c27b-pg-cluster-postgresql-archive-wal   2025-05-16T08:03:50Z   Completed   21s        2025-05-16T08:07:06Z   2025-05-16T08:07:26Z
+    ```
+
+## Troubleshooting
+
+When encountering backup issues, such as Backup status is `Failed`  or stuck in `Running`for quite a long time, follow these steps to diagnose and resolve the problem:
+
+1. Inspect the Backup resource for any error events or status updates:
+  ```bash
+  kubectl describe backup <BACKUP_NAME> -n demo
+  ```
+
+2. Verify the backup job status and examine its logs:
+  KubeBlocks runs a Job to create a full backup. If the backup task gets stuck, you can track the Job progress:
+  ```bash
+  kubectl -n demo get job -l app.kubernetes.io/instance=pg-cluster,app.kubernetes.io/managed-by=kubeblocks-dataprotection
+  ```
+
+  And check pod logs:
+  ```bash
+  kubectl -n demo logs <POD_NAME>
+  ```
+
+  This job will be deleted when the backup completes.
+
+3. Review KubeBlocks controller logs for detailed error information:
+
+  ```bash
+  kubectl -n kb-system logs deploy/kubeblocks -f
+  ```
 
 ## Cleanup
 To remove all created resources, delete the PostgreSQL cluster along with its namespace:
 
 ```bash
 kubectl delete cluster pg-cluster -n demo
-kubectl delete cluster pg-cluster-restore -n demo
+kubectl delete cluster pg-restore-pitr -n demo
 kubectl delete ns demo
 ```
 
 ## Summary
 This guide demonstrated how to restore a PostgreSQL cluster in KubeBlocks using a full backup and continuous backup for Point-In-Time Recovery (PITR). Key steps included:
 - Verifying available backups.
-- Extracting encrypted system account credentials.
 - Creating a new PostgreSQL cluster with restoration configuration.
 - Monitoring the restoration process.
 
