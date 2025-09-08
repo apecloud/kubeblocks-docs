@@ -1,17 +1,18 @@
 ---
-slug: kubeblocks-for-milvus-revealed
-title: KubeBlocks for Milvus Revealed
-description: This blog introduces the Milvus vector database and its deployment implementation on KubeBlocks, covering standalone and cluster deployment modes using modular Addons like etcd, Kafka, and MinIO.
+slug: kubeblocks-x-milvus-kubernetes-operator-guide
+title: 'KubeBlocks x Milvus: Kubernetes Operator Guide'
+description: 'Operatorize Milvus on Kubernetes using KubeBlocks: deploy standalone and cluster modes, integrate etcd/Kafka/MinIO via Addons and ServiceRef, and manage Day-2 operations with an operator-first approach.'
 date: 2025-08-12
 authors:
   name: Cheng Jiacheng
   url: https://github.com/cjc7373
   image_url: https://avatars.githubusercontent.com/u/25873777?v=4
 tags: [Milvus, Vector Database, Addons, AI]
+keywords: kubeblocks,milvus,operator,operatorization,vector-database,etcd,kafka,minio,kubernetes,serviceRef,addon,scaling,high-availability,backup
 image: /img/blogs/thumbnails/milvus_kubeblocks_thumbnail.png
 ---
 
-# KubeBlocks for Milvus Revealed
+# KubeBlocks x Milvus: Kubernetes Operator Guide
 
 ## Background
 
@@ -41,7 +42,7 @@ This contains information such as the node's ID, hostname, and connection addres
 
 Milvus provides excellent support for Kubernetes, and the official Milvus Operator is available for deploying and managing Milvus on Kubernetes. However, the Milvus Operator is still limited in managing external components like etcd and MinIO, only providing functionality to spin up corresponding Pods without supporting comprehensive Day-2 operations.
 
-KubeBlocks is a database-neutral control plane running on Kubernetes. Through the abstraction of Addons, KubeBlocks provides a unified interface supporting any type of database, covering various aspects such as startup scripts, lifecycle hooks, and configuration management. The KubeBlocks Milvus Addon not only manages the Milvus lifecycle and operations but also provides better management of the external components that Milvus depends on. Through the database operations interface provided by KubeBlocks, users can have a unified experience when operating various databases.
+KubeBlocks is a database-neutral control plane running on Kubernetes. Through the abstraction of Addons, KubeBlocks provides a unified interface supporting any type of database, covering various aspects such as startup scripts, lifecycle hooks, and configuration management. The KubeBlocks Milvus Addon not only manages the Milvus lifecycle and operations but also provides better management of the external components that Milvus depends on. Through the APIs of KubeBlocks, users can achieve consistent Day-1 and Day-2 operations across engines.
 
 ## KubeBlocks Addon Implementation
 
