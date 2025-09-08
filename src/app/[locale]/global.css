@@ -15,11 +15,9 @@ pre > code {
   border-radius: var(--css-shape-borderRadius);
   background: #1a1e22;
   color: #fff;
-  overflow: visible;
+  overflow: auto;
   display: block;
-  white-space: pre-wrap;
-  word-break: break-all;
-  overflow-wrap: break-word;
+  overflow-x: auto;
   padding: 1em;
 }
 
@@ -28,10 +26,7 @@ pre > code {
   min-width: 100%;
   padding-left: 12px;
   padding-right: 12px;
-  display: block;
-  white-space: pre-wrap;
-  word-break: break-all;
-  overflow-wrap: break-word;
+  display: inline-block;
 }
 .highlighted-code-line {
   background-color: rgba(255, 255, 255, 0.03);
