@@ -13,33 +13,134 @@ const OUTPUT = path.join(ROOT_DIR, 'public/docs-index.json');
 function extractKeywords(text, minLength = 3, maxCount = 20) {
   // Common stop words
   const stopWords = new Set([
-    'the', 'is', 'at', 'which', 'on', 'and', 'a', 'to', 'are', 'as', 'was', 'were',
-    'been', 'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-    'should', 'may', 'might', 'can', 'must', 'shall', 'of', 'in', 'for', 'with', 'by',
-    'from', 'up', 'about', 'into', 'through', 'during', 'before', 'after', 'above',
-    'below', 'to', 'under', 'again', 'further', 'then', 'once', 'here', 'there',
-    'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more',
-    'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same',
-    'so', 'than', 'too', 'very', 'can', 'just', 'now', 'also', 'if', 'this',
-    'that', 'these', 'those', 'i', 'me', 'my', 'myself', 'we', 'our', 'ours',
-    'ourselves', 'you', 'your', 'yours', 'yourself', 'yourselves', 'he', 'him',
-    'his', 'himself', 'she', 'her', 'hers', 'herself', 'it', 'its', 'itself',
-    'they', 'them', 'their', 'theirs', 'themselves'
+    'the',
+    'is',
+    'at',
+    'which',
+    'on',
+    'and',
+    'a',
+    'to',
+    'are',
+    'as',
+    'was',
+    'were',
+    'been',
+    'be',
+    'have',
+    'has',
+    'had',
+    'do',
+    'does',
+    'did',
+    'will',
+    'would',
+    'could',
+    'should',
+    'may',
+    'might',
+    'can',
+    'must',
+    'shall',
+    'of',
+    'in',
+    'for',
+    'with',
+    'by',
+    'from',
+    'up',
+    'about',
+    'into',
+    'through',
+    'during',
+    'before',
+    'after',
+    'above',
+    'below',
+    'to',
+    'under',
+    'again',
+    'further',
+    'then',
+    'once',
+    'here',
+    'there',
+    'when',
+    'where',
+    'why',
+    'how',
+    'all',
+    'any',
+    'both',
+    'each',
+    'few',
+    'more',
+    'most',
+    'other',
+    'some',
+    'such',
+    'no',
+    'nor',
+    'not',
+    'only',
+    'own',
+    'same',
+    'so',
+    'than',
+    'too',
+    'very',
+    'can',
+    'just',
+    'now',
+    'also',
+    'if',
+    'this',
+    'that',
+    'these',
+    'those',
+    'i',
+    'me',
+    'my',
+    'myself',
+    'we',
+    'our',
+    'ours',
+    'ourselves',
+    'you',
+    'your',
+    'yours',
+    'yourself',
+    'yourselves',
+    'he',
+    'him',
+    'his',
+    'himself',
+    'she',
+    'her',
+    'hers',
+    'herself',
+    'it',
+    'its',
+    'itself',
+    'they',
+    'them',
+    'their',
+    'theirs',
+    'themselves',
   ]);
 
   const words = text
     .toLowerCase()
     .replace(/[^\w\s]/g, ' ')
     .split(/\s+/)
-    .filter(word =>
-      word.length >= minLength &&
-      !stopWords.has(word) &&
-      !/^\d+$/.test(word)
+    .filter(
+      (word) =>
+        word.length >= minLength && !stopWords.has(word) && !/^\d+$/.test(word),
     );
 
   // Calculate word frequency
   const wordCounts = {};
-  words.forEach(word => {
+  words.forEach((word) => {
     wordCounts[word] = (wordCounts[word] || 0) + 1;
   });
 
@@ -73,7 +174,7 @@ function generateSummary(content, maxLength = 200) {
   const lastSentenceEnd = Math.max(
     truncated.lastIndexOf('.'),
     truncated.lastIndexOf('!'),
-    truncated.lastIndexOf('?')
+    truncated.lastIndexOf('?'),
   );
 
   if (lastSentenceEnd > maxLength * 0.7) {
@@ -96,7 +197,9 @@ function extractMetadata(filePath, frontmatter) {
     docType = 'documentation';
 
     // 从路径中提取产品类别
-    const productMatch = filePath.match(/docs\/en\/[^/]*\/kubeblocks-for-([^/]+)/);
+    const productMatch = filePath.match(
+      /docs\/en\/[^/]*\/kubeblocks-for-([^/]+)/,
+    );
     if (productMatch) {
       category = productMatch[1];
     } else if (filePath.includes('user_docs')) {
@@ -129,7 +232,7 @@ async function main() {
       'blogs/en/**/*.mdx',
       '!docs/en/preview/**/cli/**',
       '!docs/en/preview/**/release_notes/**',
-      '!docs/en/release-*/**',  // 明确排除所有release版本目录
+      '!docs/en/release-*/**', // 明确排除所有release版本目录
     ],
     { cwd: ROOT_DIR, absolute: true },
   );
@@ -172,7 +275,7 @@ async function main() {
     const headings = [];
     const headingMatches = content.match(/^#{1,6}\s+.+$/gm);
     if (headingMatches) {
-      headingMatches.forEach(heading => {
+      headingMatches.forEach((heading) => {
         const level = (heading.match(/^#+/) || [''])[0].length;
         const text = heading.replace(/^#+\s+/, '').trim();
         headings.push({ level, text });
@@ -181,7 +284,10 @@ async function main() {
 
     return {
       id: relPath.replace(/\//g, '_').replace(/\.(md|mdx)$/, ''),
-      title: data.title || data.sidebar_label || path.basename(file, path.extname(file)),
+      title:
+        data.title ||
+        data.sidebar_label ||
+        path.basename(file, path.extname(file)),
       content: fullContent,
       path: normPath,
       description: data.description || summary,

@@ -1,7 +1,9 @@
-import { readFileSync, readdirSync, existsSync } from 'fs';
+import { existsSync, readFileSync, readdirSync } from 'fs';
 import matter from 'gray-matter';
 import { NextResponse } from 'next/server';
 import { join } from 'path';
+
+export const dynamic = 'force-static'; // force-dynamic | force-static
 
 interface SearchDocument {
   id: string;
@@ -68,15 +70,16 @@ function extractContent(filePath: string): SearchDocument {
     .trim();
 
   // 生成摘要
-  const summary = plainContent.length > 200 ?
-    plainContent.substring(0, 200) + '...' :
-    plainContent;
+  const summary =
+    plainContent.length > 200
+      ? plainContent.substring(0, 200) + '...'
+      : plainContent;
 
   // 提取关键词
   const keywords = plainContent
     .toLowerCase()
     .split(/\s+/)
-    .filter(word => word.length > 3)
+    .filter((word) => word.length > 3)
     .reduce((acc: string[], word) => {
       if (!acc.includes(word)) acc.push(word);
       return acc;
@@ -87,7 +90,7 @@ function extractContent(filePath: string): SearchDocument {
   const headings: Array<{ level: number; text: string }> = [];
   const headingMatches = markdownContent.match(/^#{1,6}\s+.+$/gm);
   if (headingMatches) {
-    headingMatches.forEach(heading => {
+    headingMatches.forEach((heading) => {
       const level = (heading.match(/^#+/) || [''])[0].length;
       const text = heading.replace(/^#+\s+/, '').trim();
       headings.push({ level, text });
@@ -142,19 +145,17 @@ export async function GET() {
     const previewDir = join(rootDir, 'docs', 'en', 'preview');
     if (existsSync(previewDir)) {
       const previewFiles = getAllMdxFiles(previewDir, 'docs/en/preview');
-      allFiles.push(...previewFiles.map(file => join(rootDir, file)));
+      allFiles.push(...previewFiles.map((file) => join(rootDir, file)));
     }
 
     // 获取blogs/en下的文件
     const blogsEnDir = join(rootDir, 'blogs', 'en');
     if (existsSync(blogsEnDir)) {
       const blogFiles = getAllMdxFiles(blogsEnDir, 'blogs/en');
-      allFiles.push(...blogFiles.map(file => join(rootDir, file)));
+      allFiles.push(...blogFiles.map((file) => join(rootDir, file)));
     }
 
-    const documents = allFiles.map((filePath) =>
-      extractContent(filePath),
-    );
+    const documents = allFiles.map((filePath) => extractContent(filePath));
 
     return NextResponse.json(documents);
   } catch (error) {

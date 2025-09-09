@@ -140,11 +140,13 @@ export const ElevationScrollAppBar = (props: AppBarProps) => {
             <Box sx={searchBarStyles.container}>
               <TextField
                 size="small"
-                placeholder={mobile ? "Search..." : "Search docs..."}
+                placeholder={mobile ? 'Search...' : 'Search docs...'}
                 variant="outlined"
                 onClick={() => setShowSearch(true)}
                 InputProps={{
-                  startAdornment: <SearchIcon sx={searchBarStyles.searchIcon} />,
+                  startAdornment: (
+                    <SearchIcon sx={searchBarStyles.searchIcon} />
+                  ),
                   endAdornment: !mobile && (
                     <Box sx={searchBarStyles.shortcutContainer}>
                       <Box component="kbd" sx={searchBarStyles.shortcutKey}>

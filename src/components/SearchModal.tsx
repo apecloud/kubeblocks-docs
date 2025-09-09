@@ -1,7 +1,7 @@
+import { searchModalStyles } from '@/styles/searchModal.styles';
 import SearchIcon from '@mui/icons-material/Search';
 import MiniSearch from 'minisearch';
 import { useEffect, useRef, useState } from 'react';
-import { searchModalStyles } from '@/styles/searchModal.styles';
 
 interface SearchResult {
   id: string;
@@ -45,9 +45,29 @@ export default function SearchModal({
       .then((json) => {
         const ms = new MiniSearch({
           // 扩展搜索字段，包含更多元数据
-          fields: ['title', 'content', 'summary', 'keywords', 'headings', 'category', 'tags'],
+          fields: [
+            'title',
+            'content',
+            'summary',
+            'keywords',
+            'headings',
+            'category',
+            'tags',
+          ],
           // 存储更多字段用于显示
-          storeFields: ['id', 'title', 'path', 'content', 'description', 'summary', 'keywords', 'category', 'docType', 'headings', 'wordCount'],
+          storeFields: [
+            'id',
+            'title',
+            'path',
+            'content',
+            'description',
+            'summary',
+            'keywords',
+            'category',
+            'docType',
+            'headings',
+            'wordCount',
+          ],
           // 优化搜索选项
           searchOptions: {
             // 字段权重：标题最重要，然后是摘要和关键词
@@ -58,7 +78,7 @@ export default function SearchModal({
               headings: 1.5,
               category: 1.5,
               tags: 1.2,
-              content: 1
+              content: 1,
             },
             // 启用模糊搜索，容忍拼写错误
             fuzzy: 0.2,
@@ -69,14 +89,16 @@ export default function SearchModal({
           },
           // 自定义分词器，处理驼峰命名和特殊字符
           tokenize: (string) => {
-            return string
-              .toLowerCase()
-              // 处理驼峰命名
-              .replace(/([a-z])([A-Z])/g, '$1 $2')
-              // 处理连字符和下划线
-              .replace(/[-_]/g, ' ')
-              // 提取单词
-              .match(/\b\w+\b/g) || [];
+            return (
+              string
+                .toLowerCase()
+                // 处理驼峰命名
+                .replace(/([a-z])([A-Z])/g, '$1 $2')
+                // 处理连字符和下划线
+                .replace(/[-_]/g, ' ')
+                // 提取单词
+                .match(/\b\w+\b/g) || []
+            );
           },
           // 自定义处理器，提取更多有用信息
           processTerm: (term) => {
@@ -90,14 +112,16 @@ export default function SearchModal({
               }
             }
             return processed;
-          }
+          },
         });
 
         // 处理数据，确保keywords和headings是可搜索的文本
         const processedDocs = json.map((doc: any) => ({
           ...doc,
           keywords: doc.keywords ? doc.keywords.join(' ') : '',
-          headings: doc.headings ? doc.headings.map((h: any) => h.text).join(' ') : '',
+          headings: doc.headings
+            ? doc.headings.map((h: any) => h.text).join(' ')
+            : '',
           tags: doc.tags ? doc.tags.join(' ') : '',
         }));
 
@@ -207,7 +231,10 @@ export default function SearchModal({
 
   return (
     <div style={searchModalStyles.overlay} onClick={onClose}>
-      <div style={searchModalStyles.container} onClick={(e) => e.stopPropagation()}>
+      <div
+        style={searchModalStyles.container}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div style={searchModalStyles.searchInputContainer}>
           <SearchIcon style={searchModalStyles.searchIcon} />
           <input
@@ -228,7 +255,11 @@ export default function SearchModal({
           {results.length > 0 ? (
             <ul ref={resultsRef} style={searchModalStyles.resultsList}>
               {results.slice(0, 10).map((r, idx) => {
-                const summary = r.contextSummary || r.description || r.content?.slice(0, 300) || '';
+                const summary =
+                  r.contextSummary ||
+                  r.description ||
+                  r.content?.slice(0, 300) ||
+                  '';
                 return (
                   <li
                     key={r.id}
@@ -237,9 +268,7 @@ export default function SearchModal({
                     onClick={() => (window.location.href = `/${r.path}`)}
                   >
                     <div style={searchModalStyles.resultHeader}>
-                      <div style={searchModalStyles.resultTitle}>
-                        {r.title}
-                      </div>
+                      <div style={searchModalStyles.resultTitle}>{r.title}</div>
                       {r.category && (
                         <span style={searchModalStyles.categoryTag}>
                           {r.category}
@@ -266,14 +295,10 @@ export default function SearchModal({
               })}
             </ul>
           ) : (
-            <div style={searchModalStyles.noResults}>
-              No results
-            </div>
+            <div style={searchModalStyles.noResults}>No results</div>
           )}
         </div>
       </div>
     </div>
   );
 }
-
-
