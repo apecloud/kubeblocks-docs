@@ -3,6 +3,9 @@ import matter from 'gray-matter';
 import { NextResponse } from 'next/server';
 import { join } from 'path';
 
+export const dynamic = 'force-static'; // force-dynamic | force-static
+
+
 interface SearchDocument {
   id: string;
   title: string;
