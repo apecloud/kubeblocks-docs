@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import type { MDXComponents } from 'mdx/types';
 import { JSX } from 'react';
+import { ChartMermaid } from './components/ChartMermaid';
 import CodeWithCopyButton from './components/CodeWithCopyButton';
 import { Link } from './components/Link';
 import NoteBox from './components/NoteBox';
@@ -63,10 +64,19 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     ),
     code: (props: JSX.IntrinsicElements['code']) => {
       const match = /language-(\w+)/.exec(props.className || '');
-      if (match?.length) {
-        return (
-          <CodeWithCopyButton {...props}>{props.children}</CodeWithCopyButton>
-        );
+      const language = match?.[1];
+      if (language) {
+        if (language === 'mermaid') {
+          return (
+            <ChartMermaid>
+              {typeof props.children === 'string' ? props.children : ''}
+            </ChartMermaid>
+          );
+        } else {
+          return (
+            <CodeWithCopyButton {...props}>{props.children}</CodeWithCopyButton>
+          );
+        }
       } else {
         return (
           <code style={{ fontSize: '0.9em' }} {...props}>

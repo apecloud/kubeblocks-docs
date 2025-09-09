@@ -65,14 +65,15 @@ export const searchModalStyles = {
     margin: 0,
   } as React.CSSProperties,
 
-  resultItem: (isActive: boolean) => ({
-    padding: '1rem',
-    borderBottom: '1px solid #333',
-    background: isActive ? '#2a3956' : 'transparent',
-    color: '#fff',
-    cursor: 'pointer',
-    position: 'relative',
-  } as React.CSSProperties),
+  resultItem: (isActive: boolean) =>
+    ({
+      padding: '1rem',
+      borderBottom: '1px solid #333',
+      background: isActive ? '#2a3956' : 'transparent',
+      color: '#fff',
+      cursor: 'pointer',
+      position: 'relative',
+    }) as React.CSSProperties,
 
   resultHeader: {
     display: 'flex',

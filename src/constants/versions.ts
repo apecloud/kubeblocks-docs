@@ -23,7 +23,7 @@ export const versionOptions = [
 // 文档路径到版本的映射
 export const docPathToVersion: Record<string, string> = {
   'release-1_0': 'v1.0.0',
-  'preview': 'v1.0.1-beta.19',
+  preview: 'v1.0.1-beta.19',
   'release-0_9': 'v0.9.3', // 添加其他路径映射
 };
 
