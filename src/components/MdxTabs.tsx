@@ -1,7 +1,7 @@
 'use client';
 
 import { Box, Tab, Tabs } from '@mui/material';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 interface Props {
   children?: React.ReactNode;
@@ -9,7 +9,11 @@ interface Props {
 
 export default function MdxTabs({ children }: Props) {
   const [value, setValue] = useState<number | undefined>(0);
-  const items = Array.isArray(children) ? children : [];
+
+  const items = useMemo(
+    () => (Array.isArray(children) ? children : []),
+    [children],
+  );
 
   const handleChange = (event: React.SyntheticEvent, newValue: number) => {
     setValue(newValue);
@@ -22,14 +26,16 @@ export default function MdxTabs({ children }: Props) {
     if (activeIndex !== -1) {
       setValue(activeIndex);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [items]);
 
   return (
     <>
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs value={value} onChange={handleChange}>
           {items.map((item, index) => {
+            if (!item?.props?.label) {
+              console.log(item);
+            }
             return <Tab key={index} label={item?.props?.label} />;
           })}
         </Tabs>
