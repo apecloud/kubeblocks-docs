@@ -87,7 +87,7 @@ Apply this YAML configuration:
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
 metadata:
-  name: pg-restore-pitr
+  name: redis-restore-pitr
   namespace: demo
   annotations:
     # NOTE: replace <CONTINUOUS_BACKUP_NAME> with the continuouse backup name
@@ -99,16 +99,34 @@ spec:
   topology: replication
   componentSpecs:
     - name: redis
-      serviceVersion: "14.7.2"
-      disableExporter: true
-      replicas: 1
+      serviceVersion: "7.2.4"
+      disableExporter: false
+      replicas: 2
       resources:
         limits:
-          cpu: "0.5"
-          memory: "0.5Gi"
+          cpu: '0.5'
+          memory: 0.5Gi
         requests:
-          cpu: "0.5"
-          memory: "0.5Gi"
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+    - name: redis-sentinel
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
       volumeClaimTemplates:
         - name: data
           spec:
@@ -142,7 +160,7 @@ metadata:
   name: redis-replication-restore
   namespace: demo
 spec:
-  clusterName: redis-replication-restore
+  clusterName: redis-restore-pitr
   force: false
   restore:
     backupName: <CONTINUOUS_BACKUP_NAME>
@@ -167,7 +185,7 @@ To remove all created resources, delete the Redis cluster along with its namespa
 
 ```bash
 kubectl delete cluster redis-replication -n demo
-kubectl delete cluster redis-replication-restore -n demo
+kubectl delete cluster redis-restore-pitr -n demo
 kubectl delete ns demo
 ```
 
