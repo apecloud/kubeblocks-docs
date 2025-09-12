@@ -36,11 +36,4 @@ jobs:
       - name: deploy kubeblocks-docs
         run: |
           DEPLOY_NAME="${{ env.DEPLOY_NAME }}"
-          pods_list=$(kubectl get pods -n ${DEPLOY_NAME} -l app.kubernetes.io/instance=${DEPLOY_NAME} --no-headers | awk '{print $1}')
-          if [[ -n "$pods_list" ]]; then
-              for pod_name in $(echo "$pods_list"); do
-                  echo "pod name: $pod_name"
-                  kubectl delete pod -n ${DEPLOY_NAME} ${pod_name} --force
-                  sleep 10
-              done
-          fi
+          kubectl rollout restart deployment -n ${DEPLOY_NAME} ${DEPLOY_NAME}
