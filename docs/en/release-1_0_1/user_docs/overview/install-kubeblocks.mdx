@@ -1,0 +1,540 @@
+---
+title: Installation
+description: Install KubeBlocks on the existing Kubernetes clusters with Helm
+keywords: [taints, affinity, tolerance, install, kbcli, KubeBlocks, helm, kubernetes, operator]
+sidebar_position: 4
+sidebar_label: Installation
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import { VersionProvider, Version } from '@/components/VersionContext';
+
+<VersionProvider>
+
+# KubeBlocks
+
+This guide covers KubeBlocks deployment on existing Kubernetes clusters. Choose your preferred installation method:
+
+- **Helm** (recommended for production)
+- **kbcli** (simplified CLI experience)
+
+
+## Prerequisites
+
+### Resource Requirements
+| Component     | Database   | Recommendation |
+|--------------|------------|---------------|
+| **Control Plane** | - | 1 node (4 cores, 4GB RAM, 50GB storage) |
+| **Data Plane**    | MySQL | 2 nodes (2 cores, 4GB RAM, 50GB storage) |
+|                   | PostgreSQL | 2 nodes (2 cores, 4GB RAM, 50GB storage) |
+|                   | Redis | 2 nodes (2 cores, 4GB RAM, 50GB storage) |
+|                   | MongoDB | 3 nodes (2 cores, 4GB RAM, 50GB storage) |
+
+- **Control Plane**: Nodes running KubeBlocks components
+- **Data Plane**: Nodes hosting database instances
+
+
+### System Requirements
+
+Before installation, verify your environment meets these requirements:
+
+- Kubernetes cluster (v1.21+ recommended) - [create test cluster](../references/prepare-a-local-k8s-cluster) if needed
+- `kubectl` v1.21+ installed and configured with cluster access
+- Helm installed ([installation guide](https://helm.sh/docs/intro/install/))
+- Snapshot Controller installed ([installation guide](../references/install-snapshot-controller))
+
+## Install KubeBlocks
+
+<Tabs>
+
+<TabItem value="Helm" label="Install with Helm" default>
+
+```bash
+# Step 1: Install CRDs
+kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/{{VERSION}}/kubeblocks_crds.yaml
+
+# Step 2: Configure Helm Repository
+helm repo add kubeblocks https://apecloud.github.io/helm-charts
+helm repo update
+
+# Step 3: Deploy KubeBlocks
+helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace --version={{VERSION}}
+```
+
+
+:::note
+
+If you are using K8s \<\= 1.23, you may encounter the following error when installing CRDs:
+
+```bash
+unknown field "x-kubernetes-validations".... if you choose to ignore these errors, turn validation off with --validate\=false
+```
+
+You can fix this by running the following command:
+```bash
+kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/{{VERSION}}/kubeblocks_crds.yaml --validate\=false
+```
+:::
+
+
+**Need a different version?**
+
+For other versions, you can find available releases on [KubeBlocks Releases](https://github.com/apecloud/kubeblocks/releases/) or query using:
+
+```bash
+# Get latest stable release
+curl -s https://api.github.com/repos/apecloud/kubeblocks/releases/latest | jq -r '.tag_name'
+
+# Get all releases (including pre-releases)
+curl -s https://api.github.com/repos/apecloud/kubeblocks/tags | jq -r '.[0].name'
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="Install with kbcli">
+
+**Before You Begin**:
+- Install [KubeBlocks CLI](../../user_docs/references/install-kbcli)
+- Ensure kubectl is configured with cluster access
+
+```bash
+kbcli kubeblocks install --version={{VERSION}} --create-namespace
+```
+
+**Need a different version?**
+
+List available versions or find other releases:
+
+```bash
+# List stable releases
+kbcli kubeblocks list-versions
+
+# List all releases (including pre-releases)
+kbcli kb list-versions --devel --limit=100
+```
+
+Or browse all releases on [KubeBlocks Releases](https://github.com/apecloud/kubeblocks/releases/).
+
+:::note
+
+**Version Compatibility**
+
+KubeBlocks requires matching major versions between `kbcli` and the installed release:
+- Compatible: kbcli v1.0.0 with KubeBlocks v1.0.0
+- Incompatible: kbcli v0.9.0 with KubeBlocks v1.0.0
+
+Mismatched major versions may cause unexpected behavior or errors.
+
+:::
+
+By default, KubeBlocks installs in the `kb-system` namespace. To specify a different namespace:
+
+```bash
+kbcli kubeblocks install --version={{VERSION}} --create-namespace --namespace my-namespace
+```
+
+💡 *Remember to replace `my-namespace` with your desired namespace name.*
+
+</TabItem>
+
+</Tabs>
+
+## Verify Installation
+
+Run the following command to check whether KubeBlocks is installed successfully.
+
+<Tabs>
+
+<TabItem value="kubectl" label="kubectl" default>
+
+```bash
+kubectl -n kb-system get pods
+```
+
+<details open>
+<summary> Expected Output:</summary>
+
+If the KubeBlocks Workloads are all ready, KubeBlocks has been installed successfully.
+
+```bash
+NAME                                             READY   STATUS    RESTARTS       AGE
+kubeblocks-7cf7745685-ddlwk                      1/1     Running   0              4m39s
+kubeblocks-dataprotection-95fbc79cc-b544l        1/1     Running   0              4m39s
+```
+</details>
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+```bash
+kbcli kubeblocks status
+```
+
+<details open>
+<summary> Expected Output:</summary>
+
+If the KubeBlocks Workloads are all ready, KubeBlocks has been installed successfully.
+
+```bash
+KubeBlocks is deployed in namespace: kb-system,version: {{VERSION}}
+
+Kubernetes Cluster:
+VERSION   PROVIDER   REGION   AVAILABLE ZONES
+v1.29.2   Kind
+
+KubeBlocks Workloads:
+NAMESPACE   KIND         NAME                        READY PODS   CPU(CORES)   MEMORY(BYTES)   CREATED-AT
+kb-system   Deployment   kubeblocks                  1/1          N/A          N/A             May 26,2025 13:53 UTC+0800
+kb-system   Deployment   kubeblocks-dataprotection   1/1          N/A          N/A             May 26,2025 13:53 UTC+0800
+
+KubeBlocks Addons:
+NAME             STATUS    TYPE   PROVIDER
+apecloud-mysql   Enabled   Helm   N/A
+etcd             Enabled   Helm   N/A
+kafka            Enabled   Helm   N/A
+```
+</details>
+
+</TabItem>
+
+</Tabs>
+
+## Advanced Configuration
+
+Here list some commonly used configurations for KubeBlocks. For more information about KubeBlocks options, please refer to [KubeBlocks Options](../references/kubeblocks_options).
+
+### Custom Image Registry
+
+Specify image repository by specifying the following parameters.
+
+<Tabs>
+
+<TabItem value="Helm" label="Helm" default>
+
+```bash
+helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace \
+--version {{VERSION}} \
+--set image.registry=docker.io \
+--set dataProtection.image.registry=docker.io \
+--set addonChartsImage.registry=docker.io
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+```bash
+kbcli kubeblocks upgrade --version {{VERSION}} \
+--set image.registry=docker.io \
+--set dataProtection.image.registry=docker.io \
+--set addonChartsImage.registry=docker.io
+```
+
+</TabItem>
+
+</Tabs>
+
+Here is an introduction to the flags in the above command.
+
+- `--set image.registry` specifies the KubeBlocks image registry.
+- `--set dataProtection.image.registry` specifies the KubeBlocks-DataProtection image registry.
+- `--set addonChartsImage.registry` specifies Addon Charts image registry.
+
+If you cannot access `docker.io` please use following registry and namespace:
+- registry: apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com
+- namespace: apecloud
+
+### Specify tolerations
+
+If you want to install KubeBlocks with custom tolerations, you can use the following command:
+
+<Tabs>
+
+<TabItem value="Helm" label="Helm" default>
+
+```bash
+helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace \
+--version {{VERSION}} \
+--set-json 'tolerations=[ { "key": "control-plane-taint", "operator": "Equal", "effect": "NoSchedule", "value": "true" } ]' \
+--set-json 'dataPlane.tolerations=[{ "key": "data-plane-taint", "operator": "Equal", "effect": "NoSchedule", "value": "true"}]'
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+```bash
+kbcli kubeblocks install --version {{VERSION}} --create-namespace \
+--set image.registry=docker.io \
+--set dataProtection.image.registry=docker.io \
+--set addonChartsImage.registry=docker.io
+```
+
+</TabItem>
+
+</Tabs>
+
+### Skip Addon Auto Installation
+
+```bash
+helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace \
+--version {{VERSION}} \
+--set autoInstalledAddons="{}"
+```
+
+### Enable In-place Vertical Scaling
+
+To enable in-place vertical scaling for KubeBlocks, set the feature gate parameter during installation or upgrade:
+
+```bash
+featureGates.inPlacePodVerticalScaling.enabled=true
+```
+
+<Tabs>
+<TabItem value="Helm" label="Helm" default>
+
+1. Installation
+```bash
+helm install kubeblocks kubeblocks/kubeblocks \
+  --namespace kb-system \
+  --create-namespace \
+  --version {{VERSION}} \
+  --set featureGates.inPlacePodVerticalScaling.enabled=true
+```
+
+1. Upgrade
+```bash
+helm upgrade kubeblocks kubeblocks/kubeblocks \
+  --namespace kb-system \
+  --version {{VERSION}} \
+  --set featureGates.inPlacePodVerticalScaling.enabled=true
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+1. Installation
+```bash
+kbcli kubeblocks install \
+  --version={{VERSION}} \
+  --create-namespace \
+  --set featureGates.inPlacePodVerticalScaling.enabled=true
+```
+
+1. Upgrade
+```bash
+kbcli kubeblocks upgrade \
+  --version={{VERSION}} \
+  --set featureGates.inPlacePodVerticalScaling.enabled=true
+```
+
+</TabItem>
+</Tabs>
+
+
+**Verification**
+
+After installation or upgrade, verify the feature gate is enabled:
+
+```bash
+kubectl -n kb-system get deployments.apps kubeblocks -oyaml | \
+  yq '.spec' | \
+  grep IN_PLACE_POD_VERTICAL_SCALING -A 1
+```
+
+The output should show:
+```text
+- name: IN_PLACE_POD_VERTICAL_SCALING
+  value: "true"
+```
+
+## Uninstall KubeBlocks
+
+:::note
+
+Please delete all clusters and backups before uninstalling KubeBlocks and kbcli.
+:::
+
+```bash
+# get cluster and backups
+kubectl get cluster -A
+kubectl get backup -A
+
+# delete clusters and backups by by namespace
+kubectl delete cluster <clusteName> -n <namespace>
+kubectl delete backup <clusteName> -n <namespace>
+```
+
+<Tabs>
+
+<TabItem value="Helm" label="Helm" default>
+
+1. List all addons
+```bash
+# list all addons
+helm list -n kb-system | grep kb-addon
+```
+
+2. Uninstall all Addons.
+```bash
+helm list -n kb-system | grep kb-addon | awk '{print $1}' | xargs -I {} helm -n kb-system uninstall {}
+```
+
+While uninstalling, you will get messages like
+```
+Release "kb-addon-etcd" uninstalled
+These resources were kept due to the resource policy:
+[ConfigMap] kafka27-configuration-tpl-1.0.0
+[ComponentDefinition] kafka-combine-1.0.0
+[ComponentDefinition] kafka-controller-1.0.0
+[ComponentDefinition] kafka-exporter-1.0.0
+[ComponentDefinition] kafka27-broker-1.0.0
+[ComponentDefinition] kafka-broker-1.0.0
+```
+
+Some resources are kept due to resource policy, then check and remove them all
+
+3. Check remaining resources, such as ComponentDefinition, ConfigMaps for Configuration, and remove them all.
+```bash
+kubectl get componentdefinitions.apps.kubeblocks.io
+kubectl get parametersdefinitions.parameters.kubeblocks.io
+kubectl get configmap -n kb-system | grep configuration
+kubectl get configmap -n kb-system | grep template
+```
+
+For example
+```bash
+kubectl delete componentdefinitions.apps.kubeblocks.io --all
+kubectl delete parametersdefinitions.parameters.kubeblocks.io --all
+kubectl get configmap -n kb-system | grep configuration  | awk '{print $1}' | xargs -I {} kubectl delete -n kb-system cm {}
+kubectl get configmap -n kb-system | grep template| awk '{print $1}' | xargs -I {} kubectl delete -n kb-system cm {}
+```
+
+4. Delete Addon CRs
+
+```bash
+kubectl delete addon.extensions.kubeblocks.io --all
+```
+
+5. Verify all KubeBlocks resources are deleted
+
+```bash
+kubectl get crd  | grep kubeblocks.io | awk '{print $1}' | while read crd; do
+  echo "Processing CRD: $crd"
+  kubectl get "$crd" -o json | jq '.items[] | select(.metadata.finalizers != null) | .metadata.name' -r | while read resource; do
+    echo "Custom Resource left: $resource in CRD: $crd"
+  done
+done
+```
+
+If the output shows any custom resource left, please remove them all.
+
+6. Uninstall KubeBlocks
+
+```bash
+helm uninstall kubeblocks --namespace kb-system
+```
+
+Helm does not delete CRD objects. You can delete the ones KubeBlocks created with the following commands:
+
+```bash
+kubectl get crd -o name | grep kubeblocks.io | xargs kubectl delete
+```
+
+7. Verify all KubeBlocks resources are deleted
+
+```bash
+kubectl get crd  | grep kubeblocks.io | awk '{print $1}' | while read crd; do
+  echo "Processing CRD: $crd"
+  kubectl get "$crd" -o json | jq '.items[] | select(.metadata.finalizers != null) | .metadata.name' -r | while read resource; do
+    echo "Custom Resource left: $resource in CRD: $crd"
+  done
+done
+```
+The output should be empty.
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+1. Check addon list
+```bash
+kbcli addon list | grep Enabled
+```
+
+2. set `keepResource=false` for all addons
+```bash
+# update addons values, to remove annotation 'helm.sh/resource-policy: keep' from ComponentDefinition/ConfigMaps
+kbcli addon enable <addonName>  --set extra.keepResource=false
+```
+
+For example
+```bash
+kbcli addon enable apecloud-mysql   --set extra.keepResource=false
+kbcli addon enable etcd             --set extra.keepResource=false
+kbcli addon enable kafka            --set extra.keepResource=false
+kbcli addon enable mongodb          --set extra.keepResource=false
+kbcli addon enable mysql            --set extra.keepResource=false
+kbcli addon enable postgresql       --set extra.keepResource=false
+kbcli addon enable redis            --set extra.keepResource=false
+```
+
+3. disable all Addons
+
+```bash
+kbcli addon disable <addonName>
+```
+
+For example,
+```bash
+kbcli addon disable apecloud-mysql
+kbcli addon disable etcd
+kbcli addon disable kafka
+kbcli addon disable mongodb
+kbcli addon disable mysql
+kbcli addon disable postgresql
+kbcli addon disable redis
+```
+
+4. Verify all KubeBlocks resources are deleted
+
+```bash
+kubectl get crd  | grep kubeblocks.io | awk '{print $1}' | while read crd; do
+  echo "Processing CRD: $crd"
+  kubectl get "$crd" -o json | jq '.items[] | select(.metadata.finalizers != null) | .metadata.name' -r | while read resource; do
+    echo "Custom Resource left: $resource in CRD: $crd"
+  done
+done
+```
+
+If the output shows some custom resource left, please remove them all.
+
+5. uninstall KubeBlocks
+```bash
+kbcli kubeblocks uninstall
+```
+
+6. Verify all KubeBlocks resources are deleted
+
+```bash
+kubectl get crd  | grep kubeblocks.io | awk '{print $1}' | while read crd; do
+  echo "Processing CRD: $crd"
+  kubectl get "$crd" -o json | jq '.items[] | select(.metadata.finalizers != null) | .metadata.name' -r | while read resource; do
+    echo "Custom Resource left: $resource in CRD: $crd"
+  done
+done
+```
+check there is no ConfigMap leftover:
+
+```bash
+kubectl get configmap -n kb-system
+```
+
+</TabItem>
+
+</Tabs>
+
+</VersionProvider>

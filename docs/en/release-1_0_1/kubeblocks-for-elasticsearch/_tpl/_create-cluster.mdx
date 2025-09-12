@@ -1,0 +1,66 @@
+KubeBlocks uses a declarative approach for managing Elasticsearch  Clusters.
+Below is an example configuration for deploying a Elasticsearch Cluster with
+create a cluster with replicas for different roles.
+
+Apply the following YAML configuration to deploy the cluster:
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: es-multinode
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: dit
+      componentDef: elasticsearch-8
+      serviceVersion: 8.8.2
+      configs:
+        - name: es-cm
+          variables:
+            # use key `roles` to specify roles this component assume
+            roles: data,ingest,transform
+      replicas: 3
+      disableExporter: false
+      resources:
+        limits:
+          cpu: "1"
+          memory: "2Gi"
+        requests:
+          cpu: "1"
+          memory: "2Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+    - name: master
+      componentDef: elasticsearch-8
+      serviceVersion: 8.8.2
+      configs:
+        - name: es-cm
+          variables:
+            # use key `roles` to specify roles this component assume
+            roles: master
+      replicas: 3
+      disableExporter: false
+      resources:
+        limits:
+          cpu: "1"
+          memory: "2Gi"
+        requests:
+          cpu: "1"
+          memory: "2Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```

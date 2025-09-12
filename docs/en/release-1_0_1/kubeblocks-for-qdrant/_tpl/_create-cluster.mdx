@@ -1,0 +1,36 @@
+KubeBlocks uses a declarative approach for managing Qdrant Clusters.
+Below is an example configuration for deploying a Qdrant Cluster with 3 replicas.
+
+Apply the following YAML configuration to deploy the cluster:
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: qdrant-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: qdrant
+  topology: cluster
+  componentSpecs:
+    - name: qdrant
+      serviceVersion: 1.10.0
+      replicas: 3
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```

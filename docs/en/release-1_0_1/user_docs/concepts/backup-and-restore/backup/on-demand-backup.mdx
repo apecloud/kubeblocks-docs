@@ -1,0 +1,138 @@
+---
+title: On-demand backup
+description: How to back up databases on-demand by snapshot and backup tool
+keywords: [backup, on-demand backup, snapshot backup, backup tool]
+sidebar_position: 4
+sidebar_label: On-demand backup
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# On-demand backup
+
+KubeBlocks supports on-demand backups. You can customize your backup method by specifying `--method`. The instructions below take using a backup tool and volume snapshot as examples.
+
+## Backup tool
+
+The following command uses the `xtrabackup` backup method to create a backup named `mybackup`.
+
+<Tabs>
+
+<TabItem value="kubectl" label="kubectl" default>
+
+To Create a backup:
+```bash
+kubectl apply -f - <<EOF
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: Backup
+metadata:
+  name: mybackup
+  namespace: default
+spec:
+  backupMethod: xtrabackup
+  backupPolicyName: mycluster-mysql-backup-policy
+  deletionPolicy: Delete
+EOF
+```
+
+View the backup:
+```bash
+kubectl get backup mybackup
+>
+NAME       POLICY                          METHOD       REPO     STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
+mybackup   mycluster-mysql-backup-policy   xtrabackup   kb-oss   Completed   1632402      10s        Delete            2025-05-26T10:14:33Z   2025-05-26T10:14:42Z
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+Create a backup
+```bash
+kbcli cluster backup mycluster --name mybackup --method xtrabackup
+>
+Backup mybackup created successfully, you can view the progress:
+	kbcli cluster list-backups --names=mybackup -n default
+```
+
+View the backup
+```bash
+kbcli cluster list-backups --names mybackup
+>
+NAME       NAMESPACE   SOURCE-CLUSTER   METHOD       STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATE-TIME                  COMPLETION-TIME              EXPIRATION
+mybackup   default     mycluster        xtrabackup   Completed   1632402      10s        Delete            May 26,2025 18:14 UTC+0800   May 26,2025 18:14 UTC+0800
+```
+
+</TabItem>
+
+</Tabs>
+
+## Volume snapshot backup
+
+:::note
+**Prerequisites**
+Volume snapshot backups require:
+- StorageClass must support volume snapshots
+
+Please check the list of CS Drivers and their features at: https://kubernetes-csi.github.io/docs/drivers.html
+
+:::
+
+To create a backup using the snapshot, the `backupMethod` in the YAML configuration file or the `--method` field in the kbcli command should be set to `volume-snapshot`.
+
+<Tabs>
+
+<TabItem value="kubectl" label="kubectl" default>
+
+```bash
+# Create a backup
+kubectl apply -f - <<EOF
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: Backup
+metadata:
+  name: my-snapshot-backup
+  namespace: default
+spec:
+  backupMethod: volume-snapshot
+  backupPolicyName: mycluster-mysql-backup-policy
+EOF
+```
+
+
+View the backup
+```bash
+kubectl get backup my-snapshot-backup
+>
+NAME                 POLICY                           METHOD            REPO   STATUS    TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME   EXPIRATION-TIME
+my-snapshot-backup   mycluster2-mysql-backup-policy   volume-snapshot          Running                           Delete            2025-05-26T10:30:10Z
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+```bash
+# Create a backup
+kbcli cluster backup mycluster --name my-snapshot-backup --method volume-snapshot
+>
+Backup mybackup created successfully, you can view the progress:
+        kbcli cluster list-backups --names=mybackup -n default
+
+# View the backup
+kbcli cluster list-backups --names=my-snapshot-backup -n default
+>
+NAME                 NAMESPACE   SOURCE-CLUSTER   METHOD            STATUS    TOTAL-SIZE   DURATION   DELETION-POLICY   CREATE-TIME                  COMPLETION-TIME   EXPIRATION
+my-snapshot-backup   default     mycluster        volume-snapshot   Running                           Delete            May 26,2025 18:30 UTC+0800
+```
+
+</TabItem>
+
+</Tabs>
+
+:::caution
+
+1. When creating backups using snapshots, ensure that the storage used supports the snapshot feature; otherwise, the backup may fail.
+
+2. Backups created manually using `kbcli` will not be automatically deleted. You need to manually delete them.
+
+:::

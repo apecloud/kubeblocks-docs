@@ -1,0 +1,386 @@
+---
+title: Create and Destroy PostgreSQL Service Using the Declarative Cluster API in KubeBlocks
+description: Learn how to configure and manage PostgreSQL services in KubeBlocks for external and internal access using LoadBalancer and other service types.
+keywords: [KubeBlocks, PostgreSQL, LoadBalancer, External Service, Expose, Kubernetes]
+sidebar_position: 5
+sidebar_label: Manage PostgreSQL Services
+---
+
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# Manage PostgreSQL Services Using the Declarative Cluster API in KubeBlocks
+
+This guide provides step-by-step instructions for exposing PostgreSQL services managed by KubeBlocks, both externally and internally. You'll learn to configure external access using cloud provider LoadBalancer services, manage internal services, and properly disable external exposure when no longer needed.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploy a PostgreSQL Cluster
+
+import CreatePGCluster from '../_tpl/_create-pg-replication-cluster.mdx'
+
+<CreatePGCluster />
+
+## Verifying the Deployment
+
+import VerifyPGCluster from '../_tpl/_verify-pg-replication-cluster.mdx'
+
+<VerifyPGCluster />
+
+## View Network Services
+List the Services created for the PostgreSQL cluster:
+```bash
+kubectl get service -l app.kubernetes.io/instance=pg-cluster -n demo
+```
+
+Example Services:
+```bash
+NAME                               TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)             AGE
+pg-cluster-postgresql-postgresql   ClusterIP   10.96.19.237   <none>        5432/TCP,6432/TCP   157m
+```
+
+:::note
+
+There are two ports here 5432 and 6432, where 5432 is for postgresql and 6432 for PgBouncer.
+
+:::
+
+## Expose PostgreSQL Service
+
+External service addresses enable public internet access to PostgreSQL, while internal service addresses restrict access to the user's VPC.
+
+### Service Types Comparison
+
+| Type | Use Case | Cloud Cost | Security |
+|------|----------|------------|----------|
+| ClusterIP | Internal service communication | Free | Highest |
+| NodePort | Development/testing | Low | Moderate |
+| LoadBalancer | Production external access | High | Managed via security groups |
+
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  Option 1: Using OpsRequest
+
+  To expose the PostgreSQL service externally using a LoadBalancer, create an OpsRequest resource:
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: pg-cluster-expose-enable-ops
+    namespace: demo
+  spec:
+    type: Expose
+    clusterName: pg-cluster
+    expose:
+    - componentName: postgresql
+      services:
+      - name: internet
+        # Determines how the Service is exposed. Defaults to 'ClusterIP'.
+        # Valid options are 'ClusterIP', 'NodePort', and 'LoadBalancer'.
+        serviceType: LoadBalancer
+        # Contains cloud provider related parameters if ServiceType is LoadBalancer.
+        # Following is an example for AWS EKS
+        annotations:
+          service.beta.kubernetes.io/aws-load-balancer-type: nlb
+          service.beta.kubernetes.io/aws-load-balancer-internal: "false"  # or "true" for an internal VPC IP
+        # Specifies a role to target with the service.
+        # If specified, the service will only be exposed to pods with the matching
+        # role.
+        roleSelector: primary
+      switch: Enable
+  ```
+
+  Wait for the OpsRequest to complete:
+  ```bash
+  kubectl get ops pg-cluster-expose-enable-ops -n demo
+  ```
+
+  Example Output:
+  ```bash
+  NAME                           TYPE     CLUSTER      STATUS    PROGRESS   AGE
+  pg-cluster-expose-enable-ops   Expose   pg-cluster   Succeed   1/1        31s
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  Option 2: Using Cluster API
+
+  Alternatively, update the `spec.services` section in the Cluster resource to include a LoadBalancer service:
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  metadata:
+    name: pg-cluster
+    namespace: demo
+  spec:
+    terminationPolicy: Delete
+    clusterDef: postgresql
+    topology: replication
+    # expose a external service
+    services:
+      - annotations:
+          service.beta.kubernetes.io/aws-load-balancer-type: nlb  # Use Network Load Balancer
+          service.beta.kubernetes.io/aws-load-balancer-internal: "false"  # or "true" for an internal VPC IP
+        componentSelector: postgresql
+        name: postgresql-internet
+        serviceName: postgresql-internet
+        roleSelector: primary
+        spec:
+          ipFamilyPolicy: PreferDualStack
+          ports:
+            - name: tcp-postgresql
+              port: 5432
+              protocol: TCP
+              targetPort: tcp-postgresql
+          type: LoadBalancer
+    componentSpecs:
+      - name: postgresql
+        serviceVersion: 16.4.0
+        disableExporter: true
+        replicas: 2
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "0.5Gi"
+          requests:
+            cpu: "0.5"
+            memory: "0.5Gi"
+        volumeClaimTemplates:
+          - name: data
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 20Gi
+  ```
+  The YAML configuration above adds a new external service under the services section. This LoadBalancer service includes annotations for AWS Network Load Balancer (NLB).
+
+  :::note
+  Cloud Provider Annotations
+
+  When using a LoadBalancer service, you must include the appropriate annotations specific to your cloud provider. Below is a list of commonly used annotations for different cloud providers:
+
+  - AWS
+  ```yaml
+  service.beta.kubernetes.io/aws-load-balancer-type: nlb  # Use Network Load Balancer
+  service.beta.kubernetes.io/aws-load-balancer-internal: "true"  # Use "false" for internet-facing LoadBalancer
+  ```
+
+  - Azure
+  ```yaml
+  service.beta.kubernetes.io/azure-load-balancer-internal: "true" # Use "false" for internet-facing LoadBalancer
+  ```
+
+  - GCP
+  ```yaml
+  networking.gke.io/load-balancer-type: "Internal"  # Restricts the LoadBalancer to internal VPC access only. Defaults to internet-facing if not specified.
+  cloud.google.com/l4-rbs: "enabled" # Optimization for internet-facing LoadBalancer
+  ```
+
+  - Alibaba Cloud
+  ```yaml
+  service.beta.kubernetes.io/alibaba-cloud-loadbalancer-address-type: "internet"  # Use "intranet" for internal-facing LoadBalancer
+  ```
+  :::
+
+
+  :::note
+  The `service.beta.kubernetes.io/aws-load-balancer-internal` annotation controls whether the LoadBalancer is internal or internet-facing. Note that this annotation cannot be modified dynamically after service creation.
+  ```yaml
+    service.beta.kubernetes.io/aws-load-balancer-internal: "false"  # Use "true" for internal VPC IPs
+  ```
+  If you change this annotation from "false" to "true" after the Service is created, the annotation may update in the Service object, but the LoadBalancer will still retain its public IP.
+
+  To properly modify this behavior:
+  - First, delete the existing LoadBalancer service.
+  - Recreate the service with the updated annotation (`service.beta.kubernetes.io/aws-load-balancer-internal`: "true").
+  - Wait for the new LoadBalancer to be provisioned with the correct internal or external IP.
+  :::
+
+
+  Wait for the Cluster status to transition to Running using the following command:
+  ```bash
+  kubectl get cluster pg-cluster -n demo -w
+  ```
+  ```
+  NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+  pg-cluster   postgresql           Delete               Running   18m
+  ```
+  </TabItem>
+
+</Tabs>
+
+### Verify the Exposed Service
+Check the service details to confirm the LoadBalancer service is created:
+
+```bash
+kubectl get service -l app.kubernetes.io/instance=pg-cluster -n demo
+```
+
+Example Output:
+```bash
+NAME                               TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)             AGE
+pg-cluster-postgresql-postgresql   ClusterIP      10.96.19.237   <none>        5432/TCP,6432/TCP   33m
+pg-cluster-postgresql-internet     LoadBalancer   172.20.60.24   <EXTERNAL-IP> 5432:31243/TCP      1m
+```
+
+### Wait for DNS Propagation
+
+The LoadBalancer DNS name may take 2-5 minutes to become resolvable. Verify the resolution status:
+
+```bash
+nslookup <EXTERNAL-IP>  # replace <EXTERNAL-IP> with the real IP from previous output.
+```
+
+## Connect to PostgreSQL Externally
+
+### Retrieve Credentials
+
+KubeBlocks automatically creates a Secret containing the PostgreSQL postgres credentials. Retrieve the PostgreSQL postgres credentials:
+```bash
+NAME=`kubectl get secrets -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.username}' | base64 -d`
+PASSWD=`kubectl get secrets -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.password}' | base64 -d`
+```
+
+### Connect Using PostgreSQL Client
+
+You can now connect to the PostgreSQL database externally (e.g., from your laptop or EC2):
+```bash
+psql -h <EXTERNAL_IP> -U${NAME} -W
+```
+
+## Disable External Exposure
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  Option 1: Using OpsRequest
+
+  To disable external access, create an OpsRequest:
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: pg-cluster-expose-disable-ops
+    namespace: demo
+  spec:
+    clusterName: pg-cluster
+    expose:
+    - componentName: postgresql
+      services:
+      - name: internet
+        roleSelector: primary
+        serviceType: LoadBalancer
+      switch: Disable
+    preConditionDeadlineSeconds: 0
+    type: Expose
+  ```
+
+  Wait for the OpsRequest to complete:
+  ```bash
+  kubectl get ops pg-cluster-expose-disable-ops -n demo
+  ```
+  Example Output:
+  ```bash
+  NAME                            TYPE     CLUSTER      STATUS    PROGRESS   AGE
+  pg-cluster-expose-disable-ops   Expose   pg-cluster   Succeed   1/1        12s
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  Option 2: Using Cluster API
+
+  Alternatively, remove the `spec.services` field from the Cluster resource:
+  ```bash
+  kubectl patch cluster pg-cluster -n demo --type=json -p='[
+    {
+      "op": "remove",
+      "path": "/spec/services"
+    }
+  ]'
+  ```
+
+  Monitor the cluster status until it is Running:
+  ```bash
+  kubectl get cluster pg-cluster -n demo -w
+  ```
+
+  ```
+  NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+  pg-cluster   postgresql           Delete               Running   23m
+  ```
+  </TabItem>
+</Tabs>
+
+### Verify Service Removal
+
+Ensure that the 'pg-cluster-postgresql-internet' Service is removed:
+
+```bash
+kubectl get service -n demo
+```
+
+Expected Result: The 'pg-cluster-postgresql-internet' Service should be removed.
+
+## Expose PgBouncer Service
+
+PostgreSQL uses a multi-process architecture that creates a separate backend process for each connection. Excessive connections consume significant memory, reducing database throughput and stability. KubeBlocks addresses this with PgBouncer, a connection pool for PostgreSQL clusters.
+
+
+To expose PgBouncer Service, just update ports information with that of pgbouncer as following:
+
+```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    services:
+      - annotations:
+          service.beta.kubernetes.io/aws-load-balancer-type: nlb
+          service.beta.kubernetes.io/aws-load-balancer-internal: "false"
+        componentSelector: postgresql
+        name: postgresql-internet
+        serviceName: postgresql-internet
+        roleSelector: primary
+        spec:
+          ipFamilyPolicy: PreferDualStack
+          ports:
+            - name: tcp-pgbouncer
+              port: 6432
+              protocol: TCP
+              targetPort: tcp-pgbouncer
+          type: LoadBalancer
+    componentSpecs:
+      - name: postgresql
+...
+```
+
+## Cleanup
+To remove all created resources, delete the PostgreSQL cluster along with its namespace:
+```bash
+kubectl delete cluster pg-cluster -n demo
+kubectl delete ns demo
+```
+
+## Summary
+This guide demonstrated how to:
+- Expose a PostgreSQL service externally or internally using KubeBlocks.
+- Configure LoadBalancer services with cloud provider-specific annotations.
+- Manage external access by enabling or disabling services via OpsRequest or direct updates to the Cluster API.
+
+KubeBlocks provides flexibility and simplicity for managing MySQL services in Kubernetes environments. simplicity for managing PostgreSQL services in Kubernetes environments.

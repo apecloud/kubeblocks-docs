@@ -1,0 +1,223 @@
+---
+title: Create a Full Backup for a MongoDB Cluster on KubeBlocks
+description: Step-by-step guide to creating and validating full backups for MongoDB clusters using Backup API and OpsRequest API in KubeBlocks.
+keywords: [MongoDB, Full Backup, KubeBlocks, Kubernetes, Database Backup, XtraBackup]
+sidebar_position: 2
+sidebar_label: Create Full Backup
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# Create a Full Backup for MongoDB on KubeBlocks
+
+This guide demonstrates how to create and validate full backups for MongoDB clusters on KubeBlocks using the `pg-basebackup` method through both:
+- The Backup API (direct backup operations)
+- The OpsRequest API (managed backup operations with enhanced monitoring)
+
+We will cover how to restore data from a backup in the [Restore From Full Backup](./05-restoring-from-full-backup) guide.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploy a MongoDB Cluster
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+## Verifying the Deployment
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+## Backup Prerequisites
+
+Before creating backups, ensure:
+1. Backup repository is configured:
+   - `BackupRepo` resource exists
+   - Network connectivity between cluster and repository
+   - `BackupRepo` status shows "Ready"
+
+2. Cluster is ready:
+   - Cluster status is "Running"
+   - No ongoing operations (scaling, upgrades, etc.)
+
+## Identify Backup Configuration
+
+Check available backup policies and schedules:
+
+```bash
+# List backup policies
+kubectl get backuppolicy -n demo -l app.kubernetes.io/instance=mongo-cluster
+
+# List backup schedules
+kubectl get backupschedule -n demo -l app.kubernetes.io/instance=mongo-cluster
+```
+
+Expected Output:
+```bash
+NAME                                  BACKUP-REPO   STATUS      AGE
+mongo-cluster-mongodb-backup-policy                 Available   62m
+
+NAME                                    STATUS      AGE
+mongo-cluster-mongodb-backup-schedule   Available   62m
+```
+
+View supported backup methods in the BackupPolicy CR 'mongo-cluster-mongodb-backup-policy':
+
+```bash
+kubectl get backuppolicy mongo-cluster-mongodb-backup-policy -n demo -oyaml | yq '.spec.backupMethods[].name'
+```
+**List of Backup methods**
+
+KubeBlocks MongoDB supports these backup methods:
+
+| Feature           | Method          | Description |
+|-------------|--------|------------|
+| Full Backup | dump   | Uses `mongodump`, a MongoDB utility used to create a binary export of the contents of a database  |
+| Full Backup | datafile | Backup the data files of the database |
+| Continuous Backup | archive-oplog | Continuously archives MongoDB oplog using `wal-g` |
+
+## Backup via Backup API
+
+### 1. Create On-Demand Backup
+
+The `datafile` method backup the data files of the database
+
+Apply this manifest to create a backup:
+
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: Backup
+metadata:
+  name: mongodb-backup-datafile
+  namespace: demo
+spec:
+  # Specifies the backup method name that is defined in the backup policy.
+  # - dump
+  # - volume-snapshot
+  # - datafile
+  backupMethod: datafile
+  # Specifies the backup policy to be applied for this backup.
+  backupPolicyName: mongo-cluster-mongodb-backup-policy
+  # Determines whether the backup contents stored in the backup repository should be deleted when the backup custom resource(CR) is deleted. Supported values are `Retain` and `Delete`.
+  # - `Retain` means that the backup content and its physical snapshot on backup repository are kept.
+  # - `Delete` means that the backup content and its physical snapshot on backup repository are deleted.
+  deletionPolicy: Delete
+```
+
+### 2. Monitor Backup and Verify Completion
+
+Track progress until status shows "Completed":
+
+```bash
+kubectl get backup mongodb-backup-datafile  -n demo -w
+```
+
+Example Output:
+
+```bash
+NAME                      POLICY                                METHOD     REPO            STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME   EXPIRATION-TIME
+mongodb-backup-datafile   mongo-cluster-mongodb-backup-policy   datafile   <BACKUP_REPO>   Running     1119698                 Delete            2025-05-18T14:21:16Z
+mongodb-backup-datafile   mongo-cluster-mongodb-backup-policy   datafile   <BACKUP_REPO>   Running     1119698                 Delete            2025-05-18T14:21:16Z
+mongodb-backup-datafile   mongo-cluster-mongodb-backup-policy   datafile   <BACKUP_REPO>   Completed   1119698      15s        Delete            2025-05-18T14:21:16Z   2025-05-18T14:21:31Z
+```
+
+### 3. Validate Backup
+
+Confirm successful completion by checking:
+- Backup status shows "Completed"
+- Backup size matches expectations
+- Check files in the BackupRepo
+
+The `Backup` resource records details including:
+- Storage path
+- Time range
+- Backup file size
+
+
+## Backup via OpsRequest API
+
+### 1. Create On-Demand Backup
+
+Execute a backup using the OpsRequest API with the 'pg-basebackup' method:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: mongo-cluster-backup
+  namespace: demo
+spec:
+  clusterName: mongo-cluster
+  force: false
+  backup:
+    backupPolicyName: mongo-cluster-mongodb-backup-policy
+    backupMethod: datafile
+    deletionPolicy: Delete
+    retentionPeriod: 1mo
+  type: Backup
+```
+
+### 2. Monitor Backup Progress
+
+#### 1. Monitor Operation Status
+
+Track backup progress in real-time:
+```bash
+kubectl get ops mongo-cluster-backup  -n demo -w
+```
+
+Expected Output:
+```bash
+NAME                   TYPE     CLUSTER         STATUS    PROGRESS   AGE
+mongo-cluster-backup   Backup   mongo-cluster   Running   -/-        5s
+mongo-cluster-backup   Backup   mongo-cluster   Succeed   -/-        10s
+```
+
+- A STATUS of 'Succeed' indicates the backup operation completed successfully.
+
+#### 2. Verify Completion
+
+Check the final backup status:
+
+```bash
+kubectl get backup -n demo -l operations.kubeblocks.io/ops-name=mongo-cluster-backup
+```
+
+Example Output:
+```bash
+NAME                                       POLICY                                METHOD     REPO     STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
+backup-demo-mongo-cluster-20250518142234   mongo-cluster-mongodb-backup-policy   datafile   kb-oss   Completed   1149575      11s        Delete            2025-05-18T14:22:34Z   2025-05-18T14:22:44Z   2025-06-17T14:22:44Z
+```
+
+- The backup status should show 'Completed'.
+
+### 3. Validate Backup
+
+Confirm successful completion by checking:
+- Backup status shows "Completed"
+- Backup size matches expectations
+- Files in the BackupRepo
+
+The `Backup` resource records details including:
+- Storage path
+- Time range
+- Other metadata
+
+## Summary
+
+This guide covered:
+1. Deploying a replication MongoDB cluster
+2. Creating full backups using:
+   - Direct Backup API
+   - Managed OpsRequest API
+3. Monitoring and validating backups
+
+Your MongoDB data is now securely backed up and ready for restoration when needed.

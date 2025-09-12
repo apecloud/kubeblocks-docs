@@ -38,12 +38,12 @@ function getAllMdxFiles(dir: string, basePath: string = ''): string[] {
   return files;
 }
 
-// 从文件内容中提取标题和正文
+// Extract title and main content from file content
 function extractContent(filePath: string): SearchDocument {
   const content = readFileSync(filePath, 'utf-8');
   const { data, content: markdownContent } = matter(content);
 
-  // 过滤掉 mdx 的 import/export 语句和宏/JSX函数
+  // Filter out import/export statements and macro/JSX functions from mdx
   const filteredContent = markdownContent
     .split('\n')
     .filter(
@@ -54,28 +54,28 @@ function extractContent(filePath: string): SearchDocument {
         !/^\{.*\}$/.test(line.trim()),
     )
     .join('\n')
-    .replace(/<[^>]+>/g, '') // 去除内联 JSX 标签
-    .replace(/\{[^}]+\}/g, ''); // 去除内联 JS 表达式
+    .replace(/<[^>]+>/g, '') // Remove inline JSX tags
+    .replace(/\{[^}]+\}/g, ''); // Remove inline JS expressions
 
-  // 移除 markdown 语法，只保留纯文本
+  // Remove markdown syntax, only keep plain text
   const plainContent = filteredContent
-    .replace(/```[\s\S]*?```/g, '') // 移除代码块
-    .replace(/`.*?`/g, '') // 移除行内代码
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // 将链接转换为纯文本
-    .replace(/#{1,6}\s/g, '') // 移除标题标记
-    .replace(/\*\*/g, '') // 移除加粗标记
-    .replace(/\*/g, '') // 移除斜体标记
-    .replace(/\n/g, ' ') // 将换行转换为空格
-    .replace(/\s+/g, ' ') // 将多个空格转换为单个空格
+    .replace(/```[\s\S]*?```/g, '') // Remove code blocks
+    .replace(/`.*?`/g, '') // Remove inline code
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Convert links to plain text
+    .replace(/#{1,6}\s/g, '') // Remove title markers
+    .replace(/\*\*/g, '') // Remove bold markers
+    .replace(/\*/g, '') // Remove italic markers
+    .replace(/\n/g, ' ') // Convert line breaks to spaces
+    .replace(/\s+/g, ' ') // Convert multiple spaces to single space
     .trim();
 
-  // 生成摘要
+  // Generate summary
   const summary =
     plainContent.length > 200
       ? plainContent.substring(0, 200) + '...'
       : plainContent;
 
-  // 提取关键词
+  // Extract keywords
   const keywords = plainContent
     .toLowerCase()
     .split(/\s+/)
@@ -86,7 +86,7 @@ function extractContent(filePath: string): SearchDocument {
     }, [])
     .slice(0, 20);
 
-  // 提取标题层级
+  // Extract title hierarchy
   const headings: Array<{ level: number; text: string }> = [];
   const headingMatches = markdownContent.match(/^#{1,6}\s+.+$/gm);
   if (headingMatches) {
@@ -97,7 +97,7 @@ function extractContent(filePath: string): SearchDocument {
     });
   }
 
-  // 确定文档类型和类别
+  // Determine document type and category
   let docType = 'documentation';
   let category = 'general';
 
@@ -138,17 +138,17 @@ export async function GET() {
   try {
     const rootDir = process.cwd();
 
-    // 只获取preview目录下的文档和博客文件
+    // Only get documents and blog files in the preview directory
     const allFiles: string[] = [];
 
-    // 获取docs/en/preview下的文件
+    // Get files in docs/en/preview
     const previewDir = join(rootDir, 'docs', 'en', 'preview');
     if (existsSync(previewDir)) {
       const previewFiles = getAllMdxFiles(previewDir, 'docs/en/preview');
       allFiles.push(...previewFiles.map((file) => join(rootDir, file)));
     }
 
-    // 获取blogs/en下的文件
+    // Get files in blogs/en
     const blogsEnDir = join(rootDir, 'blogs', 'en');
     if (existsSync(blogsEnDir)) {
       const blogFiles = getAllMdxFiles(blogsEnDir, 'blogs/en');

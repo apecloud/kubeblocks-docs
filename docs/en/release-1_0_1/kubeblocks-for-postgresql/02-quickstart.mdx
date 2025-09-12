@@ -1,0 +1,579 @@
+---
+title: PostgreSQL Quickstart
+description: Comprehensive guide to deploying and managing PostgreSQL clusters with KubeBlocks, including installation, configuration, and operational best practices, an alternative to dedicated operator.
+keywords: [Kubernetes Operator, PostgreSQL, KubeBlocks, Helm, Cluster Management, QuickStart]
+sidebar_position: 2
+sidebar_label: Quickstart
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# PostgreSQL Quickstart
+
+This guide provides a comprehensive walkabout for deploying and managing PostgreSQL clusters using the **KubeBlocks PostgreSQL Add-on**, covering:
+- System prerequisites and add-on installation
+- Cluster creation and configuration
+- Operational management including start/stop procedures
+- Connection methods and cluster monitoring
+
+## Prerequisites
+
+### System Requirements
+
+Before proceeding, verify your environment meets these requirements:
+
+- A functional Kubernetes cluster (v1.21+ recommended)
+- `kubectl` v1.21+ installed and configured with cluster access
+- Helm installed ([installation guide](https://helm.sh/docs/intro/install/))
+- KubeBlocks installed ([installation guide](../user_docs/overview/install-kubeblocks))
+
+### Verify PostgreSQL Add-on
+
+The PostgreSQL Add-on is included with KubeBlocks by default. Check its status:
+
+```bash
+helm list -n kb-system | grep postgresql
+```
+
+<details open>
+<summary>Example Output:</summary>
+
+```bash
+NAME                    NAMESPACE   REVISION    UPDATED                     STATUS      CHART
+kb-addon-postgresql     kb-system   1           2025-05-21                  deployed    postgresql-1.0.0
+```
+</details>
+
+If the add-on isn't enabled, choose an installation method:
+
+<Tabs>
+
+  <TabItem value="helm" label="helm" default>
+  ```bash
+  # Add Helm repo
+  helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
+  # For users in Mainland China, if GitHub is inaccessible or slow, use this alternative repo:
+  #helm repo add kubeblocks-addons https://jihulab.com/api/v4/projects/150246/packages/helm/stable
+
+  # Update helm repo
+  helm repo update
+  # Search available Add-on versions
+  helm search repo kubeblocks/postgresql --versions
+  # Install your desired version (replace <VERSION> with your chosen version)
+  helm upgrade -i kb-addon-postgresql kubeblocks-addons/postgresql --version <VERSION> -n kb-system
+  ```
+  </TabItem>
+
+  <TabItem value="kbcli" label="kbcli">
+
+  ```bash
+  # Add an index (kubeblocks is added by default)
+  kbcli addon index add kubeblocks https://github.com/apecloud/block-index.git
+  # Update the index
+  kbcli addon index update kubeblocks
+  # Update all indexes
+  kbcli addon index update --all
+  ```
+
+  To search and install an addon:
+
+  ```bash
+  # Search Add-on
+  kbcli addon search postgresql
+  # Install Add-on with your desired version (replace <VERSION> with your chosen version)
+  kbcli addon install postgresql --version <VERSION>
+  ```
+  **Example Output:**
+  ```bash
+  ADDON   VERSION         INDEX
+  postgresql   0.9.1           kubeblocks
+  postgresql   0.9.2           kubeblocks
+  postgresql   0.9.3           kubeblocks
+  postgresql   1.0.0           kubeblocks
+  ```
+  To enable or disable an addon:
+
+  ```bash
+  # Enable Add-on
+  kbcli addon enable postgresql
+  # Disable Add-on
+  kbcli addon disable postgresql
+  ```
+
+  </TabItem>
+</Tabs>
+
+:::note
+**Version Compatibility**
+
+Always verify that the PostgreSQL Add-on version matches your KubeBlocks major version to avoid compatibility issues.
+
+:::
+
+### Verify Supported PostgreSQL Versions
+
+**List available PostgreSQL versions:**
+
+```bash
+kubectl get cmpv postgresql
+```
+<details open>
+<summary>Example Output</summary>
+```text
+NAME         VERSIONS                                              STATUS      AGE
+postgresql   16.4.0,15.7.0,14.8.0,14.7.2,12.15.0,12.14.1,12.14.0   Available   33d
+```
+</details>
+
+**Check version compatibility for ComponentDefinitions**
+
+**Step 1.** Get the list of `ComponentDefinition` associated with a given `ComponentVersion`
+
+```bash
+kubectl get cmpv postgresql -ojson | jq -r '.metadata.annotations."componentversion.kubeblocks.io/compatible-definitions"' | tr ',' '\n'
+```
+
+<details>
+<summary>Example Output</summary>
+```text
+postgresql-12-1.0.0
+postgresql-14-1.0.0
+postgresql-15-1.0.0
+postgresql-16-1.0.0
+```
+</details>
+
+**Step 2.** Get the list of `ComponentDefinition` associated with a given `ComponentVersion`
+
+```bash
+kubectl get cmpv postgresql -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("postgresql-14"))) | .releases[]'
+```
+
+This returns versions compatible with `ComponentDefinition` named `postgresql-14`:
+
+<details open>
+<summary>Example Output</summary>
+```text
+14.7.2
+14.8.0
+```
+</details>
+
+### Storage Configuration
+
+PostgreSQL requires persistent storage. Verify available options:
+
+```bash
+kubectl get storageclass
+```
+
+Recommended storage characteristics:
+- Minimum 20Gi capacity
+- ReadWriteOnce access mode
+- Supports volume expansion
+- Appropriate performance for workload
+
+## Deploy a PostgreSQL Cluster
+
+Deploy a basic PostgreSQL cluster with default settings:
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/postgresql/cluster.yaml
+```
+
+This creates:
+- A 2-replica PostgreSQL cluster
+- Default resource allocations (0.5 CPU, 0.5Gi memory)
+- 20Gi persistent storage
+- Automatic primary-replica configuration
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: pg-cluster
+  namespace: demo
+spec:
+  # Specifies the behavior when a Cluster is deleted.
+  # Valid options are: [DoNotTerminate, Delete, WipeOut] (`Halt` is deprecated since KB 0.9)
+  # - `DoNotTerminate`: Prevents deletion of the Cluster. This policy ensures that all resources remain intact.
+  # - `Delete`: Extends the `Halt` policy by also removing PVCs, leading to a thorough cleanup while removing all persistent data.
+  # - `WipeOut`: An aggressive policy that deletes all Cluster resources, including volume snapshots and backups in external storage. This results in complete data removal and should be used cautiously, primarily in non-production environments to avoid irreversible data loss.
+  terminationPolicy: Delete
+  # Specifies the name of the ClusterDefinition to use when creating a Cluster.
+  # Note: DO NOT UPDATE THIS FIELD
+  # The value must be `postgresql` to create a PostgreSQL Cluster
+  clusterDef: postgresql
+  # Specifies the name of the ClusterTopology to be used when creating the
+  # Cluster.
+  # Valid options are: [replication]
+  topology: replication
+  # Specifies a list of ClusterComponentSpec objects used to define the
+  # individual Components that make up a Cluster.
+  # This field allows for detailed configuration of each Component within the Cluster
+  componentSpecs:
+    - name: postgresql
+      # ServiceVersion specifies the version of the Service expected to be
+      # provisioned by this Component.
+      # Valid options are: [12.14.0,12.14.1,12.15.0,12.22.0,14.7.2,14.8.0,14.18.0,15.7.0,15.13.0,16.4.0,16.9.0,17.5.0]
+      serviceVersion: "14.7.2"
+      # Determines whether metrics exporter information is annotated on the
+      # Component's headless Service.
+      # Valid options are [true, false]
+      disableExporter: false
+      # Update `replicas` to your need.
+      replicas: 2
+      # Specifies the resources required by the Component.
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      # Specifies a list of PersistentVolumeClaim templates that define the storage
+      # requirements for the Component.
+      volumeClaimTemplates:
+        # Refers to the name of a volumeMount defined in
+        # `componentDefinition.spec.runtime.containers[*].volumeMounts
+        - name: data
+          spec:
+            # The name of the StorageClass required by the claim.
+            # If not specified, the StorageClass annotated with
+            # `storageclass.kubernetes.io/is-default-class=true` will be used by default
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                # Set the storage size as needed
+                storage: 20Gi
+```
+
+For more API fields and descriptions, refer to the [API Reference](../user_docs/references/api-reference/cluster).
+
+### Create a Version-Specific PostgreSQL Cluster
+
+To create a cluster with a specific version, configure `spec.componentSpecs.serviceVersion` (major.minor version) fields before applying it:
+
+<Tabs>
+  <TabItem value="PostgreSQL 12" label="PostgreSQL 12">
+  ```yaml
+    componentSpecs:
+      - name: postgresql
+        serviceVersion: 12.15.0    # Valid options: [12.15.0,12.14.1,12.14.0]
+  ```
+    </TabItem>
+
+  <TabItem value="PostgreSQL 14" label="PostgreSQL 14" default>
+  ```yaml
+    componentSpecs:
+      - name: postgresql
+        serviceVersion: 14.7.2     # Valid options: [14.18.0,14.8.0,14.7.2]
+  ```
+  </TabItem>
+
+  <TabItem value="PostgreSQL 15" label="PostgreSQL 15">
+  ```yaml
+    componentSpecs:
+      - name: postgresql
+        serviceVersion: 15.7.0    # Valid options: [15.13.0,15.7.0]
+  ```
+  </TabItem>
+
+  <TabItem value="PostgreSQL 16" label="PostgreSQL 16">
+  ```yaml
+    componentSpecs:
+      - name: postgresql
+        serviceVersion: 16.4.0    # Valid options: [16.9.0,16.4.0]
+  ```
+  </TabItem>
+
+  <TabItem value="PostgreSQL 17" label="PostgreSQL 17">
+  ```yaml
+    componentSpecs:
+      - name: postgresql
+        serviceVersion: 17.5.0    # Valid options: [17.5.0]
+  ```
+  </TabItem>
+</Tabs>
+
+List available `ComponentDefinition` and `ComponentVersion`:
+
+```bash
+kubectl get cmpd -l app.kubernetes.io/name=postgresql
+```
+
+<details open>
+<summary>Example Output</summary>
+```bash
+NAME                          SERVICE      SERVICE-VERSION   STATUS      AGE
+postgresql-12-1.0.0           postgresql   12.15.0           Available   22d
+postgresql-14-1.0.0           postgresql   14.8.0            Available   22d
+postgresql-15-1.0.0           postgresql   15.7.0            Available   22d
+postgresql-16-1.0.0           postgresql   16.4.0            Available   22d
+postgresql-17-1.0.0           postgresql   17.5.0            Available   22d
+```
+</details>
+
+```bash
+kubectl get cmpv -l app.kubernetes.io/name=postgresql
+```
+
+<details open>
+<summary>Example Output</summary>
+
+```bash
+NAME         VERSIONS                                              STATUS      AGE
+postgresql   16.4.0,15.7.0,14.8.0,14.7.2,12.15.0,12.14.1,12.14.0   Available   22d
+```
+
+</details>
+
+## Verify Cluster Status
+
+When deploying a PostgreSQL cluster with 2 replicas, KubeBlocks automatically configures:
+- Primary replica (read/write operations)
+- Secondary replica (read-only operations)
+
+Confirm successful deployment by checking:
+
+1. Cluster phase is `Running`
+2. All pods are operational
+3. Replicas have correct roles
+
+Check status using either method:
+
+<Tabs>
+<TabItem value='kubectl' label='kubectl' default>
+
+```bash
+kubectl get cluster pg-cluster -n demo
+NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+pg-cluster   postgresql           Delete               Running   107s
+
+kubectl get pods -l app.kubernetes.io/instance=pg-cluster -n demo
+NAME                      READY   STATUS    RESTARTS   AGE
+pg-cluster-postgresql-0   4/4     Running   0          31m
+pg-cluster-postgresql-1   4/4     Running   0          31m
+```
+
+</TabItem>
+
+<TabItem value='kbcli' label='kbcli'>
+
+With `kbcli` installed, you can view comprehensive cluster information:
+
+```bash
+kbcli cluster describe pg-cluster -n demo
+Name: pg-cluster	 Created Time: May 15,2025 14:23 UTC+0800
+NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY      STATUS    TERMINATION-POLICY
+demo        postgresql           replication   Running   Delete
+
+Endpoints:
+COMPONENT    INTERNAL                                                       EXTERNAL
+postgresql   pg-cluster-postgresql-postgresql.demo.svc.cluster.local:5432   <none>
+             pg-cluster-postgresql-postgresql.demo.svc.cluster.local:6432
+
+Topology:
+COMPONENT    SERVICE-VERSION   INSTANCE                  ROLE        STATUS    AZ        NODE        CREATED-TIME
+postgresql   14.7.2            pg-cluster-postgresql-0   primary     Running   zone-1a   ip-x-y-z    Dec 16,2024 08:37 UTC+0800
+postgresql   14.7.2            pg-cluster-postgresql-1   secondary   Running   zone-1b   ip-x-y-z    Dec 16,2024 08:37 UTC+0800
+
+Resources Allocation:
+COMPONENT    INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+postgresql                       500m / 500m          512Mi / 512Mi           data:20Gi      <STORAGE_CLASS_NAME>
+
+Images:
+COMPONENT    COMPONENT-DEFINITION          IMAGE
+postgresql   postgresql-14-1.0.0           docker.io/apecloud/spilo:14.7.2-pgvector-v0.6.1
+                                           docker.io/bitnami/pgbouncer:1.19.0
+
+Data Protection:
+BACKUP-REPO   AUTO-BACKUP   BACKUP-SCHEDULE   BACKUP-METHOD   BACKUP-RETENTION   RECOVERABLE-TIME
+
+Show cluster events: kbcli cluster list-events -n demo pg-cluster
+```
+
+</TabItem>
+</Tabs>
+
+## Access the PostgreSQL Cluster
+
+KubeBlocks automatically provisions:
+1. Credentials stored in Secret `pg-cluster-postgresql-account-postgres`
+2. ClusterIP Service `pg-cluster-postgresql-postgresql`
+
+### Retrieve Credentials
+```bash
+# Get username
+NAME=$(kubectl get secret -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.username}' | base64 --decode)
+
+# Get password
+PASSWD=$(kubectl get secret -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.password}' | base64 --decode)
+```
+
+### Connection Methods
+
+<Tabs>
+<TabItem value="Direct Pod Access" label="Direct Pod Access" default>
+
+Connect directly to a pod:
+```bash
+kubectl exec -ti -n demo pg-cluster-postgresql-0 -- \
+  env PGUSER=${NAME} PGPASSWORD=${PASSWD} \
+  psql -h pg-cluster-postgresql-postgresql
+```
+</TabItem>
+
+<TabItem value="Local Port Forwarding" label="Local Port Forwarding">
+
+1. Forward service port:
+    ```bash
+    kubectl port-forward svc/pg-cluster-postgresql-postgresql 5432:5432 -n demo
+    ```
+
+2. Connect via localhost:
+    ```bash
+    psql -h 127.0.0.1 -U${NAME} -W
+    ```
+</TabItem>
+</Tabs>
+
+:::note
+**Production Considerations**
+
+For production environments, avoid using `kubectl exec` and `port-forward`. Instead implement:
+- LoadBalancer or NodePort Services for external access
+- Network policies to restrict access
+- TLS encryption for secure connections
+- Connection pooling for better performance
+:::
+
+## Stop the PostgreSQL Cluster
+
+Stopping a cluster temporarily suspends operations while preserving all data and configuration:
+
+**Key Effects:**
+- Compute resources (Pods) are released
+- Persistent storage (PVCs) remains intact
+- Service definitions are maintained
+- Cluster configuration is preserved
+- Operational costs are reduced
+
+
+<Tabs>
+<TabItem value="OpsRequest" label="OpsRequest API" default>
+```bash
+kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/postgresql/stop.yaml
+```
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-stop
+  namespace: demo
+spec:
+  clusterName: pg-cluster
+  type: Stop
+```
+</TabItem>
+
+<TabItem value="ClusterAPI" label="Cluster API">
+Alternatively, stop by setting `spec.componentSpecs.stop` to true:
+
+```bash
+kubectl patch cluster pg-cluster -n demo --type='json' -p='[
+{
+  "op": "add",
+  "path": "/spec/componentSpecs/0/stop",
+  "value": true
+}
+]'
+```
+
+```yaml
+spec:
+  componentSpecs:
+    - name: postgresql
+      stop: true  # Set to stop component
+      replicas: 2
+```
+</TabItem>
+</Tabs>
+
+## Start the PostgreSQL Cluster
+
+Restarting a stopped cluster resumes operations with all data and configuration intact.
+
+**Key Effects:**
+- Compute resources (Pods) are recreated
+- Services become available again
+- Cluster returns to previous state
+
+<Tabs>
+<TabItem value="OpsRequest" label="OpsRequest API" default>
+```bash
+kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/refs/heads/main/examples/postgresql/start.yaml
+```
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-start
+  namespace: demo
+spec:
+  clusterName: pg-cluster
+  type: Start
+```
+</TabItem>
+
+<TabItem value="ClusterAPI" label="Cluster API">
+Restart by setting `spec.componentSpecs.stop` to false:
+
+```bash
+kubectl patch cluster pg-cluster -n demo --type='json' -p='[
+{
+  "op": "remove",
+  "path": "/spec/componentSpecs/0/stop"
+}
+]'
+```
+
+```yaml
+spec:
+  componentSpecs:
+    - name: postgresql
+      stop: false  # Set to start component
+      replicas: 2
+```
+</TabItem>
+</Tabs>
+
+## Delete PostgreSQL Cluster
+
+Choose carefully based on your data retention needs:
+
+| Policy          | Resources Removed | Data Removed | Recommended For |
+|-----------------|-------------------|--------------|-----------------|
+| DoNotTerminate  | None              | None         | Critical production clusters |
+| Delete          | All resources     | PVCs deleted | Non-critical environments |
+| WipeOut         | All resources     | Everything*  | Test environments only |
+
+*Includes snapshots and backups in external storage
+
+**Pre-Deletion Checklist:**
+1. Verify no applications are using the cluster
+2. Ensure required backups exist
+3. Confirm proper terminationPolicy is set
+4. Check for dependent resources
+
+For test environments, use this complete cleanup:
+
+```bash
+kubectl patch cluster pg-cluster -p '{"spec":{"terminationPolicy":"WipeOut"}}' --type="merge" -n demo
+kubectl delete cluster pg-cluster -n demo
+```

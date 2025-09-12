@@ -1,0 +1,33 @@
+Monitor the cluster status until it transitions to the Running state:
+```bash
+kubectl get cluster redis-replication -n demo -w
+```
+
+Expected Output:
+
+```bash
+NAME                CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+redis-replication   redis                Delete               Running   3m49s
+```
+
+Check the pod status and roles:
+```bash
+kubectl get pods -l app.kubernetes.io/instance=redis-replication -L  kubeblocks.io/role -n demo
+```
+
+Expected Output:
+```bash
+NAME                                 READY   STATUS    RESTARTS   AGE     ROLE
+redis-replication-redis-0            3/3     Running   0          3m38s   primary
+redis-replication-redis-1            3/3     Running   0          3m16s   secondary
+redis-replication-redis-sentinel-0   2/2     Running   0          4m35s
+redis-replication-redis-sentinel-1   2/2     Running   0          4m17s
+redis-replication-redis-sentinel-2   2/2     Running   0          3m59s
+```
+
+Once the cluster status becomes Running, your Redis cluster is ready for use.
+
+:::tip
+If you are creating the cluster for the very first time, it may take some time to pull images before running.
+
+:::

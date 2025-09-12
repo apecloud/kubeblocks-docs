@@ -1,0 +1,241 @@
+---
+title: Deploying a MySQL Group Replication Cluster with ProxySQL Using KubeBlocks
+description: Learn how to deploy a MySQL Group Replication (MGR) cluster with ProxySQL integration using KubeBlocks. This guide covers configuration, verification, failover testing, and cleanup.
+keywords: [KubeBlocks, MySQL, ProxySQL, Group Replication, High Availability, Kubernetes]
+sidebar_position: 4
+sidebar_label: MySQL Group Replication with ProxySQL
+---
+
+# Deploying a MySQL Group Replication Cluster with ProxySQL Using KubeBlocks
+
+**MySQL Group Replication (MGR)** ensures high availability and fault tolerance by synchronizing data across multiple MySQL instances. It provides automatic failover, promoting a secondary node to primary in case of failure, ensuring continuous availability.
+
+**ProxySQL** is a high-performance MySQL proxy that acts as a middleware between MySQL clients and database servers. It provides features such as query routing, load balancing, query caching, and seamless failover. When combined with MGR, ProxySQL enhances cluster performance and enables efficient traffic management.
+
+This guide explains how to deploy a **MySQL Group Replication (MGR) cluster with ProxySQL integration** using **KubeBlocks**, simplifying the process of managing MySQL clusters in Kubernetes.
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## Deploying the MySQL Group Replication Cluster
+
+KubeBlocks uses a declarative configuration approach to simplify MySQL cluster management. Below is an example configuration to deploy a MySQL Group Replication cluster with three MySQL nodes and two ProxySQL instances.
+
+Apply the following YAML configuration:
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: mgr-proxysql
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+    - name: proxysql
+      serviceVersion: 2.4.4
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+EOF
+```
+**Explanation of Key Fields**:
+- `clusterDef: mysql`: Specifies the ClusterDefinition CR for the MySQL cluster. The ClusterDefinition 'mysql' contains multiple topologies, such as 'semisync', 'semisync-proxysql', 'mgr', 'mgr-proxysql', 'orc', 'orc-proxysql'.
+- `topology: mgr-proxysql`: Configures the cluster for MySQL Group Replication with ProxySQL integration.
+- `componentSpecs`: Defines the components in the cluster:
+    - Component 'mysql':
+        - `serviceVersion: 8.0.35`: Specifies the MySQL version to deploy. Here, version 8.0.35 is used.
+        - `replicas: 3`: Sets the number of MySQL instances (in this case, 3).
+    - Component 'proxysql':
+        - `serviceVersion: 2.4.4`: Specifies the ProxySQL version to deploy. Here, version 2.4.4 is used.
+        - `replicas: 2`: Sets the number of ProxySQL instances (in this case, 2).
+
+## Verifying the Deployment
+### 1. Check the Cluster Status
+Monitor the status of the MySQL cluster as it is created:
+```bash
+kubectl get cluster -n demo -w
+```
+Example Output:
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster   mysql                Delete               Creating   9s
+example-mysql-cluster   mysql                Delete               Running    2m33s
+```
+
+### 2. Detailed Cluster Information
+To get detailed information about the deployed cluster, use the following command:
+```bash
+kbcli cluster describe example-mysql-cluster -n demo
+```
+Example Output:
+```bash
+Name: example-mysql-cluster	 Created Time: Feb 11,2025 11:58 UTC+0800
+NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY       STATUS    TERMINATION-POLICY
+demo        mysql                mgr-proxysql   Running   Delete
+
+Endpoints:
+COMPONENT   INTERNAL                                                                     EXTERNAL
+mysql       example-mysql-cluster-mysql.demo.svc.cluster.local:3306                      <none>
+proxysql    example-mysql-cluster-proxysql-proxy-ordinal-0.demo.svc.cluster.local:6032   <none>
+            example-mysql-cluster-proxysql-proxy-ordinal-0.demo.svc.cluster.local:6033
+            example-mysql-cluster-proxysql-proxy-ordinal-1.demo.svc.cluster.local:6032
+            example-mysql-cluster-proxysql-proxy-ordinal-1.demo.svc.cluster.local:6033
+            example-mysql-cluster-proxysql-proxy-server.demo.svc.cluster.local:6033
+
+Topology:
+COMPONENT   SERVICE-VERSION   INSTANCE                           ROLE        STATUS    AZ                NODE                                                       CREATED-TIME
+mysql       8.0.35            example-mysql-cluster-mysql-0      primary     Running   ap-southeast-1c   ip-10-0-3-34.ap-southeast-1.compute.internal/10.0.3.34     Feb 11,2025 12:47 UTC+0800
+mysql       8.0.35            example-mysql-cluster-mysql-1      secondary   Running   ap-southeast-1c   ip-10-0-3-228.ap-southeast-1.compute.internal/10.0.3.228   Feb 11,2025 12:47 UTC+0800
+mysql       8.0.35            example-mysql-cluster-mysql-2      secondary   Running   ap-southeast-1c   ip-10-0-3-187.ap-southeast-1.compute.internal/10.0.3.187   Feb 11,2025 12:47 UTC+0800
+proxysql    2.4.4             example-mysql-cluster-proxysql-0   <none>      Running   ap-southeast-1c   ip-10-0-3-228.ap-southeast-1.compute.internal/10.0.3.228   Feb 11,2025 12:49 UTC+0800
+proxysql    2.4.4             example-mysql-cluster-proxysql-1   <none>      Running   ap-southeast-1c   ip-10-0-3-187.ap-southeast-1.compute.internal/10.0.3.187   Feb 11,2025 12:49 UTC+0800
+
+Resources Allocation:
+COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+mysql                           500m / 500m          512Mi / 512Mi           data:20Gi      <none>
+proxysql                        500m / 500m          512Mi / 512Mi           <none>         <none>
+
+Images:
+COMPONENT   COMPONENT-DEFINITION           IMAGE
+mysql       mysql-mgr-8.0-1.0.0            docker.io/apecloud/mysql:8.0.35
+                                           docker.io/apecloud/mysqld-exporter:0.15.1
+                                           apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.0
+proxysql    proxysql-mysql-1.0.0           docker.io/apecloud/proxysql:2.4.4
+
+Show cluster events: kbcli cluster list-events -n demo example-mysql-cluster
+```
+
+## Checking Cluster Roles
+To verify the roles of MySQL instances (e.g., primary and secondary), run:
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+```
+Example Output:
+```bash
+example-mysql-cluster-mysql-0	primary
+example-mysql-cluster-mysql-1	secondary
+example-mysql-cluster-mysql-2	secondary
+```
+
+## Connecting to the MySQL Cluster
+KubeBlocks automatically creates a secret containing the MySQL root credentials. Retrieve the credentials with the following commands:
+
+```bash
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
+root
+
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+XKNv07D612
+```
+
+### Connect via ProxySQL
+Use ProxySQL to connect to the MySQL cluster:
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-proxysql-proxy-server.demo.svc.cluster.local -P6033 -uroot -pXKNv07D612
+```
+
+### Connect Directly to MySQL
+Alternatively, connect directly to the MySQL instance:
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pXKNv07D612
+```
+
+## Check Group Replication Status
+To check the status of the Group Replication cluster, run the following query:
+```sql
+mysql> SELECT * FROM performance_schema.replication_group_members;
+```
+Example Output:
+```sql
++---------------------------+--------------------------------------+--------------------------------------------------------------------+-------------+--------------+-------------+----------------+----------------------------+
+| CHANNEL_NAME              | MEMBER_ID                            | MEMBER_HOST                                                        | MEMBER_PORT | MEMBER_STATE | MEMBER_ROLE | MEMBER_VERSION | MEMBER_COMMUNICATION_STACK |
++---------------------------+--------------------------------------+--------------------------------------------------------------------+-------------+--------------+-------------+----------------+----------------------------+
+| group_replication_applier | a17c375d-e7ba-11ef-8b01-3aa4e0d3963f | example-mysql-cluster-mysql-1.example-mysql-cluster-mysql-headless |        3306 | ONLINE       | SECONDARY   | 8.0.35         | XCom                       |
+| group_replication_applier | a99688a7-e7ba-11ef-be5b-de475d052d4a | example-mysql-cluster-mysql-0.example-mysql-cluster-mysql-headless |        3306 | ONLINE       | PRIMARY     | 8.0.35         | XCom                       |
+| group_replication_applier | c4403516-e7ba-11ef-8f11-8a79c903edf0 | example-mysql-cluster-mysql-2.example-mysql-cluster-mysql-headless |        3306 | ONLINE       | SECONDARY   | 8.0.35         | XCom                       |
++---------------------------+--------------------------------------+--------------------------------------------------------------------+-------------+--------------+-------------+----------------+----------------------------+
+3 rows in set (0.00 sec)
+```
+The roles in the output should match the roles shown in the kubectl output.
+
+
+## Failover Testing
+### Trigger a Failover
+To test the MySQL Group Replication failover mechanism, delete the primary node:
+```bash
+kubectl delete pod example-mysql-cluster-mysql-0 -n demo
+pod "example-mysql-cluster-mysql-0" deleted
+```
+This triggers a failover, and one of the secondary nodes will be promoted to the primary role.
+### Verify the New Roles
+Run the following command to check the updated roles:
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+```
+Example Output:
+```bash
+example-mysql-cluster-mysql-0
+example-mysql-cluster-mysql-1	secondary
+example-mysql-cluster-mysql-2	primary
+```
+Once the deleted pod ('example-mysql-cluster-mysql-0') is recreated, it will rejoin the cluster as a secondary node:
+```bash
+example-mysql-cluster-mysql-0	secondary
+example-mysql-cluster-mysql-1	secondary
+example-mysql-cluster-mysql-2	primary
+```
+This demonstrates how the failover mechanism ensures high availability by automatically promoting a secondary instance to the primary role in case of failure.
+
+## Cleanup
+To remove all created resources, delete the MySQL cluster along with its namespace:
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete ns demo
+```
+
+## Summary
+In this guide, you learned how to:
+- Deploy a MySQL Group Replication cluster with ProxySQL using KubeBlocks.
+- Verify the cluster’s deployment and role assignments.
+- Connect to the cluster via ProxySQL or directly.
+- Check the replication status and test failover mechanisms.
+By combining MySQL Group Replication with ProxySQL, this setup ensures high availability, seamless failover, and efficient traffic management, making it ideal for production-grade deployments.

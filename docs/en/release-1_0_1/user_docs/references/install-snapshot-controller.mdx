@@ -1,0 +1,76 @@
+---
+title: Install Snapshot Controller
+description: Install Snapshot Controller
+keywords: [kbcli, kubeblocks, SnapshotController, K8s, CSI]
+sidebar_position: 5
+sidebar_label: Snapshot Controller
+---
+
+# Install Snapshot Controller
+
+The Snapshot Controller manages CSI Volume Snapshots, enabling creation, restoration, and deletion of Persistent Volume (PV) snapshots. KubeBlocks' DataProtection Controller leverages this component for database snapshot operations.
+
+**Step 1: Check Prerequisites**
+Verify if required CRDs exist:
+
+```bash
+kubectl get crd volumesnapshotclasses.snapshot.storage.k8s.io
+kubectl get crd volumesnapshots.snapshot.storage.k8s.io
+kubectl get crd volumesnapshotcontents.snapshot.storage.k8s.io
+```
+
+If your cluster lacks these CRDs, you'll need to install them first:
+
+```bash
+# v8.2.0 is the latest version of the external-snapshotter, you can replace it with the version you need.
+kubectl create -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/v8.2.0/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml
+```
+
+
+:::note
+
+**Optional Installation**
+
+If snapshot backups aren't required, you can install just the CRDs and skip following steps.
+
+:::
+
+
+**Step 2: Deploy Snapshot Controller**
+
+Install using Helm with these steps:
+
+```bash
+helm repo add piraeus-charts https://piraeus.io/helm-charts/
+helm repo update
+# Update the namespace to an appropriate value for your environment (e.g. kb-system)
+helm install snapshot-controller piraeus-charts/snapshot-controller -n kb-system --create-namespace
+```
+
+For advanced configuration options, see the [Snapshot Controller documentation](https://artifacthub.io/packages/helm/piraeus-charts/snapshot-controller#configuration).
+
+**Step 3: Verify Deployment**
+
+Check if the snapshot-controller Pod is running:
+
+```bash
+kubectl get pods -n kb-system | grep snapshot-controller
+```
+
+<details open>
+
+<summary>Expected Output</summary>
+
+```bash
+snapshot-controller-xxxx-yyyy   1/1   Running   0   30s
+```
+
+</details>
+
+If the pod is in a CrashLoopBackOff state, check logs:
+
+```bash
+kubectl logs -n kb-system deployment/snapshot-controller
+```

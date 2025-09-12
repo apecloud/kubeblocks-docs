@@ -1,0 +1,150 @@
+---
+title: Setting Up a Redis Cluster with Scheduled Backups in KubeBlocks
+description: Learn how to deploy a Redis cluster using KubeBlocks and configure automated scheduled backups with retention in an S3 repository.
+keywords: [Redis, Backup, KubeBlocks, Scheduled Backup, Kubernetes]
+sidebar_position: 3
+sidebar_label: Scheduled Backups
+---
+
+
+# Setting Up a Redis Cluster with Scheduled Backups in KubeBlocks
+
+This guide demonstrates how to deploy a Redis cluster using KubeBlocks and configure scheduled backups with retention in an S3 repository.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploy a Redis Cluster
+
+import CreateCluster from '../_tpl/_create-redis-replication-cluster.mdx'
+
+<CreateCluster />
+
+## Verifying the Deployment
+
+import VerifyCluster from '../_tpl/_verify-redis-replication-cluster.mdx'
+
+<VerifyCluster />
+
+## Prerequisites for Backup
+
+1. Backup Repository Configured:
+   - Configured `BackupRepo`
+   - Network connectivity between cluster and repo, `BackupRepo` status is `Ready`
+
+2. Cluster is Running:
+   - Cluster must be in `Running` state
+   - No ongoing operations (scaling, upgrades etc.)
+
+## Configure Scheduled Backups
+
+KubeBlocks automatically creates a `BackupSchedule` resource when the cluster is created. Follow these steps to enable and configure scheduled backups:
+
+1. Verify the default backup schedule configuration:
+
+```bash
+kubectl get backupschedule redis-replication-redis-backup-schedule  -n demo -oyaml
+```
+
+Example Output:
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: BackupSchedule
+spec:
+  backupPolicyName: redis-replication-redis-backup-policy
+  schedules:
+  - backupMethod: datafile
+    # ┌───────────── minute (0-59)
+    # │ ┌───────────── hour (0-23)
+    # │ │ ┌───────────── day of month (1-31)
+    # │ │ │ ┌───────────── month (1-12)
+    # │ │ │ │ ┌───────────── day of week (0-6) (Sunday=0)
+    # │ │ │ │ │
+    # 0 18 * * *
+    # schedule this job every day at 6:00 PM (18:00).
+    cronExpression: 0 18 * * * # update the cronExpression to your need
+    enabled: false # set to `true` to schedule base backup periodically
+    retentionPeriod: 7d # set the retention period to your need
+```
+
+2. Enable and customize the backup schedule:
+```bash
+kubectl edit backupschedule redis-replication-redis-backup-schedule -n demo
+```
+
+Update these key parameters:
+- `enabled`: Set to `true` to activate scheduled backups
+- `cronExpression`: Configure backup frequency using cron syntax
+- `retentionPeriod`: Set how long to keep backups (e.g., `7d`, `1mo`)
+
+Example configuration for daily backups at 6PM UTC with 7-day retention:
+```yaml
+schedules:
+- backupMethod: datafile
+  enabled: true
+  cronExpression: "0 18 * * *"
+  retentionPeriod: 7d
+```
+
+3. Verify the schedule configuration:
+```bash
+# Check schedule status
+kubectl get backupschedule redis-replication-redis-backup-schedule -n demo -w
+
+# View detailed configuration
+kubectl describe backupschedule redis-replication-redis-backup-schedule -n demo
+```
+
+## Monitoring and Managing Backups
+
+After enabling scheduled backups, monitor their execution and manage backup retention:
+
+1. View all backups:
+```bash
+kubectl get backup -n demo -l app.kubernetes.io/instance=redis-replication
+```
+
+2. Inspect backup details:
+```bash
+kubectl describe backup <backup-name> -n demo
+```
+
+3. Verify backup artifacts:
+- Status should show "Completed"
+- Check backup size matches expectations
+- Confirm retention period is being applied
+- Validate backup files exist in repository
+
+4. Manage backup retention:
+- To manually delete old backups:
+```bash
+kubectl delete backup <backup-name> -n demo
+```
+- To modify retention period:
+```bash
+kubectl edit backupschedule redis-replication-redis-backup-schedule -n demo
+```
+
+## Cleanup
+To remove all created resources, delete the Redis cluster along with its namespace:
+
+```bash
+kubectl delete cluster redis-replication -n demo
+kubectl delete ns demo
+```
+
+## Summary
+
+This guide demonstrated:
+1. Configuration of automated Redis backups
+2. Schedule customization using cron syntax
+3. Retention policy management
+4. Backup verification procedures
+
+Your Redis cluster now has:
+- Regular automated backups
+- Configurable retention policies
+- Complete backup history tracking

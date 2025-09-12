@@ -1,0 +1,295 @@
+---
+title: Create and Destroy Milvus Service Using the Declarative Cluster API in KubeBlocks
+description: Learn how to configure and manage Milvus services in KubeBlocks for external and internal access using LoadBalancer and other service types.
+keywords: [KubeBlocks, Milvus, LoadBalancer, External Service, Expose, Kubernetes]
+sidebar_position: 5
+sidebar_label: Manage Milvus Services
+---
+
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# Manage Milvus Services Using the Declarative Cluster API in KubeBlocks
+
+This guide provides step-by-step instructions for exposing Milvus services managed by KubeBlocks, both externally and internally. You'll learn to configure external access using cloud provider LoadBalancer services, manage internal services, and properly disable external exposure when no longer needed.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+
+## Deploy a Milvus Cluster
+
+Please refer to [Deploying a Milvus Cluster with KubeBlocks](../03-topologies/02-cluster) to deploy a milvus cluster.
+
+## View Network Services
+List the Services created for the Milvus cluster:
+```bash
+kubectl get service -l app.kubernetes.io/instance=milvus-cluster -n demo
+```
+
+Example Services:
+```bash
+NAME                   TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)              AGE
+milvus-cluster-proxy   ClusterIP   10.96.157.187   <none>        19530/TCP,9091/TCP   133m
+```
+
+## Expose Milvus Service
+
+External service addresses enable public internet access to Milvus, while internal service addresses restrict access to the user's VPC.
+
+### Service Types Comparison
+
+| Type | Use Case | Cloud Cost | Security |
+|------|----------|------------|----------|
+| ClusterIP | Internal service communication | Free | Highest |
+| NodePort | Development/testing | Low | Moderate |
+| LoadBalancer | Production external access | High | Managed via security groups |
+
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  Option 1: Using OpsRequest
+
+  To expose the Milvus service externally using a LoadBalancer, create an OpsRequest resource:
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: milvus-cluster-expose-enable-ops
+    namespace: demo
+  spec:
+    type: Expose
+    clusterName: milvus-cluster
+    expose:
+    - componentName: milvus
+      services:
+      - name: internet
+        # Determines how the Service is exposed. Defaults to 'ClusterIP'.
+        # Valid options are 'ClusterIP', 'NodePort', and 'LoadBalancer'.
+        serviceType: LoadBalancer
+        ports:
+        - name: milvus
+          port: 19530
+          protocol: TCP
+          targetPort: milvus
+        # Contains cloud provider related parameters if ServiceType is LoadBalancer.
+        # Following is an example for AWS EKS
+        annotations:
+          service.beta.kubernetes.io/aws-load-balancer-type: nlb
+          service.beta.kubernetes.io/aws-load-balancer-internal: "false"  # or "true" for an internal VPC IP
+      switch: Enable
+  ```
+
+  Wait for the OpsRequest to complete:
+  ```bash
+  kubectl get ops milvus-cluster-expose-enable-ops -n demo
+  ```
+
+  Example Output:
+  ```bash
+  NAME                                 TYPE     CLUSTER          STATUS    PROGRESS   AGE
+  milvus-cluster-expose-enable-ops     Expose   milvus-cluster   Succeed   1/1        31s
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  Option 2: Using Cluster API
+
+  Alternatively, update the `spec.services` section in the Cluster resource to include a LoadBalancer service:
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  metadata:
+    name: milvus-cluster
+    namespace: demo
+  spec:
+    terminationPolicy: Delete
+    clusterDef: milvus
+    # expose a external service
+    services:
+      - annotations:
+          service.beta.kubernetes.io/aws-load-balancer-type: nlb  # Use Network Load Balancer
+          service.beta.kubernetes.io/aws-load-balancer-internal: "false"  # or "true" for an internal VPC IP
+        componentSelector: milvus
+        name: milvus-internet
+        serviceName: milvus-internet
+        spec:
+          ipFamilyPolicy: PreferDualStack
+          ports:
+          - name: milvus
+            port: 19530
+            protocol: TCP
+            targetPort: milvus
+          type: LoadBalancer  # [ClusterIP, NodePort, LoadBalancer]
+    componentSpecs:
+    ...
+  ```
+  The YAML configuration above adds a new external service under the services section. This LoadBalancer service includes annotations for AWS Network Load Balancer (NLB).
+
+  :::note
+  Cloud Provider Annotations
+
+  When using a LoadBalancer service, you must include the appropriate annotations specific to your cloud provider. Below is a list of commonly used annotations for different cloud providers:
+
+  - AWS
+  ```yaml
+  service.beta.kubernetes.io/aws-load-balancer-type: nlb  # Use Network Load Balancer
+  service.beta.kubernetes.io/aws-load-balancer-internal: "true"  # Use "false" for internet-facing LoadBalancer
+  ```
+
+  - Azure
+  ```yaml
+  service.beta.kubernetes.io/azure-load-balancer-internal: "true" # Use "false" for internet-facing LoadBalancer
+  ```
+
+  - GCP
+  ```yaml
+  networking.gke.io/load-balancer-type: "Internal"  # Restricts the LoadBalancer to internal VPC access only. Defaults to internet-facing if not specified.
+  cloud.google.com/l4-rbs: "enabled" # Optimization for internet-facing LoadBalancer
+  ```
+
+  - Alibaba Cloud
+  ```yaml
+  service.beta.kubernetes.io/alibaba-cloud-loadbalancer-address-type: "internet"  # Use "intranet" for internal-facing LoadBalancer
+  ```
+  :::
+
+
+  :::note
+  The `service.beta.kubernetes.io/aws-load-balancer-internal` annotation controls whether the LoadBalancer is internal or internet-facing. Note that this annotation cannot be modified dynamically after service creation.
+  ```yaml
+    service.beta.kubernetes.io/aws-load-balancer-internal: "false"  # Use "true" for internal VPC IPs
+  ```
+  If you change this annotation from "false" to "true" after the Service is created, the annotation may update in the Service object, but the LoadBalancer will still retain its public IP.
+
+  To properly modify this behavior:
+  - First, delete the existing LoadBalancer service.
+  - Recreate the service with the updated annotation (`service.beta.kubernetes.io/aws-load-balancer-internal`: "true").
+  - Wait for the new LoadBalancer to be provisioned with the correct internal or external IP.
+  :::
+
+
+  Wait for the Cluster status to transition to Running using the following command:
+  ```bash
+  kubectl get cluster milvus-cluster -n demo -w
+  ```
+  ```
+  NAME             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+  milvus-cluster   milvus               Delete               Running   18m
+  ```
+  </TabItem>
+
+</Tabs>
+
+### Verify the Exposed Service
+Check the service details to confirm the LoadBalancer service is created:
+
+```bash
+kubectl get service -l app.kubernetes.io/instance=milvus-cluster -n demo
+```
+
+Example Output:
+```bash
+NAME                                 TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)              AGE
+milvus-cluster-milvus-internet       LoadBalancer   172.20.60.24   <EXTERNAL-IP> 19530:31243/TCP      1m
+```
+
+## Disable External Exposure
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  Option 1: Using OpsRequest
+
+  To disable external access, create an OpsRequest:
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: milvus-cluster-expose-disable-ops
+    namespace: demo
+  spec:
+    clusterName: milvus-cluster
+    expose:
+    - componentName: milvus
+      services:
+      - name: internet
+        serviceType: LoadBalancer
+      switch: Disable
+    preConditionDeadlineSeconds: 0
+    type: Expose
+  ```
+
+  Wait for the OpsRequest to complete:
+  ```bash
+  kubectl get ops milvus-cluster-expose-disable-ops -n demo
+  ```
+  Example Output:
+  ```bash
+  NAME                                TYPE     CLUSTER          STATUS    PROGRESS   AGE
+  milvus-cluster-expose-disable-ops   Expose   milvus-cluster   Succeed   1/1        24s
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  Option 2: Using Cluster API
+
+  Alternatively, remove the `spec.services` field from the Cluster resource:
+  ```bash
+  kubectl patch cluster milvus-cluster -n demo --type=json -p='[
+    {
+      "op": "remove",
+      "path": "/spec/services"
+    }
+  ]'
+  ```
+
+  Monitor the cluster status until it is Running:
+  ```bash
+  kubectl get cluster milvus-cluster -n demo -w
+  ```
+
+  ```bash
+  NAME             CLUSTER-DEFINITION  TERMINATION-POLICY   STATUS     AGE
+  milvus-cluster   milvus              Delete               Running    44m
+  ```
+  </TabItem>
+</Tabs>
+
+### Verify Service Removal
+
+Ensure that the 'milvus-cluster-milvus-internet' Service is removed:
+
+```bash
+kubectl get service -l app.kubernetes.io/instance=milvus-cluster -n demo
+```
+
+Expected Result: The 'milvus-cluster-milvus-internet' Service should be removed.
+
+## Cleanup
+To remove all created resources, delete the Milvus cluster along with its namespace:
+```bash
+kubectl delete cluster milvus-cluster -n demo
+kubectl delete ns demo
+```
+
+## Summary
+This guide demonstrated how to:
+- Expose a Milvus service externally or internally using KubeBlocks.
+- Configure LoadBalancer services with cloud provider-specific annotations.
+- Manage external access by enabling or disabling services via OpsRequest or direct updates to the Cluster API.
+
+KubeBlocks provides flexibility and simplicity for managing MySQL services in Kubernetes environments. simplicity for managing Milvus services in Kubernetes environments.

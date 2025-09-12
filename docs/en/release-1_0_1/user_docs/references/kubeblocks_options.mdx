@@ -1,0 +1,217 @@
+---
+title: KubeBlocks Options and Roles
+description: KubeBlocks Options and Roles
+keywords: [kubeblocks, options, roles]
+sidebar_position: 8
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# KubeBlocks Options and Roles
+
+## KubeBlocks Options
+
+### KubeBlocks  Options
+| Parameter | Description | Default |
+|----------|------|--------|
+| image.registry | KubeBlocks image repository | apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com |
+| image.repository | KubeBlocks image repository | apecloud/kubeblocks |
+| image.pullPolicy | Image pull policy | IfNotPresent |
+| image.tag | Image tag, default follows chart appVersion | "" |
+| image.imagePullSecrets | Image pull secrets | [] |
+| image.tools.repository | Tools image repository | apecloud/kubeblocks-tools |
+| replicaCount | Replica count | 1 |
+| reconcileWorkers | Reconcile workers | "" |
+
+### Data Protection  Options
+| Parameter | Description | Default |
+|----------|------|--------|
+| dataProtection.enabled | Enable data protection controllers | true |
+| dataProtection.leaderElectId | Data protection leader election ID | "" |
+| dataProtection.encryptionKey | Backup encryption key | "" |
+| dataProtection.encryptionKeySecretKeyRef.name | Encryption key Secret name | "" |
+| dataProtection.encryptionKeySecretKeyRef.key | Encryption key Secret key | "" |
+| dataProtection.encryptionKeySecretKeyRef.skipValidation | Skip key validation | false |
+| dataProtection.enableBackupEncryption | Enable backup encryption | false |
+| dataProtection.backupEncryptionAlgorithm | Backup encryption algorithm, choose one from "AES-128-CFB", "AES-192-CFB", "AES-256-CFB" | "" |
+| dataProtection.gcFrequencySeconds | Garbage collection frequency (seconds) | 3600 |
+| dataProtection.reconcileWorkers | Backup controller concurrency | "" |
+| dataProtection.image.registry | Data protection image repository | "" |
+| dataProtection.image.repository | Data protection image repository | |
+| dataProtection.image.pullPolicy | Image pull policy | IfNotPresent |
+| dataProtection.image.tag | Image tag | "" |
+| dataProtection.image.imagePullSecrets | Image pull secrets | [] |
+| dataProtection.image.datasafed.repository | Datasafed image repository | apecloud/datasafed |
+| dataProtection.image.datasafed.tag | Datasafed image tag | 0.2.0 |
+
+### Backup Repository Options
+| Parameter | Description | Default |
+|----------|------|--------|
+| backupRepo.create | Creates a backup repo during installation | false |
+| backupRepo.default | Set the created repo as the default | true |
+| backupRepo.accessMethod | The access method for the backup repo, options: [Mount, Tool] | Tool |
+| backupRepo.storageProvider | The storage provider used by the repo, options: [s3, oss, minio] | "" |
+| backupRepo.pvReclaimPolicy | The PV reclaim policy, options: [Retain, Delete] | Retain |
+| backupRepo.volumeCapacity | The capacity for creating PVC | "" |
+| backupRepo.config.bucket | Storage bucket | "" |
+| backupRepo.config.endpoint | Storage endpoint | "" |
+| backupRepo.config.region | Storage region | "" |
+| backupRepo.secrets.accessKeyId | Storage secret key ID | "" |
+| backupRepo.secrets.secretAccessKey | Storage secret key | "" |
+
+### Addon  Options
+| Parameter | Description | Default |
+|----------|------|--------|
+| addonController.enabled | Enable Addon controller, requires `cluster-admin `ClusterRole | true |
+| addonController.jobTTL | Time-to-live period for addon jobs (time.Duration format) | 5m |
+| addonController.jobImagePullPolicy | Image pull policy for addon install jobs | IfNotPresent |
+| keepAddons | Keep Addon CR objects when uninstalling chart | true |
+| addonChartLocationBase | KubeBlocks official addon chart location base. For air-gapped environments, if URL has prefix "file://", KubeBlocks will use Helm charts copied from addonChartsImage | file:// |
+| addonChartsImage.registry | Addon charts image registry (defaults to image.registry if not specified) | "" |
+| addonChartsImage.repository | Addon charts image repository | apecloud/kubeblocks-charts |
+| addonChartsImage.pullPolicy | Image pull policy | IfNotPresent |
+| addonChartsImage.tag | Image tag | "" |
+| addonChartsImage.chartsPath | Helm charts path in addon charts image | /charts |
+| addonChartsImage.pullSecrets | Image pull secrets | [] |
+| addonHelmInstallOptions | Addon helm install options | ["--atomic", "--cleanup-on-fail", "--wait", "--insecure-skip-tls-verify"] |
+| upgradeAddons | Upgrade addons when upgrading chart. Set to false to prevent addon CRs from being upgraded during chart upgrade | false |
+| autoInstalledAddons | List of addons to auto-install during installation and upgrade | ["apecloud-mysql", "etcd", "kafka", "mongodb", "mysql", "postgresql", "qdrant", "redis", "rabbitmq"] |
+
+
+### Controller Options
+| Parameter | Description | Default |
+|----------|------|--------|
+| controllers.apps.enabled | Enable apps controller | true |
+| controllers.workloads.enabled | Enable workloads controller | true |
+| controllers.operations.enabled | Enable operations controller | true |
+| controllers.experimental.enabled | Enable experimental controller | false |
+| controllers.trace.enabled | Enable trace controller | false |
+
+### Feature Gates Options
+| Parameter | Description | Default |
+|----------|------|--------|
+| featureGates.inPlacePodVerticalScaling.enabled | Enable in-place Pod vertical scaling | false |
+
+
+To update the options, you can use the following command:
+
+<Tabs>
+<TabItem value="Helm" label="Helm" default>
+
+1. Installation
+```bash
+helm install kubeblocks kubeblocks/kubeblocks \
+  --namespace kb-system \
+  --create-namespace \
+  --version {{VERSION}} \
+  --set optionName=optionValue
+```
+
+1. Upgrade
+```bash
+helm upgrade kubeblocks kubeblocks/kubeblocks \
+  --namespace kb-system \
+  --version {{VERSION}} \
+  --set optionName=optionValue
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+1. Installation
+```bash
+kbcli kubeblocks install \
+  --version={{VERSION}} \
+  --create-namespace \
+  --set optionName=optionValue
+```
+
+1. Upgrade
+```bash
+kbcli kubeblocks upgrade \
+  --version={{VERSION}} \
+  --set optionName=optionValue
+```
+
+</TabItem>
+</Tabs>
+
+
+## KubeBlocks Operator RBAC Permissions
+KubeBlocks operator requires the following permissions to work properly.
+
+### 1. Kubernetes Resource Permissions
+**Main permissions include:**
+
+#### Core Cluster Permissions:
+- **Node**: `list`, `watch`
+- **Pod**: `create`, `delete`, `deletecollection`, `get`, `list`, `patch`, `update`, `watch`, `exec`, `log`
+- **Service**: `create`, `delete`, `deletecollection`, `get`, `list`, `patch`, `update`, `watch`
+- **ConfigMap**: `create`, `delete`, `deletecollection`, `get`, `list`, `patch`, `update`, `watch`
+- **Secret**: `create`, `delete`, `deletecollection`, `get`, `list`, `patch`, `update`, `watch`
+- **ServiceAccount**: `create`, `delete`, `get`, `list`, `patch`, `update`, `watch`
+- **PersistentVolumeClaim**: `create`, `delete`, `get`, `list`, `patch`, `update`, `watch`
+- **PersistentVolume**: `get`, `list`, `patch`, `update`, `watch`
+- **Event**: `create`, `get`, `list`, `patch`, `watch`
+
+#### Application Resource Permissions:
+- **Deployment**: `get`, `list`, `watch`
+- **StatefulSet**: `create`, `delete`, `deletecollection`, `get`, `list`, `patch`, `update`, `watch`
+- **Job**: `create`, `delete`, `deletecollection`, `get`, `list`, `patch`, `update`, `watch`
+- **CronJob**: `create`, `delete`, `get`, `list`, `patch`, `update`, `watch`
+
+#### Storage Related Permissions:
+- **StorageClass**: `create`, `delete`, `get`, `list`, `watch`
+- **CSIDriver**: `get`, `list`, `watch`
+- **VolumeSnapshot**: `create`, `delete`, `get`, `list`, `patch`, `update`, `watch`
+- **VolumeSnapshotClass**: `create`, `delete`, `get`, `list`, `patch`, `update`, `watch`
+
+#### RBAC Permissions:
+- **Role**: `get`, `list`, `watch`
+- **RoleBinding**: `create`, `delete`, `get`, `list`, `patch`, `update`, `watch`
+
+#### Coordination Mechanism Permissions:
+- **Lease**: `create`, `get`, `list`, `patch`, `update`, `watch`
+
+#### Authentication Proxy Permissions
+
+- **TokenReview**: `create`
+- **SubjectAccessReview**: `create`
+
+### 2. KubeBlocks Custom Resource Permissions
+
+- **apps.kubeblocks.io** API Groups: **ClusterDefinition**, **Cluster**, **ComponentDefinition**, **Component**, **ComponentVersion**, **Rollout**, - **ServiceDescriptor**, **ShardingDefinition**, **SidecarDefinition**
+- **dataprotection.kubeblocks.io** API Groups: **ActionSet**, **BackupPolicy**, **BackupPolicyTemplate**, **BackupRepo**, **Backup**, **BackupSchedule**, - **Restore**, **StorageProvider**
+- **operations.kubeblocks.io** API Groups: **OpsDefinition**, **OpsRequest**
+- **parameters.kubeblocks.io** API Groups: **ComponentParameter**, **ParamConfigRenderer**, **Parameter**, **ParameterDefinition**
+- **experimental.kubeblocks.io** API Groups: **NodeCountScaler**
+- **extensions.kubeblocks.io** API Groups: **Addon**
+- **trace.kubeblocks.io** API Groups: **ReconciliationTrace**
+- **workloads.kubeblocks.io** API Groups: **InstanceSet**
+
+### 3. Conditional Permissions
+
+**Data Protection Feature (dataProtection.enabled=true):**
+- backup-related permissions
+
+**Webhook Conversion Feature (webhooks.conversionEnabled=true):**
+- **CustomResourceDefinition**: `create`, `get`, `list`, `patch`, `update`, `watch`
+- **Deployment**: Additional deployment management permissions
+
+**Addon Controller (addonControllerEnabled=true):**
+- **cluster-admin**: Full cluster administrator permissions
+
+:::note
+
+Addon Controller requires `cluster-admin` ClusterRole.
+If you don't want to grant this permission, you can set `addonController.enabled=false` when installing KubeBlocks.
+
+Once disabled, one can still install addons through the `helm` way [install addons](../install_addons).
+
+:::
+
+
+
+

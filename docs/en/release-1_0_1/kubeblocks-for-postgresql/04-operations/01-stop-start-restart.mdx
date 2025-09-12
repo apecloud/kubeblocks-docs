@@ -1,0 +1,283 @@
+---
+title: PostgreSQL Cluster Lifecycle Management (Stop, Start, Restart)
+description: Learn how to manage PostgreSQL cluster states in KubeBlocks including stopping, starting, and restarting operations to optimize resources.
+keywords: [KubeBlocks, PostgreSQL, Cluster Management, Stop, Start, Restart]
+sidebar_position: 1
+sidebar_label: Lifecycle Management
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# PostgreSQL Cluster Lifecycle Management
+
+This guide demonstrates how to manage a PostgreSQL cluster's operational state in **KubeBlocks**, including:
+
+- Stopping the cluster to conserve resources
+- Starting a stopped cluster
+- Restarting cluster components
+
+These operations help optimize resource usage and reduce operational costs in Kubernetes environments.
+
+Lifecycle management operations in KubeBlocks:
+
+| Operation | Effect | Use Case |
+|-----------|--------|----------|
+| Stop | Suspends cluster, retains storage | Cost savings, maintenance |
+| Start | Resumes cluster operation | Restore service after pause |
+| Restart | Recreates pods for component | Configuration changes, troubleshooting |
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploy a PostgreSQL Cluster
+
+import CreatePGCluster from '../_tpl/_create-pg-replication-cluster.mdx'
+
+<CreatePGCluster />
+
+## Verifying the Deployment
+
+import VerifyPGCluster from '../_tpl/_verify-pg-replication-cluster.mdx'
+
+<VerifyPGCluster />
+
+## Cluster Lifecycle Operations
+
+### Stopping the Cluster
+
+Stopping a PostgreSQL cluster in KubeBlocks will:
+
+1. Terminates all running pods
+2. Retains persistent storage (PVCs)
+3. Maintains cluster configuration
+
+This operation is ideal for:
+- Temporary cost savings
+- Maintenance windows
+- Development environment pauses
+
+<Tabs>
+
+<TabItem value="opsRequest" label="OpsRequest API" default>
+
+Option 1: OpsRequest API
+
+Create a Stop operation request:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-cluster-stop-ops
+  namespace: demo
+spec:
+  clusterName: pg-cluster
+  type: Stop
+```
+</TabItem>
+
+<TabItem value="ClusterAPI" label="Cluster API">
+
+Option 2: Cluster API Patch
+
+Modify the cluster spec directly by patching the stop field:
+
+```bash
+kubectl patch cluster pg-cluster -n demo --type='json' -p='[
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/0/stop",
+    "value": true
+  }
+]'
+```
+
+</TabItem>
+
+</Tabs>
+
+### Verifying Cluster Stop
+
+To confirm a successful stop operation:
+
+1. Check cluster status transition:
+    ```bash
+    kubectl get cluster pg-cluster -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+    pg-cluster   postgresql           Delete               Stopping   6m3s
+    pg-cluster   postgresql           Delete               Stopped    6m55s
+    ```
+
+2. Verify no running pods:
+    ```bash
+    kubectl get pods -n demo
+    ```
+    Example Output:
+    ```bash
+    No resources found in demo namespace.
+    ```
+
+3. Confirm persistent volumes remain:
+    ```bash
+    kubectl get pvc -n demo
+    ```
+    Example Output:
+    ```bash
+    NAME                           STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+    data-pg-cluster-postgresql-0   Bound    pvc-dcfb1ebc-2773-4edd-9898-e11da76062c4   20Gi       RWO            standard       19m
+    data-pg-cluster-postgresql-1   Bound    pvc-36366e01-0178-43fa-b1a0-4168b057dd10   20Gi       RWO            standard       19m
+    ```
+
+### Starting the Cluster
+
+Starting a stopped PostgreSQL cluster:
+1. Recreates all pods
+2. Reattaches persistent storage
+3. Restores service endpoints
+
+Expected behavior:
+- Cluster returns to previous state
+- No data loss occurs
+- Services resume automatically
+<Tabs>
+
+<TabItem value="opsRequest" label="OpsRequest API" default>
+
+Initiate a Start operation request:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-cluster-start-ops
+  namespace: demo
+spec:
+  # Specifies the name of the Cluster resource that this operation is targeting.
+  clusterName: pg-cluster
+  type: Start
+```
+
+</TabItem>
+
+<TabItem value="ClusterAPI" label="Cluster API">
+
+Modify the cluster spec to resume operation:
+1. Set stop: false, or
+2. Remove the stop field entirely
+
+    ```bash
+    kubectl patch cluster pg-cluster -n demo --type='json' -p='[
+      {
+        "op": "remove",
+        "path": "/spec/componentSpecs/0/stop"
+      }
+    ]'
+    ```
+  </TabItem>
+
+</Tabs>
+
+### Verifying Cluster Start
+
+To confirm a successful start operation:
+
+1. Check cluster status transition:
+    ```bash
+    kubectl get cluster pg-cluster -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+    pg-cluster   postgresql           Delete               Updating   22m
+    pg-cluster   postgresql           Delete               Running    22m
+    ```
+
+2. Verify pod recreation:
+    ```bash
+    kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster
+    ```
+    Example Output:
+    ```bash
+    NAME                     READY   STATUS    RESTARTS   AGE
+    pg-cluster-postgresql-0   1/1     Running   0          2m
+    pg-cluster-postgresql-1   1/1     Running   0          1m
+    ```
+
+3. Check service endpoints:
+    ```bash
+    kubectl get endpoints pg-cluster-postgresql-postgresql -n demo
+    ```
+
+### Restarting Cluster
+
+Restart operations provide:
+- Pod recreation without full cluster stop
+- Component-level granularity
+- Minimal service disruption
+
+Use cases:
+- Configuration changes requiring restart
+- Resource refresh
+- Troubleshooting
+
+**Using OpsRequest API**
+
+Target a specific component for restart:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-cluster-restart-ops
+  namespace: demo
+spec:
+  clusterName: pg-cluster
+  type: Restart
+  restart:
+  - componentName: postgresql
+```
+
+**Verifying Restart Completion**
+
+To verify a successful component restart:
+
+1. Track OpsRequest progress:
+    ```bash
+    kubectl get opsrequest pg-cluster-restart-ops -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME                     TYPE      CLUSTER      STATUS    PROGRESS   AGE
+    pg-cluster-restart-ops   Restart   pg-cluster   Running   0/2        10s
+    pg-cluster-restart-ops   Restart   pg-cluster   Running   1/2        65s
+    pg-cluster-restart-ops   Restart   pg-cluster   Running   2/2        2m5s
+    pg-cluster-restart-ops   Restart   pg-cluster   Succeed   2/2        2m5s
+    ```
+
+2. Check pod status:
+    ```bash
+    kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster
+    ```
+  Note: Pods will show new creation timestamps after restart
+
+3. Verify component health:
+    ```bash
+    kbcli cluster describe pg-cluster -n demo
+    ```
+
+Once the operation is complete, the cluster will return to the Running state.
+
+## Summary
+In this guide, you learned how to:
+1. Stop a PostgreSQL cluster to suspend operations while retaining persistent storage.
+2. Start a stopped cluster to bring it back online.
+3. Restart specific cluster components to recreate their Pods without stopping the entire cluster.
+
+By managing the lifecycle of your PostgreSQL cluster, you can optimize resource utilization, reduce costs, and maintain flexibility in your Kubernetes environment. KubeBlocks provides a seamless way to perform these operations, ensuring high availability and minimal disruption.

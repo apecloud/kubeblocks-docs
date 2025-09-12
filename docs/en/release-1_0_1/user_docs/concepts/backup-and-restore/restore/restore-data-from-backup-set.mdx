@@ -1,0 +1,59 @@
+---
+title: Restore data from backup set
+description: How to restore data from backup set
+keywords: [backup and restore, restore, backup set]
+sidebar_position: 1
+sidebar_label: Restore from backup set
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Restore data from backup set
+
+KubeBlocks supports restoring clusters from backups.  This documentation takes MySQL as an example. Please refer to [MySQL Backup and Restore](../../../../kubeblocks-for-mysql/05-backup-restore/05-restoring-from-full-backup) for more details.
+
+**Step 1. View backups.**
+
+<Tabs>
+
+<TabItem value="kubectl" label="kubectl" default>
+
+```bash
+kubectl get backups
+```
+
+</TabItem>
+
+<TabItem value="kbcli" label="kbcli">
+
+For existing clusters, execute:
+
+```bash
+kbcli cluster list-backups mycluster
+```
+
+If the cluster has been deleted, execute:
+
+```bash
+kbcli dataprotection list-backups
+```
+
+</TabItem>
+
+</Tabs>
+
+**Step 2. Restore clusters from a specific backup.**
+
+```bash
+# Restore new cluster
+kbcli cluster restore myrestore --backup mybackup
+>
+Cluster myrestore created
+
+# View the status of the restored cluster
+kbcli cluster list myrestore
+>
+NAME        NAMESPACE   CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     CREATED-TIME
+myrestore   default     mysql                Delete               Running   May 26,2025 18:42 UTC+0800
+```

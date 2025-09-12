@@ -8,28 +8,29 @@ export const versionOptions = [
   },
   {
     id: 'beta',
-    label: 'v1.0.1-beta.19',
-    value: 'v1.0.1-beta.19',
+    label: 'v1.0.1',
+    value: 'v1.0.1',
     description: 'Latest beta release',
   },
   {
     id: 'previous',
-    label: 'v0.9.3',
-    value: 'v0.9.3',
+    label: 'v0.9.5',
+    value: 'v0.9.5',
     description: 'Previous stable release',
   },
 ];
 
-// 文档路径到版本的映射
+// Document path to version mapping
 export const docPathToVersion: Record<string, string> = {
+  'preview': 'v1.0.1',
   'release-1_0': 'v1.0.0',
-  preview: 'v1.0.1-beta.19',
-  'release-0_9': 'v0.9.3', // 添加其他路径映射
+  'release-1_0_1': 'v1.0.1',
+  'release-0_9': 'v0.9.5', // Add other path mappings
 };
 
-// 从路径推断版本
+// Infer version from path
 export function getVersionFromPath(pathname: string): string {
-  // 提取文档版本路径，如 /docs/release-1_0/... -> release-1_0
+  // Extract document version path, e.g. /docs/release-1_0/... -> release-1_0
   const pathSegments = pathname.split('/');
   const docVersionPath = pathSegments[2]; // /docs/[version]/...
 

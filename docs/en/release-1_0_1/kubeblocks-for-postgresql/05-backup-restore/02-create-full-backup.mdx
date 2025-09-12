@@ -1,0 +1,261 @@
+---
+title: Create a Full Backup for a PostgreSQL Cluster on KubeBlocks
+description: Step-by-step guide to creating and validating full backups for PostgreSQL clusters using Backup API and OpsRequest API in KubeBlocks.
+keywords: [PostgreSQL, Full Backup, KubeBlocks, Kubernetes, Database Backup, XtraBackup]
+sidebar_position: 2
+sidebar_label: Create Full Backup
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# Create a Full Backup for PostgreSQL on KubeBlocks
+
+This guide demonstrates how to create and validate full backups for PostgreSQL clusters on KubeBlocks using the `pg-basebackup` method through both:
+- The Backup API (direct backup operations)
+- The OpsRequest API (managed backup operations with enhanced monitoring)
+
+We will cover how to restore data from a backup in the [Restore From Full Backup](./05-restoring-from-full-backup) guide.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploy a PostgreSQL Cluster
+
+import CreatePGCluster from '../_tpl/_create-pg-replication-cluster.mdx'
+
+<CreatePGCluster />
+
+## Verifying the Deployment
+
+import VerifyPGCluster from '../_tpl/_verify-pg-replication-cluster.mdx'
+
+<VerifyPGCluster />
+
+## Backup Prerequisites
+
+Before creating backups, ensure:
+1. Backup repository is configured:
+   - `BackupRepo` resource exists
+   - Network connectivity between cluster and repository
+   - `BackupRepo` status shows "Ready"
+
+2. Cluster is ready:
+   - Cluster status is "Running"
+   - No ongoing operations (scaling, upgrades, etc.)
+
+## Identify Backup Configuration
+
+Check available backup policies and schedules:
+
+```bash
+# List backup policies
+kubectl get backuppolicy -n demo -l app.kubernetes.io/instance=pg-cluster
+
+# List backup schedules
+kubectl get backupschedule -n demo -l app.kubernetes.io/instance=pg-cluster
+```
+
+Expected Output:
+```bash
+NAME                                            BACKUP-REPO   STATUS      AGE
+pg-cluster-postgresql-backup-policy                           Available   58m
+
+NAME                                              STATUS      AGE
+pg-cluster-postgresql-backup-schedule             Available   60m
+```
+### BackupPolicy
+
+`BackupPolicy` defines a list of backup methods and their configurations. KubeBlocks automatically generates a `BackupPolicy` for each database cluster if it supports backup (`BackupPolicyTemplate` is defined).
+
+:::tip
+To view the list of BackupPolicyTemplate, you can run the following command:
+```bash
+kubectl get backuppolicytemplate -n demo -l app.kubernetes.io/name=postgresql
+```
+:::
+
+View supported backup methods in the BackupPolicy CR `pg-cluster-postgresql-backup-policy`:
+
+```bash
+kubectl get backuppolicy pg-cluster-postgresql-backup-policy -n demo -oyaml | yq '.spec.backupMethods[] | .actionSetName + ", " + .name'
+```
+
+Example Output:
+
+| ActionSet Name                | Method Name        |
+|-------------------------------|--------------------|
+| postgresql-basebackup         | pg-basebackup      |
+| null                          | volume-snapshot    |
+| postgresql-wal-g              | wal-g              |
+| postgres-wal-g-incremental    | wal-g-incremental  |
+| postgresql-for-pitr           | archive-wal        |
+| postgres-wal-g-pitr           | wal-g-archive      |
+
+
+- `ActionSetName` refers to the name of the `ActionSet` object that defines the backup and restore actions. If `ActionSetName` is `null`, it means the backup method does not require an `ActionSet`
+- `Method Name` is simply a name of the backup method given by users or defined in the `BackupPolicyTemplate`. It will be referenced by the `BackupSchedule` resource.
+
+:::tip
+
+To check the definition of the `ActionSet` object, you can run the following command:
+```bash
+kubectl get actionset postgresql-wal-g  -oyaml  # where postgresql-basebackup is the ActionSetName
+```
+:::
+
+
+**List of Backup methods**
+
+KubeBlocks PostgreSQL supports these backup methods:
+
+| Feature           | Method          | Description |
+|-------------------|-----------------|-------------|
+| Full Backup       | pg-basebackup   | Uses `pg_basebackup`, a PostgreSQL utility to create a base backup |
+| Full Backup       | wal-g           | Uses `wal-g` to create a full backup (requires WAL-G configuration) |
+| Continuous Backup | archive-wal     | Uploads PostgreSQL Write-Ahead Logging (WAL) files periodically to the backup repository, usually paired with `pg-basebackup`|
+| Continuous Backup | wal-g-archive   | Uploads PostgreSQL Write-Ahead Logging (WAL) files periodically to the backup repository, usually paired with `wal-g`|
+
+:::note
+
+- It is recommended to pair `pg-basebackup` with `archive-wal`, and pair `wal-g` with `wal-g-archive`.
+- Method `pg-basebackup` can be enabled alone to create a full backup.
+- Method `wal-g` cannot be enabled alone. It must be paired with `wal-g-archive`.
+
+:::
+
+### BackupSchedule
+
+`BackupSchedule` defines a schedule for backups. It references the `BackupPolicy` resource and the `BackupMethod` name.
+
+View the `BackupSchedule` resource `pg-cluster-postgresql-backup-schedule`:
+
+```bash
+kubectl get backupschedule pg-cluster-postgresql-backup-schedule -n demo -oyaml | yq '.spec.schedules[] | .backupMethod + "," + .enabled'
+```
+
+Example Output:
+
+| Backup Method        | Enabled |
+|----------------------|---------|
+| pg-basebackup        | false   |
+| wal-g                | false   |
+| archive-wal          | false   |
+| wal-g-archive        | false   |
+
+By default, all backup methods are disabled. You can enable it by setting `enabled` to `true` on demand. As introduced previously, there are two `FULL` backup methods: `pg-basebackup` and `wal-g`. As `wal-g` cannot be enabled alone, we use `pg-basebackup` in this guide.
+
+## Step 1. Create On-Demand Backup (using pg-basebackup)
+Backup via Backup API
+
+### Option 1. Using Backup API
+
+Apply this manifest to create a backup:
+
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: Backup
+metadata:
+  name: pg-cluster-pg-basebackup2
+  namespace: demo
+spec:
+  backupMethod: pg-basebackup
+  backupPolicyName: pg-cluster-postgresql-backup-policy
+  # Determines whether the backup contents stored in the backup repository should be deleted
+  # when the backup custom resource(CR) is deleted. Supported values are `Retain` and `Delete`.
+  # - `Retain` means that the backup content and its physical snapshot on backup repository are kept.
+  # - `Delete` means that the backup content and its physical snapshot on backup repository are deleted.
+  deletionPolicy: Delete
+```
+
+### Option 2. Using OpsRequest API
+
+Execute a backup using the OpsRequest API with the 'pg-basebackup' method:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-cluster-backup
+  namespace: demo
+spec:
+  clusterName: pg-cluster
+  force: false
+  backup:
+    backupPolicyName: pg-cluster-postgresql-backup-policy
+    backupMethod: pg-basebackup
+    deletionPolicy: Delete
+    retentionPeriod: 1mo
+  type: Backup
+```
+
+
+## Step 2. Monitor Backup and Verify Completion
+
+You can track the Backup progress until status shows "Completed".
+
+```bash
+kubectl get backup pg-cluster-pg-basebackup  -n demo -w
+```
+
+Example Output:
+
+```bash
+NAME                       POLICY                                METHOD          REPO            STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
+pg-cluster-pg-basebackup   pg-cluster-postgresql-backup-policy   pg-basebackup   <BACKUP_REPO>   Completed   4722262      10s        Delete            2025-05-16T02:53:45Z   2025-05-16T02:53:55Z
+```
+
+## Step 3. Validate Backup
+
+Confirm successful completion by checking:
+- Backup status shows "Completed"
+- Backup size matches expectations
+- Check files in the BackupRepo
+
+The `Backup` resource records details in `.status` including:
+- Storage path
+- Time range
+- Backup file size
+
+## Troubleshooting
+
+When encountering backup issues, such as Backup status is `Failed`  or stuck in `Running`for quite a long time, follow these steps to diagnose and resolve the problem:
+
+1. Inspect the Backup resource for any error events or status updates:
+  ```bash
+  kubectl describe backup <BACKUP_NAME> -n demo
+  ```
+
+2. Verify the backup job status and examine its logs:
+  KubeBlocks runs a Job to create a full backup. If the backup task gets stuck, you can track the Job progress:
+  ```bash
+  kubectl -n demo get job -l app.kubernetes.io/instance=pg-cluster,app.kubernetes.io/managed-by=kubeblocks-dataprotection
+  ```
+
+  And check pod logs:
+  ```bash
+  kubectl -n demo logs <POD_NAME>
+  ```
+
+  This job will be deleted when the backup completes.
+
+3. Review KubeBlocks controller logs for detailed error information:
+
+  ```bash
+  kubectl -n kb-system logs deploy/kubeblocks -f
+  ```
+
+## Summary
+
+This guide covered:
+1. Deploying a replication PostgreSQL cluster
+2. Creating full backups using:
+   - Direct Backup API
+   - Managed OpsRequest API
+3. Monitoring and validating backups
+
+Your PostgreSQL data is now securely backed up and ready for restoration when needed.
