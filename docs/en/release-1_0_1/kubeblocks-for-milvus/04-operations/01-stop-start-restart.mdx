@@ -1,0 +1,257 @@
+---
+title: Milvus Cluster Lifecycle Management (Stop, Start, Restart)
+description: Learn how to manage Milvus Cluster states in KubeBlocks including stopping, starting, and restarting operations to optimize resources.
+keywords: [KubeBlocks, Milvus, Cluster Management, Stop, Start, Restart]
+sidebar_position: 1
+sidebar_label: Lifecycle Management
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Milvus Cluster Lifecycle Management
+
+This guide demonstrates how to manage a Milvus Cluster's operational state in **KubeBlocks**, including:
+
+- Stopping the cluster to conserve resources
+- Starting a stopped cluster
+- Restarting cluster components
+
+These operations help optimize resource usage and reduce operational costs in Kubernetes environments.
+
+Lifecycle management operations in KubeBlocks:
+
+| Operation | Effect | Use Case |
+|-----------|--------|----------|
+| Stop | Suspends cluster, retains storage | Cost savings, maintenance |
+| Start | Resumes cluster operation | Restore service after pause |
+| Restart | Recreates pods for component | Configuration changes, troubleshooting |
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploy a Milvus Cluster
+
+Please refer to [Deploying a Milvus Cluster with KubeBlocks](../03-topologies/02-cluster) to deploy a milvus cluster.
+
+## Cluster Lifecycle Operations
+
+### Stopping the Cluster
+
+Stopping a Milvus Cluster in KubeBlocks will:
+
+1. Terminates all running pods
+2. Maintains cluster configuration
+
+This operation is ideal for:
+- Temporary cost savings
+- Maintenance windows
+- Development environment pauses
+
+<Tabs>
+
+<TabItem value="opsRequest" label="OpsRequest API" default>
+
+Option 1: OpsRequest API
+
+Create a Stop operation request:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: milvus-cluster-stop-ops
+  namespace: demo
+spec:
+  clusterName: milvus-cluster
+  type: Stop
+```
+</TabItem>
+
+<TabItem value="ClusterAPI" label="Cluster API">
+
+Option 2: Cluster API
+
+Create a Stop operation request:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: milvus-cluster-stop-ops
+  namespace: demo
+spec:
+  clusterName: milvus-cluster
+  type: Stop
+```
+</TabItem>
+</Tabs>
+
+### Verifying Cluster Stop
+
+To confirm a successful stop operation:
+
+1. Check cluster status transition:
+    ```bash
+    kubectl get cluster milvus-cluster -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME             CLUSTER-DEFINITION  TERMINATION-POLICY   STATUS     AGE
+    milvus-cluster   milvus              Delete               Stopping   6m33s
+    milvus-cluster   milvus              Delete               Stopped    6m55s
+    ```
+
+2. Verify no running pods:
+    ```bash
+    kubectl get pods -l app.kubernetes.io/instance=milvus-cluster -n demo
+    ```
+    Example Output:
+    ```bash
+    No resources found in demo namespace.
+    ```
+
+### Starting the Cluster
+
+Starting a stopped Milvus Cluster:
+1. Recreates all pods
+3. Restores service endpoints
+
+Expected behavior:
+- Cluster returns to previous state
+- No data loss occurs
+- Services resume automatically
+<Tabs>
+
+<TabItem value="opsRequest" label="OpsRequest API" default>
+
+Initiate a Start operation request:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: milvus-cluster-start-ops
+  namespace: demo
+spec:
+  # Specifies the name of the Cluster resource that this operation is targeting.
+  clusterName: milvus-cluster
+  type: Start
+```
+</TabItem>
+</Tabs>
+
+### Verifying Cluster Start
+
+To confirm a successful start operation:
+
+1. Check cluster status transition:
+    ```bash
+    kubectl get cluster milvus-cluster -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+    milvus-cluster   milvus               Delete               Updating   30m
+    milvus-cluster   milvus               Delete               Updating   32m
+    milvus-cluster   milvus               Delete               Updating   32m
+    milvus-cluster   milvus               Delete               Running    33m
+    milvus-cluster   milvus               Delete               Running    33m
+    ```
+
+2. Verify pod recreation:
+    ```bash
+    kubectl get pods -n demo -l app.kubernetes.io/instance=milvus-cluster
+    ```
+    Example Output:
+    ```bash
+    NAME                         READY   STATUS    RESTARTS   AGE
+    milvus-cluster-datanode-0    1/1     Running   0          5m24s
+    milvus-cluster-indexnode-0   1/1     Running   0          5m24s
+    milvus-cluster-mixcoord-0    1/1     Running   0          5m24s
+    milvus-cluster-proxy-0       1/1     Running   0          5m24s
+    milvus-cluster-querynode-0   1/1     Running   0          5m24s
+    milvus-cluster-querynode-1   1/1     Running   0          3m43s
+    ```
+
+### Restarting Cluster
+
+Restart operations provide:
+- Pod recreation without full cluster stop
+- Component-level granularity
+- Minimal service disruption
+
+Use cases:
+- Configuration changes requiring restart
+- Resource refresh
+- Troubleshooting
+
+**Check Components**
+
+There are five components in Milvus Cluster. To get the list of components,
+```bash
+kubectl get cluster -n demo milvus-cluster -oyaml | yq '.spec.componentSpecs[].name'
+```
+
+Expected Output:
+```text
+proxy
+mixcoord
+datanode
+indexnode
+querynode
+```
+
+
+**Restart Proxy via OpsRequest API**
+
+List specific components to be restarted:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: milvus-cluster-restart-ops
+  namespace: demo
+spec:
+  clusterName: milvus-cluster
+  type: Restart
+  restart:
+  - componentName: proxy
+```
+
+**Verifying Restart Completion**
+
+To verify a successful component restart:
+
+1. Track OpsRequest progress:
+    ```bash
+    kubectl get opsrequest milvus-cluster-restart-ops -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME                         TYPE      CLUSTER          STATUS    PROGRESS   AGE
+    milvus-cluster-restart-ops   Restart   milvus-cluster   Running   0/1        4s
+    milvus-cluster-restart-ops   Restart   milvus-cluster   Running   1/1        2m12s
+    milvus-cluster-restart-ops   Restart   milvus-cluster   Running   1/1        2m12s
+    milvus-cluster-restart-ops   Restart   milvus-cluster   Succeed   1/1        2m12s
+    ```
+
+2. Check pod status:
+    ```bash
+    kubectl get pods -n demo -l app.kubernetes.io/instance=milvus-cluster
+    ```
+    Note: Pods will show new creation timestamps after restart. Only pods belongs to component `proxy` have been restarted.
+
+Once the operation is complete, the cluster will return to the Running state.
+
+## Summary
+In this guide, you learned how to:
+1. Stop a Milvus Cluster to suspend operations while retaining persistent storage.
+2. Start a stopped cluster to bring it back online.
+3. Restart specific cluster components to recreate their Pods without stopping the entire cluster.
+
+By managing the lifecycle of your Milvus Cluster, you can optimize resource utilization, reduce costs, and maintain flexibility in your Kubernetes environment. KubeBlocks provides a seamless way to perform these operations, ensuring high availability and minimal disruption.

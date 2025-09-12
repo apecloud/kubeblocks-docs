@@ -1,0 +1,260 @@
+---
+title: Deploying a MySQL Semi-Synchronous Cluster with ProxySQL on KubeBlocks
+description: Learn how to deploy a MySQL semi-synchronous replication cluster with ProxySQL using KubeBlocks. This guide covers configuration, verification, and failover testing.
+keywords: [KubeBlocks, MySQL, ProxySQL, Semi-Synchronous Replication, Kubernetes, High Availability]
+sidebar_position: 2
+sidebar_label: MySQL Cluster with ProxySQL
+---
+
+# Deploying a MySQL Semi-Synchronous Cluster and ProxySQL with KubeBlocks
+
+**Semi-synchronous replication** enhances data consistency between the primary and replica nodes by ensuring that the primary waits for acknowledgment from at least one replica before committing transactions.
+
+**ProxySQL** is a high-performance MySQL proxy that acts as a middleware between MySQL clients and servers. It provides advanced features such as query routing, load balancing, query caching, and high availability. When combined with a MySQL semi-synchronous cluster, ProxySQL ensures seamless failover and efficient traffic management, resulting in optimal performance and reliability.
+
+This guide walks you through deploying a MySQL semi-synchronous replication cluster integrated with ProxySQL using KubeBlocks.
+
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+  - A Kubernetes cluster is up and running.
+  - The kubectl CLI tool is configured to communicate with your cluster.
+  - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## Deploying the MySQL Semi-Synchronous Cluster
+
+KubeBlocks uses a declarative configuration approach to manage MySQL clusters. Below is an example configuration for deploying a MySQL cluster with 2 MySQL nodes (1 primary, 1 replica) and 2 ProxySQL instances.
+
+Apply the following configuration:
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync-proxysql
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+    - name: proxysql
+      serviceVersion: 2.4.4
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+EOF
+```
+**Explanation of Key Fields**:
+- `clusterDef: mysql`: Specifies the ClusterDefinition CR for the cluster. The ClusterDefinition 'mysql' contains multiple topologies, such as 'semisync', 'semisync-proxysql', 'mgr', 'mgr-proxysql', 'orc', 'orc-proxysql'.
+- `topology: semisync-proxysql`: Configures a semi-synchronous replication MySQL cluster with ProxySQL integration.
+- `componentSpecs`: Defines the components in the cluster:
+  - Component 'mysql':
+    - `serviceVersion: 8.0.35`: Specifies the MySQL version to deploy. Here, version 8.0.35 is used.
+    - `replicas: 2`: Sets the number of MySQL instances (in this case, 2).
+  - Component 'proxysql':
+    - `serviceVersion: 2.4.4`: Specifies the ProxySQL version to deploy. Here, version 2.4.4 is used.
+    - `replicas: 2`: Sets the number of ProxySQL instances (in this case, 2).
+
+
+## Verifying the Deployment
+
+### Check Cluster Status
+Once the cluster is deployed, check its status:
+
+```bash
+kubectl get cluster -n demo -w
+```
+Expected Output:
+```
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Creating   8s
+example-mysql-cluster   mysql                Delete               Running   3m1s
+```
+### Detailed Cluster Information
+To get detailed information about the cluster:
+```bash
+kbcli cluster describe example-mysql-cluster -n demo
+```
+Expected Output:
+```
+Name: example-mysql-cluster	 Created Time: Feb 10,2025 08:32 UTC+0800
+NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY            STATUS    TERMINATION-POLICY
+demo        mysql                semisync-proxysql   Running   Delete
+
+Endpoints:
+COMPONENT   INTERNAL                                                                     EXTERNAL
+mysql       example-mysql-cluster-mysql.demo.svc.cluster.local:3306                      <none>
+proxysql    example-mysql-cluster-proxysql-proxy-ordinal-0.demo.svc.cluster.local:6032   <none>
+            example-mysql-cluster-proxysql-proxy-ordinal-0.demo.svc.cluster.local:6033
+            example-mysql-cluster-proxysql-proxy-ordinal-1.demo.svc.cluster.local:6032
+            example-mysql-cluster-proxysql-proxy-ordinal-1.demo.svc.cluster.local:6033
+            example-mysql-cluster-proxysql-proxy-server.demo.svc.cluster.local:6033
+
+Topology:
+COMPONENT   SERVICE-VERSION   INSTANCE                           ROLE        STATUS    AZ                NODE                                                       CREATED-TIME
+mysql       8.0.35            example-mysql-cluster-mysql-0      primary     Running   ap-southeast-1b   ip-10-0-2-221.ap-southeast-1.compute.internal/10.0.2.221   Feb 10,2025 08:32 UTC+0800
+mysql       8.0.35            example-mysql-cluster-mysql-1      secondary   Running   ap-southeast-1a   ip-10-0-1-188.ap-southeast-1.compute.internal/10.0.1.188   Feb 10,2025 08:32 UTC+0800
+proxysql    2.4.4             example-mysql-cluster-proxysql-0   <none>      Running   ap-southeast-1b   ip-10-0-2-221.ap-southeast-1.compute.internal/10.0.2.221   Feb 10,2025 08:34 UTC+0800
+proxysql    2.4.4             example-mysql-cluster-proxysql-1   <none>      Running   ap-southeast-1a   ip-10-0-1-188.ap-southeast-1.compute.internal/10.0.1.188   Feb 10,2025 08:34 UTC+0800
+
+Resources Allocation:
+COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+mysql                           500m / 500m          512Mi / 512Mi           data:20Gi      <none>
+proxysql                        500m / 500m          512Mi / 512Mi           <none>         <none>
+
+Images:
+COMPONENT   COMPONENT-DEFINITION           IMAGE
+mysql       mysql-8.0-1.0.0                docker.io/apecloud/mysql:8.0.35
+                                           docker.io/apecloud/mysqld-exporter:0.15.1
+                                           apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.0
+proxysql    proxysql-mysql-1.0.0           docker.io/apecloud/proxysql:2.4.4
+
+Data Protection:
+BACKUP-REPO   AUTO-BACKUP   BACKUP-SCHEDULE   BACKUP-METHOD   BACKUP-RETENTION   RECOVERABLE-TIME
+
+Show cluster events: kbcli cluster list-events -n demo example-mysql-cluster
+```
+
+## Connecting to the MySQL Cluster
+
+KubeBlocks automatically creates a secret containing the MySQL root credentials. Retrieve the credentials with the following commands:
+```bash
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
+root
+
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+22mue70Hx6
+```
+
+### Connect via ProxySQL
+Use ProxySQL to connect to the MySQL cluster:
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-proxysql-proxy-server.demo.svc.cluster.local -P6033 -uroot -p22mue70Hx6
+```
+### Connect Directly to MySQL
+Alternatively, connect directly to the MySQL instance:
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -p22mue70Hx6
+```
+
+## Testing Semi-Synchronous Replication
+
+### Verify Pod Roles
+List all pods in the cluster and check their roles:
+
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+```
+Expected Output:
+```bash
+example-mysql-cluster-mysql-0	secondary
+example-mysql-cluster-mysql-1	primary
+```
+
+### Check Replication Status
+Verify the replication status for the primary and replica nodes:
+
+### Primary Node
+Run the following command on the primary node:
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-0.example-mysql-cluster-mysql-headless.demo.svc.cluster.local -uroot -p22mue70Hx6 -e "show status like 'Rpl%_status';"
+```
+Expected Output:
+```sql
++------------------------------+-------+
+| Variable_name                | Value |
++------------------------------+-------+
+| Rpl_semi_sync_replica_status | ON    |
+| Rpl_semi_sync_source_status  | OFF   |
++------------------------------+-------+
+```
+Explanation:
+- "Rpl_semi_sync_replica_status: ON": This indicates that the secondary instance is acting as a semi-synchronous replica and is actively receiving and acknowledging changes from the primary instance.
+- "Rpl_semi_sync_source_status: OFF": This indicates that the secondary instance is not acting as a source (or master) in the replication setup.
+
+### Replica Node
+Run the following command on the replica node:
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql-1.example-mysql-cluster-mysql-headless.demo.svc.cluster.local -uroot -p22mue70Hx6 -e "show status like 'Rpl%_status';"
+```
+Expected Output:
+```sql
++------------------------------+-------+
+| Variable_name                | Value |
++------------------------------+-------+
+| Rpl_semi_sync_replica_status | OFF   |
+| Rpl_semi_sync_source_status  | ON    |
++------------------------------+-------+
+```
+Explanation:
+- "Rpl_semi_sync_source_status: ON": This indicates that the primary instance is configured for semi-synchronous replication as the source (or master).
+- "Rpl_semi_sync_replica_status: OFF": This indicates that the primary instance is not acting as a replica in the replication setup.
+
+## Failover Testing
+### Trigger a Failover
+To test the failover mechanism, delete the primary pod:
+```bash
+kubectl delete pod example-mysql-cluster-mysql-1 -n demo
+```
+This will trigger a failover, and the secondary instance will be promoted to the primary role. You can verify the new roles of the pods:
+### Verify the Updated Roles
+```bash
+kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
+```
+Expected Output:
+```bash
+example-mysql-cluster-mysql-0	primary
+example-mysql-cluster-mysql-1
+```
+After some time, the deleted pod will be recreated and rejoin the cluster as a replica:
+```bash
+example-mysql-cluster-mysql-0	primary
+example-mysql-cluster-mysql-1    secondary
+```
+
+## Cleanup
+To remove all created resources, delete the MySQL cluster along with its namespace:
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete ns demo
+```
+
+## Summary
+In this guide, you learned how to:
+- Deploy a MySQL semi-synchronous replication cluster with ProxySQL using KubeBlocks.
+- Verify the cluster's roles and replication status.
+- Test failover mechanisms for high availability.
+By combining a MySQL semi-synchronous cluster with ProxySQL, you can achieve seamless failover, efficient traffic management, and enhanced reliability for production-grade deployments.

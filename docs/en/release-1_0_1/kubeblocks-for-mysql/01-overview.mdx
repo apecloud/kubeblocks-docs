@@ -1,0 +1,73 @@
+---
+title: Overview of KubeBlocks MySQL Addon
+description: Learn about the features and capabilities of the KubeBlocks MySQL addon, including deployment topologies, lifecycle management, backup and restore, and supported versions.
+keywords: [MySQL, KubeBlocks, operator, database, features, lifecycle management, backup, restore]
+sidebar_position: 1
+sidebar_label: Overview
+---
+
+# Overview of KubeBlocks MySQL Addon
+
+The **KubeBlocks MySQL Addon** offers a comprehensive solution for deploying and managing MySQL clusters in Kubernetes. This document provides an overview of its features, including deployment topologies, lifecycle management options, backup and restore functionality, and supported MySQL versions.
+
+## Features
+
+### Topologies
+The **KubeBlocks Operator** supports deploying MySQL in three different topologies, tailored to meet varying requirements for performance, consistency, and high availability:
+
+
+| Features                      | Description
+|-------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| SemiSync                      | Leverages MySQL’s semi-synchronous replication mechanism to achieve near-real-time data consistency. <br /> • Requires at least one replica to acknowledge receipt of the transaction before the primary commits. <br /> • Balances performance and consistency by reducing the chance of data loss in case of a primary failure.                                                    |
+| MySQL Group Replication (MGR) | Creates a distributed, multi-primary MySQL cluster using MySQL’s native Group Replication. <br /> • Ensures fault-tolerant operations and automatic data synchronization across all nodes. <br /> • Provides built-in conflict detection and resolution for continuous database availability.                  |
+| Orchestrator Integration      | Integrates an external Orchestrator for high-availability (HA) management. <br /> • Adds automated monitoring and failover capabilities, including replica promotion. <br /> • Allows dynamic handling of node failures or degradations, reducing downtime. |
+
+With these options, you can tailor your MySQL deployment to your specific requirements for performance, consistency, and availability.
+
+### Lifecycle Management
+
+KubeBlocks provides robust lifecycle management features to simplify MySQL cluster operations:
+
+| Features                      | Description                                                                                                             |
+|-------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| ProxySQL                      | Use ProxySQL as database load balancer and query router for connection management and read-write splitting              |
+| Read Replicas                 | Secondary replicas can provide read-only services                                                                       |
+| Horizontal scaling            | Modifying the number of replicas will trigger scale-in and scale-out operations                                         |
+| Vertical scaling              | Ability to adjust compute resources (CPU and memory) for MySQL replicas                                                 |
+| Volume Expansion              | Support dynamic expansion of persistent storage volumes for MySQL replicas                                              |
+| Restart                       | Controlled restart of the MySQL cluster while maintaining high availability                                             |
+| Stop/Start                    | Ability to stop and start the MySQL cluster for maintenance                                                             |
+| Custom root password          | Ability to set and manage custom root password for the MySQL cluster during creation                                    |
+| Custom configuration template | Providing customized MySQL configuration file templates during creation                                                  |
+| Dynamic Parameter Changes     | Reconfigure MySQL parameters dynamically without requiring a cluster restart                                            |
+| Expose Custom Services        | Ability to expose database services with custom configurations for different access requirements                        |
+| Switchover                    | Planned primary-secondary switch operation with minimal downtime	                                                       |
+| Decommission specific replica | Safely take a specific MySQL replica offline for maintenance or decommissioning                                         |
+| Rebuild specific replica      | Recover a replica in place or recreate it as a new replica to restore functionality                                     |
+| Minor Version Upgrade         | Perform minor version upgrades of MySQL clusters without impacting availability                                         |
+| Advanced Pod Management       | Support for custom Pod resources, custom scheduling policies, gradual rolling updates, and more advanced operational controls |
+| TLS Encryption                | Support for enabling or disabling TLS encryption for secure database connections	                                       |
+| Prometheus Integration        | Integration with Prometheus managed by the Prometheus Operator for monitoring and alerting of MySQL metrics             |
+| Loki Stack Integration        | Integrate with Loki Stack to collect MySQL error logs, audit logs, and slow query logs for better observability  |
+
+
+
+### Backup and Restore
+
+| Features    | Methods    | Description                                                     |
+|-------------|------------|-----------------------------------------------------------------|
+| Full Backup | xtrabackup | Uses `xtrabackup` to perform full backups                       |
+| Continuous Backup |  archive-binlog | Support for continuous backups to enable point-in-time recovery |
+
+### Supported Versions
+
+| Major Versions | Minor Versions                 |
+|---------------|----------------------------------|
+| 5.7 | 5.7.44                           |
+| 8.0 | [8.0.30-8.0.39]                  |
+| 8.4 | 8.4.0,8.4.1,8.4.2                |
+
+The list of supported versions can be found by following command:
+```
+kubectl get cmpv mysql
+```

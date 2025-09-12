@@ -1,0 +1,143 @@
+---
+title: Decommission a Specific Pod in KubeBlocks-Managed Milvus Clusters
+description: Learn how to decommission (take offline) a specific Pod in a Milvus cluster managed by KubeBlocks.
+keywords: [KubeBlocks, Milvus, Decommission Pod, Horizontal Scaling, Kubernetes]
+sidebar_position: 9
+sidebar_label: Decommission Milvus Replica
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+
+# Decommission a Specific Pod in KubeBlocks-Managed Milvus Clusters
+
+This guide explains how to decommission (take offline) specific Pods in Milvus clusters managed by KubeBlocks. Decommissioning provides precise control over cluster resources while maintaining availability. Use this for workload rebalancing, node maintenance, or addressing failures.
+
+## Why Decommission Pods with KubeBlocks?
+
+In traditional StatefulSet-based deployments, Kubernetes lacks the ability to decommission specific Pods. StatefulSets ensure the order and identity of Pods, and scaling down always removes the Pod with the highest ordinal number (e.g., scaling down from 3 replicas removes `Pod-2` first). This limitation prevents precise control over which Pod to take offline, which can complicate maintenance, workload distribution, or failure handling.
+
+KubeBlocks overcomes this limitation by enabling administrators to decommission specific Pods directly. This fine-grained control ensures high availability and allows better resource management without disrupting the entire cluster.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploy a Milvus Cluster
+
+Please refer to [Deploying a Milvus Cluster with KubeBlocks](../03-topologies/02-cluster) to deploy a milvus cluster.
+
+## Decommission a Pod
+
+**Expected Workflow**:
+
+1. Replica specified in `onlineInstancesToOffline` is removed
+2. Pod terminates gracefully
+3. Cluster transitions from `Updating` to `Running`
+
+
+Before decommissioning a specific pod from a component, make sure this component has more than one replicas.
+If not, please scale out the componen ahead.
+
+E.g. you can patch the cluster CR with command, to declare there are 3 replicas in component querynode.
+
+```bash
+kubectl patch cluster milvus-cluster -n demo --type='json' -p='[
+  {
+    "op": "replace",
+    "path": "/spec/componentSpecs/4/replicas",
+    "value": 3
+  }
+]'
+```
+
+
+To decommission a specific Pod (e.g., 'milvus-cluster-querynode-1'), you can use one of the following methods:
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  Option 1: Using OpsRequest
+
+  Create an OpsRequest to mark the Pod as offline:
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: milvus-cluster-decommission-ops
+    namespace: demo
+  spec:
+    clusterName: milvus-cluster
+    type: HorizontalScaling
+    horizontalScaling:
+    - componentName: querynode
+      scaleIn:
+        onlineInstancesToOffline:
+          - 'milvus-cluster-querynode-1'  # Specifies the instance names that need to be taken offline
+  ```
+
+  #### Monitor the Decommissioning Process
+  Check the progress of the decommissioning operation:
+
+  ```bash
+  kubectl get ops milvus-cluster-decommission-ops -n demo -w
+  ```
+  Example Output:
+
+  ```bash
+NAME                              TYPE                CLUSTER          STATUS    PROGRESS   AGE
+milvus-cluster-decommission-ops   HorizontalScaling   milvus-cluster   Running   0/1        8s
+milvus-cluster-decommission-ops   HorizontalScaling   milvus-cluster   Running   1/1        31s
+milvus-cluster-decommission-ops   HorizontalScaling   milvus-cluster   Succeed   1/1        31s
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  Option 2: Using Cluster API
+
+  Alternatively, update the Cluster resource directly to decommission the Pod:
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: milvus
+        replicas: 2       # explected replicas after decommission
+        offlineInstances:
+          - milvus-cluster-querynode-1   # <----- Specify Pod to be decommissioned
+   ...
+  ```
+  </TabItem>
+
+</Tabs>
+
+### Verify the Decommissioning
+
+After applying the updated configuration, verify the remaining Pods in the cluster:
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=milvus-cluster
+```
+
+Example Output:
+```bash
+NAME                         READY   STATUS    RESTARTS   AGE
+milvus-cluster-querynode-0   2/2     Running   0          25m
+milvus-cluster-querynode-2   2/2     Running   0          24m
+```
+
+## Summary
+Key takeaways:
+- Traditional StatefulSets lack precise Pod removal control
+- KubeBlocks enables targeted Pod decommissioning
+- Two implementation methods: OpsRequest or Cluster API
+
+This provides granular cluster management while maintaining availability.

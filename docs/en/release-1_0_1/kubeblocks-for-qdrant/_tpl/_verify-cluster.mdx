@@ -1,0 +1,33 @@
+Monitor the cluster status until it transitions to the Running state:
+```bash
+kubectl get cluster qdrant-cluster -n demo -w
+```
+
+Expected Output:
+
+```bash
+kubectl get cluster qdrant-cluster -n demo
+NAME             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+qdrant-cluster   qdrant              Delete               Creating   49s
+qdrant-cluster   qdrant              Delete               Running    62s
+```
+
+Check the pod status and roles:
+```bash
+kubectl get pods -l app.kubernetes.io/instance=qdrant-cluster -n demo
+```
+
+Expected Output:
+```bash
+NAME                      READY   STATUS    RESTARTS   AGE
+qdrant-cluster-qdrant-0   2/2     Running   0          1m43s
+qdrant-cluster-qdrant-1   2/2     Running   0          1m28s
+qdrant-cluster-qdrant-2   2/2     Running   0          1m14s
+```
+
+Once the cluster status becomes Running, your Qdrant cluster is ready for use.
+
+:::tip
+If you are creating the cluster for the very first time, it may take some time to pull images before running.
+
+:::

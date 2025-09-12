@@ -1,0 +1,36 @@
+Monitor the cluster status until it transitions to the Running state:
+```bash
+kubectl get cluster es-multinode -n demo -w
+```
+
+Expected Output:
+
+```bash
+NAME           CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+es-multinode                        Delete               Creating   10s
+es-multinode                        Delete               Updating   41s
+es-multinode                        Delete               Running    42s
+```
+
+Check the pod status and roles:
+```bash
+kubectl get pods -l app.kubernetes.io/instance=es-multinode -n demo
+```
+
+Expected Output:
+```bash
+NAME                    READY   STATUS    RESTARTS   AGE
+es-multinode-dit-0      3/3     Running   0          6m21s
+es-multinode-dit-1      3/3     Running   0          6m21s
+es-multinode-dit-2      3/3     Running   0          6m21s
+es-multinode-master-0   3/3     Running   0          6m21s
+es-multinode-master-1   3/3     Running   0          6m21s
+es-multinode-master-2   3/3     Running   0          6m21s
+```
+
+Once the cluster status becomes Running, your Elasticsearch cluster is ready for use.
+
+:::tip
+If you are creating the cluster for the very first time, it may take some time to pull images before running.
+
+:::

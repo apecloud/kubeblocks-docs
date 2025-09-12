@@ -11,6 +11,7 @@ import fs from 'fs';
 import { setStaticParamsLocale } from 'next-international/server';
 import path from 'path';
 import VersionList from './version';
+import semver from 'semver';
 
 export default async function DocsLayout({
   children,
@@ -35,6 +36,22 @@ export default async function DocsLayout({
   }
 
   const versions = fs.readdirSync(path.join(DOCS_DIR, locale));
+  // sort version in orders of
+  // 1. preview is alway the first
+  // 2. other versions are sorted in descending semver order
+  versions.sort((a, b) => {
+    if (a === 'preview') return -1;
+    if (b === 'preview') return 1;
+    // Use the 'semver' library for proper semver comparison
+    // Make sure to install 'semver' (npm install semver)
+    if (a === b) return 0;
+    // If both are valid semver, compare them
+    if (semver.valid(a) && semver.valid(b)) {
+      return semver.rcompare(a, b); // descending order
+    }
+    // Fallback to string comparison if not valid semver
+    return a < b ? 1 : a > b ? -1 : 0;
+  });
 
   return (
     <>
