@@ -1,21 +1,23 @@
 ---
-title: Install Addons
+title: Addons Management
 description: Install KubeBlocks addons with Helm
 keywords: [addon, helm, KubeBlocks, kubernetes, operator, database]
 sidebar_position: 3
-sidebar_label: Install Addons
+sidebar_label: Addons Management
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# Install Addons
+# Addons Management
 
 With the release of KubeBlocks v0.8.0, Addons are decoupled from KubeBlocks and some Addons are not installed by default. If you want to use these Addons, install Addons first by index. Or if you uninstalled some Addons, you can follow the steps in this tutorial to install them again.
 
 This tutorial takes elasticsearch as an example. You can replace elasticsearch with the Addon you need.
 
 The official index repo is [KubeBlocks index](https://github.com/apecloud/block-index). Addons are maintained in the [KubeBlocks Addon repo](https://github.com/apecloud/kubeblocks-addons).
+
+## Install Addons
 
 :::note
 
@@ -201,6 +203,108 @@ What is the difference between using `kbcli` and `helm` to install an Addon?
 </TabItem>
 
 </Tabs>
+
+## Upgrade Addons
+
+Follow these steps to upgrade Addons individually.
+
+:::note
+Upgrading Addons may lead to restarting existing database clusters and affect availability. Only proceed during maintenance windows, and test the upgrade in a non-production environment first.
+:::
+
+<Tabs>
+
+  <TabItem value="Helm" label="Helm" default>
+
+  **Step 1: Configure Addon Repository**
+
+  ```bash
+  # Add the primary Addon repository
+  helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
+
+  # Alternative repository for users in regions with limited GitHub access
+  # helm repo add kubeblocks-addons https://jihulab.com/api/v4/projects/150246/packages/helm/stable
+
+  # Update repository information
+  helm repo update
+  ```
+
+  **Step 2: Find Available Versions**
+
+  ```bash
+  # Search for available versions of a specific Addon
+  helm search repo kubeblocks-addons/{addon-name} --versions --devel
+  # Example: helm search repo kubeblocks-addons/mysql --versions --devel
+  ```
+
+  **Step 3: Upgrade the Addon**
+
+  Select a version that is compatible (same major version) with your KubeBlocks release and upgrade:
+
+  ```bash
+  # Upgrade to a specific version
+  helm upgrade -i {addon-release-name} kubeblocks-addons/{addon-name} --version x.y.z -n kb-system
+  ```
+
+  :::note
+  **Parameter Reference:**
+  - `{addon-name}`: Replace with the actual Addon name (e.g., `mysql`, `postgresql`)
+  - `{addon-release-name}`: The release name of the installed Addon (e.g., `kb-addon-mysql`, `kb-addon-postgresql`)
+  - `x.y.z`: The target version number, compatible with your KubeBlocks release
+  :::
+
+  </TabItem>
+
+  <TabItem value="kbcli" label="kbcli">
+
+  **Step 1: Update Addon Index**
+
+  ```bash
+  # List available Addon indexes (the default index is `kubeblocks`)
+  kbcli addon index list
+
+  # Update the default KubeBlocks index
+  kbcli addon index update kubeblocks
+  ```
+
+  **Step 2: Search for Available Addon Versions**
+
+  ```bash
+  # Search for available versions of a specific Addon
+  kbcli addon search {addon-name}
+
+  # View currently installed Addons and their versions
+  kbcli addon list | grep {addon-name}
+  ```
+
+  **Step 3: Upgrade the Addon**
+
+  Select a version that is compatible (same major version) with your KubeBlocks release and upgrade:
+
+  ```bash
+  kbcli addon upgrade {addon-name} --version x.y.z
+  ```
+
+  **Force upgrade (use with caution):**
+  ```bash
+  kbcli addon upgrade {addon-name} --version x.y.z --force
+  ```
+
+  **Fresh installation (if not previously installed):**
+  ```bash
+  kbcli addon install {addon-name} --version x.y.z
+  ```
+
+  :::note
+  **When to use `--force`:**
+  - You need to downgrade to a previous version
+  - Use with caution as it bypasses compatibility checks
+  :::
+
+  </TabItem>
+
+</Tabs>
+
 
 ## Advanced Configuration
 
