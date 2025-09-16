@@ -1,0 +1,290 @@
+---
+title: Customizing Pod Resource Configurations and Labels in a MySQL Cluster Managed by KubeBlocks
+description: Learn how to customize Pod resource configurations and labels in a MySQL cluster using KubeBlocks to meet specific workload demands.
+keywords: [KubeBlocks, MySQL, Pod Resource Configuration, Kubernetes, Cluster Management]
+sidebar_position: 2
+sidebar_label: Custom Pod Resources
+---
+
+# Customizing Pod Resource Configurations and Labels in a MySQL Cluster Managed by KubeBlocks
+
+In certain scenarios, different Pods within the same database cluster may require varying resource allocations. For example:
+- Some replicas dedicated to report generation might leverage additional resources to handle analytical queries efficiently.
+
+With KubeBlocks, you can customize Pod resource configurations and labels to tailor each instance to meet its unique requirements.
+This guide demonstrates how to deploy a MySQL cluster with a custom replica provisioned with higher CPU and memory resources.
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## Deploy a MySQL Semi-Synchronous Cluster
+
+Deploy a 2-node semi-sync MySQL cluster (1 primary, 1 secondary):
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+## Verifying the Deployment
+
+Monitor the cluster status and wait until the STATUS changes to Running:
+```bash
+kubectl get cluster example-mysql-cluster -n demo -w
+```
+Expected Output:
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Creating   17s
+example-mysql-cluster   mysql                Delete               Running   2m33s
+```
+
+
+## Add a Custom Replica with Different Resource Configurations
+To add a new replica with higher CPU and memory allocations, update the cluster specification as follows:
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+      instances:
+        - name: custom
+          replicas: 1
+          labels:
+            custom-resource-config: "true"
+          resources:
+            limits:
+              cpu: 1
+              memory: 1Gi
+            requests:
+              cpu: 1
+              memory: 1Gi
+EOF
+```
+**Explanation:**
+- Default Resource Configuration: The mysql component is configured with 0.5 CPU and 0.5Gi memory per Pod.
+- Custom Resource Configuration: A single instance (custom) is configured with 1 CPU and 1Gi memory.
+
+
+## Verifying the Deployment
+Monitor the cluster status until it returns to Running:
+```bash
+kubectl get cluster -n demo -w
+```
+Example Output:
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster   mysql                Delete               Updating   79s
+example-mysql-cluster   mysql                Delete               Running   2m44s
+```
+List all the Pods in the cluster:
+```bash
+kubectl get pods -n demo
+```
+Expected Output:
+```bash
+NAME                                   READY   STATUS    RESTARTS   AGE
+example-mysql-cluster-mysql-0          4/4     Running   0          2m49s
+example-mysql-cluster-mysql-1          4/4     Running   0          2m49s
+example-mysql-cluster-mysql-custom-0   4/4     Running   0          97s
+```
+**Observation**:
+- The custom Pod name includes "-custom" in the middle (e.g., 'example-mysql-cluster-mysql-custom-0'), reflecting the instance template name "custom".
+
+Use the KubeBlocks CLI to check the cluster and verify the resource configurations:
+```bash
+kbcli cluster describe example-mysql-cluster -n demo
+```
+Expected Output:
+```bash
+Resources Allocation:
+COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+mysql       custom              1 / 1                1Gi / 1Gi               data:20Gi      <none>
+mysql                           500m / 500m          512Mi / 512Mi           data:20Gi      <none>
+```
+**Observation**:
+- The default replica has 0.5 CPU and 0.5Gi memory.
+- The custom replica has 1 CPU and 1Gi memory.
+
+## Expose the custom Pod as a Service
+To expose the custom Pod via a separate Service, use the following configuration:
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  # expose a service
+  services:
+    - name: custom-pod
+      componentSelector: mysql
+      serviceName: custom-pod
+      spec:
+        selector:
+          custom-resource-config: "true"
+        ipFamilyPolicy: PreferDualStack
+        ports:
+          - name: tcp-mysql
+            port: 3306
+            protocol: TCP
+            targetPort: mysql
+        type: ClusterIP
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+      instances:
+        - name: custom
+          replicas: 1
+          labels:
+            custom-resource-config: "true"
+          resources:
+            limits:
+              cpu: 1
+              memory: 1Gi
+            requests:
+              cpu: 1
+              memory: 1Gi
+EOF
+```
+### Verify the Update
+Check the Cluster status:
+```bash
+kubectl get cluster -n demo -w
+```
+Example Output:
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster   mysql                Delete               Updating   16m
+example-mysql-cluster   mysql                Delete               Running    17m
+```
+Then list the Services:
+```bash
+kubectl get svc -n demo
+```
+Example Output:
+```bash
+NAME                                   TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                                                 AGE
+example-mysql-cluster-custom-pod       ClusterIP   172.20.202.249   <none>        3306/TCP                                                12m
+example-mysql-cluster-mysql            ClusterIP   172.20.11.166    <none>        3306/TCP                                                12m
+example-mysql-cluster-mysql-headless   ClusterIP   None             <none>        3306/TCP,3601/TCP,9104/TCP,3501/TCP,3502/TCP,9901/TCP   12m
+```
+
+### Accessing Your Custom Pod via the Service
+Retrieve the root credentials:
+```bash
+kubectl get secrets -n demo  example-semisync-mysql-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
+
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+```
+Expected Output:
+```bash
+root
+
+uk263gR24s
+```
+
+Connect to the custom Pod from inside one of the MySQL containers:
+```bash
+kubectl exec -it example-mysql-cluster-mysql-0 -n demo -- mysql -hexample-mysql-cluster-custom-pod -uroot -puk263gR24s
+```
+This custom Pod is provisioned with additional resources, making it ideal for running complex queries or analytical workloads.
+
+## Cleanup
+To remove all created resources, delete the MySQL cluster along with its namespace:
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete ns demo
+```
+
+
+## Conclusion
+By customizing Pod resource configurations and labels through KubeBlocks, you can build a flexible and resource-efficient MySQL environment. Whether you need a powerful primary instance or specialized report-generation replicas, KubeBlocks Operator enables you to fine-tune each Pod’s CPU, memory, and storage according to workload demands.

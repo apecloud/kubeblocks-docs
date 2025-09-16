@@ -1,0 +1,192 @@
+---
+title: Deploy a MySQL Cluster with User-Provided TLS on KubeBlocks
+description: Learn how to deploy a MySQL cluster on KubeBlocks with user-provided TLS certificates for secure communication. This guide covers generating certificates, deploying the cluster, and verifying secure connections.
+keywords: [KubeBlocks, MySQL, Kubernetes, TLS, Secure Communication, User-Provided Certificates]
+sidebar_position: 2
+sidebar_label: MySQL Cluster with User-Provided TLS
+---
+
+# Deploy a MySQL Cluster with User-Provided TLS on KubeBlocks
+
+This guide explains how to deploy a MySQL cluster with **user-provided TLS certificates** using KubeBlocks. By supplying your own certificates, you have full control over the security configuration for encrypted communication between the MySQL client and server. This guide covers generating certificates, deploying the cluster, and verifying the secure connection.
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## Generating Certificates
+
+To enable TLS encryption, you will need to provide a Certificate Authority (CA), a server certificate, and a private key. Follow these steps to generate these using OpenSSL:
+
+1. Generate the Root Certificate (CA)
+```bash
+# Create the CA private key (password optional)
+openssl genrsa -aes256 -out ca-key.pem 4096
+
+# Generate a self-signed root certificate (valid for 10 years)
+openssl req -x509 -new -nodes -key ca-key.pem -sha256 -days 3650 -out ca.pem
+# Enter the required information (e.g., Common Name can be "MySQL Root CA")
+```
+
+2. Generate the Server Certificate & Key
+```bash
+# Generate the server private key
+openssl genrsa -out server-key.pem 4096
+
+# Create a Certificate Signing Request (CSR)
+openssl req -new -key server-key.pem -out server-req.pem
+# Enter server identification details, such as:
+# Common Name (CN) = Server domain name or IP (must match the MySQL server address!)
+
+# Sign the server certificate with the CA (valid for 10 years)
+openssl x509 -req -in server-req.pem -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out server-cert.pem -days 3650 -sha256
+```
+
+3. Verify the Certificates
+Verify that the server certificate is valid and signed by the CA:
+```bash
+# Verify the server certificate
+openssl verify -CAfile ca.pem server-cert.pem
+```
+Expected Output:
+```bash
+server-cert.pem: OK
+```
+
+## Create Kubernetes Secrets
+Store the generated certificates and keys in a Kubernetes Secret to make them accessible to your MySQL cluster:
+```bash
+kubectl create secret generic mysql-tls-secret \
+  --namespace=demo \
+  --from-file=ca.crt=ca.pem \
+  --from-file=tls.crt=server-cert.pem \
+  --from-file=tls.key=server-key.pem \
+  --type=kubernetes.io/tls
+```
+This secret contains the CA, server certificate, and private key required to enable mTLS on the MySQL cluster.
+
+## Deploying the MySQL Semi-Synchronous Cluster
+
+KubeBlocks uses a declarative approach for managing MySQL clusters. Below is an example configuration for deploying a MySQL cluster with 2 nodes (1 primary, 1 replicas) in semi-synchronous mode with user-provided TLS certificates:
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      tls: true
+      issuer:
+        name: UserProvided
+        secretRef:
+          name: mysql-tls-secret
+          namespace: demo
+          ca: ca.crt
+          cert: tls.crt
+          key: tls.key
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+**Configuration Highlights:**
+- `tls: true`: Enables TLS encryption for secure communication.
+- `issuer.name: UserProvided`: Specifies that user-provided certificates are being used.
+- `secretRef`: Links the cluster to the Kubernetes Secret containing the certificates.
+
+## Verifying the Deployment
+Monitor the cluster status until it transitions to the Running state:
+```bash
+kubectl get cluster -n demo -w
+```
+Expected Output:
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Running   11m
+```
+
+## Connect to MySQL Cluster
+
+KubeBlocks automatically creates a secret containing the MySQL root credentials. Retrieve the credentials with the following commands:
+
+1. Retrieve the root username:
+```bash
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
+```
+Expected Output:
+```bash
+root
+```
+
+2. Retrieve the root password:
+```bash
+kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
+```
+Expected Output:
+```bash
+D0o5P43S8G
+```
+
+Use the MySQL client with the '--ssl-mode=REQUIRED' option to enforce TLS during the connection:
+```bash
+kubectl exec -it -n demo example-mysql-cluster-mysql-0 -c mysql -- mysql -h example-mysql-cluster-mysql.demo.svc.cluster.local -uroot -pD0o5P43S8G --ssl-mode=REQUIRED
+```
+
+After connecting, verify that TLS is being used by running the STATUS command in the MySQL shell:
+```sql
+mysql> STATUS;
+--------------
+
+SSL:			Cipher in use is TLS_AES_256_GCM_SHA384
+```
+If you see SSL information in the output, the connection is successfully encrypted using TLS.
+
+
+## Cleanup
+Remove all resources after testing:
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete secret mysql-tls-secret -n demo
+kubectl delete ns demo
+```
+
+## Summary
+In this guide, you learned how to:
+- Generate a self-signed CA and server certificates using OpenSSL.
+- Store the certificates in a Kubernetes Secret.
+- Deploy a MySQL cluster with TLS encryption using KubeBlocks.
+- Connect to the MySQL cluster securely using TLS and verify the connection.
+
+Using TLS ensures secure communication between the MySQL client and server, protecting sensitive data in transit. By following these steps, you can easily set up and manage a secure MySQL cluster on Kubernetes using KubeBlocks.

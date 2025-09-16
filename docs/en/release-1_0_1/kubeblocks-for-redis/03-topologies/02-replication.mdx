@@ -1,0 +1,130 @@
+---
+title: Deploying a Redis Replication Cluster with KubeBlocks
+description: Learn how to deploy a Redis Replication cluster using KubeBlocks. This guide covers configuration, verification, failover testing, and timeout configuration.
+keywords: [KubeBlocks, Redis, Kubernetes, High Availability]
+sidebar_position: 1
+sidebar_label: Redis Replication Cluster
+---
+
+# Deploying a Redis Replication Cluster with KubeBlocks
+
+Redis Replication involves a primary (master) node that handles writes and one or more replica (slave) nodes that replicate data from the master for read scaling and failover.
+
+**Use Cases**
+- Read-heavy applications (e.g., analytics workload).
+- High-availability setups with Redis Sentinel for automatic failover.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploying the Redis Replication Cluster
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: redis-replication
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: redis
+  topology: replication
+  componentSpecs:
+    - name: redis
+      serviceVersion: "7.2.4"
+      disableExporter: false
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+    - name: redis-sentinel
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+**Key Configuration Details**:
+- `clusterDef: redis`: Specifies the ClusterDefinition CR for the cluster.
+- `topology: replication`: Configures the cluster to use replication topology.
+- `componentSpecs`: Defines the components in the cluster:
+  - Component 'redis':
+    - `serviceVersion: 7.2.4`: Specifies the version of the Redis service to be deployed.
+  - Component 'redis-sentinel':
+    - Redis Sentinel is a high availability solution for Redis. Recommended to deploy 3 replica for high availability.
+
+## Verifying the Deployment
+
+### Check the Cluster Status
+Once the cluster is deployed, check its status:
+```bash
+kubectl get cluster redis-replication  -n demo -w
+```
+Expected Output:
+```bash
+NAME                CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+redis-replication   redis                Delete               Running   66s
+```
+
+### Verify Component and Pod Status
+```bash
+kubectl get component redis-replication-redis -n demo
+```
+Expected Output:
+```bash
+NAME                      DEFINITION              SERVICE-VERSION   STATUS    AGE
+redis-replication-redis   redis-7-1.0.0           7.2.4             Running   90s
+```
+
+Check pods and their roles
+
+```bash
+kubectl get pods -l app.kubernetes.io/instance=redis-replication -L  kubeblocks.io/role -n demo
+```
+
+Expected Output:
+```bash
+NAME                                 READY   STATUS    RESTARTS   AGE     ROLE
+redis-replication-redis-0            3/3     Running   0          3m38s   primary
+redis-replication-redis-1            3/3     Running   0          3m16s   secondary
+redis-replication-redis-sentinel-0   2/2     Running   0          4m35s
+redis-replication-redis-sentinel-1   2/2     Running   0          4m17s
+redis-replication-redis-sentinel-2   2/2     Running   0          3m59s
+```
+
+## Cleanup
+To remove all resources created during this tutorial:
+
+```bash
+kubectl delete cluster redis-replication -n demo
+kubectl delete ns demo
+```

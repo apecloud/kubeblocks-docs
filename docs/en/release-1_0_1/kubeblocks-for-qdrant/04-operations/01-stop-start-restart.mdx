@@ -1,0 +1,281 @@
+---
+title: Qdrant Cluster Lifecycle Management (Stop, Start, Restart)
+description: Learn how to manage Qdrant Cluster states in KubeBlocks including stopping, starting, and restarting operations to optimize resources.
+keywords: [KubeBlocks, Qdrant, Cluster Management, Stop, Start, Restart]
+sidebar_position: 1
+sidebar_label: Lifecycle Management
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Qdrant Cluster Lifecycle Management
+
+This guide demonstrates how to manage a Qdrant Cluster's operational state in **KubeBlocks**, including:
+
+- Stopping the cluster to conserve resources
+- Starting a stopped cluster
+- Restarting cluster components
+
+These operations help optimize resource usage and reduce operational costs in Kubernetes environments.
+
+Lifecycle management operations in KubeBlocks:
+
+| Operation | Effect | Use Case |
+|-----------|--------|----------|
+| Stop | Suspends cluster, retains storage | Cost savings, maintenance |
+| Start | Resumes cluster operation | Restore service after pause |
+| Restart | Recreates pods for component | Configuration changes, troubleshooting |
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploy a Qdrant Cluster
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+## Verifying the Deployment
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+## Cluster Lifecycle Operations
+
+### Stopping the Cluster
+
+Stopping a Qdrant Cluster in KubeBlocks will:
+
+1. Terminates all running pods
+2. Retains persistent storage (PVCs)
+3. Maintains cluster configuration
+
+This operation is ideal for:
+- Temporary cost savings
+- Maintenance windows
+- Development environment pauses
+
+<Tabs>
+
+<TabItem value="opsRequest" label="OpsRequest API" default>
+
+Option 1: OpsRequest API
+
+Create a Stop operation request:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: qdrant-cluster-stop-ops
+  namespace: demo
+spec:
+  clusterName: qdrant-cluster
+  type: Stop
+```
+</TabItem>
+
+<TabItem value="ClusterAPI" label="Cluster API">
+
+Option 2: Cluster API Patch
+
+Modify the cluster spec directly by patching the stop field:
+
+
+```bash
+kubectl patch cluster qdrant-cluster -n demo --type='json' -p='[
+{
+  "op": "add",
+  "path": "/spec/componentSpecs/0/stop",
+  "value": true
+}
+]'
+```
+</TabItem>
+
+</Tabs>
+
+### Verifying Cluster Stop
+
+To confirm a successful stop operation:
+
+1. Check cluster status transition:
+    ```bash
+    kubectl get cluster qdrant-cluster -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME             CLUSTER-DEFINITION  TERMINATION-POLICY   STATUS     AGE
+    qdrant-cluster   qdrant              Delete               Stopping   6m3s
+    qdrant-cluster   qdrant              Delete               Stopped    6m55s
+    ```
+
+2. Verify no running pods:
+    ```bash
+    kubectl get pods -l app.kubernetes.io/instance=qdrant-cluster -n demo
+    ```
+    Example Output:
+    ```bash
+    No resources found in demo namespace.
+    ```
+
+3. Confirm persistent volumes remain:
+    ```bash
+    kubectl get pvc -l app.kubernetes.io/instance=qdrant-cluster -n demo
+    ```
+    Example Output:
+    ```bash
+    NAME                           STATUS   VOLUME     CAPACITY   ACCESS MODES   STORAGECLASS         VOLUMEATTRIBUTESCLASS   AGE
+    data-qdrant-cluster-qdrant-0   Bound    pvc-uuid   20Gi       RWO            <STORAGECLASS>       <unset>                 22m
+    data-qdrant-cluster-qdrant-1   Bound    pvc-uuid   20Gi       RWO            <STORAGECLASS>       <unset>                 21m
+    data-qdrant-cluster-qdrant-2   Bound    pvc-uuid   20Gi       RWO            <STORAGECLASS>       <unset>                 21m
+    ```
+
+### Starting the Cluster
+
+Starting a stopped Qdrant Cluster:
+1. Recreates all pods
+2. Reattaches persistent storage
+3. Restores service endpoints
+
+Expected behavior:
+- Cluster returns to previous state
+- No data loss occurs
+- Services resume automatically
+<Tabs>
+
+<TabItem value="opsRequest" label="OpsRequest API" default>
+
+Initiate a Start operation request:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: qdrant-cluster-start-ops
+  namespace: demo
+spec:
+  # Specifies the name of the Cluster resource that this operation is targeting.
+  clusterName: qdrant-cluster
+  type: Start
+```
+
+</TabItem>
+
+<TabItem value="ClusterAPI" label="Cluster API">
+
+Modify the cluster spec to resume operation:
+1. Set stop: false, or
+2. Remove the stop field entirely
+    ```bash
+    kubectl patch cluster qdrant-cluster -n demo --type='json' -p='[
+    {
+      "op": "remove",
+      "path": "/spec/componentSpecs/0/stop"
+    }
+    ]'
+    ```
+
+</TabItem>
+
+</Tabs>
+
+### Verifying Cluster Start
+
+To confirm a successful start operation:
+
+1. Check cluster status transition:
+    ```bash
+    kubectl get cluster qdrant-cluster -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+    qdrant-cluster   qdrant               Delete               Updating   24m
+    qdrant-cluster   qdrant               Delete               Running    24m
+    qdrant-cluster   qdrant               Delete               Running    24m
+    ```
+
+2. Verify pod recreation:
+    ```bash
+    kubectl get pods -n demo -l app.kubernetes.io/instance=qdrant-cluster
+    ```
+    Example Output:
+    ```bash
+    NAME                      READY   STATUS    RESTARTS   AGE
+    qdrant-cluster-qdrant-0   2/2     Running   0          55s
+    qdrant-cluster-qdrant-1   2/2     Running   0          44s
+    qdrant-cluster-qdrant-2   2/2     Running   0          33s
+    ```
+
+### Restarting Cluster
+
+Restart operations provide:
+- Pod recreation without full cluster stop
+- Component-level granularity
+- Minimal service disruption
+
+Use cases:
+- Configuration changes requiring restart
+- Resource refresh
+- Troubleshooting
+
+**Using OpsRequest API**
+
+Target specific components `qdrant` for restart:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: qdrant-cluster-restart-ops
+  namespace: demo
+spec:
+  clusterName: qdrant-cluster
+  type: Restart
+  restart:
+  - componentName: qdrant
+```
+
+**Verifying Restart Completion**
+
+To verify a successful component restart:
+
+1. Track OpsRequest progress:
+    ```bash
+    kubectl get opsrequest qdrant-cluster-restart-ops -n demo -w
+    ```
+    Example Output:
+    ```bash
+    NAME                         TYPE      CLUSTER          STATUS    PROGRESS   AGE
+    qdrant-cluster-restart-ops   Restart   qdrant-cluster   Running   0/3        4s
+    qdrant-cluster-restart-ops   Restart   qdrant-cluster   Running   1/3        28s
+    qdrant-cluster-restart-ops   Restart   qdrant-cluster   Running   2/3        56s
+    qdrant-cluster-restart-ops   Restart   qdrant-cluster   Running   2/3        109s
+    ```
+
+2. Check pod status:
+    ```bash
+    kubectl get pods -n demo -l app.kubernetes.io/instance=qdrant-cluster
+    ```
+    Note: Pods will show new creation timestamps after restart
+
+3. Verify component health:
+    ```bash
+    kbcli cluster describe qdrant-cluster -n demo
+    ```
+
+Once the operation is complete, the cluster will return to the Running state.
+
+## Summary
+In this guide, you learned how to:
+1. Stop a Qdrant Cluster to suspend operations while retaining persistent storage.
+2. Start a stopped cluster to bring it back online.
+3. Restart specific cluster components to recreate their Pods without stopping the entire cluster.
+
+By managing the lifecycle of your Qdrant Cluster, you can optimize resource utilization, reduce costs, and maintain flexibility in your Kubernetes environment. KubeBlocks provides a seamless way to perform these operations, ensuring high availability and minimal disruption.

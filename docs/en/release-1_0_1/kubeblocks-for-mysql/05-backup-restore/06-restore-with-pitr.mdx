@@ -1,0 +1,163 @@
+---
+title: Restore a MySQL Cluster from Backup with Point-In-Time-Recovery(PITR) on KubeBlocks
+description: Learn how to restore a MySQL cluster using a full backup and continuous binlog backup for Point-In-Time Recovery (PITR) on KubeBlocks.
+keywords: [MySQL, Full Backup, PITR, KubeBlocks]
+sidebar_position: 6
+sidebar_label: Restore with PITR
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Restore a MySQL Cluster from Backup with Point-In-Time-Recovery(PITR) on KubeBlocks
+
+This guide provides a step-by-step walk-through for restoring a MySQL cluster from an existing full backup in KubeBlocks, along with continuous binlog backups for Point-In-Time Recovery (PITR).
+
+## Prerequisites
+Before proceeding, ensure the following:
+- Environment Setup:
+  - A Kubernetes cluster is up and running.
+  - The kubectl CLI tool is configured to communicate with your cluster.
+  - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## Check Existing Backups
+To perform a PITR restoration, both a full backup and continuous backup are required. Refer to the documentation to configure these backups if they are not already set up.
+
+List available backups with the following command:
+```bash
+kubectl get backup -n demo
+```
+
+Expected Output:
+```bash
+NAME                                               POLICY                                      METHOD           REPO      STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
+77a788fa-example-mysql-cluster-archive-binlog      example-mysql-cluster-mysql-backup-policy   archive-binlog   s3-repo   Running     2110030                 Delete            2025-03-04T02:28:55Z                          2025-04-03T02:28:55Z
+example-mysql-cluster-xtrabackup-20250305000008    example-mysql-cluster-mysql-backup-policy   xtrabackup       s3-repo   Completed   3102161      18s        Delete            2025-03-05T00:00:11Z   2025-03-05T00:00:29Z   2025-04-04T00:00:29Z
+```
+- '77a788fa-example-mysql-cluster-archive-binlog': Continuous backup (binlog archive).
+- 'example-mysql-cluster-xtrabackup-20250305000008': Full backup.
+
+
+## Create Restored Cluster
+
+Create a new cluster with restoration configuration referencing the backup.
+
+Apply the following YAML configuration:
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster-restored
+  namespace: demo
+  annotations:
+    kubeblocks.io/restore-from-backup: '{"mysql":{"name":"example-mysql-cluster-xtrabackup-20250305000008","namespace":"demo","volumeRestorePolicy":"Parallel",
+"restoreTime":"2025-03-05T02:00:00Z"}}'
+spec:
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      componentDef: "mysql-8.0"
+      serviceVersion: 8.0.35
+      disableExporter: false
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+## Perform Restoration via Ops API
+
+Alternatively, use the Ops API to initiate the restoration process:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-cluster-restore
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster-restore
+  force: false
+  restore:
+    backupName: example-mysql-cluster-xtrabackup-20250305000008
+    backupNamespace: demo
+    restorePointInTime: 2025-03-05T02:00:00Z
+  type: Restore
+EOF
+```
+
+### Monitor Restoration Progress
+
+#### Step 1: Watch Pod Initialization
+```bash
+kubectl get pods -n demo -w
+```
+
+Expected Workflow:
+
+1. Data Preparation Pods:
+```bash
+restore-preparedata-XXXXX-<hash>   0/1     Init:0/1   0          6s
+restore-preparedata-XXXXX-<hash>   1/1     Running    0          12s
+restore-preparedata-XXXXX-<hash>   0/1     Completed 0          20s
+```
+These pods copy backup data to Persistent Volumes (PVCs).
+
+
+2. MySQL Cluster Pods:
+```bash
+example-mysql-cluster-restored-mysql-0     0/4     Pending        0          0s
+example-mysql-cluster-restored-mysql-0     4/4     Running        0          20s
+```
+After restoration, MySQL cluster pods initialize with the restored data and start the MySQL service.
+
+#### Step 2: Verify Cluster Status
+Check the status of the restored cluster:
+```bash
+kubectl get cluster example-mysql-cluster-restored -n demo
+```
+Successful Output:
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster-restored                        Delete               Running   97s
+```
+
+## Cleanup
+To remove all created resources, delete the MySQL cluster along with its namespace:
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete cluster example-mysql-cluster-restored -n demo
+kubectl delete ns demo
+```
+
+## Summary
+This guide demonstrated how to restore a MySQL cluster in KubeBlocks using a full backup and continuous binlog backup for Point-In-Time Recovery (PITR). Key steps included:
+- Verifying available backups.
+- Extracting encrypted system account credentials.
+- Creating a new MySQL cluster with restoration configuration.
+- Monitoring the restoration process.
+
+With this approach, you can restore a MySQL cluster to a specific point in time, ensuring minimal data loss and operational continuity.
+

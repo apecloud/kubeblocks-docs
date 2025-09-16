@@ -1,0 +1,293 @@
+---
+title: Upgrading the Minor Version of a PostgreSQL Cluster in KubeBlocks
+description: Learn how to deploy and upgrade a PostgreSQL cluster managed by KubeBlocks with minimal downtime.
+keywords: [KubeBlocks, PostgreSQL, Upgrade, Rolling Upgrade, Kubernetes]
+sidebar_position: 6
+sidebar_label: Minor Version Upgrade
+hidden: true
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Upgrading the Minor Version of a PostgreSQL Cluster in KubeBlocks
+
+This guide walks you through the deployment and minor version upgrade of a PostgreSQL cluster managed by KubeBlocks, ensuring minimal downtime during the process.
+
+To minimize the impact on database availability, the upgrade process starts with the replicas (secondary instances). Once the replicas are upgraded, a switchover operation promotes one of the upgraded replicas to primary. The switchover process is very fast, typically completing in a few hundred milliseconds. After the switchover, the original primary instance is upgraded, ensuring minimal disruption to the application.
+
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## Deploy a PostgreSQL Replication Cluster
+
+KubeBlocks uses a declarative approach for managing PostgreSQL clusters. Below is an example configuration for deploying a PostgreSQL cluster with 2 replicas (1 primary, 1 replicas).
+
+Apply the following YAML configuration to deploy the cluster:
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: pg-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: postgresql
+  topology: replication
+  componentSpecs:
+    - name: postgresql
+      serviceVersion: 14.7.2  # use 14.7.2 here to test minor version upgrade
+      disableExporter: true
+      replicas: 2
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+## Verifying the Deployment
+Monitor the cluster status until it transitions to the Running state:
+```bash
+kubectl get cluster pg-cluster -n demo -w
+```
+
+Example Output:
+
+```bash
+NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+pg-cluster   postgresql           Delete               Creating   50s
+pg-cluster   postgresql           Delete               Running    4m2s
+```
+Once the cluster status becomes Running, your PostgreSQL cluster is ready for use.
+
+:::tip
+If you are creating the cluster for the very first time, it may take some time to pull images before running.
+
+:::
+
+## List All Available PostgreSQL Versions
+
+Use the following command to display the PostgreSQL versions supported by your KubeBlocks installation:
+```bash
+kubectl get cmpv postgresql
+```
+Expected Output:
+```bash
+NAME         VERSIONS                                              STATUS      AGE
+postgresql   16.4.0,15.7.0,14.8.0,14.7.2,12.15.0,12.14.1,12.14.0   Available   33d
+```
+
+Note: The list of supported versions may vary depending on your KubeBlocks version.
+
+## Upgrading the PostgreSQL Version
+
+### Identify the Current Primary and Secondary Instances
+
+Run the following command to identify the roles of the cluster instances:
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster -L kubeblocks.io/role
+```
+
+Expected Output:
+```bash
+NAME                      READY   STATUS    RESTARTS   AGE   ROLE
+pg-cluster-postgresql-0   4/4     Running   0          66m   primary
+pg-cluster-postgresql-1   4/4     Running   0          65m   secondary
+```
+
+### Check compatible versions for the same ComponentDefinition
+
+**Step 1.** Get the list of `ComponentDefinition` associated with a given `ComponentVersion`
+
+```bash
+kubectl get cmpv postgresql -ojson | jq -r '.metadata.annotations."componentversion.kubeblocks.io/compatible-definitions"' | tr ',' '\n'
+```
+
+<details>
+<summary>Example Output</summary>
+```text
+postgresql-12-1.0.0
+postgresql-14-1.0.0
+postgresql-15-1.0.0
+postgresql-16-1.0.0
+```
+</details>
+
+**Step 2.** Get the list of `ComponentDefinition` associated with a given `ComponentVersion`
+
+```bash
+kubectl get cmpv postgresql -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("postgresql-14"))) | .releases[]'
+```
+
+This returns versions compatible with `ComponentDefinition` named `postgresql-14`:
+
+<details open>
+<summary>Example Output</summary>
+```text
+14.7.2
+14.8.0
+```
+</details>
+
+### Apply the Upgrade
+
+**Expected Workflow**:
+
+1. Secondary replicas are upgrade first (one at a time)
+1. Primary is upgrade last after secondary replicas are healthy
+1. Cluster status transitions from `Updating` to `Running`
+
+To upgrade the PostgreSQL version, modify the serviceVersion field in the Cluster resource. In this example, we will upgrade the PostgreSQL version from `14.7.2` to `14.8.0`
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  Option 1: Using OpsRequest
+
+  You can upgrade the cluster using an OpsRequest:
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: pg-upgrade
+    namespace: demo
+  spec:
+    # Specifies the name of the Cluster resource that this operation is targeting.
+    clusterName: pg-cluster
+    type: Upgrade
+    upgrade:
+      components:
+      - componentName: postgresql
+        # Specifies the desired service version of component
+        serviceVersion: "14.8.0"
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+  Option 1: Using the Declarative Cluster API
+
+  Alternatively, you may stop the cluster by setting the `spec.componentSpecs.serviceVersion` field in the cluster configuration:
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  metadata:
+    name: pg-cluster
+    namespace: demo
+  spec:
+    terminationPolicy: Delete
+    clusterDef: postgresql
+    topology: replication
+    componentSpecs:
+      - name: postgresql
+        serviceVersion: 14.8.0  # set to 14.8.0 for upgrading
+        disableExporter: true
+        replicas: 2
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "0.5Gi"
+          requests:
+            cpu: "0.5"
+            memory: "0.5Gi"
+        volumeClaimTemplates:
+          - name: data
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 20Gi
+  ```
+  </TabItem>
+</Tabs>
+
+### Monitor the Upgrade Process
+During the upgrade, observe the changes in the cluster's Pods:
+```bash
+kubectl get pods -n demo -w
+```
+Expected Output:
+```bash
+NAME                      READY   STATUS    RESTARTS   AGE
+pg-cluster-postgresql-0   4/4     Running   0          97s
+pg-cluster-postgresql-1   4/4     Running   0          50s
+pg-cluster-postgresql-1   3/4     Running   2 (2s ago)   68s
+pg-cluster-postgresql-0   4/4     Running   2 (6s ago)   2m6s
+```
+**Key Observations:**
+- The secondary replica ('pg-cluster-postgresql-1') is upgraded first.
+- A switchover operation occurs, making the replica the new primary.
+- Finally, the original primary ('pg-cluster-postgresql-0') is upgraded.
+
+After the upgrade is completed, roles are switched:
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster -L kubeblocks.io/role
+```
+Updated Roles:
+```bash
+NAME                      READY   STATUS    RESTARTS   AGE   ROLE
+pg-cluster-postgresql-0   4/4     Running   0          2m    secondary
+pg-cluster-postgresql-1   4/4     Running   0          2m    primary
+```
+
+## Verification
+
+### Check Cluster Status
+Ensure the cluster is in the Running state:
+```bash
+kubectl get cluster pg-cluster -n demo -w
+```
+Expected Output:
+```bash
+NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+pg-cluster   postgresql                Delete               Running   17m
+```
+
+### Verify the PostgreSQL Version
+Retrieve the PostgreSQL postgres credentials:
+```bash
+NAME=`kubectl get secrets -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.username}' | base64 -d`
+PASSWD=`kubectl get secrets -n demo pg-cluster-postgresql-account-postgres -o jsonpath='{.data.password}' | base64 -d`
+```
+
+Connect to the upgraded instances and verify the PostgreSQL version:
+```bash
+kubectl exec -ti -n demo pg-cluster-postgresql-1 -- \
+  env PGUSER=${NAME} PGPASSWORD=${PASSWD} psql -c "SELECT VERSION();"
+```
+
+## Summary
+In this guide, you learned how to:
+- Deploy a PostgreSQL replication cluster using KubeBlocks.
+- Perform a rolling upgrade of the PostgreSQL minor version with minimal downtime.
+- Verify that the upgrade was successful.
+
+This rolling upgrade strategy ensures high availability by upgrading the replicas first, performing a switchover, and then upgrading the original primary instance.
+ strategy ensures high availability by upgrading the replicas first, performing a switchover, and then upgrading the original primary instance.

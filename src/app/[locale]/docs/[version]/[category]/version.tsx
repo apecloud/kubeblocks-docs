@@ -91,7 +91,7 @@ export default function VersionList({ version, versions }: Props) {
               sx={{ paddingBlock: 1.2 }}
             >
               <ListItemIcon>{v === version && <DoneOutlined />}</ListItemIcon>
-              <ListItemText>{v.replace(/_/, '.')}</ListItemText>
+              <ListItemText>{v.replace(/_/g, '.')}</ListItemText>
             </MenuItem>
           );
         })}
