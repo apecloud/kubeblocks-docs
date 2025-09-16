@@ -12,49 +12,49 @@ We are delighted to announce the release of KubeBlocks v0.9.5. This release incl
 
 ### Features
 
-- **Improve the settings of the manager** - Improves performance, stability, and configurability of KubeBlocks Operator. [#9595](https://github.com/apecloud/kubeblocks/pull/9595)
-- **Specify allowed symbols in password generation** - Allows customization of symbols used in generated passwords. [#9489](https://github.com/apecloud/kubeblocks/pull/9489)
-- **OpsDefinition supports image mapping for multi service version** - Enables image mapping for different service versions in operations definitions. [#9607](https://github.com/apecloud/kubeblocks/pull/9607)
-- **Support resize subresource in InPlacePodVerticalScaling** - Improves resource resizing handling for K8s v1.32 and above. [#9536](https://github.com/apecloud/kubeblocks/pull/9536) [#9545](https://github.com/apecloud/kubeblocks/pull/9545)
-- **Add azureblob storage provider** - Adds Azure Blob storage provider support. [#9492](https://github.com/apecloud/kubeblocks/pull/9492)
+- **Improve the settings of the manager** - Improves performance, stability, and configurability of KubeBlocks Operator. ([#9595](https://github.com/apecloud/kubeblocks/pull/9595))
+- **Specify allowed symbols in password generation** - Allows customization of symbols used in generated passwords. ([#9489](https://github.com/apecloud/kubeblocks/pull/9489))
+- **OpsDefinition supports image mapping for multi service version** - Enables image mapping for different service versions in operations definitions. ([#9607](https://github.com/apecloud/kubeblocks/pull/9607))
+- **Support resize subresource in InPlacePodVerticalScaling** - Improves resource resizing handling for K8s v1.32 and above. ([#9536](https://github.com/apecloud/kubeblocks/pull/9536), [#9545](https://github.com/apecloud/kubeblocks/pull/9545))
+- **Add azureblob storage provider** - Adds Azure Blob storage provider support. ([#9492](https://github.com/apecloud/kubeblocks/pull/9492))
 
 ## KubeBlocks Addons
 
 ### MySQL Variants (MySQL, GreatSQL)
-- Support greatsql. [#1793](https://github.com/apecloud/kubeblocks-addons/pull/1793)
-- Support mysql audit log config. [#1890](https://github.com/apecloud/kubeblocks-addons/pull/1890)
-- Support greatsql auditlog config. [#1893](https://github.com/apecloud/kubeblocks-addons/pull/1893)
+- Support greatsql. ([#1793](https://github.com/apecloud/kubeblocks-addons/pull/1793))
+- Support mysql audit log config. ([#1890](https://github.com/apecloud/kubeblocks-addons/pull/1890))
+- Support greatsql auditlog config. ([#1893](https://github.com/apecloud/kubeblocks-addons/pull/1893))
 
 ### PostgreSQL
-- Refactor PostgreSQL addon and support PostgreSQL 16 and 17. [#1734](https://github.com/apecloud/kubeblocks-addons/pull/1734)
-- Support using etcd as DCS for PostgreSQL. [#1864](https://github.com/apecloud/kubeblocks-addons/pull/1864)
+- Refactor PostgreSQL addon and support PostgreSQL 16 and 17. ([#1734](https://github.com/apecloud/kubeblocks-addons/pull/1734))
+- Support using etcd as DCS for PostgreSQL. ([#1864](https://github.com/apecloud/kubeblocks-addons/pull/1864))
 
 ### Redis
-- Support redis 7.2.10 and redis 8 [#1812](https://github.com/apecloud/kubeblocks-addons/pull/1812)
+- Support redis 7.2.10 and redis 8 ([#1812](https://github.com/apecloud/kubeblocks-addons/pull/1812))
 - Fix Redis slave instance memory leak when loading redisgears module.
 - Change redis maxmemory-policy to volatile-lru and maxmemory = 0.8 * limit_memory.
 
 ### MongoDB
-- Support mongodb sharding. [#1701](https://github.com/apecloud/kubeblocks-addons/pull/1701)
+- Support mongodb sharding. ([#1701](https://github.com/apecloud/kubeblocks-addons/pull/1701))
 
 ### Elasticsearch
-- Optimize backup. [#1853](https://github.com/apecloud/kubeblocks-addons/pull/1853)
-- Support new version 8.15.5. [#1929](https://github.com/apecloud/kubeblocks-addons/pull/1929)
+- Optimize backup. ([#1853](https://github.com/apecloud/kubeblocks-addons/pull/1853))
+- Support new version 8.15.5. ([#1929](https://github.com/apecloud/kubeblocks-addons/pull/1929))
 
 ### ClickHouse
-- Clickhouse support backup and restore. [#1800](https://github.com/apecloud/kubeblocks-addons/pull/1800)
-- Update metrics. [#1916](https://github.com/apecloud/kubeblocks-addons/pull/1916)
+- Clickhouse support backup and restore. ([#1800](https://github.com/apecloud/kubeblocks-addons/pull/1800))
+- Update metrics. ([#1916](https://github.com/apecloud/kubeblocks-addons/pull/1916))
 
 ### ZooKeeper
-- Improve zookeeper jvm setting and gc option. [#1771](https://github.com/apecloud/kubeblocks-addons/pull/1771) [#1938](https://github.com/apecloud/kubeblocks-addons/pull/1938)
+- Improve zookeeper jvm setting and gc option. ([#1771](https://github.com/apecloud/kubeblocks-addons/pull/1771), [#1938](https://github.com/apecloud/kubeblocks-addons/pull/1938))
 
 ### etcd
-- Support etcd v3.6.1. [#1737](https://github.com/apecloud/kubeblocks-addons/pull/1737)
-- Improve etcd backup procedure. [#1740](https://github.com/apecloud/kubeblocks-addons/pull/1740)
-- Improve etcd params and configuration. [#1778](https://github.com/apecloud/kubeblocks-addons/pull/1778)
+- Support etcd v3.6.1. ([#1737](https://github.com/apecloud/kubeblocks-addons/pull/1737))
+- Improve etcd backup procedure. ([#1740](https://github.com/apecloud/kubeblocks-addons/pull/1740))
+- Improve etcd params and configuration. ([#1778](https://github.com/apecloud/kubeblocks-addons/pull/1778))
 
 ### Milvus
-- Support to create Milvus clusters on arm. [#1792](https://github.com/apecloud/kubeblocks-addons/pull/1792)
+- Support to create Milvus clusters on arm. ([#1792](https://github.com/apecloud/kubeblocks-addons/pull/1792))
 
 ## Upgrade to v0.9.5
 
