@@ -13,7 +13,7 @@ rm -rf docs/en/preview/cli
 # check out kbcli repo of branch v1.0.0 and copy docs/user_docs/cli to docs/zh/cli and docs/en/cli
 git clone -b "$BRANCH" "$REPO_URL" "$CLONE_DIR"
 
-cd "$CLONE_DIR" && make kbcli-doc
+cd "$CLONE_DIR" && rm -rf $KBCLI_DOCS_DIR && make kbcli-doc
 cd ..
 # cp -r "$CLONE_DIR/$KBCLI_DOCS_DIR" docs/zh/preview/cli
 cp -r "$CLONE_DIR/$KBCLI_DOCS_DIR" docs/en/preview/cli
