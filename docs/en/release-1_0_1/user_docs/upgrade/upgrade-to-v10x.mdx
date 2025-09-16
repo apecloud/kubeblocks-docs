@@ -1,0 +1,147 @@
+---
+title: Upgrade to v1.0.x
+description: Upgrade to KubeBlocks v1.0.x, operation, tips and notes
+keywords: [upgrade, kubeblocks]
+sidebar_position: 1
+sidebar_label: Upgrade to v1.0.x
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+export const LATEST_VERSION = "v1.0.1";
+
+{/* Custom component to render code blocks with variable substitution */}
+export const VersionedCodeBlock = ({ children, language = "bash" }) => (
+  <pre>
+    <code className={`language-${language}`}>
+      {children.replace(/{LATEST_VERSION}/g, LATEST_VERSION)}
+    </code>
+  </pre>
+);
+
+# Upgrade to KubeBlocks v1.0.x
+
+This guide walks you through upgrading KubeBlocks to version 1.0.x.
+
+## Before You Begin
+
+### Verify Your Current Version
+
+First, check which version of KubeBlocks you're currently running:
+
+```bash
+# Using helm
+helm -n kb-system list | grep kubeblocks
+
+# Using kbcli
+kbcli version
+```
+
+### Choose Your Upgrade Path
+
+Select the appropriate upgrade path based on your current version:
+
+| Current Version | Target: v1.0.x | Upgrade Path |
+|-----------------|----------------|---------------|
+| v1.0.x | ✅ Direct upgrade | Follow [Upgrade from KubeBlocks v1.0.x](#upgrade-from-kubeblocks-v10x) |
+| v0.9.x | ❌ Not supported | N/A |
+
+
+## Upgrade from KubeBlocks v1.0.x
+
+This section covers upgrading between v1.0.x versions (for example, from v1.0.0 to v1.0.1). Since these are patch releases within the same major version, the upgrade process is straightforward.
+
+:::note
+**Version Placeholder:**
+
+Throughout this section, replace {LATEST_VERSION} with your target version number (e.g., `v1.0.1`).
+:::
+
+<Tabs>
+
+  <TabItem value="Helm" label="Helm" default>
+
+  **Step 1: Update Custom Resource Definitions (CRDs)**
+
+  KubeBlocks separates CRDs from the Helm chart to reduce chart size. Start by updating the CRDs:
+
+  <VersionedCodeBlock>
+{`kubectl replace -f https://github.com/apecloud/kubeblocks/releases/download/{LATEST_VERSION}/kubeblocks_crds.yaml`}
+  </VersionedCodeBlock>
+
+  **Step 2: Upgrade KubeBlocks Core**
+
+  First, update your Helm repository to get the latest chart information:
+  ```bash
+  helm repo add kubeblocks https://apecloud.github.io/helm-charts
+  helm repo update kubeblocks
+  ```
+
+  Then upgrade KubeBlocks to the target version:
+  <VersionedCodeBlock>
+{`helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version {LATEST_VERSION}`}
+  </VersionedCodeBlock>
+
+  **Step 3: (Optional) Upgrade Addons**
+
+  :::note
+  We are glad to announce that since KubeBlocks 1.0.0, each `ComponentDefinition` CR has its own version (usually the same as its Addon version), existing Clusters will not be affected by the Addon upgrade.
+
+  But it is still recommended to test upgrade Addons in a non-production environment first.
+  :::
+
+  To upgrade Addons to the versions bundled with the new KubeBlocks version:
+
+  <VersionedCodeBlock>
+{`helm -n kb-system upgrade kubeblocks kubeblocks/kubeblocks --version {LATEST_VERSION}  --set upgradeAddons=true`}
+  </VersionedCodeBlock>
+
+  Or you want to upgrade specific Addons follow the steps in [Upgrade Addons](../references/install-addons#upgrade-addons)
+
+  </TabItem>
+
+  <TabItem value="kbcli" label="kbcli">
+
+  **Step 1: Update kbcli**
+
+  Download and install the matching version of kbcli:
+
+  <VersionedCodeBlock>
+{`curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash -s {LATEST_VERSION}`}
+  </VersionedCodeBlock>
+
+  **Step 2: Upgrade KubeBlocks Core**
+
+  Perform the core upgrade without updating Addons:
+
+  <VersionedCodeBlock>
+{`kbcli kb upgrade --version {LATEST_VERSION}`}
+  </VersionedCodeBlock>
+
+  **Step 3: (Optional) Upgrade Addons**
+
+  :::note
+  We are glad to announce that since KubeBlocks 1.0.0, each `ComponentDefinition` CR has its own version (usually the same as its Addon version), existing Clusters will not be affected by the Addon upgrade.
+
+  But it is still recommended to test upgrade Addons in a non-production environment first.
+  :::
+
+  To upgrade Addons to the versions bundled with the new KubeBlocks version:
+
+  <VersionedCodeBlock>
+{`kbcli kb upgrade --version {LATEST_VERSION} --set upgradeAddons=true`}
+  </VersionedCodeBlock>
+
+   Or you want to upgrade specific Addons follow the steps in [Upgrade Addons](../references/install-addons#upgrade-addons)
+
+  </TabItem>
+
+</Tabs>
+
+## Getting Help
+
+If you encounter issues during the upgrade process:
+
+- **Check the logs**: Review upgrade logs using `kubectl -n kb-system logs deployment/kubeblocks`
+- **Community Support**: Visit the [KubeBlocks GitHub Issues](https://github.com/apecloud/kubeblocks/issues) for known issues and community help
