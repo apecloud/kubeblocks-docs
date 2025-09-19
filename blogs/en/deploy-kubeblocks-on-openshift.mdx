@@ -1,0 +1,467 @@
+---
+slug: deploy-kubeblocks-on-openshift
+title: How to Deploy and Use KubeBlocks on OpenShift
+description: This blog introduces how to deploy and use KubeBlocks on OpenShift.
+date: 2025-09-16
+authors:
+  name: dongming
+  url: https://github.com/ldming
+  image_url: https://avatars.githubusercontent.com/u/726412?v=4
+tags: [OpenShift]
+keywords: kubeblocks,openshift,kubernetes,database,deployment,management,operator,helm,mysql,postgresql,redis,mongodb
+image: /img/blogs/thumbnails/blog-deploy-kubeblocks-on-openshift.png
+---
+
+# How to Deploy and Use KubeBlocks on OpenShift
+
+## Background
+
+In today's wave of digital transformation, Kubernetes has become the standard platform for enterprise container orchestration, providing powerful automated deployment, scaling, and management capabilities for applications. However, as more and more enterprises migrate critical business applications to Kubernetes, how to efficiently manage database workloads has become a significant challenge. Compared to stateless applications, databases need to handle complex scenarios such as persistent storage, high availability, backup and recovery, and version upgrades, which are areas that traditional Kubernetes native features cannot fully cover.
+
+Red Hat OpenShift is an enterprise-grade container platform built on Kubernetes, providing enterprises with more comprehensive features and toolchains. Compared to open-source Kubernetes, OpenShift enhances security (such as SCC, i.e., Security Context Constraints), provides integrated CI/CD pipelines, developer tools, and more complete multi-tenancy support. OpenShift's project isolation mechanism and enterprise-grade support make it the platform of choice for many large enterprises and organizations.
+
+However, even on a mature platform like OpenShift, database management remains a complex task, requiring specialized tools and solutions to simplify operational processes.
+
+KubeBlocks is a cloud-native data infrastructure designed specifically for Kubernetes environments, providing a complete solution for enterprises to manage database workloads in cloud-native environments. Through a unified control plane, KubeBlocks can easily manage the full lifecycle of 30+ database engines such as MySQL, PostgreSQL, MongoDB, and Redis.
+
+Core advantages of KubeBlocks:
+
+* Multi-engine support: Supports 30+ database engines, avoiding technology stack fragmentation.
+* High availability architecture: Built-in high availability configuration and disaster recovery capabilities to ensure business continuity.
+* Automated operations: Fully automated Day-2 operations, including backup, recovery, scaling, and version upgrades.
+* Cloud-native design: Deeply integrated with the Kubernetes ecosystem, fully leveraging cloud-native advantages.
+
+Deploying KubeBlocks on OpenShift can provide enterprises with a unified and powerful database management platform. This combination fully leverages OpenShift's enterprise-grade security and management capabilities, while utilizing KubeBlocks' professional database operation and maintenance functions, achieving integrated management of applications and databases.
+
+Through KubeBlocks, OpenShift users can:
+
+* Use a unified interface and tools to manage different types of databases.
+* Automate complex database operations such as deployment, scaling, and backup.
+* Seamlessly integrate with OpenShift's security policies and monitoring systems.
+* Reduce the complexity and operational costs of database management.
+
+This article will introduce how to deploy KubeBlocks on OpenShift and demonstrate how to use it to create and manage MySQL and PostgreSQL database clusters, helping you build an enterprise-grade unified database management platform. At the same time, we will also focus on the impact of OpenShift's unique security mechanisms on the deployment process and their solutions.
+
+## Deploy KubeBlocks
+
+### Prerequisites
+
+Before deploying KubeBlocks on OpenShift, please ensure you have the following conditions:
+
+1. OpenShift cluster: Version 4.8 or higher.
+2. Cluster administrator privileges: Administrator privileges are required to install Operators and CRDs. For specific required permissions, please refer to the [documentation](https://kubeblocks.io/docs/preview/user_docs/references/kubeblocks_options).
+3. CLI tools:
+    * `oc` (OpenShift command-line tool)
+    * `kubectl` (Kubernetes command-line tool)
+    * `helm` (Version 3.0+)
+4. Resource requirements:
+    * At least 3 Nodes, each Node recommended to have at least 8C16G.
+    * Configured default storage class.
+
+### Prepare OpenShift Cluster
+
+The author created an OpenShift cluster on Azure consisting of 3 control plane nodes and 3 data plane nodes to deploy and verify KubeBlocks.
+
+```Bash
+# View cluster nodes
+oc get nodes
+NAME                             STATUS   ROLES                  AGE   VERSION
+kbe-8rfgv-master-0               Ready    control-plane,master   11d   v1.30.11
+kbe-8rfgv-master-1               Ready    control-plane,master   11d   v1.30.11
+kbe-8rfgv-master-2               Ready    control-plane,master   11d   v1.30.11
+kbe-8rfgv-worker-eastus1-7t2hw   Ready    worker                 11d   v1.30.11
+kbe-8rfgv-worker-eastus2-cw62z   Ready    worker                 11d   v1.30.11
+kbe-8rfgv-worker-eastus3-srrlp   Ready    worker                 11d   v1.30.11
+
+# Check cluster status
+oc cluster-info
+
+# Verify cluster administrator privileges
+oc auth can-i create clusterroles
+```
+
+### Install KubeBlocks CLI (kbcli)
+
+`kbcli` is the command-line tool for KubeBlocks, used to manage KubeBlocks clusters. The installation method for Linux/MacOS systems is as follows; for other systems, please refer to the [documentation](https://kubeblocks.io/docs/preview/user_docs/references/install-kbcli).
+
+```Bash
+# Download and install kbcli (Linux/MacOS example)
+curl -fsSL https://kubeblocks.io/installer/install_cli.sh | bash -s 1.0.1
+
+# Verify installation
+kbcli version
+```
+
+### Deploy KubeBlocks
+
+Refer to the [KubeBlocks documentation](https://kubeblocks.io/docs/preview/user_docs/overview/install-kubeblocks) to deploy KubeBlocks using Helm.
+
+```Bash
+# Add KubeBlocks Helm repository
+helm repo add kubeblocks https://apecloud.github.io/helm-charts --force-update
+
+# View the latest version, currently 1.0.1
+helm search repo kubeblocks/kubeblocks --versions
+
+# Create KubeBlocks dependent CRDs
+kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/v1.0.1/kubeblocks_crds.yaml
+
+# Install KubeBlocks
+helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace --version 1.0.1
+```
+
+If using a private image registry, you can specify the registry address and access credentials using the following command.
+
+```Bash
+# Create a secret to store credentials for accessing the private image registry
+kubectl create secret docker-registry <your-registry-secret-name> \
+--docker-username=<your-username> \
+--docker-password=<your-password> \
+--docker-server=<your-registry-url>
+
+# Deploy KubeBlocks and specify the private image registry address and access credentials
+helm install kubeblocks kubeblocks/kubeblocks \
+--namespace kb-system --create-namespace \
+--version 1.0.1 \
+--set image.registry=<your-registry-url> \
+--set image.imagePullSecrets[0].name=<your-registry-secret-name> \
+--set dataProtection.image.registry=<your-registry-url> \
+--set dataProtection.image.imagePullSecrets[0].name=<your-registry-secret-name>
+```
+
+Perform the following operations to verify if KubeBlocks is successfully installed.
+
+```Bash
+# Check if KubeBlocks Pods are running
+kubectl get pods
+NAME                                         READY   STATUS    RESTARTS   AGE
+kubeblocks-84994765cf-zkz6t                  1/1     Running   0          12m
+kubeblocks-dataprotection-79dc8cd474-cdztr   1/1     Running   0          12m
+
+# View KubeBlocks Addons
+kubectl get addon
+NAME             TYPE   VERSION   PROVIDER    STATUS     AGE
+apecloud-mysql   Helm   1.0.1     community   Enabled    13m
+etcd             Helm   1.0.1     community   Enabled    13m
+kafka            Helm   1.0.1     community   Enabled    13m
+mongodb          Helm   1.0.1     community   Enabled    13m
+mysql            Helm   1.0.1     community   Enabled    13m
+postgresql       Helm   1.0.1     community   Enabled    13m
+qdrant           Helm   1.0.1     community   Disabled   13m
+rabbitmq         Helm   1.0.1     community   Disabled   13m
+redis            Helm   1.0.1     community   Enabled    13m
+
+# Check if the private image registry pull secret is correctly set in the ServiceAccount
+kubectl -n kb-system get sa kubeblocks -o jsonpath='{.imagePullSecrets}'
+```
+
+KubeBlocks has now been installed, and common database engine plugins such as MySQL, PostgreSQL, and Redis are installed by default.
+
+### Create Backup Repository
+
+A BackupRepo is KubeBlocks' abstraction for storage where database backups are kept, currently supporting object storage from mainstream cloud vendors. For subsequent use in this article, we will create an Azure Blob storage and then a BackupRepo on Azure.
+
+```Bash
+# Create backup repository
+kbcli backuprepo create azureblob  \
+    --provider azureblob \
+    --account-key='<your-account-key>' \
+    --account-name='<your-account-name>' \
+    --default=true \
+    --container='<your-container-name>'
+```
+
+After creating a backup repository, KubeBlocks automatically creates a Job to check the accessibility of the object storage. Before KubeBlocks version 1.0.1, this Job required running as a root account, and OpenShift's default SCC policy does not allow this operation for security reasons. Therefore, it is necessary to configure appropriate SCC permissions for the relevant ServiceAccount:
+
+```Bash
+# Add anyuid SCC to the ServiceAccount running the backup repository check Job
+oc adm policy add-scc-to-user anyuid -z kubeblocks-dataprotection-worker -n kb-system
+```
+
+> Note: The `anyuid` SCC allows containers to run with any user ID, including root. Please ensure this permission is only assigned to necessary ServiceAccounts.
+
+Check the backup repository status to ensure it reaches the `Ready` state.
+
+```Bash
+kubectl get backuprepo
+NAME        STATUS   STORAGEPROVIDER   ACCESSMETHOD   DEFAULT   AGE
+azureblob   Ready    azureblob         Tool           true      21h
+```
+
+## Create and Operate Databases
+
+### Create Project
+
+First, create a project on OpenShift to deploy the database cluster. A project in OpenShift corresponds to a namespace in Kubernetes but provides additional security isolation and resource management capabilities.
+
+```Bash
+# Create project
+oc new-project demo
+```
+
+KubeBlocks requires running Pods with root privileges for certain operations (e.g., creating backups, initializing PostgreSQL clusters), and OpenShift's default security policies do not allow this. To ensure KubeBlocks functions correctly, appropriate SCC permissions need to be configured for the project:
+
+```Bash
+# Add anyuid SCC to the demo project, allowing Pods to run with any user ID
+oc adm policy add-scc-to-group anyuid system:serviceaccounts:demo
+```
+
+### MySQL
+
+#### Create MySQL Cluster
+
+Refer to the [documentation](https://kubeblocks.io/docs/preview/kubeblocks-for-mysql/04-operations/01-stop_start_restart) to create a MySQL database cluster.
+
+```Bash
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+View the status of the MySQL cluster:
+
+```Bash
+kubectl get cluster example-mysql-cluster -n demo
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Running   3m41s
+```
+
+#### Vertical Scaling
+
+Execute the following command to scale the cluster to 1C1G:
+
+```Bash
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-cluster-vscale-ops
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  type: VerticalScaling
+  verticalScaling:
+  - componentName: mysql
+    requests:
+      cpu: '1'
+      memory: 1Gi
+    limits:
+      cpu: '1'
+      memory: 1Gi
+EOF
+```
+
+View cluster resources:
+
+```Bash
+kbcli cluster describe example-mysql-cluster -n demo
+...
+Resources Allocation:
+COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+mysql                           1 / 1                1Gi / 1Gi               data:20Gi      <none>
+...
+```
+
+Readers can refer to the [official documentation](https://kubeblocks.io/docs/preview/kubeblocks-for-mysql/04-operations/01-stop_start_restart) to perform other operational tasks, which will not be demonstrated here.
+
+#### Backup and Recovery
+
+Refer to the [documentation](https://kubeblocks.io/docs/preview/kubeblocks-for-mysql/05-backup-restore/02-create-full-backup) to create a full backup:
+
+```Bash
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-cluster-backup
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  force: false
+  backup:
+    backupPolicyName: example-mysql-cluster-mysql-backup-policy
+    backupMethod: xtrabackup
+    deletionPolicy: Delete
+    retentionPeriod: 1mo
+  type: Backup
+EOF
+```
+
+View backup status:
+
+```Bash
+kubectl get backup  -n demo
+NAME                                               POLICY                                      METHOD       REPO        STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
+backup-demo-example-mysql-cluster-20250823080440   example-mysql-cluster-mysql-backup-policy   xtrabackup   azureblob   Completed   2556817      11s        Delete            2025-08-23T08:04:40Z   2025-08-23T08:04:50Z   2025-09-22T08:04:50Z
+```
+
+If the backup remains in a Running state, you can check the status of the Job associated with the backup. If there are event messages similar to the following, it indicates that the ServiceAccount's SCC is not correctly set, preventing the Job from running as a root account. This is due to OpenShift's default security constraints; please refer to the above instructions to set the SCC permissions for the corresponding ServiceAccount or Namespace `demo`.
+
+```PlainText
+  Warning  FailedCreate  4s (x6 over 35s)  job-controller  Error creating: pods "dp-backup-0-backup-demo-example-mysql-cluster-20250823154613-50-" is forbidden: unable to validate against any security context constraint: [provider "anyuid": Forbidden: not usable by user or serviceaccount, provider restricted-v2: .containers[0].runAsUser: Invalid value: 0: must be in the ranges: [1000760000, 1000769999], provider restricted-v2: .containers[1].runAsUser: Invalid value: 0: must be in the ranges: [1000760000, 1000769999], provider "restricted": Forbidden: not usable by user or serviceaccount, provider "nonroot-v2": Forbidden: not usable by user or serviceaccount, provider "nonroot": Forbidden: not usable by user or serviceaccount, provider "hostmount-anyuid": Forbidden: not usable by user or serviceaccount, provider "machine-api-termination-handler": Forbidden: not usable by user or serviceaccount, provider "hostnetwork-v2": Forbidden: not usable by user or serviceaccount, provider "hostnetwork": Forbidden: not usable by user or serviceaccount, provider "hostaccess": Forbidden: not usable by user or serviceaccount, provider "node-exporter": Forbidden: not usable by user or serviceaccount, provider "privileged": Forbidden: not usable by user or serviceaccount, provider "privileged-genevalogging": Forbidden: not usable by user or serviceaccount]
+```
+
+Use this backup to restore a new MySQL cluster with the following command:
+
+```Bash
+kbcli cluster restore example-mysql-cluster-restored --backup=backup-demo-example-mysql-cluster-20250823080440
+```
+
+View the status of the restored cluster:
+
+```Bash
+kubectl get cluster example-mysql-cluster-restored -n demo
+NAME                             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster-restored   mysql                Delete               Running   3m
+```
+
+### PostgreSQL
+
+#### Create PostgreSQL Cluster
+
+Refer to the [documentation](https://kubeblocks.io/docs/preview/kubeblocks-for-postgresql/04-operations/01-stop-start-restart) to create a PostgreSQL cluster.
+
+```Bash
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: pg-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: postgresql
+  topology: replication
+  componentSpecs:
+    - name: postgresql
+      serviceVersion: 16.4.0
+      disableExporter: true
+      replicas: 2
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+View the status of the PostgreSQL cluster:
+
+```Bash
+kubectl get cluster
+NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+pg-cluster   postgresql           Delete               Running   6m7s
+```
+
+#### Vertical Scaling
+
+Execute the following command to scale the PostgreSQL cluster's resource configuration to 1C1G:
+
+```Bash
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-cluster-vscale-ops
+  namespace: demo
+spec:
+  clusterName: pg-cluster
+  type: VerticalScaling
+  verticalScaling:
+  - componentName: postgresql
+    requests:
+      cpu: '1'
+      memory: 1Gi
+    limits:
+      cpu: '1'
+      memory: 1Gi
+EOF
+```
+
+View cluster resource status:
+
+```Bash
+kbcli cluster describe pg-cluster -n demo
+...
+Resources Allocation:
+COMPONENT    INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+postgresql                       1 / 1                1Gi / 1Gi               data:20Gi      managed-csi
+...
+```
+
+Readers can refer to the [official documentation](https://kubeblocks.io/docs/preview/kubeblocks-for-postgresql/04-operations/01-stop-start-restart) to perform other operational tasks.
+
+#### Backup and Recovery
+
+Refer to the [documentation](https://kubeblocks.io/docs/preview/kubeblocks-for-postgresql/05-backup-restore/02-create-full-backup) to create a full backup and view its status.
+
+```Bash
+kubectl get backup
+NAME                                    POLICY                                METHOD          REPO        STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
+backup-demo-pg-cluster-20250823100024   pg-cluster-postgresql-backup-policy   pg-basebackup   azureblob   Completed   3707917      22s        Delete            2025-08-23T10:00:24Z   2025-08-23T10:00:46Z   2025-09-22T10:00:46Z
+```
+
+Use this backup to restore a new PostgreSQL cluster, as follows:
+
+```Bash
+# Use kbcli command to restore a new PostgreSQL cluster
+kbcli cluster restore pg-cluster-restored --backup=backup-demo-pg-cluster-20250823100024
+
+# View cluster status
+kubectl get cluster pg-cluster-restored
+NAME                  CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+pg-cluster-restored   postgresql           Delete               Running   3m43s
+```
+
+Above, we used MySQL and PostgreSQL as examples to demonstrate how to create and manage database clusters using KubeBlocks on OpenShift. Readers can also refer to the KubeBlocks official documentation to create other types of database clusters, such as Redis, MongoDB, Kafka, etc. Due to space limitations, this article will not provide further examples.
+
+## Summary
+
+This article describes how to deploy and use [open-source KubeBlocks](https://kubeblocks.io) on OpenShift, demonstrating how to solve the database management challenges faced by enterprises in Kubernetes environments. By combining OpenShift's enterprise-grade platform capabilities with KubeBlocks' professional database management functions, enterprises can obtain comprehensive Database as a Service (DBaaS) capabilities, enabling integrated management of applications and databases.
+
+For enterprise users with higher requirements, we also provide [Enterprise KubeBlocks](https://apecloud.cn/products/kubeblocks-enterprise), which adds the following core enterprise-grade features on top of the open-source version:
+
+* Enterprise-grade management console: Provides a unified visual management interface, supporting white-screen operations and complete API integration.
+* Multi-tenancy and enhanced security: Supports enterprise-grade multi-tenancy isolation, fine-grained access control, data encryption, and compliance auditing.
+* Commercial database support: Includes enterprise-grade commercial database engines such as Oracle, SQL Server, and more version choices.
+* Enterprise-grade disaster recovery and observability: Provides cross-region disaster recovery capabilities, comprehensive monitoring metrics, log management, and alert services.
+
+If you are interested in Enterprise KubeBlocks or wish to deploy KubeBlocks in a production environment, please visit our [official website](https://apecloud.cn/products/kubeblocks-enterprise) for more information or contact us for a trial version.
