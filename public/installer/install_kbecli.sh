@@ -138,10 +138,6 @@ installFile() {
 
     if [ $? -eq 0 ] && [ -f "$CLI_FILE" ]; then
         echo "kbecli installed successfully."
-        kbecli version
-        echo -e "Make sure your docker service is running and begin your journey with kbecli:\n"
-        echo -e "\t$CLI_FILENAME playground init"
-        echo -e ""
     else
         echo "Failed to install $CLI_FILENAME"
         exit 1
@@ -162,11 +158,6 @@ cleanup() {
     if [[ -d "${CLI_TMP_ROOT:-}" ]]; then
         rm -rf "$CLI_TMP_ROOT"
     fi
-}
-
-installCompleted() {
-    echo -e "\nFor more information on how to get started, please visit:"
-    echo "  https://kubeblocks.io"
 }
 
 # -----------------------------------------------------------------------------
@@ -191,4 +182,3 @@ fi
 downloadFile $ret_val
 installFile
 cleanup
-installCompleted
