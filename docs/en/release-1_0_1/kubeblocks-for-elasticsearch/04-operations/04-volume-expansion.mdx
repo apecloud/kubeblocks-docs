@@ -54,16 +54,14 @@ metadata:
 spec:
   terminationPolicy: Delete
   componentSpecs:
-    - name: dit
-      componentDef: elasticsearch-8
+    - name: master
+      componentDef: elasticsearch-master-8
       serviceVersion: 8.8.2
       configs:
         - name: es-cm
           variables:
-            # use key `roles` to specify roles this component assume
-            roles: data,ingest,transform
+            version: 8.8.2
       replicas: 3
-      disableExporter: false
       resources:
         limits:
           cpu: "1"
@@ -74,23 +72,20 @@ spec:
       volumeClaimTemplates:
         - name: data
           spec:
-            # specify storage class name supports Volume Expansion
             storageClassName: <STORAGE_CLASS_NAME>
             accessModes:
               - ReadWriteOnce
             resources:
               requests:
                 storage: 20Gi
-    - name: master
-      componentDef: elasticsearch-8
+    - name: data
+      componentDef: elasticsearch-data-8
       serviceVersion: 8.8.2
       configs:
         - name: es-cm
           variables:
-            # use key `roles` to specify roles this component assume
-            roles: master
+            version: 8.8.2
       replicas: 3
-      disableExporter: false
       resources:
         limits:
           cpu: "1"
@@ -101,7 +96,6 @@ spec:
       volumeClaimTemplates:
         - name: data
           spec:
-            # specify storage class name supports Volume Expansion
             storageClassName: <STORAGE_CLASS_NAME>
             accessModes:
               - ReadWriteOnce
@@ -154,7 +148,7 @@ You can expand the volume in one of two ways:
     clusterName: es-multinode
     type: VolumeExpansion
     volumeExpansion:
-    - componentName: dit
+    - componentName: data
       volumeClaimTemplates:
       - name: data
         storage: 30Gi
@@ -188,7 +182,7 @@ You can expand the volume in one of two ways:
 
   ```yaml
   componentSpecs:
-    - name: dit
+    - name: data
       volumeClaimTemplates:
         - name: data
           spec:
@@ -213,21 +207,21 @@ kbcli cluster describe es-multinode -n demo
 Expected Output:
 ```bash
 Resources Allocation:
-COMPONENT         INSTANCE-TEMPLATE     CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
-dit                                     1 / 1                1Gi / 1Gi               data:30Gi      <STORAGE_CLASS_NAME>
+COMPONENT         INSTANCE-TEMPLATE      CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+data                                     1 / 1                1Gi / 1Gi               data:30Gi      <STORAGE_CLASS_NAME>
 ```
 The volume size for the data PVC has been updated to the specified value (e.g., 30Gi in this case).
 
 Confirm PVC resizing completion:
 ```bash
-kubectl get pvc -l app.kubernetes.io/instance=es-multinode,apps.kubeblocks.io/component-name=dit -n demo
+kubectl get pvc -l app.kubernetes.io/instance=es-multinode,apps.kubeblocks.io/component-name=data -n demo
 ```
 Expected Output:
 ```bash
 NAME                      STATUS   VOLUME     CAPACITY   ACCESS MODES   STORAGECLASS
-data-es-multinode-dit-0   Bound    pvc-uuid   30Gi       RWO            <STORAGE_CLASS_NAME>
-data-es-multinode-dit-1   Bound    pvc-uuid   30Gi       RWO            <STORAGE_CLASS_NAME>
-data-es-multinode-dit-2   Bound    pvc-uuid   30Gi       RWO            <STORAGE_CLASS_NAME>
+data-es-multinode-data-0   Bound    pvc-uuid   30Gi       RWO            <STORAGE_CLASS_NAME>
+data-es-multinode-data-1   Bound    pvc-uuid   30Gi       RWO            <STORAGE_CLASS_NAME>
+data-es-multinode-data-2   Bound    pvc-uuid   30Gi       RWO            <STORAGE_CLASS_NAME>
 ```
 
 ## Cleanup

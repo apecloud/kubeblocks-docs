@@ -67,10 +67,10 @@ To decommission a specific Pod (e.g., 'es-multinode-dit-1'), you can use one of 
     clusterName: es-multinode
     type: HorizontalScaling
     horizontalScaling:
-    - componentName: dit
+    - componentName: data
       scaleIn:
         onlineInstancesToOffline:
-          - 'es-multinode-dit-1'  # Specifies the instance names that need to be taken offline
+          - 'es-multinode-data-1'  # Specifies the instance names that need to be taken offline
   ```
 
   #### Monitor the Decommissioning Process
@@ -101,10 +101,10 @@ To decommission a specific Pod (e.g., 'es-multinode-dit-1'), you can use one of 
   kind: Cluster
   spec:
     componentSpecs:
-      - name: dit
+      - name: data
         replicas: 2       # explected replicas after decommission
         offlineInstances:
-          - es-multinode-dit-1   # <----- Specify Pod to be decommissioned
+          - es-multinode-data-1   # <----- Specify Pod to be decommissioned
    ...
   ```
   </TabItem>
@@ -115,14 +115,14 @@ To decommission a specific Pod (e.g., 'es-multinode-dit-1'), you can use one of 
 
 After applying the updated configuration, verify the remaining Pods in the cluster:
 ```bash
-kubectl get pods -n demo -l app.kubernetes.io/instance=es-multinode,apps.kubeblocks.io/component-name=dit
+kubectl get pods -n demo -l app.kubernetes.io/instance=es-multinode,apps.kubeblocks.io/component-name=data
 ```
 
 Example Output:
 ```bash
-NAME                 READY   STATUS    RESTARTS   AGE
-es-multinode-dit-0   2/2     Running   0          24m
-es-multinode-dit-2   2/2     Running   0          2m1s
+NAME                  READY   STATUS    RESTARTS   AGE
+es-multinode-data-0   4/4     Running   0          24m
+es-multinode-data-2   4/4     Running   0          2m1s
 ```
 
 ## Summary

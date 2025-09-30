@@ -120,8 +120,8 @@ kubectl get cmpv mongodb
 <details open>
 <summary>Example Output</summary>
 ```text
-NAME      VERSIONS                                                                                         STATUS      AGE
-mongodb   8.0.8,8.0.6,8.0.4,7.0.19,7.0.16,7.0.12,6.0.22,6.0.20,6.0.16,5.0.30,5.0.28,4.4.29,4.2.24,4.0.28   Available   26d
+NAME      VERSIONS                            STATUS      AGE
+mongodb   8.0.8,7.0.18,6.0.21,5.0.29,4.4.29   Available   26d
 ```
 </details>
 
@@ -136,14 +136,14 @@ kubectl get cmpv mongodb -ojson | jq -r '.metadata.annotations."componentversion
 <details>
 <summary>Example Output</summary>
 ```text
-mongodb-1.0.0
+mongodb-1.0.1
 ```
 </details>
 
 **Step 2.** Get the list of `ComponentDefinition` associated with a given `ComponentVersion`
 
 ```bash
-kubectl get cmpv mongodb -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("mongodb"))) | .releases[]'
+kubectl get cmpv mongodb -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("^mongodb"))) | .releases[]'
 ```
 
 This returns versions compatible with `ComponentDefinition` named `mongodb`:
@@ -152,19 +152,10 @@ This returns versions compatible with `ComponentDefinition` named `mongodb`:
 <summary>Example Output</summary>
 ```text
 8.0.8
-8.0.6
-8.0.4
-7.0.19
-7.0.16
-7.0.12
-6.0.22
-6.0.20
-6.0.16
-5.0.30
-5.0.28
+7.0.18
+6.0.21
+5.0.29
 4.4.29
-4.2.24
-4.0.28
 ```
 </details>
 
@@ -224,8 +215,8 @@ spec:
     - name: mongodb
       # ServiceVersion specifies the version of the Service expected to be
       # provisioned by this Component.
-      # Valid options are: [4.0.28,4.2.24,4.4.29,5.0.28,6.0.16,7.0.1]
-      serviceVersion: "6.0.16"
+      # Valid options are: [8.0.8,7.0.18,6.0.21,5.0.29,4.4.29]
+      serviceVersion: "6.0.21"
       # Specifies the desired number of replicas in the Component
       replicas: 3
       # Specifies the resources required by the Component.
@@ -266,35 +257,35 @@ To create a cluster with a specific version, configure `spec.componentSpecs.serv
   ```yaml
     componentSpecs:
       - name: mongodb
-        serviceVersion: 4.0.28    # Valid options: [4.0.28,4.2.24,4.4.29]
+        serviceVersion: 4.4.29
   ```
   </TabItem>
   <TabItem value="mongodb5" label="MongoDB 5">
   ```yaml
     componentSpecs:
       - name: mongodb
-        serviceVersion: 5.0.28   # Valid options: [5.0.28]
+        serviceVersion: 5.0.29
   ```
   </TabItem>
   <TabItem value="mongodb6" label="MongoDB 6" default>
   ```yaml
     componentSpecs:
       - name: mongodb
-        serviceVersion: 6.0.22    # Valid options: [6.0.22,6.0.20,6.0.16 ]
+        serviceVersion: 6.0.21
   ```
   </TabItem>
   <TabItem value="mongodb7" label="MongoDB 7">
   ```yaml
     componentSpecs:
       - name: mongodb
-        serviceVersion: 7.0.19    # Valid options: [7.0.19,7.0.16,7.0.12]
+        serviceVersion: 7.0.18
   ```
   </TabItem>
   <TabItem value="mongodb8" label="MongoDB 8">
   ```yaml
     componentSpecs:
       - name: mongodb
-        serviceVersion: 8.0.8    # Valid options: [8.0.8,8.0.6,8.0.4]
+        serviceVersion: 8.0.8
   ```
   </TabItem>
 
@@ -347,9 +338,9 @@ mongodb     mongo-cluster-mongodb.demo.svc.cluster.local:27017              <non
 
 Topology:
 COMPONENT   SERVICE-VERSION   INSTANCE                  ROLE        STATUS    AZ       NODE    CREATED-TIME
-mongodb     6.0.16            mongo-cluster-mongodb-0   primary     Running   zone-x   x.y.z   May 18,2025 21:16 UTC+0800
-mongodb     6.0.16            mongo-cluster-mongodb-1   secondary   Running   zone-x   x.y.z   May 18,2025 21:16 UTC+0800
-mongodb     6.0.16            mongo-cluster-mongodb-2   secondary   Running   zone-x   x.y.z   May 18,2025 21:17 UTC+0800
+mongodb     6.0.21            mongo-cluster-mongodb-0   primary     Running   zone-x   x.y.z   May 18,2025 21:16 UTC+0800
+mongodb     6.0.21            mongo-cluster-mongodb-1   secondary   Running   zone-x   x.y.z   May 18,2025 21:16 UTC+0800
+mongodb     6.0.21            mongo-cluster-mongodb-2   secondary   Running   zone-x   x.y.z   May 18,2025 21:17 UTC+0800
 
 Resources Allocation:
 COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
@@ -357,8 +348,9 @@ mongodb                         500m / 500m          512Mi / 512Mi           dat
 
 Images:
 COMPONENT   COMPONENT-DEFINITION    IMAGE
-mongodb     mongodb-1.0.0           docker.io/library/mongo:6.0.16
-                                    apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com/apecloud/kubeblocks-tools:1.0.0
+mongodb     mongodb-1.0.1           docker.io/apecloud/percona-server-mongodb:6.0.21
+                                    docker.io/apecloud/percona-backup-mongodb:2.9.1
+                                    docker.io/apecloud/mongodb_exporter:0.44.0
 
 Data Protection:
 BACKUP-REPO   AUTO-BACKUP   BACKUP-SCHEDULE   BACKUP-METHOD   BACKUP-RETENTION   RECOVERABLE-TIME
