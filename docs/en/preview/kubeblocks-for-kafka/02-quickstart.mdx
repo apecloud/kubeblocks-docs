@@ -154,6 +154,11 @@ spec:
   componentSpecs:
     - name: kafka-broker
       replicas: 1
+      serviceVersion: 3.3.2
+      services:
+        - name: advertised-listener
+          serviceType: ClusterIP # Valid options are: [ClusterIP, NodePort, LoadBalancer]
+          podService: true
       resources:
         limits:
           cpu: "0.5"
@@ -168,9 +173,9 @@ spec:
           value: "-XshowSettings:vm -XX:MaxRAMPercentage=100 -Ddepth=64"
           # Whether to enable direct Pod IP address access mode.
           # - If set to 'true', Kafka clients will connect to Brokers using the Pod IP address directly.
-          # - If set to 'false', Kafka clients will connect to Brokers using the Headless Service's FQDN.
+          # - If set to 'false', Kafka clients will connect to Brokers using the Headless Service's FQDN, and service `advertised-listener` must be set with "podService: true".
         - name: KB_BROKER_DIRECT_POD_ACCESS
-          value: "true"
+          value: "false"
       volumeClaimTemplates:
         - name: data
           spec:
@@ -189,6 +194,7 @@ spec:
               requests:
                 storage: 1Gi
     - name: kafka-controller
+      serviceVersion: 3.3.2
       replicas: 1
       resources:
         limits:
@@ -207,6 +213,7 @@ spec:
               requests:
                 storage: 1Gi
     - name: kafka-exporter
+      serviceVersion: 1.6.0
       replicas: 1
       resources:
         limits:
@@ -232,57 +239,57 @@ Check status using either method:
 
 <Tabs>
   <TabItem value='kubectl' label='kubectl' default>
-```bash
-kubectl get cluster kafka-separated-cluster -n demo -w
-NAME                      CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
-kafka-separated-cluster   kafka                Delete               Running   2m48s
+    ```bash
+    kubectl get cluster kafka-separated-cluster -n demo -w
+    NAME                      CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+    kafka-separated-cluster   kafka                Delete               Running   2m48s
 
-kubectl get pods -l app.kubernetes.io/instance=kafka-separated-cluster -n demo
-NAME                                         READY   STATUS    RESTARTS   AGE
-kafka-separated-cluster-kafka-broker-0       2/2     Running   0          2m33s
-kafka-separated-cluster-kafka-controller-0   2/2     Running   0          2m58s
-kafka-separated-cluster-kafka-exporter-0     1/1     Running   0          2m9s
-```
+    kubectl get pods -l app.kubernetes.io/instance=kafka-separated-cluster -n demo
+    NAME                                         READY   STATUS    RESTARTS   AGE
+    kafka-separated-cluster-kafka-broker-0       2/2     Running   0          2m33s
+    kafka-separated-cluster-kafka-controller-0   2/2     Running   0          2m58s
+    kafka-separated-cluster-kafka-exporter-0     1/1     Running   0          2m9s
+    ```
   </TabItem>
 
   <TabItem value='kbcli' label='kbcli'>
 
   With `kbcli` installed, you can view comprehensive cluster information:
 
-```bash
-kbcli cluster describe kafka-separated-cluster -n demo
+    ```bash
+    kbcli cluster describe kafka-separated-cluster -n demo
 
-Name: kafka-separated-cluster  Created Time: May 19,2025 16:56 UTC+0800
-NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY            STATUS    TERMINATION-POLICY
-demo        kafka                separated_monitor   Running   Delete
+    Name: kafka-separated-cluster  Created Time: May 19,2025 16:56 UTC+0800
+    NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY            STATUS    TERMINATION-POLICY
+    demo        kafka                separated_monitor   Running   Delete
 
-Endpoints:
-COMPONENT      INTERNAL                                                                                 EXTERNAL
-kafka-broker   kafka-separated-cluster-kafka-broker-advertised-listener-0.demo.svc.cluster.local:9092   <none>
+    Endpoints:
+    COMPONENT      INTERNAL                                                                                 EXTERNAL
+    kafka-broker   kafka-separated-cluster-kafka-broker-advertised-listener-0.demo.svc.cluster.local:9092   <none>
 
-Topology:
-COMPONENT          SERVICE-VERSION   INSTANCE                                     ROLE     STATUS    AZ       NODE    CREATED-TIME
-kafka-broker       3.3.2             kafka-separated-cluster-kafka-broker-0       <none>   Running   zone-x   x.y.z   May 19,2025 16:57 UTC+0800
-kafka-controller   3.3.2             kafka-separated-cluster-kafka-controller-0   <none>   Running   zone-x   x.y.z   May 19,2025 16:56 UTC+0800
-kafka-exporter     1.6.0             kafka-separated-cluster-kafka-exporter-0     <none>   Running   zone-x   x.y.z   May 19,2025 16:57 UTC+0800
+    Topology:
+    COMPONENT          SERVICE-VERSION   INSTANCE                                     ROLE     STATUS    AZ       NODE    CREATED-TIME
+    kafka-broker       3.3.2             kafka-separated-cluster-kafka-broker-0       <none>   Running   zone-x   x.y.z   May 19,2025 16:57 UTC+0800
+    kafka-controller   3.3.2             kafka-separated-cluster-kafka-controller-0   <none>   Running   zone-x   x.y.z   May 19,2025 16:56 UTC+0800
+    kafka-exporter     1.6.0             kafka-separated-cluster-kafka-exporter-0     <none>   Running   zone-x   x.y.z   May 19,2025 16:57 UTC+0800
 
-Resources Allocation:
-COMPONENT          INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
-kafka-controller                       500m / 500m          512Mi / 512Mi           metadata:1Gi   <none>
-kafka-broker                           500m / 500m          512Mi / 512Mi           data:20Gi
-                                                                                    metadata:1Gi
-kafka-exporter                         100m / 500m          214748364800m / 1Gi     <none>         <none>
+    Resources Allocation:
+    COMPONENT          INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+    kafka-controller                       500m / 500m          512Mi / 512Mi           metadata:1Gi   <none>
+    kafka-broker                           500m / 500m          512Mi / 512Mi           data:20Gi
+                                                                                        metadata:1Gi
+    kafka-exporter                         100m / 500m          214748364800m / 1Gi     <none>         <none>
 
-Images:
-COMPONENT          COMPONENT-DEFINITION             IMAGE
-kafka-controller   kafka-controller-1.0.0           docker.io/bitnami/kafka:3.3.2-debian-11-r54
-                                                    docker.io/bitnami/jmx-exporter:0.18.0-debian-11-r20
-kafka-broker       kafka-broker-1.0.0               docker.io/bitnami/kafka:3.3.2-debian-11-r54
-                                                    docker.io/bitnami/jmx-exporter:0.18.0-debian-11-r20
-kafka-exporter     kafka-exporter-1.0.0             docker.io/bitnami/kafka-exporter:1.6.0-debian-11-r67
+    Images:
+    COMPONENT          COMPONENT-DEFINITION             IMAGE
+    kafka-controller   kafka-controller-1.0.0           docker.io/bitnami/kafka:3.3.2-debian-11-r54
+                                                        docker.io/bitnami/jmx-exporter:0.18.0-debian-11-r20
+    kafka-broker       kafka-broker-1.0.0               docker.io/bitnami/kafka:3.3.2-debian-11-r54
+                                                        docker.io/bitnami/jmx-exporter:0.18.0-debian-11-r20
+    kafka-exporter     kafka-exporter-1.0.0             docker.io/bitnami/kafka-exporter:1.6.0-debian-11-r67
 
-Show cluster events: kbcli cluster list-events -n demo kafka-separated-cluster
-```
+    Show cluster events: kbcli cluster list-events -n demo kafka-separated-cluster
+    ```
 
   </TabItem>
 </Tabs>
@@ -295,7 +302,7 @@ kubectl get svc -l app.kubernetes.io/instance=kafka-separated-cluster  -n demo
 ```
 
 Expected Output:
-```
+```bash
 NAME                                                         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
 kafka-separated-cluster-kafka-broker-advertised-listener-0   ClusterIP   10.96.131.175   <none>        9092/TCP   5m8s
 ```

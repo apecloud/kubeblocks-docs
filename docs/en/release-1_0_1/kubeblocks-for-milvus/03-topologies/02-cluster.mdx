@@ -55,7 +55,7 @@ spec:
   terminationPolicy: WipeOut
   componentSpecs:
     - name: etcd
-      componentDef: etcd-3-1.0.0
+      componentDef: etcd-3  # Prefix Match Component Definition Name
       serviceVersion: 3.5.6
       replicas: 1
       resources:
@@ -89,8 +89,11 @@ spec:
   terminationPolicy: WipeOut
   componentSpecs:
     - name: minio
-      componentDef: milvus-minio-1.0.0
-      replicas: 1
+      componentDef: minio  # Prefix Match Component Definition Name
+      env:
+        - name: MINIO_BUCKETS # specify buckets to be created when initializing the cluster
+          value: milvus
+      replicas: 2
       resources:
         limits:
           cpu: '0.5'
@@ -241,6 +244,13 @@ spec:
         requests:
           cpu: "0.5"
           memory: "0.5Gi"
+      configs:
+        - name: config
+          variables:
+            mq_type: pulsar # pulsar, kafka as mq
+            minio_bucket: milvus # a valid bucket name in minio
+            minio_root_path: files # root path for milvus data
+            minio_use_path_style: "true" # set to true for minio use path style
       # Defines a list of ServiceRef for a Component
       serviceRefs:
         - name: milvus-meta-storage # Specifies the identifier of the service reference declaration, defined in `componentDefinition.spec.serviceRefDeclarations[*].name`
@@ -251,7 +261,7 @@ spec:
             service:
               component: etcd       # component name, should be etcd
               service: headless     # Refer to default headless Service
-              port: client          # Refer to port name 'client'
+              port: client          # Refer to port name 'client', port 2379
         - name: milvus-log-storage
           namespace: demo
           clusterServiceSelector:
@@ -259,7 +269,7 @@ spec:
             service:
               component: broker
               service: headless
-              port: pulsar
+              port: pulsar         # port 6650
         - name: milvus-object-storage
           namespace: demo
           clusterServiceSelector:
@@ -267,10 +277,10 @@ spec:
             service:
               component: minio
               service: headless
-              port: http
+              port: api            # port 9000
             credential:            # Specifies the SystemAccount to authenticate and establish a connection with the referenced Cluster.
               component: minio     # for component 'minio'
-              name: admin          # the name of the credential (SystemAccount) to reference, using account 'admin' in this case
+              name: root          # the name of the credential (SystemAccount) to reference, using account 'admin' in this case
     - name: mixcoord
       replicas: 1
       resources:
@@ -304,12 +314,21 @@ spec:
             service:
               component: minio
               service: headless
-              port: http
+              port: api
             credential:
               component: minio
-              name: admin
+              name: root
+      disableExporter: true
+      configs:
+        - name: config
+          variables:
+            mq_type: pulsar
+            minio_bucket: milvus
+            minio_root_path: files
+            minio_use_path_style: "true"
     - name: datanode
       replicas: 1
+      disableExporter: true
       resources:
         limits:
           cpu: "0.5"
@@ -341,12 +360,21 @@ spec:
             service:
               component: minio
               service: headless
-              port: http
+              port: api
             credential:
               component: minio
-              name: admin
+              name: root
+      disableExporter: true
+      configs:
+        - name: config
+          variables:
+            mq_type: pulsar
+            minio_bucket: milvus
+            minio_root_path: files
+            minio_use_path_style: "true"
     - name: indexnode
       replicas: 1
+      disableExporter: true
       resources:
         limits:
           cpu: "0.5"
@@ -378,12 +406,21 @@ spec:
             service:
               component: minio
               service: headless
-              port: http
+              port: api
             credential:
               component: minio
-              name: admin
+              name: root
+      disableExporter: true
+      configs:
+        - name: config
+          variables:
+            mq_type: pulsar
+            minio_bucket: milvus
+            minio_root_path: files
+            minio_use_path_style: "true"
     - name: querynode
-      replicas: 2
+      replicas: 1
+      disableExporter: true
       resources:
         limits:
           cpu: "0.5"
@@ -415,10 +452,18 @@ spec:
             service:
               component: minio
               service: headless
-              port: http
+              port: api
             credential:
               component: minio
-              name: admin
+              name: root
+      disableExporter: true
+      configs:
+        - name: config
+          variables:
+            mq_type: pulsar
+            minio_bucket: milvus
+            minio_root_path: files
+            minio_use_path_style: "true"
 ```
 
 :::note
@@ -461,7 +506,7 @@ serviceRefs:
         port: http           # NOTE: Refer to port name 'http', for port number '9000'
       credential:            # Specifies the SystemAccount to authenticate and establish a connection with the referenced Cluster.
         component: minio     # for component 'minio'
-        name: admin          # NOTE: the name of the credential (SystemAccount) to reference, using account 'admin' in this case
+        name: root          # NOTE: the name of the credential (SystemAccount) to reference, using account 'root' in this case
 ```
 
 

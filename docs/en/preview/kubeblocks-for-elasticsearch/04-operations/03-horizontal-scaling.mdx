@@ -60,7 +60,7 @@ import VerifyCluster from '../_tpl/_verify-cluster.mdx'
     clusterName: es-multinode
     type: HorizontalScaling
     horizontalScaling:
-    - componentName: dit
+    - componentName: data
       # Specifies the replica changes for scaling in components
       scaleOut:
         # Specifies the replica changes for the component.
@@ -94,7 +94,7 @@ import VerifyCluster from '../_tpl/_verify-cluster.mdx'
   kind: Cluster
   spec:
     componentSpecs:
-      - name: dit
+      - name: data
         replicas: 4 # increase replicas to scale-out
   ...
   ```
@@ -112,16 +112,16 @@ import VerifyCluster from '../_tpl/_verify-cluster.mdx'
 After applying the operation, you will see a new pod created and the Elasticsearch cluster status goes from `Updating` to `Running`, and the newly created pod has a new role `secondary`.
 
 ```bash
-kubectl get pods -n demo -l app.kubernetes.io/instance=es-multinode,apps.kubeblocks.io/component-name=dit
+kubectl get pods -n demo -l app.kubernetes.io/instance=es-multinode,apps.kubeblocks.io/component-name=data
 ```
 
 Example Output:
 ```bash
-NAME                 READY   STATUS    RESTARTS   AGE
-es-multinode-dit-0   3/3     Running   0          4m28s
-es-multinode-dit-1   3/3     Running   0          5m27s
-es-multinode-dit-2   3/3     Running   0          6m25s
-es-multinode-dit-3   3/3     Running   0          1m25s
+NAME                  READY   STATUS    RESTARTS   AGE
+es-multinode-data-0   4/4     Running   0          4m28s
+es-multinode-data-1   4/4     Running   0          5m27s
+es-multinode-data-2   4/4     Running   0          6m25s
+es-multinode-data-3   4/4     Running   0          1m25s
 ```
 
 ## Scale-in (Remove Replicas)
@@ -150,7 +150,7 @@ es-multinode-dit-3   3/3     Running   0          1m25s
     clusterName: es-multinode
     type: HorizontalScaling
     horizontalScaling:
-    - componentName: dit
+    - componentName: data
       # Specifies the replica changes for scaling in components
       scaleIn:
         # Specifies the replica changes for the component.
@@ -183,7 +183,7 @@ es-multinode-dit-3   3/3     Running   0          1m25s
   kind: Cluster
   spec:
     componentSpecs:
-      - name: dit
+      - name: data
         replicas: 3 # decrease replicas to scale-in
   ```
 
@@ -199,15 +199,15 @@ es-multinode-dit-3   3/3     Running   0          1m25s
 ### Verify Scale-In
 
 ```bash
-kubectl get pods -n demo -l app.kubernetes.io/instance=es-multinode,apps.kubeblocks.io/component-name=dit
+kubectl get pods -n demo -l app.kubernetes.io/instance=es-multinode,apps.kubeblocks.io/component-name=data
 ```
 
 Example Output (three Pod):
 ```bash
-NAME                 READY   STATUS    RESTARTS   AGE
-es-multinode-dit-0   3/3     Running   0          8m20s
-es-multinode-dit-1   3/3     Running   0          9m19s
-es-multinode-dit-2   3/3     Running   0          10m
+NAME                  READY   STATUS    RESTARTS   AGE
+es-multinode-data-0   4/4     Running   0          8m20s
+es-multinode-data-1   4/4     Running   0          9m19s
+es-multinode-data-2   4/4     Running   0          10m
 ```
 
 ## Best Practices

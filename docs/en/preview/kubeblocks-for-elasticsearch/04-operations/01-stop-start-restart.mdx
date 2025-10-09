@@ -136,9 +136,9 @@ To confirm a successful stop operation:
     Example Output:
     ```bash
     NAME                         STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
-    data-es-multinode-dit-0      Bound    pvc-aa8136e5-a69a-4117-bb4c-8978978bb77f   20Gi       RWO            standard       <unset>                 8m25s
-    data-es-multinode-dit-1      Bound    pvc-408fe4d5-b3a9-4984-b6e5-48ec133307eb   20Gi       RWO            standard       <unset>                 8m25s
-    data-es-multinode-dit-2      Bound    pvc-cf6c3c7c-bb5f-4fa6-8dff-33e0862f8ef9   20Gi       RWO            standard       <unset>                 8m25s
+    data-es-multinode-data-0     Bound    pvc-aa8136e5-a69a-4117-bb4c-8978978bb77f   20Gi       RWO            standard       <unset>                 8m25s
+    data-es-multinode-data-1     Bound    pvc-408fe4d5-b3a9-4984-b6e5-48ec133307eb   20Gi       RWO            standard       <unset>                 8m25s
+    data-es-multinode-data-2     Bound    pvc-cf6c3c7c-bb5f-4fa6-8dff-33e0862f8ef9   20Gi       RWO            standard       <unset>                 8m25s
     data-es-multinode-master-0   Bound    pvc-5793e794-8c91-4bba-b6e8-52c414ec0ade   20Gi       RWO            standard       <unset>                 8m25s
     data-es-multinode-master-1   Bound    pvc-044dae8d-82ee-41f3-867d-c8f27ec08fbe   20Gi       RWO            standard       <unset>                 8m25s
     data-es-multinode-master-2   Bound    pvc-2af7cedb-2f5f-4846-be43-ff6da8109880   20Gi       RWO            standard       <unset>                 8m25s
@@ -220,9 +220,9 @@ To confirm a successful start operation:
     Example Output:
     ```bash
     NAME                    READY   STATUS    RESTARTS   AGE
-    es-multinode-dit-0      3/3     Running   0          24m
-    es-multinode-dit-1      3/3     Running   0          24m
-    es-multinode-dit-2      3/3     Running   0          24m
+    es-multinode-data-0     3/3     Running   0          24m
+    es-multinode-data-1     3/3     Running   0          24m
+    es-multinode-data-2     3/3     Running   0          24m
     es-multinode-master-0   3/3     Running   0          24m
     es-multinode-master-1   3/3     Running   0          24m
     es-multinode-master-2   3/3     Running   0          24m
@@ -268,7 +268,7 @@ spec:
   clusterName: es-multinode
   type: Restart
   restart:
-  - componentName: dit
+  - componentName: data
 ```
 
 **Verifying Restart Completion**

@@ -72,7 +72,7 @@ import VerifyCluster from '../_tpl/_verify-cluster.mdx'
     clusterName: es-multinode
     type: VerticalScaling
     verticalScaling:
-    - componentName: dit
+    - componentName: data
       requests:
         cpu: '1'
         memory: 1Gi
@@ -112,7 +112,7 @@ import VerifyCluster from '../_tpl/_verify-cluster.mdx'
   kind: Cluster
   spec:
     componentSpecs:
-      - name: dit
+      - name: data
         replicas: 3
         resources:
           requests:
@@ -151,7 +151,7 @@ Expected Output:
 ```bash
 Resources Allocation:
 COMPONENT          INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
-dit                                    1 / 1                1Gi / 1Gi               data:20Gi      <none>
+data                                   1 / 1                1Gi / 1Gi               data:20Gi      <none>
 ```
 
 ## Key Benefits of Vertical Scaling with KubeBlocks
