@@ -2719,6 +2719,9 @@ with `preCondition` specifying when the action should be fired relative to the C
 `roleProbe`: Defines the procedure which is invoked regularly to assess the role of replicas.
 </li>
 <li>
+`availableProbe`: Defines the procedure which is invoked regularly to assess the availability of the component.
+</li>
+<li>
 `switchover`: Defines the procedure for a controlled transition of a role to a new replica.
 This approach aims to minimize downtime and maintain availability in systems with a leader-follower topology,
 such as before planned maintenance or upgrades on the current leader node.
@@ -3899,6 +3902,9 @@ with `preCondition` specifying when the action should be fired relative to the C
 `roleProbe`: Defines the procedure which is invoked regularly to assess the role of replicas.
 </li>
 <li>
+`availableProbe`: Defines the procedure which is invoked regularly to assess the availability of the component.
+</li>
+<li>
 `switchover`: Defines the procedure for a controlled transition of a role to a new replica.
 </li>
 <li>
@@ -3939,18 +3945,17 @@ or database connection credentials.
 These variables provide a dynamic and context-aware mechanism for script execution.
 </li>
 <li>
-HTTPAction: Performs an HTTP request.
-HTTPAction is to be implemented in future version.
+HTTPAction: Performs a single HTTP(S) request.
 </li>
 <li>
-GRPCAction: In future version, Actions will support initiating gRPC calls.
+GRPCAction: Issues a unary gRPC call to a target service.
 This allows developers to implement Actions using plugins written in programming language like Go,
 providing greater flexibility and extensibility.
 </li>
 </ul>
 
 <p>
-An action is considered successful on returning 0, or HTTP 200 for status HTTP(s) Actions.
+An action is considered successful on returning 0, or HTTP 2xx for status HTTP actions.
 Any other return value or HTTP status codes indicate failure,
 and the action may be retried based on the configured retry policy.
 </p>
@@ -3960,11 +3965,11 @@ If an action exceeds the specified timeout duration, it will be terminated, and 
 </li>
 <li>
 If an action produces any data as output, it should be written to stdout,
-or included in the HTTP response payload for HTTP(s) actions.
+or included in the HTTP response payload for HTTP actions.
 </li>
 <li>
 If an action encounters any errors, error messages should be written to stderr,
-or detailed in the HTTP response with the appropriate non-200 status code.
+or detailed in the HTTP response with the appropriate non-2xx status code.
 </li>
 </ul>
 </div>
@@ -3997,6 +4002,130 @@ ExecAction
 <p>
 Defines the command to run.
 </p>
+
+<p>
+This field cannot be updated.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`http`<br/>
+<em>
+<a href="#apps.kubeblocks.io/v1.HTTPAction">
+HTTPAction
+</a>
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+Defines the HTTP request to perform.
+</p>
+
+<p>
+This field cannot be updated.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`grpc`<br/>
+<em>
+<a href="#apps.kubeblocks.io/v1.GRPCAction">
+GRPCAction
+</a>
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+Defines the gRPC call to issue.
+</p>
+
+<p>
+This field cannot be updated.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`targetPodSelector`<br/>
+<em>
+<a href="#apps.kubeblocks.io/v1.TargetPodSelector">
+TargetPodSelector
+</a>
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+Defines the criteria used to select the target Pod(s) for executing the Action.
+This is useful when there is no default target replica identified.
+It allows for precise control over which Pod(s) the Action should run in.
+</p>
+
+<p>
+If not specified, the Action will be executed in the pod where the Action is triggered, such as the pod
+to be removed or added; or a random pod if the Action is triggered at the component level, such as
+post-provision or pre-terminate of the component.
+</p>
+
+<p>
+This field cannot be updated.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`matchingKey`<br/>
+<em>
+string
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+Used in conjunction with the `targetPodSelector` field to refine the selection of target pod(s) for Action execution.
+The impact of this field depends on the `targetPodSelector` value:
+</p>
+<ul>
+<li>
+When `targetPodSelector` is set to `Any` or `All`, this field will be ignored.
+</li>
+<li>
+When `targetPodSelector` is set to `Role`, only those replicas whose role matches the `matchingKey`
+will be selected for the Action.
+</li>
+</ul>
 
 <p>
 This field cannot be updated.
@@ -5727,6 +5856,7 @@ ComponentPhase
 </td>
 <td>
 
+<em>(Optional)</em>
 
 <p>
 Specifies the current state of the Component.
@@ -5751,7 +5881,48 @@ map[string]string
 
 <p>
 Records detailed information about the Component in its current phase.
-The keys are either podName, deployName, or statefulSetName, formatted as &lsquo;ObjectKind/Name&rsquo;.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`observedGeneration`<br/>
+<em>
+int64
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+Indicates the most recent generation of the component state observed.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`upToDate`<br/>
+<em>
+bool
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+Indicates whether the component state observed is up-to-date with the desired state.
 </p>
 
 </td>
@@ -5766,7 +5937,7 @@ ClusterComponentVolumeClaimTemplate
 
 <p>
 
-(<em>Appears on:</em><a href="#apps.kubeblocks.io/v1.ClusterComponentSpec">ClusterComponentSpec</a>, <a href="#apps.kubeblocks.io/v1.ComponentSpec">ComponentSpec</a>)
+(<em>Appears on:</em><a href="#apps.kubeblocks.io/v1.ClusterComponentSpec">ClusterComponentSpec</a>, <a href="#apps.kubeblocks.io/v1.ComponentSpec">ComponentSpec</a>, <a href="#apps.kubeblocks.io/v1.InstanceTemplate">InstanceTemplate</a>)
 
 </p>
 <div>
@@ -7859,6 +8030,31 @@ This field is immutable once set.
 
 <td>
 
+`withRole`<br/>
+<em>
+string
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+Specifies the role that the component will go through to be considered available.
+</p>
+
+<p>
+This field is immutable once set.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
 `withProbe`<br/>
 <em>
 <a href="#apps.kubeblocks.io/v1.ComponentAvailableWithProbe">
@@ -7873,6 +8069,10 @@ ComponentAvailableWithProbe
 
 <p>
 Specifies the strategies for determining whether the component is available based on the available probe.
+</p>
+
+<p>
+If specified, it will take precedence over the WithPhases and WithRole fields.
 </p>
 
 <p>
@@ -9456,6 +9656,9 @@ with `preCondition` specifying when the action should be fired relative to the C
 `roleProbe`: Defines the procedure which is invoked regularly to assess the role of replicas.
 </li>
 <li>
+`availableProbe`: Defines the procedure which is invoked regularly to assess the availability of the component.
+</li>
+<li>
 `switchover`: Defines the procedure for a controlled transition of a role to a new replica.
 This approach aims to minimize downtime and maintain availability in systems with a leader-follower topology,
 such as before planned maintenance or upgrades on the current leader node.
@@ -9963,15 +10166,6 @@ Without this, services that rely on roleSelectors might improperly direct traffi
 </p>
 
 <p>
-The container executing this action has access to following variables:
-</p>
-<ul>
-<li>
-KB_POD_FQDN: The FQDN of the Pod whose role is being assessed.
-</li>
-</ul>
-
-<p>
 Expected output of this action:
 - On Success: The determined role of the replica, which must align with one of the roles specified
   in the component definition.
@@ -10123,7 +10317,7 @@ command:
 - -c
 - |
    CLIENT=&quot;mysql -u $SERVICE_USER -p$SERVICE_PASSWORD -P $SERVICE_PORT -h $SERVICE_HOST -e&quot;
-	  $CLIENT &quot;ALTER SYSTEM ADD SERVER '$KB_POD_FQDN:$SERVICE_PORT' ZONE 'zone1'&quot;
+	  $CLIENT &quot;ALTER SYSTEM ADD SERVER '$POD_FQDN:$SERVICE_PORT' ZONE 'zone1'&quot;
 </code>
 </pre>
 
@@ -10192,7 +10386,7 @@ command:
 - -c
 - |
    CLIENT=&quot;mysql -u $SERVICE_USER -p$SERVICE_PASSWORD -P $SERVICE_PORT -h $SERVICE_HOST -e&quot;
-	  $CLIENT &quot;ALTER SYSTEM DELETE SERVER '$KB_POD_FQDN:$SERVICE_PORT' ZONE 'zone1'&quot;
+	  $CLIENT &quot;ALTER SYSTEM DELETE SERVER '$POD_FQDN:$SERVICE_PORT' ZONE 'zone1'&quot;
 </code>
 </pre>
 
@@ -10227,15 +10421,6 @@ Defines the procedure to switch a replica into the read-only state.
 Use Case:
 This action is invoked when the database&rsquo;s volume capacity nears its upper limit and space is about to be exhausted.
 </p>
-
-<p>
-The container executing this action has access to following environment variables:
-</p>
-<ul>
-<li>
-KB_POD_FQDN: The FQDN of the replica pod whose role is being checked.
-</li>
-</ul>
 
 <p>
 Expected action output:
@@ -10275,15 +10460,6 @@ This action is used to bring back a replica that was previously in a read-only s
 which restricted write operations, to its normal operational state where it can handle
 both read and write operations.
 </p>
-
-<p>
-The container executing this action has access to following environment variables:
-</p>
-<ul>
-<li>
-KB_POD_FQDN: The FQDN of the replica pod whose role is being checked.
-</li>
-</ul>
 
 <p>
 Expected action output:
@@ -13488,6 +13664,544 @@ If empty, Prometheus uses the default value `http`.
 </tr>
 </tbody>
 </table>
+<h3 id="apps.kubeblocks.io/v1.GRPCAction">
+GRPCAction
+
+</h3>
+
+<p>
+
+(<em>Appears on:</em><a href="#apps.kubeblocks.io/v1.Action">Action</a>)
+
+</p>
+<div>
+
+<p>
+GRPCAction describes an action that issues a unary gRPC call to a target service.
+</p>
+
+<p>
+Reflection &amp; templating:
+  - This implementation uses gRPC Server Reflection to discover service/method schemas at runtime.
+    The target service MUST enable reflection. See: <a href="https://grpc.io/docs/guides/reflection/">https://grpc.io/docs/guides/reflection/</a>.
+  - Request message field values in `Request` support Go text/template syntax and will be rendered
+    with predefined action variables before marshaling into the request message.
+  - Not intended for streaming or large data-transfer operations (e.g., dataLoad, dataDump).
+Only unary (non-streaming) RPCs are supported.
+</p>
+
+<p>
+Success &amp; output:
+  - After invocation, the `Status` field in `Response` (if set) is inspected; a non-empty value
+    indicates failure.
+  - The `Message` field in `Response` (if set) is written to stdout if the invocation succeeds,
+or to stderr if it fails.
+</p>
+</div>
+<table>
+<thead>
+<tr>
+
+<th>Field</th>
+<th>Description</th>
+
+</tr>
+</thead>
+<tbody>
+<tr>
+
+<td>
+
+`port`<br/>
+<em>
+string
+</em>
+
+</td>
+<td>
+
+
+<p>
+The port to access on the host.
+It may be a numeric string (e.g., &ldquo;50051&rdquo;) or a named port defined in the container spec.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`host`<br/>
+<em>
+string
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+The target host to connect to.
+Defaults to &ldquo;127.0.0.1&rdquo; if not specified.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`service`<br/>
+<em>
+string
+</em>
+
+</td>
+<td>
+
+
+<p>
+Fully-qualified name of the gRPC service to call.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`method`<br/>
+<em>
+string
+</em>
+
+</td>
+<td>
+
+
+<p>
+Name of the method to invoke on the gRPC service.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`request`<br/>
+<em>
+<a href="#apps.kubeblocks.io/v1.GRPCRequest">
+GRPCRequest
+</a>
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+Request payload for the gRPC method.
+</p>
+
+<p>
+Keys are proto field names (lowerCamelCase); values are strings that can include Go templates.
+Templates are rendered with predefined action variables before the request is sent.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`response`<br/>
+<em>
+<a href="#apps.kubeblocks.io/v1.GRPCResponse">
+GRPCResponse
+</a>
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+Required response schema for the gRPC method.
+</p>
+
+</td>
+
+</tr>
+</tbody>
+</table>
+<h3 id="apps.kubeblocks.io/v1.GRPCRequest">
+GRPCRequest
+(`map[string]string` alias)
+</h3>
+
+<p>
+
+(<em>Appears on:</em><a href="#apps.kubeblocks.io/v1.GRPCAction">GRPCAction</a>)
+
+</p>
+<div>
+
+<p>
+GRPCRequest is a map of proto field names to their string values.
+</p>
+</div>
+<h3 id="apps.kubeblocks.io/v1.GRPCResponse">
+GRPCResponse
+
+</h3>
+
+<p>
+
+(<em>Appears on:</em><a href="#apps.kubeblocks.io/v1.GRPCAction">GRPCAction</a>)
+
+</p>
+<div>
+
+<p>
+GRPCResponse defines which fields in the gRPC response should be treated as status or output.
+</p>
+</div>
+<table>
+<thead>
+<tr>
+
+<th>Field</th>
+<th>Description</th>
+
+</tr>
+</thead>
+<tbody>
+<tr>
+
+<td>
+
+`status`<br/>
+<em>
+string
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+Name of the string field in the response that carries status information.
+If non-empty, the action fails.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`message`<br/>
+<em>
+string
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+Name of the field in the response whose value should be output.
+Printed to stdout on success, or stderr on failure.
+</p>
+
+</td>
+
+</tr>
+</tbody>
+</table>
+<h3 id="apps.kubeblocks.io/v1.HTTPAction">
+HTTPAction
+
+</h3>
+
+<p>
+
+(<em>Appears on:</em><a href="#apps.kubeblocks.io/v1.Action">Action</a>)
+
+</p>
+<div>
+
+<p>
+HTTPAction defines an action that performs a single HTTP(S) request.
+</p>
+
+<p>
+Behavior &amp; templating:
+  - The request body (`Body`) supports Go text/template syntax. It is rendered with predefined variables
+    before the request is sent.
+  - Custom headers (`Headers`) can be specified. Each header value can also use Go text/template
+    syntax and will be rendered with the same predefined variables.
+  - Not intended for streaming or large data-transfer workflows (e.g., dataLoad, dataDump).
+Designed for one-shot request/response scenarios.
+</p>
+
+<p>
+Success:
+  - Any HTTP 2xx status code is considered success by default.
+- Non-2xx status codes are treated as failures.
+</p>
+</div>
+<table>
+<thead>
+<tr>
+
+<th>Field</th>
+<th>Description</th>
+
+</tr>
+</thead>
+<tbody>
+<tr>
+
+<td>
+
+`port`<br/>
+<em>
+string
+</em>
+
+</td>
+<td>
+
+
+<p>
+The port to access on the host.
+It may be a numeric string (e.g., &ldquo;8080&rdquo;) or a named port defined in the container spec.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`host`<br/>
+<em>
+string
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+The target host to connect to.
+Defaults to &ldquo;127.0.0.1&rdquo; if not specified.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`scheme`<br/>
+<em>
+string
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+The scheme to use for connecting to the host.
+Defaults to &ldquo;HTTP&rdquo;.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`path`<br/>
+<em>
+string
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+The path to request on the HTTP server.
+Defaults to &ldquo;/&rdquo; if not specified.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`method`<br/>
+<em>
+string
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+The HTTP method to use.
+Defaults to &ldquo;GET&rdquo;.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`headers`<br/>
+<em>
+<a href="#apps.kubeblocks.io/v1.HTTPHeader">
+[]HTTPHeader
+</a>
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+Custom headers to set in the request.
+Header values may use Go text/template syntax, rendered with predefined variables.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`body`<br/>
+<em>
+string
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+Optional HTTP request body.
+</p>
+
+<p>
+Supports Go text/template syntax; rendered with predefined variables before sending.
+</p>
+
+</td>
+
+</tr>
+</tbody>
+</table>
+<h3 id="apps.kubeblocks.io/v1.HTTPHeader">
+HTTPHeader
+
+</h3>
+
+<p>
+
+(<em>Appears on:</em><a href="#apps.kubeblocks.io/v1.HTTPAction">HTTPAction</a>)
+
+</p>
+<div>
+
+<p>
+HTTPHeader represents a single HTTP header key/value pair.
+</p>
+</div>
+<table>
+<thead>
+<tr>
+
+<th>Field</th>
+<th>Description</th>
+
+</tr>
+</thead>
+<tbody>
+<tr>
+
+<td>
+
+`name`<br/>
+<em>
+string
+</em>
+
+</td>
+<td>
+
+
+<p>
+Name of the header field.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`value`<br/>
+<em>
+string
+</em>
+
+</td>
+<td>
+
+
+<p>
+Value of the header field.
+</p>
+
+</td>
+
+</tr>
+</tbody>
+</table>
 <h3 id="apps.kubeblocks.io/v1.HostNetwork">
 HostNetwork
 
@@ -13941,6 +14655,29 @@ This field allows for customizing resource allocation (CPU, memory, etc.) for th
 <p>
 Defines Env to override.
 Add new or override existing envs.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`volumeClaimTemplates`<br/>
+<em>
+<a href="#apps.kubeblocks.io/v1.ClusterComponentVolumeClaimTemplate">
+[]ClusterComponentVolumeClaimTemplate
+</a>
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+Specifies an override for the storage requirements of the instances.
 </p>
 
 </td>
@@ -14951,6 +15688,28 @@ The number of symbols in the password.
 
 <td>
 
+`symbolCharacters`<br/>
+<em>
+string
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+The set of symbols allowed when generating password. If empty, kubeblocks will
+use a default symbol set, which is &ldquo;!@#&amp;*&rdquo;.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
 `letterCase`<br/>
 <em>
 <a href="#apps.kubeblocks.io/v1.LetterCase">
@@ -15548,7 +16307,7 @@ int32
 
 <p>
 Specifies the frequency at which the probe is conducted. This value is expressed in seconds.
-Default to 10 seconds. Minimum value is 1.
+Default to 60 seconds. Minimum value is 1.
 </p>
 
 </td>
@@ -20648,7 +21407,7 @@ TargetPodSelector
 
 <p>
 
-(<em>Appears on:</em><a href="#apps.kubeblocks.io/v1.ExecAction">ExecAction</a>)
+(<em>Appears on:</em><a href="#apps.kubeblocks.io/v1.Action">Action</a>, <a href="#apps.kubeblocks.io/v1.ExecAction">ExecAction</a>)
 
 </p>
 <div>
@@ -53715,6 +54474,29 @@ This field allows for customizing resource allocation (CPU, memory, etc.) for th
 <p>
 Defines Env to override.
 Add new or override existing envs.
+</p>
+
+</td>
+
+</tr>
+<tr>
+
+<td>
+
+`volumeClaimTemplates`<br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaim-v1-core">
+[]Kubernetes core/v1.PersistentVolumeClaim
+</a>
+</em>
+
+</td>
+<td>
+
+<em>(Optional)</em>
+
+<p>
+Specifies an override for the storage requirements of the instances.
 </p>
 
 </td>
