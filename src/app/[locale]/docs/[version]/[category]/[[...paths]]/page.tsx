@@ -1,4 +1,5 @@
 import { SidebarMenuItem } from '@/components/SidebarMenu';
+import HtmlRenderer from '@/components/HtmlRenderer';
 import { getStaticParams } from '@/locales/server';
 import {
   DOCS_DIR,
@@ -9,6 +10,7 @@ import {
 } from '@/utils/markdown';
 import fs from 'fs';
 import _ from 'lodash';
+import matter from 'gray-matter';
 import { redirect } from 'next/navigation';
 import path from 'path';
 
@@ -92,14 +94,36 @@ export default async function MarkdownPage({
   const defaultRelativeEnPath = path.join('en', version, category, ...paths);
   const defaultMdxEnPath = path.join(DOCS_DIR, `${defaultRelativeEnPath}.mdx`);
 
+  // Check if this is an api-reference file
+  const isApiReference = paths.some(p => p.includes('api-reference')) ||
+                         relativePath.includes('api-reference');
+
   if (fs.existsSync(mdxPath)) {
-    const { default: MDXContent } = await import(`@docs/${relativePath}.mdx`);
-    return <MDXContent />;
+    if (isApiReference) {
+      // For api-reference files, read as raw HTML
+      const fileContent = fs.readFileSync(mdxPath, 'utf-8');
+      const { content } = matter(fileContent);
+      return (
+          <HtmlRenderer content={content} />
+      );
+    } else {
+      const { default: MDXContent } = await import(`@docs/${relativePath}.mdx`);
+      return <MDXContent />;
+    }
   } else if (fs.existsSync(defaultMdxEnPath)) {
-    const { default: MDXContent } = await import(
-      `@docs/${defaultRelativeEnPath}.mdx`
-    );
-    return <MDXContent />;
+    if (isApiReference) {
+      // For api-reference files, read as raw HTML
+      const fileContent = fs.readFileSync(defaultMdxEnPath, 'utf-8');
+      const { content } = matter(fileContent);
+      return (
+          <HtmlRenderer content={content} />
+      );
+    } else {
+      const { default: MDXContent } = await import(
+        `@docs/${defaultRelativeEnPath}.mdx`
+      );
+      return <MDXContent />;
+    }
   } else if (first?.href) {
     redirect(first.href);
   }

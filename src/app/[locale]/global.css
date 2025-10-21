@@ -160,3 +160,22 @@ pre > code {
 .markdown-body table.MuiTable-root td:last-child {
   border-right: none;
 }
+
+/* API Reference pages: no TOC sidebar */
+.api-reference-content {
+  margin-right: 0 !important;
+}
+
+.api-reference-content ~ .toc,
+.api-reference-content + .toc {
+  display: none !important;
+}
+
+@media screen and (min-width: 980px) {
+  .markdown-body.with-sidebar > .api-reference-content {
+    margin-right: 0 !important;
+  }
+  .markdown-body.with-sidebar > .api-reference-content ~ .toc {
+    display: none !important;
+  }
+}
