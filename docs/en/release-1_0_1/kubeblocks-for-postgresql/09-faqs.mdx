@@ -69,3 +69,114 @@ You can shell into one of the etcd container to view the etcd data, and view the
 ```bash
 etcdctl get /service --prefix
 ```
+
+## 2. What to do if log files consume too much space
+
+PostgreSQL log files can accumulate and consume significant disk space over time. Here are several approaches to manage log file storage:
+
+### How to check current log file usage
+
+First, check the disk usage of your PostgreSQL pod:
+
+```bash
+kubectl exec -it <pod-name> -n <namespace> -- df -h /home/postgres/pgdata/pgroot/data/log
+```
+
+### Option 1. Configure log filename pattern and reduce log verbosity
+
+You can adjust PostgreSQL's built-in log filename pattern and log verbosity settings by modifying the cluster configuration.
+
+For example, you can set the log filename pattern to `postgresql-%u.log` to limit the number of log files to 7 days:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: pg-reconfigure-logs
+  namespace: <namespace>
+spec:
+  clusterName: <cluster-name>
+  reconfigures:
+  - componentName: postgresql
+    parameters:
+      - key: log_filename
+        value: 'postgresql-%u.log' # supports strftime specification, default value is 'postgresql-%Y-%m-%d.log'
+      - key: log_statement
+        value: 'none' # none, ddl, mod, all
+  type: Reconfiguring
+```
+
+- `log_filename`: Pattern for log filenames (supports strftime specification, default value is 'postgresql-%Y-%m-%d.log')
+- `log_statement`: Controls which SQL statements are logged (none, ddl, mod, all)
+
+:::note
+Changes to `log_filename` may require a server restart to take effect.
+:::
+
+### Option 2. Clean up old logs manually
+
+If you need immediate space relief, you can manually remove old log files:
+
+```bash
+# Find and remove log files older than 7 days
+kubectl exec -it <pod-name> -n <namespace> -- find /home/postgres/pgdata/pgroot/data/log -name "*.log" -mtime +7 -delete
+```
+
+:::caution
+Be careful when deleting log files manually. Ensure you have backups or have reviewed the logs before deletion.
+:::
+
+### Option 3. Increase storage capacity
+
+If log management isn't sufficient, consider expanding the persistent volume [here](./04-operations/04-volume-expansion)
+
+This will increase the storage capacity for the data volume, which typically includes log files.
+
+
+## 3. PostgreSQL fails to start with special characters in password
+
+### Problem Description
+
+PostgreSQL may fail to start when the password contains certain special characters. By checking POD logs, it shows like this:
+```bash
+File "/usr/lib/python3/dist-packages/yaml/scanner.py", line 116, in check_token
+    self.fetch_more_tokens()
+  File "/usr/lib/python3/dist-packages/yaml/scanner.py", line 231, in fetch_more_tokens
+    return self.fetch_anchor()
+  File "/usr/lib/python3/dist-packages/yaml/scanner.py", line 621, in fetch_anchor
+    self.tokens.append(self.scan_anchor(AnchorToken))
+  File "/usr/lib/python3/dist-packages/yaml/scanner.py", line 929, in scan_anchor
+    raise ScannerError("while scanning an %s" % name, start_mark,
+yaml.scanner.ScannerError: while scanning an anchor
+  in "<unicode string>", line 45, column 17:
+          password: &amp;JgE#F5x&amp;eNwis*2dW!7&amp ...
+                    ^
+```
+
+### Affected Version
+- KubeBlocks v0.9.4 and before
+- KubeBlocks v1.0.0
+
+### Solution
+
+Upgrade KubeBlocks to `v1.0.1-beta.6` or `v0.9.5-beta.4` or later.
+
+To avoid this, you can explicitly set the list of symbols allowed in password generation policy.
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+spec:
+  componentSpecs:
+    - name: postgresql
+      systemAccounts:
+        - name: postgres
+          passwordConfig:
+            length: 20           # Password length: 20 characters
+            numDigits: 4         # At least 4 digits
+            numSymbols: 2        # At least 2 symbols
+            letterCase: MixedCases # Uppercase and lowercase letters
+            symbolCharacters: '!' # set the allowed symbols when generating password
+# other fields in the Cluster manifest are omitted for brevity
+```
