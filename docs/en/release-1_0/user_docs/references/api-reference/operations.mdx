@@ -52,12 +52,12 @@ OpsDefinition is the Schema for the OpsDefinitions API.
 
 <td>
 
-`apiVersion`<br/>
+<code>apiVersion</code><br/>
 string
 </td>
 <td>
 
-`operations.kubeblocks.io/v1alpha1`
+<code>operations.kubeblocks.io/v1alpha1</code>
 
 </td>
 
@@ -66,12 +66,12 @@ string
 
 <td>
 
-`kind`<br/>
+<code>kind</code><br/>
 string
 
 </td>
 <td>
-`OpsDefinition`
+<code>OpsDefinition</code>
 </td>
 
 </tr>
@@ -79,7 +79,7 @@ string
 
 <td>
 
-`metadata`<br/>
+<code>metadata</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
@@ -90,7 +90,7 @@ Kubernetes meta/v1.ObjectMeta
 <td>
 
 Refer to the Kubernetes API documentation for the fields of the
-`metadata` field.
+<code>metadata</code> field.
 
 </td>
 
@@ -99,7 +99,7 @@ Refer to the Kubernetes API documentation for the fields of the
 
 <td>
 
-`spec`<br/>
+<code>spec</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.OpsDefinitionSpec">
 OpsDefinitionSpec
@@ -117,7 +117,7 @@ OpsDefinitionSpec
 
 <td>
 
-`preConditions`<br/>
+<code>preConditions</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.PreCondition">
 []PreCondition
@@ -150,7 +150,7 @@ Example:
 
 <td>
 
-`podInfoExtractors`<br/>
+<code>podInfoExtractors</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.PodInfoExtractor">
 []PodInfoExtractor
@@ -166,7 +166,7 @@ Example:
 Specifies a list of PodInfoExtractor, each designed to select a specific Pod and extract selected runtime info
 from its PodSpec.
 The extracted information, such as environment variables, volumes and tolerations, are then injected into
-Jobs or Pods that execute the OpsActions defined in `actions`.
+Jobs or Pods that execute the OpsActions defined in <code>actions</code>.
 </p>
 
 </td>
@@ -176,7 +176,7 @@ Jobs or Pods that execute the OpsActions defined in `actions`.
 
 <td>
 
-`componentInfos`<br/>
+<code>componentInfos</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ComponentInfo">
 []ComponentInfo
@@ -200,7 +200,7 @@ It also includes connection credentials (address and account) for each Component
 
 <td>
 
-`parametersSchema`<br/>
+<code>parametersSchema</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ParametersSchema">
 ParametersSchema
@@ -223,7 +223,7 @@ Specifies the schema for validating the data types and value ranges of parameter
 
 <td>
 
-`actions`<br/>
+<code>actions</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.OpsAction">
 []OpsAction
@@ -251,7 +251,7 @@ Specifies a list of OpsAction where each customized action is executed sequentia
 
 <td>
 
-`status`<br/>
+<code>status</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.OpsDefinitionStatus">
 OpsDefinitionStatus
@@ -291,12 +291,12 @@ OpsRequest is the Schema for the opsrequests API
 
 <td>
 
-`apiVersion`<br/>
+<code>apiVersion</code><br/>
 string
 </td>
 <td>
 
-`operations.kubeblocks.io/v1alpha1`
+<code>operations.kubeblocks.io/v1alpha1</code>
 
 </td>
 
@@ -305,12 +305,12 @@ string
 
 <td>
 
-`kind`<br/>
+<code>kind</code><br/>
 string
 
 </td>
 <td>
-`OpsRequest`
+<code>OpsRequest</code>
 </td>
 
 </tr>
@@ -318,7 +318,7 @@ string
 
 <td>
 
-`metadata`<br/>
+<code>metadata</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
@@ -329,7 +329,7 @@ Kubernetes meta/v1.ObjectMeta
 <td>
 
 Refer to the Kubernetes API documentation for the fields of the
-`metadata` field.
+<code>metadata</code> field.
 
 </td>
 
@@ -338,7 +338,7 @@ Refer to the Kubernetes API documentation for the fields of the
 
 <td>
 
-`spec`<br/>
+<code>spec</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.OpsRequestSpec">
 OpsRequestSpec
@@ -356,7 +356,7 @@ OpsRequestSpec
 
 <td>
 
-`clusterName`<br/>
+<code>clusterName</code><br/>
 <em>
 string
 </em>
@@ -376,7 +376,7 @@ Specifies the name of the Cluster resource that this operation is targeting.
 
 <td>
 
-`cancel`<br/>
+<code>cancel</code><br/>
 <em>
 bool
 </em>
@@ -396,7 +396,7 @@ This field applies only to &ldquo;VerticalScaling&rdquo; and &ldquo;HorizontalSc
 </p>
 
 <p>
-Note: Setting `cancel` to true is irreversible; further modifications to this field are ineffective.
+Note: Setting <code>cancel</code> to true is irreversible; further modifications to this field are ineffective.
 </p>
 
 </td>
@@ -406,7 +406,7 @@ Note: Setting `cancel` to true is irreversible; further modifications to this fi
 
 <td>
 
-`force`<br/>
+<code>force</code><br/>
 <em>
 bool
 </em>
@@ -419,17 +419,17 @@ bool
 <p>
 Instructs the system to bypass pre-checks (including cluster state checks and customized pre-conditions hooks)
 and immediately execute the opsRequest, except for the opsRequest of &lsquo;Start&rsquo; type, which will still undergo
-pre-checks even if `force` is true.
+pre-checks even if <code>force</code> is true.
 </p>
 
 <p>
 This is useful for concurrent execution of &lsquo;VerticalScaling&rsquo; and &lsquo;HorizontalScaling&rsquo; opsRequests.
-By setting `force` to true, you can bypass the default checks and demand these opsRequests to run
+By setting <code>force</code> to true, you can bypass the default checks and demand these opsRequests to run
 simultaneously.
 </p>
 
 <p>
-Note: Once set, the `force` field is immutable and cannot be updated.
+Note: Once set, the <code>force</code> field is immutable and cannot be updated.
 </p>
 
 </td>
@@ -439,7 +439,7 @@ Note: Once set, the `force` field is immutable and cannot be updated.
 
 <td>
 
-`enqueueOnForce`<br/>
+<code>enqueueOnForce</code><br/>
 <em>
 bool
 </em>
@@ -460,7 +460,7 @@ Indicates whether opsRequest should continue to queue when &lsquo;force&rsquo; i
 
 <td>
 
-`type`<br/>
+<code>type</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.OpsType">
 OpsType
@@ -488,7 +488,7 @@ Note: This field is immutable once set.
 
 <td>
 
-`ttlSecondsAfterSucceed`<br/>
+<code>ttlSecondsAfterSucceed</code><br/>
 <em>
 int32
 </em>
@@ -500,7 +500,7 @@ int32
 
 <p>
 Specifies the duration in seconds that an OpsRequest will remain in the system after successfully completing
-(when `opsRequest.status.phase` is &ldquo;Succeed&rdquo;) before automatic deletion.
+(when <code>opsRequest.status.phase</code> is &ldquo;Succeed&rdquo;) before automatic deletion.
 </p>
 
 </td>
@@ -510,7 +510,7 @@ Specifies the duration in seconds that an OpsRequest will remain in the system a
 
 <td>
 
-`ttlSecondsAfterUnsuccessfulCompletion`<br/>
+<code>ttlSecondsAfterUnsuccessfulCompletion</code><br/>
 <em>
 int32
 </em>
@@ -532,7 +532,7 @@ for any phase other than &ldquo;Succeed&rdquo; (e.g., &ldquo;Failed&rdquo;, &ldq
 
 <td>
 
-`preConditionDeadlineSeconds`<br/>
+<code>preConditionDeadlineSeconds</code><br/>
 <em>
 int32
 </em>
@@ -555,7 +555,7 @@ If set to 0 (default), pre-conditions must be satisfied immediately for the OpsR
 
 <td>
 
-`timeoutSeconds`<br/>
+<code>timeoutSeconds</code><br/>
 <em>
 int32
 </em>
@@ -578,7 +578,7 @@ If this value is not set or set to 0, the timeout will be ignored and the opsReq
 
 <td>
 
-`SpecificOpsRequest`<br/>
+<code>SpecificOpsRequest</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.SpecificOpsRequest">
 SpecificOpsRequest
@@ -591,7 +591,7 @@ SpecificOpsRequest
 
 <p>
 
-(Members of `SpecificOpsRequest` are embedded into this type.)
+(Members of <code>SpecificOpsRequest</code> are embedded into this type.)
 
 </p>
 
@@ -612,7 +612,7 @@ Exactly one of its members must be set.
 
 <td>
 
-`status`<br/>
+<code>status</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.OpsRequestStatus">
 OpsRequestStatus
@@ -654,7 +654,7 @@ ActionTask
 
 <td>
 
-`objectKey`<br/>
+<code>objectKey</code><br/>
 <em>
 string
 </em>
@@ -674,7 +674,7 @@ Represents the name of the task.
 
 <td>
 
-`namespace`<br/>
+<code>namespace</code><br/>
 <em>
 string
 </em>
@@ -694,7 +694,7 @@ Represents the namespace where the task is deployed.
 
 <td>
 
-`status`<br/>
+<code>status</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ActionTaskStatus">
 ActionTaskStatus
@@ -716,7 +716,7 @@ Indicates the current status of the task, including &ldquo;Processing&rdquo;, &l
 
 <td>
 
-`targetPodName`<br/>
+<code>targetPodName</code><br/>
 <em>
 string
 </em>
@@ -737,7 +737,7 @@ The name of the Pod that the task is associated with or operates on.
 
 <td>
 
-`retries`<br/>
+<code>retries</code><br/>
 <em>
 int32
 </em>
@@ -758,7 +758,7 @@ The count of retry attempts made for this task.
 </table>
 <h3 id="operations.kubeblocks.io/v1alpha1.ActionTaskStatus">
 ActionTaskStatus
-(`string` alias)
+(<code>string</code> alias)
 </h3>
 
 <p>
@@ -842,7 +842,7 @@ Backup
 
 <td>
 
-`backupName`<br/>
+<code>backupName</code><br/>
 <em>
 string
 </em>
@@ -863,7 +863,7 @@ Specifies the name of the Backup custom resource.
 
 <td>
 
-`backupPolicyName`<br/>
+<code>backupPolicyName</code><br/>
 <em>
 string
 </em>
@@ -884,7 +884,7 @@ Indicates the name of the BackupPolicy applied to perform this Backup.
 
 <td>
 
-`backupMethod`<br/>
+<code>backupMethod</code><br/>
 <em>
 string
 </em>
@@ -906,7 +906,7 @@ The specified BackupMethod must be defined in the BackupPolicy.
 
 <td>
 
-`deletionPolicy`<br/>
+<code>deletionPolicy</code><br/>
 <em>
 string
 </em>
@@ -919,9 +919,9 @@ string
 <p>
 Determines whether the backup contents stored in backup repository
 should be deleted when the Backup custom resource is deleted.
-Supported values are `Retain` and `Delete`.
-- `Retain` means that the backup content and its physical snapshot on backup repository are kept.
-- `Delete` means that the backup content and its physical snapshot on backup repository are deleted.
+Supported values are <code>Retain</code> and <code>Delete</code>.
+- <code>Retain</code> means that the backup content and its physical snapshot on backup repository are kept.
+- <code>Delete</code> means that the backup content and its physical snapshot on backup repository are deleted.
 </p>
 
 </td>
@@ -931,7 +931,7 @@ Supported values are `Retain` and `Delete`.
 
 <td>
 
-`retentionPeriod`<br/>
+<code>retentionPeriod</code><br/>
 <em>
 string
 </em>
@@ -947,7 +947,7 @@ Determines the duration for which the Backup custom resources should be retained
 
 <p>
 The controller will automatically remove all Backup objects that are older than the specified RetentionPeriod.
-For example, RetentionPeriod of `30d` will keep only the Backup objects of last 30 days.
+For example, RetentionPeriod of <code>30d</code> will keep only the Backup objects of last 30 days.
 Sample duration format:
 </p>
 <ul>
@@ -974,7 +974,7 @@ If not set, the Backup objects will be kept forever.
 </p>
 
 <p>
-If the `deletionPolicy` is set to &lsquo;Delete&rsquo;, then the associated backup data will also be deleted
+If the <code>deletionPolicy</code> is set to &lsquo;Delete&rsquo;, then the associated backup data will also be deleted
 along with the Backup object.
 Otherwise, only the Backup custom resource will be deleted.
 </p>
@@ -986,7 +986,7 @@ Otherwise, only the Backup custom resource will be deleted.
 
 <td>
 
-`parentBackupName`<br/>
+<code>parentBackupName</code><br/>
 <em>
 string
 </em>
@@ -997,7 +997,7 @@ string
 <em>(Optional)</em>
 
 <p>
-If the specified BackupMethod is incremental, `parentBackupName` is required.
+If the specified BackupMethod is incremental, <code>parentBackupName</code> is required.
 </p>
 
 </td>
@@ -1007,7 +1007,7 @@ If the specified BackupMethod is incremental, `parentBackupName` is required.
 
 <td>
 
-`parameters`<br/>
+<code>parameters</code><br/>
 <em>
 []github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1.ParameterPair
 </em>
@@ -1019,7 +1019,7 @@ If the specified BackupMethod is incremental, `parentBackupName` is required.
 
 <p>
 Specifies a list of name-value pairs representing parameters and their corresponding values.
-Parameters match the schema specified in the `actionset.spec.parametersSchema`
+Parameters match the schema specified in the <code>actionset.spec.parametersSchema</code>
 </p>
 
 </td>
@@ -1047,7 +1047,7 @@ BackupRefSpec
 
 <td>
 
-`ref`<br/>
+<code>ref</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.RefNamespaceName">
 RefNamespaceName
@@ -1094,7 +1094,7 @@ CompletionProbe
 
 <td>
 
-`initialDelaySeconds`<br/>
+<code>initialDelaySeconds</code><br/>
 <em>
 int32
 </em>
@@ -1116,7 +1116,7 @@ The default value is 5 seconds, with a minimum value of 1.
 
 <td>
 
-`timeoutSeconds`<br/>
+<code>timeoutSeconds</code><br/>
 <em>
 int32
 </em>
@@ -1138,7 +1138,7 @@ The default value is 60 seconds, with a minimum value of 1.
 
 <td>
 
-`periodSeconds`<br/>
+<code>periodSeconds</code><br/>
 <em>
 int32
 </em>
@@ -1160,7 +1160,7 @@ The default value is 5 seconds, with a minimum value of 1.
 
 <td>
 
-`matchExpressions`<br/>
+<code>matchExpressions</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.MatchExpressions">
 MatchExpressions
@@ -1206,7 +1206,7 @@ ComponentInfo
 
 <td>
 
-`componentDefinitionName`<br/>
+<code>componentDefinitionName</code><br/>
 <em>
 string
 </em>
@@ -1242,7 +1242,7 @@ For example:
 
 <td>
 
-`accountName`<br/>
+<code>accountName</code><br/>
 <em>
 string
 </em>
@@ -1255,7 +1255,7 @@ string
 <p>
 Specifies the account name associated with the Component.
 If set, the corresponding account username and password are injected into containers&rsquo; environment variables
-`KB_ACCOUNT_USERNAME` and `KB_ACCOUNT_PASSWORD`.
+<code>KB_ACCOUNT_USERNAME</code> and <code>KB_ACCOUNT_PASSWORD</code>.
 </p>
 
 </td>
@@ -1265,7 +1265,7 @@ If set, the corresponding account username and password are injected into contai
 
 <td>
 
-`serviceName`<br/>
+<code>serviceName</code><br/>
 <em>
 string
 </em>
@@ -1277,9 +1277,9 @@ string
 
 <p>
 Specifies the name of the Service.
-If set, the service name is injected as the `KB_COMP_SVC_NAME` environment variable in the containers,
-and each service port is mapped to a corresponding environment variable named `KB_COMP_SVC_PORT_$(portName)`.
-The `portName` is transformed by replacing &lsquo;-&rsquo; with &lsquo;_&rsquo; and converting to uppercase.
+If set, the service name is injected as the <code>KB_COMP_SVC_NAME</code> environment variable in the containers,
+and each service port is mapped to a corresponding environment variable named <code>KB_COMP_SVC_PORT_$(portName)</code>.
+The <code>portName</code> is transformed by replacing &lsquo;-&rsquo; with &lsquo;_&rsquo; and converting to uppercase.
 </p>
 
 </td>
@@ -1317,7 +1317,7 @@ ComponentOps specifies the Component to be operated on.
 
 <td>
 
-`componentName`<br/>
+<code>componentName</code><br/>
 <em>
 string
 </em>
@@ -1361,7 +1361,7 @@ CustomOps
 
 <td>
 
-`opsDefinitionName`<br/>
+<code>opsDefinitionName</code><br/>
 <em>
 string
 </em>
@@ -1381,7 +1381,7 @@ Specifies the name of the OpsDefinition.
 
 <td>
 
-`serviceAccountName`<br/>
+<code>serviceAccountName</code><br/>
 <em>
 string
 </em>
@@ -1401,7 +1401,7 @@ Specifies the name of the ServiceAccount to be used for executing the custom ope
 
 <td>
 
-`maxConcurrentComponents`<br/>
+<code>maxConcurrentComponents</code><br/>
 <em>
 <a href="https://pkg.go.dev/k8s.io/apimachinery/pkg/util/intstr#IntOrString">
 Kubernetes api utils intstr.IntOrString
@@ -1439,7 +1439,7 @@ Note: This feature is not implemented yet.
 
 <td>
 
-`components`<br/>
+<code>components</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.CustomOpsComponent">
 []CustomOpsComponent
@@ -1486,7 +1486,7 @@ CustomOpsComponent
 
 <td>
 
-`ComponentOps`<br/>
+<code>ComponentOps</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ComponentOps">
 ComponentOps
@@ -1499,7 +1499,7 @@ ComponentOps
 
 <p>
 
-(Members of `ComponentOps` are embedded into this type.)
+(Members of <code>ComponentOps</code> are embedded into this type.)
 
 </p>
 
@@ -1514,7 +1514,7 @@ Specifies the name of the Component.
 
 <td>
 
-`parameters`<br/>
+<code>parameters</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.Parameter">
 []Parameter
@@ -1527,7 +1527,7 @@ Specifies the name of the Component.
 <em>(Optional)</em>
 
 <p>
-Specifies the parameters that match the schema specified in the `opsDefinition.spec.parametersSchema`.
+Specifies the parameters that match the schema specified in the <code>opsDefinition.spec.parametersSchema</code>.
 </p>
 
 </td>
@@ -1561,7 +1561,7 @@ EnvVarRef
 
 <td>
 
-`targetContainerName`<br/>
+<code>targetContainerName</code><br/>
 <em>
 string
 </em>
@@ -1583,7 +1583,7 @@ If not specified, the first container will be used by default.
 
 <td>
 
-`envName`<br/>
+<code>envName</code><br/>
 <em>
 string
 </em>
@@ -1628,7 +1628,7 @@ Expose
 
 <td>
 
-`componentName`<br/>
+<code>componentName</code><br/>
 <em>
 string
 </em>
@@ -1648,7 +1648,7 @@ Specifies the name of the Component.
 
 <td>
 
-`switch`<br/>
+<code>switch</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ExposeSwitch">
 ExposeSwitch
@@ -1671,7 +1671,7 @@ Indicates whether the services will be exposed.
 
 <td>
 
-`services`<br/>
+<code>services</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.OpsService">
 []OpsService
@@ -1684,13 +1684,13 @@ Indicates whether the services will be exposed.
 
 <p>
 Specifies a list of OpsService.
-When an OpsService is exposed, a corresponding ClusterService will be added to `cluster.spec.services`.
+When an OpsService is exposed, a corresponding ClusterService will be added to <code>cluster.spec.services</code>.
 On the other hand, when an OpsService is unexposed, the corresponding ClusterService will be removed
-from `cluster.spec.services`.
+from <code>cluster.spec.services</code>.
 </p>
 
 <p>
-Note: If `componentName` is not specified, the `ports` and `selector` fields must be provided
+Note: If <code>componentName</code> is not specified, the <code>ports</code> and <code>selector</code> fields must be provided
 in each OpsService definition.
 </p>
 
@@ -1701,7 +1701,7 @@ in each OpsService definition.
 </table>
 <h3 id="operations.kubeblocks.io/v1alpha1.ExposeSwitch">
 ExposeSwitch
-(`string` alias)
+(<code>string</code> alias)
 </h3>
 
 <p>
@@ -1750,7 +1750,7 @@ ExposeSwitch Specifies the switch for the expose operation. This switch can be u
 </table>
 <h3 id="operations.kubeblocks.io/v1alpha1.FailurePolicyType">
 FailurePolicyType
-(`string` alias)
+(<code>string</code> alias)
 </h3>
 
 <p>
@@ -1835,7 +1835,7 @@ HorizontalScaling defines the parameters of a horizontal scaling operation.
 
 <td>
 
-`ComponentOps`<br/>
+<code>ComponentOps</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ComponentOps">
 ComponentOps
@@ -1848,7 +1848,7 @@ ComponentOps
 
 <p>
 
-(Members of `ComponentOps` are embedded into this type.)
+(Members of <code>ComponentOps</code> are embedded into this type.)
 
 </p>
 
@@ -1863,7 +1863,7 @@ Specifies the name of the Component.
 
 <td>
 
-`shards`<br/>
+<code>shards</code><br/>
 <em>
 int32
 </em>
@@ -1884,7 +1884,7 @@ This parameter is mutually exclusive with other parameters.
 
 <td>
 
-`scaleOut`<br/>
+<code>scaleOut</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ScaleOut">
 ScaleOut
@@ -1909,7 +1909,7 @@ Note: Any configuration that deletes instances is considered invalid.
 
 <td>
 
-`scaleIn`<br/>
+<code>scaleIn</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ScaleIn">
 ScaleIn
@@ -1958,7 +1958,7 @@ Instance
 
 <td>
 
-`name`<br/>
+<code>name</code><br/>
 <em>
 string
 </em>
@@ -1978,7 +1978,7 @@ Pod name of the instance.
 
 <td>
 
-`targetNodeName`<br/>
+<code>targetNodeName</code><br/>
 <em>
 string
 </em>
@@ -2028,7 +2028,7 @@ InstanceReplicasTemplate defines the template for instance replicas.
 
 <td>
 
-`name`<br/>
+<code>name</code><br/>
 <em>
 string
 </em>
@@ -2048,7 +2048,7 @@ Specifies the name of the instance template.
 
 <td>
 
-`replicaChanges`<br/>
+<code>replicaChanges</code><br/>
 <em>
 int32
 </em>
@@ -2092,7 +2092,7 @@ InstanceResourceTemplate
 
 <td>
 
-`name`<br/>
+<code>name</code><br/>
 <em>
 string
 </em>
@@ -2112,7 +2112,7 @@ Refer to the instance template name of the component or sharding.
 
 <td>
 
-`ResourceRequirements`<br/>
+<code>ResourceRequirements</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core">
 Kubernetes core/v1.ResourceRequirements
@@ -2125,7 +2125,7 @@ Kubernetes core/v1.ResourceRequirements
 
 <p>
 
-(Members of `ResourceRequirements` are embedded into this type.)
+(Members of <code>ResourceRequirements</code> are embedded into this type.)
 
 </p>
 
@@ -2158,7 +2158,7 @@ InstanceVolumeClaimTemplate
 
 <td>
 
-`name`<br/>
+<code>name</code><br/>
 <em>
 string
 </em>
@@ -2178,7 +2178,7 @@ Refer to the instance template name of the component or sharding.
 
 <td>
 
-`volumeClaimTemplates`<br/>
+<code>volumeClaimTemplates</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.OpsRequestVolumeClaimTemplate">
 []OpsRequestVolumeClaimTemplate
@@ -2224,7 +2224,7 @@ JSONPatchOperation
 
 <td>
 
-`op`<br/>
+<code>op</code><br/>
 <em>
 string
 </em>
@@ -2244,7 +2244,7 @@ Specifies the type of JSON patch operation. It supports the following values: &l
 
 <td>
 
-`path`<br/>
+<code>path</code><br/>
 <em>
 string
 </em>
@@ -2264,7 +2264,7 @@ Specifies the json patch path.
 
 <td>
 
-`value`<br/>
+<code>value</code><br/>
 <em>
 string
 </em>
@@ -2312,7 +2312,7 @@ LastComponentConfiguration can be used to track and compare the desired state of
 
 <td>
 
-`replicas`<br/>
+<code>replicas</code><br/>
 <em>
 int32
 </em>
@@ -2323,7 +2323,7 @@ int32
 <em>(Optional)</em>
 
 <p>
-Records the `replicas` of the Component prior to any changes.
+Records the <code>replicas</code> of the Component prior to any changes.
 </p>
 
 </td>
@@ -2333,7 +2333,7 @@ Records the `replicas` of the Component prior to any changes.
 
 <td>
 
-`shards`<br/>
+<code>shards</code><br/>
 <em>
 int32
 </em>
@@ -2344,7 +2344,7 @@ int32
 <em>(Optional)</em>
 
 <p>
-Records the `shards` of the Component prior to any changes.
+Records the <code>shards</code> of the Component prior to any changes.
 </p>
 
 </td>
@@ -2354,7 +2354,7 @@ Records the `shards` of the Component prior to any changes.
 
 <td>
 
-`ResourceRequirements`<br/>
+<code>ResourceRequirements</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core">
 Kubernetes core/v1.ResourceRequirements
@@ -2367,7 +2367,7 @@ Kubernetes core/v1.ResourceRequirements
 
 <p>
 
-(Members of `ResourceRequirements` are embedded into this type.)
+(Members of <code>ResourceRequirements</code> are embedded into this type.)
 
 </p>
 <em>(Optional)</em>
@@ -2383,7 +2383,7 @@ Records the resources of the Component prior to any changes.
 
 <td>
 
-`volumeClaimTemplates`<br/>
+<code>volumeClaimTemplates</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.OpsRequestVolumeClaimTemplate">
 []OpsRequestVolumeClaimTemplate
@@ -2406,7 +2406,7 @@ Records volumes&rsquo; storage size of the Component prior to any changes.
 
 <td>
 
-`services`<br/>
+<code>services</code><br/>
 <em>
 []github.com/apecloud/kubeblocks/apis/apps/v1.ClusterComponentService
 </em>
@@ -2427,7 +2427,7 @@ Records the ClusterComponentService list of the Component prior to any changes.
 
 <td>
 
-`instances`<br/>
+<code>instances</code><br/>
 <em>
 []github.com/apecloud/kubeblocks/apis/apps/v1.InstanceTemplate
 </em>
@@ -2448,7 +2448,7 @@ Records the InstanceTemplate list of the Component prior to any changes.
 
 <td>
 
-`offlineInstances`<br/>
+<code>offlineInstances</code><br/>
 <em>
 []string
 </em>
@@ -2469,7 +2469,7 @@ Records the offline instances of the Component prior to any changes.
 
 <td>
 
-`serviceVersion`<br/>
+<code>serviceVersion</code><br/>
 <em>
 string
 </em>
@@ -2490,7 +2490,7 @@ Records the version of the Service expected to be provisioned by this Component 
 
 <td>
 
-`componentDefinitionName`<br/>
+<code>componentDefinitionName</code><br/>
 <em>
 string
 </em>
@@ -2535,7 +2535,7 @@ LastConfiguration
 
 <td>
 
-`components`<br/>
+<code>components</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.LastComponentConfiguration">
 map[string]github.com/apecloud/kubeblocks/apis/operations/v1alpha1.LastComponentConfiguration
@@ -2582,7 +2582,7 @@ MatchExpressions
 
 <td>
 
-`failure`<br/>
+<code>failure</code><br/>
 <em>
 string
 </em>
@@ -2594,7 +2594,7 @@ string
 
 <p>
 Specifies a failure condition for an action using a Go template expression.
-Should evaluate to either `true` or `false`.
+Should evaluate to either <code>true</code> or <code>false</code>.
 The current resource object is parsed into the Go template.
 for example, you can use &lsquo;&#123;&#123; eq .spec.replicas 1 &#125;&#125;&rsquo;.
 </p>
@@ -2606,7 +2606,7 @@ for example, you can use &lsquo;&#123;&#123; eq .spec.replicas 1 &#125;&#125;&rs
 
 <td>
 
-`success`<br/>
+<code>success</code><br/>
 <em>
 string
 </em>
@@ -2617,7 +2617,7 @@ string
 
 <p>
 Specifies a success condition for an action using a Go template expression.
-Should evaluate to either `true` or `false`.
+Should evaluate to either <code>true</code> or <code>false</code>.
 The current resource object is parsed into the Go template.
 for example, using &lsquo;&#123;&#123; eq .spec.replicas 1 &#125;&#125;&rsquo;
 </p>
@@ -2673,7 +2673,7 @@ resourceModifier: Modifies a K8s object using JSON patches, useful for updating 
 
 <td>
 
-`name`<br/>
+<code>name</code><br/>
 <em>
 string
 </em>
@@ -2693,7 +2693,7 @@ Specifies the name of the OpsAction.
 
 <td>
 
-`failurePolicy`<br/>
+<code>failurePolicy</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.FailurePolicyType">
 FailurePolicyType
@@ -2725,7 +2725,7 @@ Valid values are:
 
 <td>
 
-`parameters`<br/>
+<code>parameters</code><br/>
 <em>
 []string
 </em>
@@ -2744,7 +2744,7 @@ For &lsquo;workload&rsquo; or &lsquo;exec&rsquo; actions, parameters are injecte
 </li>
 <li>
 For &lsquo;resourceModifier&rsquo; actions, parameter can be referenced using $() in fields
-`resourceModifier.completionProbe.matchExpressions` and `resourceModifier.jsonPatches[*].value`.
+<code>resourceModifier.completionProbe.matchExpressions</code> and <code>resourceModifier.jsonPatches[&ast;].value</code>.
 </li>
 </ul>
 
@@ -2755,7 +2755,7 @@ For &lsquo;resourceModifier&rsquo; actions, parameter can be referenced using $(
 
 <td>
 
-`workload`<br/>
+<code>workload</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.OpsWorkloadAction">
 OpsWorkloadAction
@@ -2779,7 +2779,7 @@ This action leads to the creation of a K8s workload, such as a Pod or Job, to ex
 
 <td>
 
-`exec`<br/>
+<code>exec</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.OpsExecAction">
 OpsExecAction
@@ -2803,7 +2803,7 @@ It creates a Pod and invokes a &lsquo;kubectl exec&rsquo; to run command inside 
 
 <td>
 
-`resourceModifier`<br/>
+<code>resourceModifier</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.OpsResourceModifierAction">
 OpsResourceModifierAction
@@ -2859,7 +2859,7 @@ OpsDefinitionSpec defines the desired state of OpsDefinition.
 
 <td>
 
-`preConditions`<br/>
+<code>preConditions</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.PreCondition">
 []PreCondition
@@ -2892,7 +2892,7 @@ Example:
 
 <td>
 
-`podInfoExtractors`<br/>
+<code>podInfoExtractors</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.PodInfoExtractor">
 []PodInfoExtractor
@@ -2908,7 +2908,7 @@ Example:
 Specifies a list of PodInfoExtractor, each designed to select a specific Pod and extract selected runtime info
 from its PodSpec.
 The extracted information, such as environment variables, volumes and tolerations, are then injected into
-Jobs or Pods that execute the OpsActions defined in `actions`.
+Jobs or Pods that execute the OpsActions defined in <code>actions</code>.
 </p>
 
 </td>
@@ -2918,7 +2918,7 @@ Jobs or Pods that execute the OpsActions defined in `actions`.
 
 <td>
 
-`componentInfos`<br/>
+<code>componentInfos</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ComponentInfo">
 []ComponentInfo
@@ -2942,7 +2942,7 @@ It also includes connection credentials (address and account) for each Component
 
 <td>
 
-`parametersSchema`<br/>
+<code>parametersSchema</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ParametersSchema">
 ParametersSchema
@@ -2965,7 +2965,7 @@ Specifies the schema for validating the data types and value ranges of parameter
 
 <td>
 
-`actions`<br/>
+<code>actions</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.OpsAction">
 []OpsAction
@@ -3015,7 +3015,7 @@ OpsDefinitionStatus defines the observed state of OpsDefinition
 
 <td>
 
-`observedGeneration`<br/>
+<code>observedGeneration</code><br/>
 <em>
 int64
 </em>
@@ -3036,7 +3036,7 @@ Represents the most recent generation observed of this OpsDefinition.
 
 <td>
 
-`phase`<br/>
+<code>phase</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.Phase">
 Phase
@@ -3061,7 +3061,7 @@ When it equals to &ldquo;Available&rdquo;, the OpsDefinition is ready and can be
 
 <td>
 
-`message`<br/>
+<code>message</code><br/>
 <em>
 string
 </em>
@@ -3106,7 +3106,7 @@ OpsEnvVar
 
 <td>
 
-`name`<br/>
+<code>name</code><br/>
 <em>
 string
 </em>
@@ -3127,7 +3127,7 @@ It must conform to the C_IDENTIFIER format, which includes only alphanumeric cha
 
 <td>
 
-`valueFrom`<br/>
+<code>valueFrom</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.OpsVarSource">
 OpsVarSource
@@ -3173,7 +3173,7 @@ OpsExecAction
 
 <td>
 
-`podInfoExtractorName`<br/>
+<code>podInfoExtractorName</code><br/>
 <em>
 string
 </em>
@@ -3183,7 +3183,7 @@ string
 
 
 <p>
-Specifies a PodInfoExtractor defined in the `opsDefinition.spec.podInfoExtractors`.
+Specifies a PodInfoExtractor defined in the <code>opsDefinition.spec.podInfoExtractors</code>.
 </p>
 
 </td>
@@ -3193,7 +3193,7 @@ Specifies a PodInfoExtractor defined in the `opsDefinition.spec.podInfoExtractor
 
 <td>
 
-`backoffLimit`<br/>
+<code>backoffLimit</code><br/>
 <em>
 int32
 </em>
@@ -3214,7 +3214,7 @@ Specifies the number of retries allowed before marking the action as failed.
 
 <td>
 
-`command`<br/>
+<code>command</code><br/>
 <em>
 []string
 </em>
@@ -3234,7 +3234,7 @@ The command to be executed via &lsquo;kubectl exec &ndash;&rsquo;.
 
 <td>
 
-`containerName`<br/>
+<code>containerName</code><br/>
 <em>
 string
 </em>
@@ -3246,7 +3246,7 @@ string
 
 <p>
 The name of the container in the target pod where the command should be executed.
-This corresponds to the `-c &#123;containerName&#125;` option in `kubectl exec`.
+This corresponds to the <code>-c &#123;containerName&#125;</code> option in <code>kubectl exec</code>.
 </p>
 
 <p>
@@ -3260,7 +3260,7 @@ If not set, the first container is used.
 </table>
 <h3 id="operations.kubeblocks.io/v1alpha1.OpsPhase">
 OpsPhase
-(`string` alias)
+(<code>string</code> alias)
 </h3>
 
 <p>
@@ -3393,7 +3393,7 @@ OpsRecorder
 
 <td>
 
-`name`<br/>
+<code>name</code><br/>
 <em>
 string
 </em>
@@ -3413,7 +3413,7 @@ name OpsRequest name
 
 <td>
 
-`type`<br/>
+<code>type</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.OpsType">
 OpsType
@@ -3435,7 +3435,7 @@ opsRequest type
 
 <td>
 
-`inQueue`<br/>
+<code>inQueue</code><br/>
 <em>
 bool
 </em>
@@ -3455,7 +3455,7 @@ indicates whether the current opsRequest is in the queue
 
 <td>
 
-`queueBySelf`<br/>
+<code>queueBySelf</code><br/>
 <em>
 bool
 </em>
@@ -3493,7 +3493,7 @@ OpsRequestBehaviour
 
 <td>
 
-`FromClusterPhases`<br/>
+<code>FromClusterPhases</code><br/>
 <em>
 []github.com/apecloud/kubeblocks/apis/apps/v1.ClusterPhase
 </em>
@@ -3509,7 +3509,7 @@ OpsRequestBehaviour
 
 <td>
 
-`ToClusterPhase`<br/>
+<code>ToClusterPhase</code><br/>
 <em>
 github.com/apecloud/kubeblocks/apis/apps/v1.ClusterPhase
 </em>
@@ -3549,7 +3549,7 @@ OpsRequestComponentStatus
 
 <td>
 
-`phase`<br/>
+<code>phase</code><br/>
 <em>
 github.com/apecloud/kubeblocks/apis/apps/v1.ComponentPhase
 </em>
@@ -3560,7 +3560,7 @@ github.com/apecloud/kubeblocks/apis/apps/v1.ComponentPhase
 <em>(Optional)</em>
 
 <p>
-Records the current phase of the Component, mirroring `cluster.status.components[componentName].phase`.
+Records the current phase of the Component, mirroring <code>cluster.status.components[componentName].phase</code>.
 </p>
 
 </td>
@@ -3570,7 +3570,7 @@ Records the current phase of the Component, mirroring `cluster.status.components
 
 <td>
 
-`lastFailedTime`<br/>
+<code>lastFailedTime</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
 Kubernetes meta/v1.Time
@@ -3593,7 +3593,7 @@ Records the timestamp when the Component last transitioned to a &ldquo;Failed&rd
 
 <td>
 
-`preCheck`<br/>
+<code>preCheck</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.PreCheckResult">
 PreCheckResult
@@ -3616,7 +3616,7 @@ Records the result of the preConditions check of the opsRequest, which determine
 
 <td>
 
-`progressDetails`<br/>
+<code>progressDetails</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ProgressStatusDetail">
 []ProgressStatusDetail
@@ -3639,7 +3639,7 @@ Describes the progress details of objects or actions associated with the Compone
 
 <td>
 
-`reason`<br/>
+<code>reason</code><br/>
 <em>
 string
 </em>
@@ -3660,7 +3660,7 @@ Provides an explanation for the Component being in its current state.
 
 <td>
 
-`message`<br/>
+<code>message</code><br/>
 <em>
 string
 </em>
@@ -3709,7 +3709,7 @@ OpsRequestSpec defines the desired state of OpsRequest
 
 <td>
 
-`clusterName`<br/>
+<code>clusterName</code><br/>
 <em>
 string
 </em>
@@ -3729,7 +3729,7 @@ Specifies the name of the Cluster resource that this operation is targeting.
 
 <td>
 
-`cancel`<br/>
+<code>cancel</code><br/>
 <em>
 bool
 </em>
@@ -3749,7 +3749,7 @@ This field applies only to &ldquo;VerticalScaling&rdquo; and &ldquo;HorizontalSc
 </p>
 
 <p>
-Note: Setting `cancel` to true is irreversible; further modifications to this field are ineffective.
+Note: Setting <code>cancel</code> to true is irreversible; further modifications to this field are ineffective.
 </p>
 
 </td>
@@ -3759,7 +3759,7 @@ Note: Setting `cancel` to true is irreversible; further modifications to this fi
 
 <td>
 
-`force`<br/>
+<code>force</code><br/>
 <em>
 bool
 </em>
@@ -3772,17 +3772,17 @@ bool
 <p>
 Instructs the system to bypass pre-checks (including cluster state checks and customized pre-conditions hooks)
 and immediately execute the opsRequest, except for the opsRequest of &lsquo;Start&rsquo; type, which will still undergo
-pre-checks even if `force` is true.
+pre-checks even if <code>force</code> is true.
 </p>
 
 <p>
 This is useful for concurrent execution of &lsquo;VerticalScaling&rsquo; and &lsquo;HorizontalScaling&rsquo; opsRequests.
-By setting `force` to true, you can bypass the default checks and demand these opsRequests to run
+By setting <code>force</code> to true, you can bypass the default checks and demand these opsRequests to run
 simultaneously.
 </p>
 
 <p>
-Note: Once set, the `force` field is immutable and cannot be updated.
+Note: Once set, the <code>force</code> field is immutable and cannot be updated.
 </p>
 
 </td>
@@ -3792,7 +3792,7 @@ Note: Once set, the `force` field is immutable and cannot be updated.
 
 <td>
 
-`enqueueOnForce`<br/>
+<code>enqueueOnForce</code><br/>
 <em>
 bool
 </em>
@@ -3813,7 +3813,7 @@ Indicates whether opsRequest should continue to queue when &lsquo;force&rsquo; i
 
 <td>
 
-`type`<br/>
+<code>type</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.OpsType">
 OpsType
@@ -3841,7 +3841,7 @@ Note: This field is immutable once set.
 
 <td>
 
-`ttlSecondsAfterSucceed`<br/>
+<code>ttlSecondsAfterSucceed</code><br/>
 <em>
 int32
 </em>
@@ -3853,7 +3853,7 @@ int32
 
 <p>
 Specifies the duration in seconds that an OpsRequest will remain in the system after successfully completing
-(when `opsRequest.status.phase` is &ldquo;Succeed&rdquo;) before automatic deletion.
+(when <code>opsRequest.status.phase</code> is &ldquo;Succeed&rdquo;) before automatic deletion.
 </p>
 
 </td>
@@ -3863,7 +3863,7 @@ Specifies the duration in seconds that an OpsRequest will remain in the system a
 
 <td>
 
-`ttlSecondsAfterUnsuccessfulCompletion`<br/>
+<code>ttlSecondsAfterUnsuccessfulCompletion</code><br/>
 <em>
 int32
 </em>
@@ -3885,7 +3885,7 @@ for any phase other than &ldquo;Succeed&rdquo; (e.g., &ldquo;Failed&rdquo;, &ldq
 
 <td>
 
-`preConditionDeadlineSeconds`<br/>
+<code>preConditionDeadlineSeconds</code><br/>
 <em>
 int32
 </em>
@@ -3908,7 +3908,7 @@ If set to 0 (default), pre-conditions must be satisfied immediately for the OpsR
 
 <td>
 
-`timeoutSeconds`<br/>
+<code>timeoutSeconds</code><br/>
 <em>
 int32
 </em>
@@ -3931,7 +3931,7 @@ If this value is not set or set to 0, the timeout will be ignored and the opsReq
 
 <td>
 
-`SpecificOpsRequest`<br/>
+<code>SpecificOpsRequest</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.SpecificOpsRequest">
 SpecificOpsRequest
@@ -3944,7 +3944,7 @@ SpecificOpsRequest
 
 <p>
 
-(Members of `SpecificOpsRequest` are embedded into this type.)
+(Members of <code>SpecificOpsRequest</code> are embedded into this type.)
 
 </p>
 
@@ -3987,7 +3987,7 @@ OpsRequestStatus represents the observed state of an OpsRequest.
 
 <td>
 
-`clusterGeneration`<br/>
+<code>clusterGeneration</code><br/>
 <em>
 int64
 </em>
@@ -4008,7 +4008,7 @@ Records the cluster generation after the OpsRequest action has been handled.
 
 <td>
 
-`phase`<br/>
+<code>phase</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.OpsPhase">
 OpsPhase
@@ -4031,7 +4031,7 @@ Possible values include &ldquo;Pending&rdquo;, &ldquo;Creating&rdquo;, &ldquo;Ru
 
 <td>
 
-`progress`<br/>
+<code>progress</code><br/>
 <em>
 string
 </em>
@@ -4051,7 +4051,7 @@ Represents the progress of the OpsRequest.
 
 <td>
 
-`lastConfiguration`<br/>
+<code>lastConfiguration</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.LastConfiguration">
 LastConfiguration
@@ -4074,7 +4074,7 @@ Records the configuration prior to any changes.
 
 <td>
 
-`components`<br/>
+<code>components</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.OpsRequestComponentStatus">
 map[string]github.com/apecloud/kubeblocks/apis/operations/v1alpha1.OpsRequestComponentStatus
@@ -4097,7 +4097,7 @@ Records the status information of Components changed due to the OpsRequest.
 
 <td>
 
-`extras`<br/>
+<code>extras</code><br/>
 <em>
 []string
 </em>
@@ -4117,7 +4117,7 @@ A collection of additional key-value pairs that provide supplementary informatio
 
 <td>
 
-`startTimestamp`<br/>
+<code>startTimestamp</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
 Kubernetes meta/v1.Time
@@ -4140,7 +4140,7 @@ Records the time when the OpsRequest started processing.
 
 <td>
 
-`completionTimestamp`<br/>
+<code>completionTimestamp</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
 Kubernetes meta/v1.Time
@@ -4163,7 +4163,7 @@ Records the time when the OpsRequest was completed.
 
 <td>
 
-`cancelTimestamp`<br/>
+<code>cancelTimestamp</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
 Kubernetes meta/v1.Time
@@ -4186,7 +4186,7 @@ Records the time when the OpsRequest was cancelled.
 
 <td>
 
-`conditions`<br/>
+<code>conditions</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#condition-v1-meta">
 []Kubernetes meta/v1.Condition
@@ -4236,7 +4236,7 @@ OpsRequestVolumeClaimTemplate
 
 <td>
 
-`storage`<br/>
+<code>storage</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#quantity-resource-core">
 Kubernetes resource.Quantity
@@ -4258,7 +4258,7 @@ Specifies the desired storage size for the volume.
 
 <td>
 
-`name`<br/>
+<code>name</code><br/>
 <em>
 string
 </em>
@@ -4270,7 +4270,7 @@ string
 <p>
 Specify the name of the volumeClaimTemplate in the Component.
 The specified name must match one of the volumeClaimTemplates defined
-in the `clusterComponentSpec.volumeClaimTemplates` field.
+in the <code>clusterComponentSpec.volumeClaimTemplates</code> field.
 </p>
 
 </td>
@@ -4304,7 +4304,7 @@ OpsResourceModifierAction
 
 <td>
 
-`resource`<br/>
+<code>resource</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.TypedObjectRef">
 TypedObjectRef
@@ -4326,7 +4326,7 @@ Specifies the K8s object that is to be updated.
 
 <td>
 
-`jsonPatches`<br/>
+<code>jsonPatches</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.JSONPatchOperation">
 []JSONPatchOperation
@@ -4348,7 +4348,7 @@ Specifies a list of patches for modifying the object.
 
 <td>
 
-`completionProbe`<br/>
+<code>completionProbe</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.CompletionProbe">
 CompletionProbe
@@ -4385,7 +4385,7 @@ OpsService
 <div>
 
 <p>
-OpsService represents the parameters to dynamically create or remove a ClusterService in the `cluster.spec.services` array.
+OpsService represents the parameters to dynamically create or remove a ClusterService in the <code>cluster.spec.services</code> array.
 </p>
 </div>
 <table>
@@ -4402,7 +4402,7 @@ OpsService represents the parameters to dynamically create or remove a ClusterSe
 
 <td>
 
-`name`<br/>
+<code>name</code><br/>
 <em>
 string
 </em>
@@ -4412,7 +4412,7 @@ string
 
 
 <p>
-Specifies the name of the Service. This name is used to set `clusterService.name`.
+Specifies the name of the Service. This name is used to set <code>clusterService.name</code>.
 </p>
 
 <p>
@@ -4426,7 +4426,7 @@ Note: This field cannot be updated.
 
 <td>
 
-`annotations`<br/>
+<code>annotations</code><br/>
 <em>
 map[string]string
 </em>
@@ -4451,7 +4451,7 @@ More info: <a href="https://kubernetes.io/docs/concepts/services-networking/serv
 
 <td>
 
-`ports`<br/>
+<code>ports</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#serviceport-v1-core">
 []Kubernetes core/v1.ServicePort
@@ -4469,7 +4469,7 @@ Specifies Port definitions that are to be exposed by a ClusterService.
 
 <p>
 If not specified, the Port definitions from non-NodePort and non-LoadBalancer type ComponentService
-defined in the ComponentDefinition (`componentDefinition.spec.services`) will be used.
+defined in the ComponentDefinition (<code>componentDefinition.spec.services</code>) will be used.
 If no matching ComponentService is found, the expose operation will fail.
 </p>
 
@@ -4484,7 +4484,7 @@ More info: <a href="https://kubernetes.io/docs/concepts/services-networking/serv
 
 <td>
 
-`roleSelector`<br/>
+<code>roleSelector</code><br/>
 <em>
 string
 </em>
@@ -4511,7 +4511,7 @@ If both are specified, a pod must match both conditions to be selected.
 
 <td>
 
-`podSelector`<br/>
+<code>podSelector</code><br/>
 <em>
 map[string]string
 </em>
@@ -4538,7 +4538,7 @@ If both are specified, a pod must match both conditions to be selected.
 
 <td>
 
-`serviceType`<br/>
+<code>serviceType</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#servicetype-v1-core">
 Kubernetes core/v1.ServiceType
@@ -4552,19 +4552,19 @@ Kubernetes core/v1.ServiceType
 
 <p>
 Determines how the Service is exposed. Defaults to &lsquo;ClusterIP&rsquo;.
-Valid options are `ClusterIP`, `NodePort`, and `LoadBalancer`.
+Valid options are <code>ClusterIP</code>, <code>NodePort</code>, and <code>LoadBalancer</code>.
 </p>
 <ul>
 <li>
-`ClusterIP`: allocates a cluster-internal IP address for load-balancing to endpoints.
+<code>ClusterIP</code>: allocates a cluster-internal IP address for load-balancing to endpoints.
 Endpoints are determined by the selector or if that is not specified,
 they are determined by manual construction of an Endpoints object or EndpointSlice objects.
 </li>
 <li>
-`NodePort`: builds on ClusterIP and allocates a port on every node which routes to the same endpoints as the clusterIP.
+<code>NodePort</code>: builds on ClusterIP and allocates a port on every node which routes to the same endpoints as the clusterIP.
 </li>
 <li>
-`LoadBalancer`: builds on NodePort and creates an external load-balancer (if supported in the current cloud)
+<code>LoadBalancer</code>: builds on NodePort and creates an external load-balancer (if supported in the current cloud)
 which routes to the same endpoints as the clusterIP.
 </li>
 </ul>
@@ -4585,7 +4585,7 @@ For more info, see:
 
 <td>
 
-`ipFamilies`<br/>
+<code>ipFamilies</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#ipfamily-v1-core">
 []Kubernetes core/v1.IPFamily
@@ -4602,8 +4602,8 @@ A list of IP families (e.g., IPv4, IPv6) assigned to this Service.
 </p>
 
 <p>
-Usually assigned automatically based on the cluster configuration and the `ipFamilyPolicy` field.
-If specified manually, the requested IP family must be available in the cluster and allowed by the `ipFamilyPolicy`.
+Usually assigned automatically based on the cluster configuration and the <code>ipFamilyPolicy</code> field.
+If specified manually, the requested IP family must be available in the cluster and allowed by the <code>ipFamilyPolicy</code>.
 If the requested IP family is not available or not allowed, the Service creation will fail.
 </p>
 
@@ -4624,7 +4624,7 @@ This field may hold a maximum of two entries (dual-stack families, in either ord
 </p>
 
 <p>
-Common combinations of `ipFamilies` and `ipFamilyPolicy` are:
+Common combinations of <code>ipFamilies</code> and <code>ipFamilyPolicy</code> are:
 </p>
 <ul>
 <li>
@@ -4659,7 +4659,7 @@ The Service uses a single-stack with IPv6 only.
 
 <td>
 
-`ipFamilyPolicy`<br/>
+<code>ipFamilyPolicy</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#ipfamilypolicy-v1-core">
 Kubernetes core/v1.IPFamilyPolicy
@@ -4700,7 +4700,7 @@ If the cluster is not configured for dual-stack, the Service creation fails.
 </table>
 <h3 id="operations.kubeblocks.io/v1alpha1.OpsType">
 OpsType
-(`string` alias)
+(<code>string</code> alias)
 </h3>
 
 <p>
@@ -4921,7 +4921,7 @@ OpsVarSource
 
 <td>
 
-`envRef`<br/>
+<code>envRef</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.EnvVarRef">
 EnvVarRef
@@ -4945,7 +4945,7 @@ Used to specify the source of the variable, which can be either &ldquo;env&rdquo
 
 <td>
 
-`fieldPath`<br/>
+<code>fieldPath</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectfieldselector-v1-core">
 Kubernetes core/v1.ObjectFieldSelector
@@ -4993,7 +4993,7 @@ OpsWorkloadAction
 
 <td>
 
-`type`<br/>
+<code>type</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.OpsWorkloadType">
 OpsWorkloadType
@@ -5013,7 +5013,7 @@ Defines the workload type of the action. Valid values include &ldquo;Job&rdquo; 
 </li>
 <li>
 &ldquo;Pod&rdquo;: Creates a Pod to execute the action.
-Note: unlike Jobs, manually deleting a Pod does not affect the `backoffLimit`.
+Note: unlike Jobs, manually deleting a Pod does not affect the <code>backoffLimit</code>.
 </li>
 </ul>
 
@@ -5024,7 +5024,7 @@ Note: unlike Jobs, manually deleting a Pod does not affect the `backoffLimit`.
 
 <td>
 
-`podInfoExtractorName`<br/>
+<code>podInfoExtractorName</code><br/>
 <em>
 string
 </em>
@@ -5034,7 +5034,7 @@ string
 
 
 <p>
-Specifies a PodInfoExtractor defined in the `opsDefinition.spec.podInfoExtractors`.
+Specifies a PodInfoExtractor defined in the <code>opsDefinition.spec.podInfoExtractors</code>.
 </p>
 
 </td>
@@ -5044,7 +5044,7 @@ Specifies a PodInfoExtractor defined in the `opsDefinition.spec.podInfoExtractor
 
 <td>
 
-`backoffLimit`<br/>
+<code>backoffLimit</code><br/>
 <em>
 int32
 </em>
@@ -5065,7 +5065,7 @@ Specifies the number of retries allowed before marking the action as failed.
 
 <td>
 
-`podSpec`<br/>
+<code>podSpec</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#podspec-v1-core">
 Kubernetes core/v1.PodSpec
@@ -5087,7 +5087,7 @@ Specifies the PodSpec of the &lsquo;workload&rsquo; action.
 </table>
 <h3 id="operations.kubeblocks.io/v1alpha1.OpsWorkloadType">
 OpsWorkloadType
-(`string` alias)
+(<code>string</code> alias)
 </h3>
 
 <p>
@@ -5160,7 +5160,7 @@ Parameter
 
 <td>
 
-`name`<br/>
+<code>name</code><br/>
 <em>
 string
 </em>
@@ -5180,7 +5180,7 @@ Specifies the identifier of the parameter as defined in the OpsDefinition.
 
 <td>
 
-`value`<br/>
+<code>value</code><br/>
 <em>
 string
 </em>
@@ -5201,7 +5201,7 @@ If the parameter type is an array, the format should be &ldquo;v1,v2,v3&rdquo;.
 
 <td>
 
-`valueFrom`<br/>
+<code>valueFrom</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ParameterSource">
 ParameterSource
@@ -5247,7 +5247,7 @@ ParameterPair
 
 <td>
 
-`key`<br/>
+<code>key</code><br/>
 <em>
 string
 </em>
@@ -5267,7 +5267,7 @@ Represents the name of the parameter that is to be updated.
 
 <td>
 
-`value`<br/>
+<code>value</code><br/>
 <em>
 string
 </em>
@@ -5313,7 +5313,7 @@ ParameterSource
 
 <td>
 
-`configMapKeyRef`<br/>
+<code>configMapKeyRef</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#configmapkeyselector-v1-core">
 Kubernetes core/v1.ConfigMapKeySelector
@@ -5336,7 +5336,7 @@ Selects a key of a ConfigMap.
 
 <td>
 
-`secretKeyRef`<br/>
+<code>secretKeyRef</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretkeyselector-v1-core">
 Kubernetes core/v1.SecretKeySelector
@@ -5383,7 +5383,7 @@ ParametersSchema
 
 <td>
 
-`openAPIV3Schema`<br/>
+<code>openAPIV3Schema</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#jsonschemaprops-v1-apiextensions-k8s-io">
 Kubernetes api extensions v1.JSONSchemaProps
@@ -5411,7 +5411,7 @@ The supported property types include:
 </table>
 <h3 id="operations.kubeblocks.io/v1alpha1.Phase">
 Phase
-(`string` alias)
+(<code>string</code> alias)
 </h3>
 
 <p>
@@ -5492,7 +5492,7 @@ PodInfoExtractor
 
 <td>
 
-`name`<br/>
+<code>name</code><br/>
 <em>
 string
 </em>
@@ -5512,7 +5512,7 @@ Specifies the name of the PodInfoExtractor.
 
 <td>
 
-`env`<br/>
+<code>env</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.OpsEnvVar">
 []OpsEnvVar
@@ -5536,7 +5536,7 @@ and injected into the containers executing each OpsAction.
 
 <td>
 
-`podSelector`<br/>
+<code>podSelector</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.PodSelector">
 PodSelector
@@ -5558,7 +5558,7 @@ Used to select the target Pod from which environment variables and volumes are e
 
 <td>
 
-`volumeMounts`<br/>
+<code>volumeMounts</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#volumemount-v1-core">
 []Kubernetes core/v1.VolumeMount
@@ -5583,7 +5583,7 @@ This allows the containers to access shared or persistent data necessary for the
 </table>
 <h3 id="operations.kubeblocks.io/v1alpha1.PodSelectionPolicy">
 PodSelectionPolicy
-(`string` alias)
+(<code>string</code> alias)
 </h3>
 
 <p>
@@ -5660,7 +5660,7 @@ PodSelector selects the target Pod from which environment variables and volumes 
 
 <td>
 
-`role`<br/>
+<code>role</code><br/>
 <em>
 string
 </em>
@@ -5681,7 +5681,7 @@ Specifies the role of the target Pod.
 
 <td>
 
-`multiPodSelectionPolicy`<br/>
+<code>multiPodSelectionPolicy</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.PodSelectionPolicy">
 PodSelectionPolicy
@@ -5723,7 +5723,7 @@ PointInTimeRefSpec
 
 <td>
 
-`time`<br/>
+<code>time</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
 Kubernetes meta/v1.Time
@@ -5746,7 +5746,7 @@ Refers to the specific time point for restoration, with UTC as the time zone.
 
 <td>
 
-`ref`<br/>
+<code>ref</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.RefNamespaceName">
 RefNamespaceName
@@ -5793,7 +5793,7 @@ PreCheckResult
 
 <td>
 
-`pass`<br/>
+<code>pass</code><br/>
 <em>
 bool
 </em>
@@ -5813,7 +5813,7 @@ Indicates whether the preCheck operation passed or failed.
 
 <td>
 
-`message`<br/>
+<code>message</code><br/>
 <em>
 string
 </em>
@@ -5858,7 +5858,7 @@ PreCondition
 
 <td>
 
-`rule`<br/>
+<code>rule</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.Rule">
 Rule
@@ -5880,7 +5880,7 @@ Specifies the conditions that must be met for the operation to execute.
 </table>
 <h3 id="operations.kubeblocks.io/v1alpha1.ProgressStatus">
 ProgressStatus
-(`string` alias)
+(<code>string</code> alias)
 </h3>
 
 <p>
@@ -5975,7 +5975,7 @@ ProgressStatusDetail
 
 <td>
 
-`group`<br/>
+<code>group</code><br/>
 <em>
 string
 </em>
@@ -5996,7 +5996,7 @@ Specifies the group to which the current object belongs to.
 
 <td>
 
-`objectKey`<br/>
+<code>objectKey</code><br/>
 <em>
 string
 </em>
@@ -6007,8 +6007,8 @@ string
 <em>(Optional)</em>
 
 <p>
-`objectKey` uniquely identifies the object, which can be any K8s object, like a Pod, Job, Component, or PVC.
-Either `objectKey` or `actionName` must be provided.
+<code>objectKey</code> uniquely identifies the object, which can be any K8s object, like a Pod, Job, Component, or PVC.
+Either <code>objectKey</code> or <code>actionName</code> must be provided.
 </p>
 
 </td>
@@ -6018,7 +6018,7 @@ Either `objectKey` or `actionName` must be provided.
 
 <td>
 
-`actionName`<br/>
+<code>actionName</code><br/>
 <em>
 string
 </em>
@@ -6029,8 +6029,8 @@ string
 <em>(Optional)</em>
 
 <p>
-Indicates the name of an OpsAction, as defined in `opsDefinition.spec.actions[*].name`.
-Either `objectKey` or `actionName` must be provided.
+Indicates the name of an OpsAction, as defined in <code>opsDefinition.spec.actions[&ast;].name</code>.
+Either <code>objectKey</code> or <code>actionName</code> must be provided.
 </p>
 
 </td>
@@ -6040,7 +6040,7 @@ Either `objectKey` or `actionName` must be provided.
 
 <td>
 
-`actionTasks`<br/>
+<code>actionTasks</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ActionTask">
 []ActionTask
@@ -6063,7 +6063,7 @@ Lists the tasks, such as Jobs or Pods, that carry out the action.
 
 <td>
 
-`status`<br/>
+<code>status</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ProgressStatus">
 ProgressStatus
@@ -6085,7 +6085,7 @@ Represents the current processing state of the object, including &ldquo;Processi
 
 <td>
 
-`message`<br/>
+<code>message</code><br/>
 <em>
 string
 </em>
@@ -6106,7 +6106,7 @@ Provides a human-readable explanation of the object&rsquo;s condition.
 
 <td>
 
-`startTime`<br/>
+<code>startTime</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
 Kubernetes meta/v1.Time
@@ -6129,7 +6129,7 @@ Records the start time of object processing.
 
 <td>
 
-`endTime`<br/>
+<code>endTime</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
 Kubernetes meta/v1.Time
@@ -6176,7 +6176,7 @@ RebuildInstance
 
 <td>
 
-`ComponentOps`<br/>
+<code>ComponentOps</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ComponentOps">
 ComponentOps
@@ -6189,7 +6189,7 @@ ComponentOps
 
 <p>
 
-(Members of `ComponentOps` are embedded into this type.)
+(Members of <code>ComponentOps</code> are embedded into this type.)
 
 </p>
 
@@ -6204,7 +6204,7 @@ Specifies the name of the Component.
 
 <td>
 
-`instances`<br/>
+<code>instances</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.Instance">
 []Instance
@@ -6226,7 +6226,7 @@ Specifies the instances (Pods) that need to be rebuilt, typically operating as s
 
 <td>
 
-`inPlace`<br/>
+<code>inPlace</code><br/>
 <em>
 bool
 </em>
@@ -6248,7 +6248,7 @@ the instance that require rebuilding will be taken offline.
 
 <td>
 
-`backupName`<br/>
+<code>backupName</code><br/>
 <em>
 string
 </em>
@@ -6276,7 +6276,7 @@ Note:
 
 <td>
 
-`sourceBackupTargetName`<br/>
+<code>sourceBackupTargetName</code><br/>
 <em>
 string
 </em>
@@ -6297,7 +6297,7 @@ When multiple source targets exist of the backup, you must specify the source ta
 
 <td>
 
-`restoreEnv`<br/>
+<code>restoreEnv</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#envvar-v1-core">
 []Kubernetes core/v1.EnvVar
@@ -6321,8 +6321,8 @@ Merge priority: Restore env &gt; Backup env &gt; ActionSet env.
 <p>
 Purpose: Some databases require different configurations when being restored as a standby
 compared to being restored as a primary.
-For example, when restoring MySQL as a replica, you need to set `skip_slave_start=&quot;ON&quot;` for 5.7
-or `skip_replica_start=&quot;ON&quot;` for 8.0.
+For example, when restoring MySQL as a replica, you need to set <code>skip_slave_start=&quot;ON&quot;</code> for 5.7
+or <code>skip_replica_start=&quot;ON&quot;</code> for 8.0.
 Allowing environment variables to be passed in makes it more convenient to control these behavioral differences
 during the restore process.
 </p>
@@ -6362,7 +6362,7 @@ Reconfigure defines the parameters for updating a Component&rsquo;s configuratio
 
 <td>
 
-`ComponentOps`<br/>
+<code>ComponentOps</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ComponentOps">
 ComponentOps
@@ -6375,7 +6375,7 @@ ComponentOps
 
 <p>
 
-(Members of `ComponentOps` are embedded into this type.)
+(Members of <code>ComponentOps</code> are embedded into this type.)
 
 </p>
 
@@ -6390,7 +6390,7 @@ Specifies the name of the Component.
 
 <td>
 
-`parameters`<br/>
+<code>parameters</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ParameterPair">
 []ParameterPair
@@ -6439,7 +6439,7 @@ RefNamespaceName
 
 <td>
 
-`name`<br/>
+<code>name</code><br/>
 <em>
 string
 </em>
@@ -6460,7 +6460,7 @@ Refers to the specific name of the resource.
 
 <td>
 
-`namespace`<br/>
+<code>namespace</code><br/>
 <em>
 string
 </em>
@@ -6509,7 +6509,7 @@ ReplicaChanger defines the parameters for changing the number of replicas.
 
 <td>
 
-`replicaChanges`<br/>
+<code>replicaChanges</code><br/>
 <em>
 int32
 </em>
@@ -6529,7 +6529,7 @@ Specifies the replica changes for the component.
 
 <td>
 
-`instances`<br/>
+<code>instances</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.InstanceReplicasTemplate">
 []InstanceReplicasTemplate
@@ -6577,7 +6577,7 @@ Restore
 
 <td>
 
-`backupName`<br/>
+<code>backupName</code><br/>
 <em>
 string
 </em>
@@ -6597,7 +6597,7 @@ Specifies the name of the Backup custom resource.
 
 <td>
 
-`backupNamespace`<br/>
+<code>backupNamespace</code><br/>
 <em>
 string
 </em>
@@ -6618,7 +6618,7 @@ Specifies the namespace of the backup custom resource. If not specified, the nam
 
 <td>
 
-`restorePointInTime`<br/>
+<code>restorePointInTime</code><br/>
 <em>
 string
 </em>
@@ -6647,7 +6647,7 @@ A human-readable date-time format, e.g. &ldquo;Jul 25,2023 18:52:53 UTC+0800&rdq
 
 <td>
 
-`env`<br/>
+<code>env</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#envvar-v1-core">
 []Kubernetes core/v1.EnvVar
@@ -6670,7 +6670,7 @@ Specifies a list of environment variables to be set in the container.
 
 <td>
 
-`volumeRestorePolicy`<br/>
+<code>volumeRestorePolicy</code><br/>
 <em>
 string
 </em>
@@ -6700,7 +6700,7 @@ Support values:
 
 <td>
 
-`deferPostReadyUntilClusterRunning`<br/>
+<code>deferPostReadyUntilClusterRunning</code><br/>
 <em>
 bool
 </em>
@@ -6730,7 +6730,7 @@ This setting is useful for coordinating PostReady operations across the Cluster 
 
 <td>
 
-`parameters`<br/>
+<code>parameters</code><br/>
 <em>
 []github.com/apecloud/kubeblocks/apis/dataprotection/v1alpha1.ParameterPair
 </em>
@@ -6742,7 +6742,7 @@ This setting is useful for coordinating PostReady operations across the Cluster 
 
 <p>
 Specifies a list of name-value pairs representing parameters and their corresponding values.
-Parameters match the schema specified in the `actionset.spec.parametersSchema`
+Parameters match the schema specified in the <code>actionset.spec.parametersSchema</code>
 </p>
 
 </td>
@@ -6776,7 +6776,7 @@ Rule
 
 <td>
 
-`expression`<br/>
+<code>expression</code><br/>
 <em>
 string
 </em>
@@ -6787,18 +6787,18 @@ string
 
 <p>
 Specifies a Go template expression that determines how the operation can be executed.
-The return value must be either `true` or `false`.
+The return value must be either <code>true</code> or <code>false</code>.
 Available built-in objects that can be referenced in the expression include:
 </p>
 <ul>
 <li>
-`params`: Input parameters.
+<code>params</code>: Input parameters.
 </li>
 <li>
-`cluster`: The referenced Cluster object.
+<code>cluster</code>: The referenced Cluster object.
 </li>
 <li>
-`component`: The referenced Component object.
+<code>component</code>: The referenced Component object.
 </li>
 </ul>
 
@@ -6809,7 +6809,7 @@ Available built-in objects that can be referenced in the expression include:
 
 <td>
 
-`message`<br/>
+<code>message</code><br/>
 <em>
 string
 </em>
@@ -6819,7 +6819,7 @@ string
 
 
 <p>
-Specifies the error or status message reported if the `expression` does not evaluate to `true`.
+Specifies the error or status message reported if the <code>expression</code> does not evaluate to <code>true</code>.
 </p>
 
 </td>
@@ -6857,7 +6857,7 @@ ScaleIn defines the configuration for a scale-in operation.
 
 <td>
 
-`ReplicaChanger`<br/>
+<code>ReplicaChanger</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ReplicaChanger">
 ReplicaChanger
@@ -6870,7 +6870,7 @@ ReplicaChanger
 
 <p>
 
-(Members of `ReplicaChanger` are embedded into this type.)
+(Members of <code>ReplicaChanger</code> are embedded into this type.)
 
 </p>
 
@@ -6885,7 +6885,7 @@ Modifies the replicas of the component and instance templates.
 
 <td>
 
-`onlineInstancesToOffline`<br/>
+<code>onlineInstancesToOffline</code><br/>
 <em>
 []string
 </em>
@@ -6934,7 +6934,7 @@ ScaleOut defines the configuration for a scale-out operation.
 
 <td>
 
-`ReplicaChanger`<br/>
+<code>ReplicaChanger</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ReplicaChanger">
 ReplicaChanger
@@ -6947,7 +6947,7 @@ ReplicaChanger
 
 <p>
 
-(Members of `ReplicaChanger` are embedded into this type.)
+(Members of <code>ReplicaChanger</code> are embedded into this type.)
 
 </p>
 
@@ -6962,7 +6962,7 @@ Modifies the replicas of the component and instance templates.
 
 <td>
 
-`newInstances`<br/>
+<code>newInstances</code><br/>
 <em>
 []github.com/apecloud/kubeblocks/apis/apps/v1.InstanceTemplate
 </em>
@@ -6984,7 +6984,7 @@ New instances are created based on the provided instance templates.
 
 <td>
 
-`offlineInstancesToOnline`<br/>
+<code>offlineInstancesToOnline</code><br/>
 <em>
 []string
 </em>
@@ -7029,7 +7029,7 @@ SpecificOpsRequest
 
 <td>
 
-`upgrade`<br/>
+<code>upgrade</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.Upgrade">
 Upgrade
@@ -7056,7 +7056,7 @@ Note: This field is immutable once set.
 
 <td>
 
-`horizontalScaling`<br/>
+<code>horizontalScaling</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.HorizontalScaling">
 []HorizontalScaling
@@ -7081,7 +7081,7 @@ and take offline/online the specified instances.
 
 <td>
 
-`volumeExpansion`<br/>
+<code>volumeExpansion</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.VolumeExpansion">
 []VolumeExpansion
@@ -7105,7 +7105,7 @@ that requires storage expansion.
 
 <td>
 
-`start`<br/>
+<code>start</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ComponentOps">
 []ComponentOps
@@ -7128,7 +7128,7 @@ Lists Components to be started. If empty, all components will be started.
 
 <td>
 
-`stop`<br/>
+<code>stop</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ComponentOps">
 []ComponentOps
@@ -7151,7 +7151,7 @@ Lists Components to be stopped. If empty, all components will be stopped.
 
 <td>
 
-`restart`<br/>
+<code>restart</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ComponentOps">
 []ComponentOps
@@ -7174,7 +7174,7 @@ Lists Components to be restarted.
 
 <td>
 
-`switchover`<br/>
+<code>switchover</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.Switchover">
 []Switchover
@@ -7197,7 +7197,7 @@ Lists Switchover objects, each specifying a Component to perform the switchover 
 
 <td>
 
-`verticalScaling`<br/>
+<code>verticalScaling</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.VerticalScaling">
 []VerticalScaling
@@ -7220,7 +7220,7 @@ Lists VerticalScaling objects, each specifying a component and its desired compu
 
 <td>
 
-`reconfigures`<br/>
+<code>reconfigures</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.Reconfigure">
 []Reconfigure
@@ -7243,7 +7243,7 @@ Lists Reconfigure objects, each specifying a Component and its configuration upd
 
 <td>
 
-`expose`<br/>
+<code>expose</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.Expose">
 []Expose
@@ -7266,7 +7266,7 @@ Lists Expose objects, each specifying a Component and its services to be exposed
 
 <td>
 
-`backup`<br/>
+<code>backup</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.Backup">
 Backup
@@ -7289,7 +7289,7 @@ Specifies the parameters to back up a Cluster.
 
 <td>
 
-`restore`<br/>
+<code>restore</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.Restore">
 Restore
@@ -7313,7 +7313,7 @@ Note that this restore operation will roll back cluster services.
 
 <td>
 
-`rebuildFrom`<br/>
+<code>rebuildFrom</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.RebuildInstance">
 []RebuildInstance
@@ -7339,7 +7339,7 @@ Hence, rebuilding instances is often also referred to as &ldquo;standby reconstr
 
 <td>
 
-`custom`<br/>
+<code>custom</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.CustomOps">
 CustomOps
@@ -7386,7 +7386,7 @@ Switchover
 
 <td>
 
-`componentName`<br/>
+<code>componentName</code><br/>
 <em>
 string
 </em>
@@ -7407,7 +7407,7 @@ Specifies the name of the Component as defined in the cluster.spec.
 
 <td>
 
-`componentObjectName`<br/>
+<code>componentObjectName</code><br/>
 <em>
 string
 </em>
@@ -7428,7 +7428,7 @@ Specifies the name of the Component object.
 
 <td>
 
-`instanceName`<br/>
+<code>instanceName</code><br/>
 <em>
 string
 </em>
@@ -7449,7 +7449,7 @@ in a consensus system.
 
 <td>
 
-`candidateName`<br/>
+<code>candidateName</code><br/>
 <em>
 string
 </em>
@@ -7496,7 +7496,7 @@ TypedObjectRef
 
 <td>
 
-`apiGroup`<br/>
+<code>apiGroup</code><br/>
 <em>
 string
 </em>
@@ -7518,7 +7518,7 @@ For all third-party types, this is mandatory.
 
 <td>
 
-`kind`<br/>
+<code>kind</code><br/>
 <em>
 string
 </em>
@@ -7538,7 +7538,7 @@ Specifies the type of resource being referenced.
 
 <td>
 
-`name`<br/>
+<code>name</code><br/>
 <em>
 string
 </em>
@@ -7588,7 +7588,7 @@ updatedParameters:
 
 <td>
 
-`addedKeys`<br/>
+<code>addedKeys</code><br/>
 <em>
 map[string]string
 </em>
@@ -7609,7 +7609,7 @@ Maps newly added configuration files to their content.
 
 <td>
 
-`deletedKeys`<br/>
+<code>deletedKeys</code><br/>
 <em>
 map[string]string
 </em>
@@ -7630,7 +7630,7 @@ Lists the name of configuration files that have been deleted.
 
 <td>
 
-`updatedKeys`<br/>
+<code>updatedKeys</code><br/>
 <em>
 map[string]string
 </em>
@@ -7679,7 +7679,7 @@ Upgrade defines the parameters for an upgrade operation.
 
 <td>
 
-`components`<br/>
+<code>components</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.UpgradeComponent">
 []UpgradeComponent
@@ -7731,7 +7731,7 @@ UpgradeComponent
 
 <td>
 
-`ComponentOps`<br/>
+<code>ComponentOps</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ComponentOps">
 ComponentOps
@@ -7744,7 +7744,7 @@ ComponentOps
 
 <p>
 
-(Members of `ComponentOps` are embedded into this type.)
+(Members of <code>ComponentOps</code> are embedded into this type.)
 
 </p>
 
@@ -7759,7 +7759,7 @@ Specifies the name of the Component.
 
 <td>
 
-`componentDefinitionName`<br/>
+<code>componentDefinitionName</code><br/>
 <em>
 string
 </em>
@@ -7780,7 +7780,7 @@ Specifies the name of the ComponentDefinition, only exact matches are supported.
 
 <td>
 
-`serviceVersion`<br/>
+<code>serviceVersion</code><br/>
 <em>
 string
 </em>
@@ -7833,7 +7833,7 @@ It defines the parameters required for the operation.
 
 <td>
 
-`ComponentOps`<br/>
+<code>ComponentOps</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ComponentOps">
 ComponentOps
@@ -7846,7 +7846,7 @@ ComponentOps
 
 <p>
 
-(Members of `ComponentOps` are embedded into this type.)
+(Members of <code>ComponentOps</code> are embedded into this type.)
 
 </p>
 
@@ -7861,7 +7861,7 @@ Specifies the name of the Component.
 
 <td>
 
-`ResourceRequirements`<br/>
+<code>ResourceRequirements</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core">
 Kubernetes core/v1.ResourceRequirements
@@ -7874,7 +7874,7 @@ Kubernetes core/v1.ResourceRequirements
 
 <p>
 
-(Members of `ResourceRequirements` are embedded into this type.)
+(Members of <code>ResourceRequirements</code> are embedded into this type.)
 
 </p>
 
@@ -7889,7 +7889,7 @@ Defines the desired compute resources of the Component&rsquo;s instances.
 
 <td>
 
-`instances`<br/>
+<code>instances</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.InstanceResourceTemplate">
 []InstanceResourceTemplate
@@ -7940,7 +7940,7 @@ VolumeExpansion encapsulates the parameters required for a volume expansion oper
 
 <td>
 
-`ComponentOps`<br/>
+<code>ComponentOps</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.ComponentOps">
 ComponentOps
@@ -7953,7 +7953,7 @@ ComponentOps
 
 <p>
 
-(Members of `ComponentOps` are embedded into this type.)
+(Members of <code>ComponentOps</code> are embedded into this type.)
 
 </p>
 
@@ -7968,7 +7968,7 @@ Specifies the name of the Component.
 
 <td>
 
-`volumeClaimTemplates`<br/>
+<code>volumeClaimTemplates</code><br/>
 <em>
 <a href="#operations.kubeblocks.io/v1alpha1.OpsRequestVolumeClaimTemplate">
 []OpsRequestVolumeClaimTemplate
@@ -7993,6 +7993,6 @@ that are used to expand the storage and the desired storage size for each one.
 
 <p>
 <em>
-Generated with `gen-crd-api-reference-docs`
+Generated with <code>gen-crd-api-reference-docs</code>
 </em>
 </p>
