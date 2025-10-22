@@ -24,11 +24,11 @@ files
         /<pre><code([^>]*)>/g,
         (match, attr) => '<pre>\n<code' + attr + '>\n',
       )
-      .replace(/<\/code><\/pre>/g, '</code>\n</pre>')
       .replace(
-        /<code>(.*?)\s*<\/code>/g,
-        (match, content) => '`' + content + '`',
-      )
+         /<code>(.*?)\s*<\/code>/g,
+         (match, content) => '<code>' + content.replace(/\*/g, '&ast;') + '</code>',
+       )
+      .replace(/<\/code><\/pre>/g, '</code>\n</pre>')
       .replace(/<p>/g, '\n<p>\n')
       .replace(/<\/p>/g, '\n</p>')
       .replace(/<li>/g, '<li>\n')

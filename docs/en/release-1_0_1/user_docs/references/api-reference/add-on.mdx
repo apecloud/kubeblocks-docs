@@ -50,12 +50,12 @@ Addon is the Schema for the add-ons API.
 
 <td>
 
-`apiVersion`<br/>
+<code>apiVersion</code><br/>
 string
 </td>
 <td>
 
-`extensions.kubeblocks.io/v1alpha1`
+<code>extensions.kubeblocks.io/v1alpha1</code>
 
 </td>
 
@@ -64,12 +64,12 @@ string
 
 <td>
 
-`kind`<br/>
+<code>kind</code><br/>
 string
 
 </td>
 <td>
-`Addon`
+<code>Addon</code>
 </td>
 
 </tr>
@@ -77,7 +77,7 @@ string
 
 <td>
 
-`metadata`<br/>
+<code>metadata</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
@@ -88,7 +88,7 @@ Kubernetes meta/v1.ObjectMeta
 <td>
 
 Refer to the Kubernetes API documentation for the fields of the
-`metadata` field.
+<code>metadata</code> field.
 
 </td>
 
@@ -97,7 +97,7 @@ Refer to the Kubernetes API documentation for the fields of the
 
 <td>
 
-`spec`<br/>
+<code>spec</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.AddonSpec">
 AddonSpec
@@ -115,7 +115,7 @@ AddonSpec
 
 <td>
 
-`description`<br/>
+<code>description</code><br/>
 <em>
 string
 </em>
@@ -136,7 +136,7 @@ Specifies the description of the add-on.
 
 <td>
 
-`type`<br/>
+<code>type</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.AddonType">
 AddonType
@@ -158,7 +158,7 @@ Defines the type of the add-on. The only valid value is &lsquo;helm&rsquo;.
 
 <td>
 
-`version`<br/>
+<code>version</code><br/>
 <em>
 string
 </em>
@@ -179,7 +179,7 @@ Indicates the version of the add-on.
 
 <td>
 
-`provider`<br/>
+<code>provider</code><br/>
 <em>
 string
 </em>
@@ -200,7 +200,7 @@ Specifies the provider of the add-on.
 
 <td>
 
-`helm`<br/>
+<code>helm</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.HelmTypeInstallSpec">
 HelmTypeInstallSpec
@@ -224,7 +224,7 @@ when the type is set to &lsquo;helm&rsquo;.
 
 <td>
 
-`defaultInstallValues`<br/>
+<code>defaultInstallValues</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.AddonDefaultInstallSpecItem">
 []AddonDefaultInstallSpecItem
@@ -246,7 +246,7 @@ Specifies the default installation parameters.
 
 <td>
 
-`install`<br/>
+<code>install</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.AddonInstallSpec">
 AddonInstallSpec
@@ -269,7 +269,7 @@ Defines the installation parameters.
 
 <td>
 
-`installable`<br/>
+<code>installable</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.InstallableSpec">
 InstallableSpec
@@ -293,7 +293,7 @@ the selector and auto-install settings.
 
 <td>
 
-`cliPlugins`<br/>
+<code>cliPlugins</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.CliPlugin">
 []CliPlugin
@@ -322,7 +322,7 @@ Specifies the CLI plugin installation specifications.
 
 <td>
 
-`status`<br/>
+<code>status</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.AddonStatus">
 AddonStatus
@@ -364,7 +364,7 @@ AddonDefaultInstallSpecItem
 
 <td>
 
-`AddonInstallSpec`<br/>
+<code>AddonInstallSpec</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.AddonInstallSpec">
 AddonInstallSpec
@@ -377,7 +377,7 @@ AddonInstallSpec
 
 <p>
 
-(Members of `AddonInstallSpec` are embedded into this type.)
+(Members of <code>AddonInstallSpec</code> are embedded into this type.)
 
 </p>
 
@@ -388,7 +388,7 @@ AddonInstallSpec
 
 <td>
 
-`selectors`<br/>
+<code>selectors</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.SelectorRequirement">
 []SelectorRequirement
@@ -436,7 +436,7 @@ AddonInstallExtraItem
 
 <td>
 
-`AddonInstallSpecItem`<br/>
+<code>AddonInstallSpecItem</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.AddonInstallSpecItem">
 AddonInstallSpecItem
@@ -449,7 +449,7 @@ AddonInstallSpecItem
 
 <p>
 
-(Members of `AddonInstallSpecItem` are embedded into this type.)
+(Members of <code>AddonInstallSpecItem</code> are embedded into this type.)
 
 </p>
 
@@ -460,7 +460,7 @@ AddonInstallSpecItem
 
 <td>
 
-`name`<br/>
+<code>name</code><br/>
 <em>
 string
 </em>
@@ -504,7 +504,7 @@ AddonInstallSpec
 
 <td>
 
-`AddonInstallSpecItem`<br/>
+<code>AddonInstallSpecItem</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.AddonInstallSpecItem">
 AddonInstallSpecItem
@@ -517,7 +517,7 @@ AddonInstallSpecItem
 
 <p>
 
-(Members of `AddonInstallSpecItem` are embedded into this type.)
+(Members of <code>AddonInstallSpecItem</code> are embedded into this type.)
 
 </p>
 
@@ -528,7 +528,7 @@ AddonInstallSpecItem
 
 <td>
 
-`enabled`<br/>
+<code>enabled</code><br/>
 <em>
 bool
 </em>
@@ -549,7 +549,7 @@ Can be set to true if there are no specific installation attributes to be set.
 
 <td>
 
-`extras`<br/>
+<code>extras</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.AddonInstallExtraItem">
 []AddonInstallExtraItem
@@ -596,7 +596,7 @@ AddonInstallSpecItem
 
 <td>
 
-`replicas`<br/>
+<code>replicas</code><br/>
 <em>
 int32
 </em>
@@ -617,7 +617,7 @@ Specifies the number of replicas.
 
 <td>
 
-`persistentVolumeEnabled`<br/>
+<code>persistentVolumeEnabled</code><br/>
 <em>
 bool
 </em>
@@ -638,7 +638,7 @@ Indicates whether the Persistent Volume is enabled or not.
 
 <td>
 
-`storageClass`<br/>
+<code>storageClass</code><br/>
 <em>
 string
 </em>
@@ -659,7 +659,7 @@ Specifies the name of the storage class.
 
 <td>
 
-`tolerations`<br/>
+<code>tolerations</code><br/>
 <em>
 string
 </em>
@@ -680,7 +680,7 @@ Specifies the tolerations in a JSON array string format.
 
 <td>
 
-`resources`<br/>
+<code>resources</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.ResourceRequirements">
 ResourceRequirements
@@ -703,7 +703,7 @@ Specifies the resource requirements.
 </table>
 <h3 id="extensions.kubeblocks.io/v1alpha1.AddonPhase">
 AddonPhase
-(`string` alias)
+(<code>string</code> alias)
 </h3>
 
 <p>
@@ -785,7 +785,7 @@ AddonPhase defines addon phases.
 </table>
 <h3 id="extensions.kubeblocks.io/v1alpha1.AddonSelectorKey">
 AddonSelectorKey
-(`string` alias)
+(<code>string</code> alias)
 </h3>
 
 <p>
@@ -873,7 +873,7 @@ AddonSpec defines the desired state of an add-on.
 
 <td>
 
-`description`<br/>
+<code>description</code><br/>
 <em>
 string
 </em>
@@ -894,7 +894,7 @@ Specifies the description of the add-on.
 
 <td>
 
-`type`<br/>
+<code>type</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.AddonType">
 AddonType
@@ -916,7 +916,7 @@ Defines the type of the add-on. The only valid value is &lsquo;helm&rsquo;.
 
 <td>
 
-`version`<br/>
+<code>version</code><br/>
 <em>
 string
 </em>
@@ -937,7 +937,7 @@ Indicates the version of the add-on.
 
 <td>
 
-`provider`<br/>
+<code>provider</code><br/>
 <em>
 string
 </em>
@@ -958,7 +958,7 @@ Specifies the provider of the add-on.
 
 <td>
 
-`helm`<br/>
+<code>helm</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.HelmTypeInstallSpec">
 HelmTypeInstallSpec
@@ -982,7 +982,7 @@ when the type is set to &lsquo;helm&rsquo;.
 
 <td>
 
-`defaultInstallValues`<br/>
+<code>defaultInstallValues</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.AddonDefaultInstallSpecItem">
 []AddonDefaultInstallSpecItem
@@ -1004,7 +1004,7 @@ Specifies the default installation parameters.
 
 <td>
 
-`install`<br/>
+<code>install</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.AddonInstallSpec">
 AddonInstallSpec
@@ -1027,7 +1027,7 @@ Defines the installation parameters.
 
 <td>
 
-`installable`<br/>
+<code>installable</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.InstallableSpec">
 InstallableSpec
@@ -1051,7 +1051,7 @@ the selector and auto-install settings.
 
 <td>
 
-`cliPlugins`<br/>
+<code>cliPlugins</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.CliPlugin">
 []CliPlugin
@@ -1102,7 +1102,7 @@ AddonStatus defines the observed state of an add-on.
 
 <td>
 
-`phase`<br/>
+<code>phase</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.AddonPhase">
 AddonPhase
@@ -1115,7 +1115,7 @@ AddonPhase
 
 <p>
 Defines the current installation phase of the add-on. It can take one of
-the following values: `Disabled`, `Enabled`, `Failed`, `Enabling`, `Disabling`.
+the following values: <code>Disabled</code>, <code>Enabled</code>, <code>Failed</code>, <code>Enabling</code>, <code>Disabling</code>.
 </p>
 
 </td>
@@ -1125,7 +1125,7 @@ the following values: `Disabled`, `Enabled`, `Failed`, `Enabling`, `Disabling`.
 
 <td>
 
-`conditions`<br/>
+<code>conditions</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#condition-v1-meta">
 []Kubernetes meta/v1.Condition
@@ -1148,7 +1148,7 @@ Provides a detailed description of the current state of add-on API installation.
 
 <td>
 
-`observedGeneration`<br/>
+<code>observedGeneration</code><br/>
 <em>
 int64
 </em>
@@ -1170,7 +1170,7 @@ to the add-on&rsquo;s generation, which is updated on mutation by the API Server
 </table>
 <h3 id="extensions.kubeblocks.io/v1alpha1.AddonType">
 AddonType
-(`string` alias)
+(<code>string</code> alias)
 </h3>
 
 <p>
@@ -1232,7 +1232,7 @@ CliPlugin
 
 <td>
 
-`name`<br/>
+<code>name</code><br/>
 <em>
 string
 </em>
@@ -1252,7 +1252,7 @@ Specifies the name of the plugin.
 
 <td>
 
-`indexRepository`<br/>
+<code>indexRepository</code><br/>
 <em>
 string
 </em>
@@ -1272,7 +1272,7 @@ Defines the index repository of the plugin.
 
 <td>
 
-`description`<br/>
+<code>description</code><br/>
 <em>
 string
 </em>
@@ -1317,7 +1317,7 @@ DataObjectKeySelector
 
 <td>
 
-`name`<br/>
+<code>name</code><br/>
 <em>
 string
 </em>
@@ -1337,7 +1337,7 @@ Defines the name of the object being referred to.
 
 <td>
 
-`key`<br/>
+<code>key</code><br/>
 <em>
 string
 </em>
@@ -1357,7 +1357,7 @@ Specifies the key to be selected.
 </table>
 <h3 id="extensions.kubeblocks.io/v1alpha1.HelmInstallOptions">
 HelmInstallOptions
-(`map[string]string` alias)
+(<code>map[string]string</code> alias)
 </h3>
 
 <p>
@@ -1393,7 +1393,7 @@ HelmInstallValues
 
 <td>
 
-`urls`<br/>
+<code>urls</code><br/>
 <em>
 []string
 </em>
@@ -1414,7 +1414,7 @@ Specifies the URL location of the values file.
 
 <td>
 
-`configMapRefs`<br/>
+<code>configMapRefs</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.DataObjectKeySelector">
 []DataObjectKeySelector
@@ -1439,7 +1439,7 @@ extension to specify a content type.
 
 <td>
 
-`secretRefs`<br/>
+<code>secretRefs</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.DataObjectKeySelector">
 []DataObjectKeySelector
@@ -1464,7 +1464,7 @@ extension to specify a content type.
 
 <td>
 
-`setValues`<br/>
+<code>setValues</code><br/>
 <em>
 []string
 </em>
@@ -1485,7 +1485,7 @@ Values set during Helm installation. Multiple or separate values can be specifie
 
 <td>
 
-`setJSONValues`<br/>
+<code>setJSONValues</code><br/>
 <em>
 []string
 </em>
@@ -1530,7 +1530,7 @@ HelmJSONValueMapType
 
 <td>
 
-`tolerations`<br/>
+<code>tolerations</code><br/>
 <em>
 string
 </em>
@@ -1579,7 +1579,7 @@ HelmTypeInstallSpec defines the Helm installation spec.
 
 <td>
 
-`chartLocationURL`<br/>
+<code>chartLocationURL</code><br/>
 <em>
 string
 </em>
@@ -1599,7 +1599,7 @@ Specifies the URL location of the Helm Chart.
 
 <td>
 
-`installOptions`<br/>
+<code>installOptions</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.HelmInstallOptions">
 HelmInstallOptions
@@ -1622,7 +1622,7 @@ Defines the options for Helm release installation.
 
 <td>
 
-`installValues`<br/>
+<code>installValues</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.HelmInstallValues">
 HelmInstallValues
@@ -1645,7 +1645,7 @@ Defines the set values for Helm release installation.
 
 <td>
 
-`valuesMapping`<br/>
+<code>valuesMapping</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.HelmValuesMapping">
 HelmValuesMapping
@@ -1668,7 +1668,7 @@ Defines the mapping of add-on normalized resources parameters to Helm values&rsq
 
 <td>
 
-`chartsImage`<br/>
+<code>chartsImage</code><br/>
 <em>
 string
 </em>
@@ -1689,7 +1689,7 @@ Defines the image of Helm charts.
 
 <td>
 
-`chartsPathInImage`<br/>
+<code>chartsPathInImage</code><br/>
 <em>
 string
 </em>
@@ -1735,7 +1735,7 @@ HelmValueMapType
 
 <td>
 
-`replicaCount`<br/>
+<code>replicaCount</code><br/>
 <em>
 string
 </em>
@@ -1756,7 +1756,7 @@ Defines the key for setting the replica count in the Helm values map.
 
 <td>
 
-`persistentVolumeEnabled`<br/>
+<code>persistentVolumeEnabled</code><br/>
 <em>
 string
 </em>
@@ -1777,7 +1777,7 @@ Indicates whether the persistent volume is enabled in the Helm values map.
 
 <td>
 
-`storageClass`<br/>
+<code>storageClass</code><br/>
 <em>
 string
 </em>
@@ -1822,7 +1822,7 @@ HelmValuesMapping
 
 <td>
 
-`HelmValuesMappingItem`<br/>
+<code>HelmValuesMappingItem</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.HelmValuesMappingItem">
 HelmValuesMappingItem
@@ -1835,7 +1835,7 @@ HelmValuesMappingItem
 
 <p>
 
-(Members of `HelmValuesMappingItem` are embedded into this type.)
+(Members of <code>HelmValuesMappingItem</code> are embedded into this type.)
 
 </p>
 
@@ -1846,7 +1846,7 @@ HelmValuesMappingItem
 
 <td>
 
-`extras`<br/>
+<code>extras</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.HelmValuesMappingExtraItem">
 []HelmValuesMappingExtraItem
@@ -1893,7 +1893,7 @@ HelmValuesMappingExtraItem
 
 <td>
 
-`HelmValuesMappingItem`<br/>
+<code>HelmValuesMappingItem</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.HelmValuesMappingItem">
 HelmValuesMappingItem
@@ -1906,7 +1906,7 @@ HelmValuesMappingItem
 
 <p>
 
-(Members of `HelmValuesMappingItem` are embedded into this type.)
+(Members of <code>HelmValuesMappingItem</code> are embedded into this type.)
 
 </p>
 
@@ -1917,7 +1917,7 @@ HelmValuesMappingItem
 
 <td>
 
-`name`<br/>
+<code>name</code><br/>
 <em>
 string
 </em>
@@ -1961,7 +1961,7 @@ HelmValuesMappingItem
 
 <td>
 
-`valueMap`<br/>
+<code>valueMap</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.HelmValueMapType">
 HelmValueMapType
@@ -1974,19 +1974,19 @@ HelmValueMapType
 <em>(Optional)</em>
 
 <p>
-Defines the &ldquo;key&rdquo; mapping values. Valid keys include `replicaCount`,
-`persistentVolumeEnabled`, and `storageClass`.
+Defines the &ldquo;key&rdquo; mapping values. Valid keys include <code>replicaCount</code>,
+<code>persistentVolumeEnabled</code>, and <code>storageClass</code>.
 Enum values explained:
 </p>
 <ul>
 <li>
-`replicaCount` sets the replicaCount value mapping key.
+<code>replicaCount</code> sets the replicaCount value mapping key.
 </li>
 <li>
-`persistentVolumeEnabled` sets the persistent volume enabled mapping key.
+<code>persistentVolumeEnabled</code> sets the persistent volume enabled mapping key.
 </li>
 <li>
-`storageClass` sets the storageClass mapping key.
+<code>storageClass</code> sets the storageClass mapping key.
 </li>
 </ul>
 
@@ -1997,7 +1997,7 @@ Enum values explained:
 
 <td>
 
-`jsonMap`<br/>
+<code>jsonMap</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.HelmJSONValueMapType">
 HelmJSONValueMapType
@@ -2015,7 +2015,7 @@ Enum values explained:
 </p>
 <ul>
 <li>
-`tolerations` sets the toleration mapping key.
+<code>tolerations</code> sets the toleration mapping key.
 </li>
 </ul>
 
@@ -2026,7 +2026,7 @@ Enum values explained:
 
 <td>
 
-`resources`<br/>
+<code>resources</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.ResourceMappingItem">
 ResourceMappingItem
@@ -2073,7 +2073,7 @@ InstallableSpec
 
 <td>
 
-`selectors`<br/>
+<code>selectors</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.SelectorRequirement">
 []SelectorRequirement
@@ -2097,7 +2097,7 @@ they must all evaluate to true for the add-on to be installed.
 
 <td>
 
-`autoInstall`<br/>
+<code>autoInstall</code><br/>
 <em>
 bool
 </em>
@@ -2117,7 +2117,7 @@ Indicates whether an add-on should be installed automatically.
 </table>
 <h3 id="extensions.kubeblocks.io/v1alpha1.LineSelectorOperator">
 LineSelectorOperator
-(`string` alias)
+(<code>string</code> alias)
 </h3>
 
 <p>
@@ -2212,7 +2212,7 @@ ResourceMappingItem
 
 <td>
 
-`storage`<br/>
+<code>storage</code><br/>
 <em>
 string
 </em>
@@ -2233,7 +2233,7 @@ Specifies the key used for mapping the storage size value.
 
 <td>
 
-`cpu`<br/>
+<code>cpu</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.ResourceReqLimItem">
 ResourceReqLimItem
@@ -2256,7 +2256,7 @@ Specifies the key used for mapping both CPU requests and limits.
 
 <td>
 
-`memory`<br/>
+<code>memory</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.ResourceReqLimItem">
 ResourceReqLimItem
@@ -2303,7 +2303,7 @@ ResourceReqLimItem
 
 <td>
 
-`requests`<br/>
+<code>requests</code><br/>
 <em>
 string
 </em>
@@ -2324,7 +2324,7 @@ Specifies the mapping key for the request value.
 
 <td>
 
-`limits`<br/>
+<code>limits</code><br/>
 <em>
 string
 </em>
@@ -2369,7 +2369,7 @@ ResourceRequirements
 
 <td>
 
-`limits`<br/>
+<code>limits</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcelist-v1-core">
 Kubernetes core/v1.ResourceList
@@ -2393,7 +2393,7 @@ More info: <a href="https://kubernetes.io/docs/concepts/configuration/manage-res
 
 <td>
 
-`requests`<br/>
+<code>requests</code><br/>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcelist-v1-core">
 Kubernetes core/v1.ResourceList
@@ -2443,7 +2443,7 @@ SelectorRequirement
 
 <td>
 
-`key`<br/>
+<code>key</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.AddonSelectorKey">
 AddonSelectorKey
@@ -2459,13 +2459,13 @@ The selector key. Valid values are KubeVersion, KubeGitVersion and KubeProvider.
 </p>
 <ul>
 <li>
-`KubeVersion` the semver expression of Kubernetes versions, i.e., v1.24.
+<code>KubeVersion</code> the semver expression of Kubernetes versions, i.e., v1.24.
 </li>
 <li>
-`KubeGitVersion` may contain distro. info., i.e., v1.24.4+eks.
+<code>KubeGitVersion</code> may contain distro. info., i.e., v1.24.4+eks.
 </li>
 <li>
-`KubeProvider` the Kubernetes provider, i.e., aws, gcp, azure, huaweiCloud, tencentCloud etc.
+<code>KubeProvider</code> the Kubernetes provider, i.e., aws, gcp, azure, huaweiCloud, tencentCloud etc.
 </li>
 </ul>
 
@@ -2476,7 +2476,7 @@ The selector key. Valid values are KubeVersion, KubeGitVersion and KubeProvider.
 
 <td>
 
-`operator`<br/>
+<code>operator</code><br/>
 <em>
 <a href="#extensions.kubeblocks.io/v1alpha1.LineSelectorOperator">
 LineSelectorOperator
@@ -2497,16 +2497,16 @@ Possible enum values:
 </p>
 <ul>
 <li>
-`Contains` line contains a string.
+<code>Contains</code> line contains a string.
 </li>
 <li>
-`DoesNotContain` line does not contain a string.
+<code>DoesNotContain</code> line does not contain a string.
 </li>
 <li>
-`MatchRegex` line contains a match to the regular expression.
+<code>MatchRegex</code> line contains a match to the regular expression.
 </li>
 <li>
-`DoesNotMatchRegex` line does not contain a match to the regular expression.
+<code>DoesNotMatchRegex</code> line does not contain a match to the regular expression.
 </li>
 </ul>
 
@@ -2517,7 +2517,7 @@ Possible enum values:
 
 <td>
 
-`values`<br/>
+<code>values</code><br/>
 <em>
 []string
 </em>
@@ -2540,6 +2540,6 @@ Represents an array of string values. This serves as an &ldquo;OR&rdquo; express
 
 <p>
 <em>
-Generated with `gen-crd-api-reference-docs`
+Generated with <code>gen-crd-api-reference-docs</code>
 </em>
 </p>
