@@ -126,11 +126,12 @@ export const ContactUs = ({
           <DialogContent>
             <Stack spacing={1.5}>
               <Stack spacing={1}>
-                <InputLabel>Username</InputLabel>
+                <InputLabel>First and Last Name</InputLabel>
                 <OutlinedInput
                   type="text"
                   name="username"
                   value={formData?.username}
+                  placeholder='Name'
                   error={!_.isEmpty(errors?.username)}
                   onChange={handleChange}
                 />
@@ -142,6 +143,7 @@ export const ContactUs = ({
                   type="text"
                   name="email"
                   value={formData?.email}
+                  placeholder='me@company.com'
                   error={!_.isEmpty(errors?.email)}
                   onChange={handleChange}
                 />
