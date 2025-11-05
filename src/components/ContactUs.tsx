@@ -131,6 +131,7 @@ export const ContactUs = ({
                   type="text"
                   name="username"
                   value={formData?.username}
+                  placeholder='Name'
                   error={!_.isEmpty(errors?.username)}
                   onChange={handleChange}
                 />
