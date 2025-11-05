@@ -1,5 +1,6 @@
 'use client';
 
+import { ContactUs } from '@/components/ContactUs';
 import SearchModal from '@/components/SearchModal';
 import { SlackIconNoColor } from '@/components/icons';
 import { useI18n } from '@/locales/client';
@@ -16,6 +17,7 @@ import {
   Box,
   Button,
   IconButton,
+  Link,
   Stack,
   TextField,
   Toolbar,
@@ -24,7 +26,6 @@ import {
 } from '@mui/material';
 import useScrollTrigger from '@mui/material/useScrollTrigger';
 import Image from 'next/image';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import DatabasesNav from './nav-databases';
@@ -121,41 +122,47 @@ export const ElevationScrollAppBar = (props: AppBarProps) => {
             >
               {t('navigation.blogs')}
             </Button>
-            <Button
-              component={Link}
+            <ContactUs
               color="inherit"
               size="large"
-              href="https://console.kubeblocks.io"
-              target="_blank"
-              endIcon={<LaunchOutlined />}
+              title="Trial Account Request"
               sx={{
                 paddingInline: 2,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
               }}
+              endIcon={<LaunchOutlined />}
+              extra={
+                <Link target="_blank" href="https://console.kubeblocks.io">
+                  Start Your Free Trial
+                </Link>
+              }
             >
               KubeBlocks Cloud
-            </Button>
+            </ContactUs>
+
             <Box sx={searchBarStyles.container}>
               <TextField
                 size="small"
                 placeholder={mobile ? 'Search...' : 'Search docs...'}
                 variant="outlined"
                 onClick={() => setShowSearch(true)}
-                InputProps={{
-                  startAdornment: (
-                    <SearchIcon sx={searchBarStyles.searchIcon} />
-                  ),
-                  endAdornment: !mobile && (
-                    <Box sx={searchBarStyles.shortcutContainer}>
-                      <Box component="kbd" sx={searchBarStyles.shortcutKey}>
-                        ⌘K
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <SearchIcon sx={searchBarStyles.searchIcon} />
+                    ),
+                    endAdornment: !mobile && (
+                      <Box sx={searchBarStyles.shortcutContainer}>
+                        <Box component="kbd" sx={searchBarStyles.shortcutKey}>
+                          ⌘K
+                        </Box>
                       </Box>
-                    </Box>
-                  ),
-                  readOnly: true,
-                  sx: searchBarStyles.inputRoot,
+                    ),
+                    readOnly: true,
+                    sx: searchBarStyles.inputRoot,
+                  },
                 }}
                 sx={searchBarStyles.textField}
               />

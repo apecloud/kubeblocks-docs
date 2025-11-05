@@ -25,9 +25,10 @@ files
         (match, attr) => '<pre>\n<code' + attr + '>\n',
       )
       .replace(
-         /<code>(.*?)\s*<\/code>/g,
-         (match, content) => '<code>' + content.replace(/\*/g, '&ast;') + '</code>',
-       )
+        /<code>(.*?)\s*<\/code>/g,
+        (match, content) =>
+          '<code>' + content.replace(/\*/g, '&ast;') + '</code>',
+      )
       .replace(/<\/code><\/pre>/g, '</code>\n</pre>')
       .replace(/<p>/g, '\n<p>\n')
       .replace(/<\/p>/g, '\n</p>')
