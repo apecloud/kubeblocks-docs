@@ -80,3 +80,7 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+# env config
+env:
+  FEISHU_WEBHOOK:
