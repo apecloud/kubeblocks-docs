@@ -13,6 +13,7 @@ import { ElevationScrollAppBar } from './ElevationScrollAppBar';
 
 import 'highlight.js/styles/github-dark.css';
 import './global.css';
+import Script from 'next/script';
 
 const geist = Geist({
   subsets: ['latin'],
@@ -37,6 +38,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning className={geist.className}>
       <body>
+        <Script src="/c.js"/>
         <I18nProvider locale={locale}>
           <AppRouterCacheProvider options={{ key: 'css' }}>
             <NextThemeProvider>
