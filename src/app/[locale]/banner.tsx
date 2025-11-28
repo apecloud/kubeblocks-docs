@@ -56,8 +56,8 @@ export default function Banner() {
           <Typography mb={8} sx={{ color: textSecondaryColor, fontSize: 22 }}>
             Stop juggling multiple operators. KubeBlocks provides a single,
             production-grade control plane to run, manage, and scale any
-            database—from MySQL and Postgres to Kafka and MongoDB—with a
-            consistent, unified API.
+            database—from MySQL and PostgreSQL to Kafka and MongoDB—with a
+            unified API.
           </Typography>
 
           <Chip
