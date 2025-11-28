@@ -35,6 +35,7 @@ export default async function HomePage({
         <Features />
         <Contact />
         <BlogsPreview blogs={blogs} />
+        
       </Box>
       <Footer />
     </>
