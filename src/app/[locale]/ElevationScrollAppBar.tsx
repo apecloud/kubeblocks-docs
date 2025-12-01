@@ -139,7 +139,7 @@ export const ElevationScrollAppBar = (props: AppBarProps) => {
                 </Link>
               }
             >
-              KubeBlocks Cloud
+              KubeBlocks Enterprise
             </ContactUs>
 
             <Box sx={searchBarStyles.container}>
