@@ -12,8 +12,8 @@ import { Geist } from 'next/font/google';
 import { ElevationScrollAppBar } from './ElevationScrollAppBar';
 
 import 'highlight.js/styles/github-dark.css';
-import './global.css';
 import Script from 'next/script';
+import './global.css';
 
 const geist = Geist({
   subsets: ['latin'],
@@ -30,7 +30,7 @@ export default async function RootLayout({
   params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ locale: 'en' }>;
+  params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
   setStaticParamsLocale(locale);
@@ -38,8 +38,8 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning className={geist.className}>
       <body>
-        <Script src="/c.js"/>
-        <I18nProvider locale={locale}>
+        <Script src="/c.js" />
+        <I18nProvider locale={locale as 'en'}>
           <AppRouterCacheProvider options={{ key: 'css' }}>
             <NextThemeProvider>
               <MuiThemeProvider>
