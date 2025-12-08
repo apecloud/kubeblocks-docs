@@ -1,6 +1,6 @@
 ---
 title: Configuring a MySQL Cluster with Gradual Rolling Update in KubeBlocks
-description: Learn how to configure and perform gradual rolling updates for MySQL clusters in KubeBlocks using the rollingUpdate strategy to ensure minimal disruption during updates.
+description: Learn how to configure and perform gradual rolling updates for MySQL clusters in KubeBlocks using the rolling update strategy to ensure minimal disruption during updates.
 keywords: [KubeBlocks, MySQL, Rolling Update, Kubernetes, Cluster Management]
 sidebar_position: 5
 sidebar_label: Gradual Rolling Update
@@ -8,7 +8,7 @@ sidebar_label: Gradual Rolling Update
 
 # Configuring a MySQL Cluster with Gradual Rolling Update in KubeBlocks
 
-This guide demonstrates how to configure gradual rolling updates for MySQL clusters in KubeBlocks using the rollingUpdate strategy. Gradual rolling updates allow you to control the number of Pods updated at a time, ensuring minimal disruption during updates.
+This guide demonstrates how to configure gradual rolling updates for MySQL clusters in KubeBlocks using the rolling update strategy. Gradual rolling updates allow you to control the number of Pods updated at a time, ensuring minimal disruption during updates.
 **Key Parameters:**
 - `rollingUpdate.replicas`: Specifies the number of instances to update during each step of the rolling update. The remaining instances stay unaffected.
   - The value can be an absolute number (e.g., 5) or a percentage of desired instances (e.g., 10%).

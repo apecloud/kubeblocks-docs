@@ -7,7 +7,7 @@ authors:
   name: dullboy
   url: https://github.com/nayutah
   image_url: https://avatars.githubusercontent.com/u/111858489?v=4
-tags: [PostgresSQL, Addons, Benchmark, Profiling]
+tags: [PostgreSQL, Addons, Benchmark, Profiling]
 Keywords: PostgreSQL, Kubernetes Operator, KubeBlocks, Performance Tuning, Benchmark, WAL, Checkpoint, IO Contention, TPS, wal_init_zero, full_page_write, Stateful Workloads, pgBouncer, XFS, Database on Kubernetes
 image: /img/blogs/thumbnails/blog-pg.png
 ---
@@ -437,7 +437,7 @@ Now I tried to solve the problem.
 
 Zeroing WAL logs depends on whether WAL log slots are functioning correctly, which is a suboptimal but somewhat efficient approach. Ideally WAL logs should be self-explanatory, not relying on zeroing to ensure the correctness. However, this solution would require modifying the PG kernel, which is not practical. Another approach is to clear WAL logs by the filesystem without the need for explicit PG kernel calls. This solution requires the filesystem to support this feature.
 
-ZFS and XFS happen to have this COW eature. For more details, refer to [this answer on Reddit](https://www.reddit.com/r/bcachefs/comments/fhws6h/the_state_of_linux_cow_file_systems_what_to_choose/?rdt=58971).
+ZFS and XFS happen to have this COW feature. For more details, refer to [this answer on Reddit](https://www.reddit.com/r/bcachefs/comments/fhws6h/the_state_of_linux_cow_file_systems_what_to_choose/?rdt=58971).
 
 Since the EXT4 filesystem used for testing did not have this feature, I switched to the ZFS filesystem.
 

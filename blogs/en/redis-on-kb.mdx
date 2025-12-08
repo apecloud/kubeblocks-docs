@@ -296,7 +296,7 @@ As we can see, all the Pod and NodePort traffic on the communication counterpart
 
 3. The truth has been revealed.
 
-So the reason for the failed meet operation is now quite clear. The secondary-1 pod, without announcing its address, tried to meet primary-1 using the pod IP (10.42.0.237). The meet message was NAT-translated to 10.42.0.1 on the primary-1 pod. Primary-1 then tried to reconnect to secondart-1 using the default bus port 16379 and the source IP address (10.42.0.1) extracted from the message. When trying to connect to 10.42.0.1:16379, since this is not an actual Redis pod, there is no Redis-server process listening on port 16379, so a "connection refused" error was returned.
+So the reason for the failed meet operation is now quite clear. The secondary-1 pod, without announcing its address, tried to meet primary-1 using the pod IP (10.42.0.237). The meet message was NAT-translated to 10.42.0.1 on the primary-1 pod. Primary-1 then tried to reconnect to secondary-1 using the default bus port 16379 and the source IP address (10.42.0.1) extracted from the message. When trying to connect to 10.42.0.1:16379, since this is not an actual Redis pod, there is no Redis-server process listening on port 16379, so a "connection refused" error was returned.
 
 
 ## Problem fixing

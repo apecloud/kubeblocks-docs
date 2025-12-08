@@ -172,7 +172,7 @@ Check if there is a scrape job corresponding to the PodMonitor (the job name is 
 
 Expected State:
 - The State of the target should be UP.
-- The target's labels should include the ones defined in podTargetLabels (e.g., 'app_kubernetes_io_instance').
+- The target's labels should include the ones defined in `podTargetLabels` (e.g., 'app_kubernetes_io_instance').
 
 ### 2. Test Metrics Collection
 Verify metrics are being scraped:
@@ -227,7 +227,7 @@ Import the KubeBlocks Kafka dashboard:
 2. Import dashboard from [Grafana Kafka Dashboard](https://github.com/apecloud/kubeblocks-addons/tree/main/addons/kafka/dashboards)
 
 ![kafka-jmx-monitoring-grafana-dashboard.png](/img/docs/en/kafka-jmx-monitoring-grafana-dashboard.png)
-Figure 1. Kakfa jmx dashboard
+Figure 1. Kafka jmx dashboard
 
 
 ![kafka-monitoring-grafana-dashboard.png](/img/docs/en/kafka-monitoring-grafana-dashboard.png)

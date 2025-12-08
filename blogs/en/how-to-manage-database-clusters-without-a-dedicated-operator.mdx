@@ -25,7 +25,7 @@ Today, I will introduce KubeBlocks and the design concept of it, and Shun will s
 The motivation we started the KubeBlocks project was quite simple: how to manage databases more effectively.
 Our team is a group of people with strong database background and K8s background, including database developers, database administors, and SREs. We deal with hundreds of cloud database issues daily, from database crashes, slow queries, high availability to data migration, resource scheduling, etc.
 
-The interesting part about our team is that we work on different database types, for instance, MySQL, PostgreSQL, Redis, MongoDB, which are widely used open source databases. When we exchange our ideas on how to manage a specific database, we find these databases actually share many things in common. If we can improve the management of one database, can others benefit from it? Besides, databases are in an era of rapid growth, with new data products emerging continuously. These new databaes, to some extent, still inherit those common characteristics.
+The interesting part about our team is that we work on different database types, for instance, MySQL, PostgreSQL, Redis, MongoDB, which are widely used open source databases. When we exchange our ideas on how to manage a specific database, we find these databases actually share many things in common. If we can improve the management of one database, can others benefit from it? Besides, databases are in an era of rapid growth, with new data products emerging continuously. These new databases, to some extent, still inherit those common characteristics.
 
 So the challenge we face is: is it possible to design a unified platform, to manage not only one, but a batch of widely-used databases, or even more, to manage those emerging databases as well? What's more, if there is such a platform, we hope the platform can be deployed on either cloud or on-premises infrastructures.
 
@@ -61,21 +61,21 @@ And other tasks listed here can be left to cloud-native experts. The cloud-nativ
 
 With these ideas in mind, here comes KubeBlocks. KubeBlocks is an open source and cloud neutral project. It was open-sourced last June and has 2k stars to date. KubeBlocks is a database-type agnostic operator, designed to be extensible, flexible, and pluggable.
 
-Its extensiblility comes from its unified APIs. KubeBlocks provides an addon mechanism for integrating database engines, which also is the key to how Chind Mobile Cloud can integrate their in-house and open source databases into KubeBlocks within 2 months. We have about 30 addons so far, most of them are contributed by the community for their own needs.
+Its extensibility comes from its unified APIs. KubeBlocks provides an addon mechanism for integrating database engines, which also is the key to how China Mobile Cloud can integrate their in-house and open source databases into KubeBlocks within 2 months. We have about 30 addons so far, most of them are contributed by the community for their own needs.
 
 It is flexible, which means it has a very flexible cluster topology. Users can customize their own cluster topology and each component comes from the addon market.
 
-It is pluggable with its modular design. Modules such as backup and restore, montoring, and configuration are pluggable. One can choose which module to use tailored to their specific requirements.
+It is pluggable with its modular design. Modules such as backup and restore, monitoring, and configuration are pluggable. One can choose which module to use tailored to their specific requirements.
 
 If you are interested in KubeBlocks, you can visit our GitHub repo, and you will get more technical details and more documentations, and a full list of database addons we have.
 
-All these features befenit from our precise and concise modeling of database, which is pivotal from the perspecitive of databases. We complete the modeling by taking the following three steps.
+All these features benefit from our precise and concise modeling of database, which is pivotal from the perspective of databases. We complete the modeling by taking the following three steps.
 
 Step 1. Build a hierarchical model.
 
-We first model each standalone database system or service as a component, such as a MySQL component to provide MySQL services, and an orchestor for MySQL high availability and replication management. This modeling is quite intuitive.
+We first model each standalone database system or service as a component, such as a MySQL component to provide MySQL services, and an orchestrator for MySQL high availability and replication management. This modeling is quite intuitive.
 
-And a database cluster is, by nature, a collection of components that working together to handle certain database tasks. For example, a cluster with a MySQL component and an orchestor component makes a high-available MySQL Replication cluster. Further more, you can customize this cluster with any preferred proxy component such as HAProxy and ProxySQL.
+And a database cluster is, by nature, a collection of components that working together to handle certain database tasks. For example, a cluster with a MySQL component and an orchestrator component makes a high-available MySQL Replication cluster. Further more, you can customize this cluster with any preferred proxy component such as HAProxy and ProxySQL.
 
 These two layers - individual database components and the overall cluster - provide a straightforward, easy-to-follow structure. But what is so special about databases? It is not only stateful, the more important part is: it has roles.
 
@@ -92,7 +92,7 @@ Step 2. Separate the cluster template API and the cluster API.
 We notice that it is still too complex for a database user, who simply wants to create a cluster.
 Apart from the four layer modeling, we further divide each layer into two parts: one for database experts, and the other part for database users.
 
-Database experts handle the cluster definition for topology, component definition to describe engine-specific behaviors, and component version to describe engine images and ensure compatibilities.
+Database experts handle the cluster definition for topology, component definition to describe engine-specific behaviors, and component version to describe engine images and ensure compatibility.
 Database users only need to know the cluster and components they need, and for each component, they only need to care about resource configurations, such as CPU, memory, volume size, and replicas.
 
 ![Step 2. Separate the cluster template API and the cluster API](/img/blogs/dedicated-operator-3.png)
@@ -101,15 +101,15 @@ Step 3. Introduce the Database Interface.
 
 With more and more databases integrated into KubeBlocks, we find the setup scripts are far from enough to describe engine specific behaviors.
 
-Here we propose a set of database interfaces to manage replicas or component lifecycle, called Lifecycle Actions in KubeBlocks. Without these actions, one can never manage a database well. The details of each action vary from database to database. I category these actions into three groups:
+Here we propose a set of database interfaces to manage replicas or component lifecycle, called Lifecycle Actions in KubeBlocks. Without these actions, one can never manage a database well. The details of each action vary from database to database. I categorize these actions into three groups:
 
 - Role probe and switchover for role management;
 - memberJoin and memberLeave, dataDump and dataLoad for horizontal scaling in and out;
-- Post-provision and pre-termintion operations for component level management.
+- Post-provision and pre-termination operations for component level management.
 
 The most widespread action, so far, is roleProbe. It is triggered periodically to check the role of each replica and reports the results to pod, through events or API calls. So the database service will be routed to the right replica as expected.
 
-With more addons joining our communtity, we will continuously refine these actions, and there are still actions uncoverd, for example reconfiguring and account provisioning.
+With more addons joining our community, we will continuously refine these actions, and there are still actions uncoverd, for example reconfiguring and account provisioning.
 
 ![Lifecycle actions](/img/blogs/dedicated-operator-4.png)
 
@@ -117,7 +117,7 @@ To summarize, KubeBlocks is a database-type agnostic operator. It provides a uni
 
 ![Summary](/img/blogs/dedicated-operator-5.png)
 
-KubeBlocks 1.0 will be released soon in two months, and welcome to join our communtity.
+KubeBlocks 1.0 will be released soon in two months, and welcome to join our community.
 
 ## How China Mobile Cloud uses KubeBlocks
 
@@ -125,7 +125,7 @@ Good afternoon, everyone. This is Shun from China Mobile Cloud. I'm a senior sys
 
 ### Challenges faced by the DBaaS system of China Mobile Cloud
 
-Before we jump in, let me share with you an overview about China Mobile Cloud DBaaS system, which manges all of our cloud databases. The DBaaS system in China Mobile Cloud covers a comprehensive product line, including transactional databases, analytical and search databases, NoSQL databases, and more. Not only do we provide the DB services for some most populuar open source databases and 3rd party databases, we are also developing our in-house DB engines and provide services on top of them. Currently we are serving for more than 35k customers across 9 major industries, such as government, telecom, finance, health care, education, etc.
+Before we jump in, let me share with you an overview about China Mobile Cloud DBaaS system, which manages all of our cloud databases. The DBaaS system in China Mobile Cloud covers a comprehensive product line, including transactional databases, analytical and search databases, NoSQL databases, and more. Not only do we provide the DB services for some most popular open source databases and 3rd party databases, we are also developing our in-house DB engines and provide services on top of them. Currently we are serving for more than 35k customers across 9 major industries, such as government, telecom, finance, health care, education, etc.
 
 And more than 130k database cluster instances are running on our 15 Level-1 regions and 31 Level-2 regions.  Besides database provisioning, we also build a solid eco-system to help our customers manage their databases more efficiently.  We've build so many helpful management tools and systems like data migration, DB management console, and some tools with AIOps capabilities. China Mobile Cloud DBaaS platform runs in a cloud-native way, which means most of our DB instances are running inside the K8s clusters.
 
@@ -154,7 +154,7 @@ The add-ons are simply Helm charts containing CR objects from the KubeBlocks fra
 
 Also, less code means fewer potential bugs and faster integration of new database engines, perfectly aligning with our requirements.
 
-What's more, the KubeBlocks is a generic framework specially designed for database workloads. It effectively covers all the basic management operations for databases on Kubernetes. For example, it covers lifecycle management, backup & restore, configuration management, high availability, etc.
+What's more, the KubeBlocks is a generic framework specially designed for database workloads. It effectively covers all the basic management operations for databases on Kubernetes. For example, it covers lifecycle management, backup and restore, configuration management, high availability, etc.
 
 Additionally, KubeBlocks also includes extensible mechanisms, allowing specific database engine management operations to seamlessly integrate into the overall framework.
 
@@ -164,7 +164,7 @@ Additionally, KubeBlocks also includes extensible mechanisms, allowing specific 
 
 After the thorough research, we decided to give KubeBlocks a try. At that time, we needed to integrate an in-house database engine into our DBaaS system, which we referred to as H-DB. This presented an ideal opportunity to test KubeBlocks for DBaaS system integration.
 
-Let me first give you a brief introduction to our H-DB.  It is a fully in-house developed, cloud-native distributed database engine, separating the computation and storage layer.  Usually, writing a DB operator for such a complex DB system is challenging, not mention to do it in a quick way. However, thanks to the KubeBlocks project, we can achieve that in a low-code way. Here's how we build the whole KubeBlocks addon:
+Let me first give you a brief introduction to our H-DB.  It is a fully in-house developed, cloud-native distributed database engine, separating the computation and storage layer.  Usually, writing a DB operator for such a complex DB system is challenging, not mentioning to do it in a quick way. However, thanks to the KubeBlocks project, we can achieve that in a low-code way. Here's how we build the whole KubeBlocks addon:
 
 - The first step is to design the cluster topology, and build up an addon scaffold. Typically, the initial addon just contains a rough ClusterDefinition scaffold and a very basic ClusterVersion specifying the images for all the component containers. Back to our case, there're two components in our H-DB cluster: the compute nodes and data nodes. So we defined a cluster definition object with these two components, configured the images for each component in the ClusterVersion, and just set a dummy start command in the ClusterDefinitions temporarily. Then we wrote a simple Cluster CR object for testing to ensure all the addons can be installed without problems and that Pods could be started successfully.
 - The next step is to refine the ClusterDefinition, setting the right configuration parameters in the ConfigMap, also writing scripts to bootstrap the cluster. We tweak our configuration and scripts to make the cluster up and running. This is a crucial step, because it means the first workable add-on is done.
