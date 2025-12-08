@@ -3,6 +3,8 @@ ActionSet
 add-on
 addon
 Addon
+Addon
+Addon's
 addons
 Addons
 admin
@@ -18,6 +20,7 @@ apecloud
 ApeCloud
 api
 API
+API's
 apigroup
 apigroups
 apis
@@ -433,6 +436,7 @@ registries
 registry
 Replica
 replicaset
+ReplicaSet
 replicasets
 ReplicationCluster
 repo
@@ -613,4 +617,3 @@ ZooKeeper
 zset
 zst
 zstd
-ReplicaSet
