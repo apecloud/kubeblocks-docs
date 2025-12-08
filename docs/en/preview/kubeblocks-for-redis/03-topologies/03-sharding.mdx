@@ -70,7 +70,7 @@ spec:
 ```
 
 **Key Configuration Details**:
-- `shardings`: Specifies a list of ShardingSpec objects that configure the sharding topology for components of a Cluster.
+- `shardings`: Specifies a list of `ShardingSpec` objects that configure the sharding topology for components of a Cluster.
 - `shards`: Specifies the number of shards to create for the cluster.
 - `serviceType`: Specifies the service type of `redis-advertised` service, which is used to parse the advertised endpoints of the Redis pods.
    By default, the service type is `NodePort`. If you want to expose the service to the outside of the cluster, you can override the service type to `NodePort` or `LoadBalancer` depending on your need.

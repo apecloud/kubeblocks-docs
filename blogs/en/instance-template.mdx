@@ -30,7 +30,7 @@ As these requirements became more common, the **Instance Template** feature was 
 
 An **Instance** serves as the fundamental unit in KubeBlocks, comprising a Pod along with several auxiliary objects. For simplicity, you can think of an **Instance** as a **Pod**, and and for the sake of consistency, we'll continue referring to it as an "**Instance**" from here on.
 
-Starting from v0.9, KubeBlocks introduces the ability to define multiple **instance templates** for a given **Componen**t within a **Cluster**. These instance templates include several fields, such as **Name**, **Replicas**, **Annotations**, **Labels**, **Env**, **Tolerations**, **NodeSelector**. The values defined in these templates will override the corresponding values in the default template (i.e., **PodTemplate** defined in **ClusterDefinition** and **ComponentDefinition**) to generate the final configuration used for rendering the instance.
+Starting from v0.9, KubeBlocks introduces the ability to define multiple **instance templates** for a given **Component** within a **Cluster**. These instance templates include several fields, such as **Name**, **Replicas**, **Annotations**, **Labels**, **Env**, **Tolerations**, **NodeSelector**. The values defined in these templates will override the corresponding values in the default template (i.e., **PodTemplate** defined in **ClusterDefinition** and **ComponentDefinition**) to generate the final configuration used for rendering the instance.
 
 ## How to apply an instance template?
 
@@ -232,7 +232,7 @@ Before v0.9, KubeBlocks supported defining `Resource` values at multiple levels:
 
 Before v0.9, environment variables in KubeBlocks could be set at the default template and Component levels, either directly or indirectly. Additionally, KubeBlocks provided certain system default environment variables through ConfigMaps using the `EnvVarSource` mechanism. These variables were combined to form the final Env list.
 
-Starting with v0.9, instance templates introduced a new way to define environment variabless. The values defined in instance templates will override other Env variables, except for KubeBlocks’ system default environment variables. The override logic follows the same principles as for `Annotations` and `Labels`: if an Env `Name` matches, the `Value` or `ValueFrom` from the instance template takes precedence; if there’s no match, the new Env is added to the list.
+Starting with v0.9, instance templates introduced a new way to define environment variables. The values defined in instance templates will override other Env variables, except for KubeBlocks’ system default environment variables. The override logic follows the same principles as for `Annotations` and `Labels`: if an Env `Name` matches, the `Value` or `ValueFrom` from the instance template takes precedence; if there’s no match, the new Env is added to the list.
 
 ### Volumes
 

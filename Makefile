@@ -46,3 +46,11 @@ BRANCH ?= main
 sync-kbcli-docs: ## Sync kbcli docs, call scripts/sync-kbcli-docs.sh
 	@./scripts/sync-kbcli-docs.sh $(BRANCH)
 	$(YARN) format-md-to-mdx
+
+# spell check
+SPELLCHECK_VERSION ?= 0.54.0
+
+.PHONY: spellcheck
+spellcheck: ## Runs the spellcheck on docs and blogs directories.
+	@echo "Running spellcheck on docs/ and blogs/ directories..."
+	@docker run --rm -v $(PWD):/tmp:Z jonasbn/github-action-spellcheck:$(SPELLCHECK_VERSION) --config .spellcheck.yml

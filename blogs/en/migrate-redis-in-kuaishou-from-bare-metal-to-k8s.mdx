@@ -1,7 +1,7 @@
 ---
 slug: migrate-redis-at-kuaishou-from-bare-metal-to-k8s
 title: Resource Utilization Boost - Large-Scale Redis Migration from Bare Metal to Kubernetes
-description: This is a joint talk delievered by ApeCloud and Kuaishou on KubeCon China 2024. This talk is about migrating large-scale Redis instances at Kuaishou from bare metal to Kubernetes to improve resource utilization.
+description: This is a joint talk delivered by ApeCloud and Kuaishou on KubeCon China 2024. This talk is about migrating large-scale Redis instances at Kuaishou from bare metal to Kubernetes to improve resource utilization.
 date: 2024-09-03
 authors:
   name: Xueqiang Wu & Yuxing Liu
@@ -90,7 +90,7 @@ After discussing the high availability related topics, let's move on to the last
 
 In our use case at Kuaishou, we encountered an extremely challenging scenario where a single Redis cluster can contain nearly 10,000 Pods. That meant a single InstanceSet Custom Resource (CR) would have over 10,000 secondary objects, which causing a huge impact on the Controller reconciliation process.
 
-To address this, we made some parameter tunings and design changes to the InstanceSet Controller.
+To address this, we made some parameter tuning and design changes to the InstanceSet Controller.
 
 First, on the tuning side, **we increased the CPU and memory resources allocated to the InstanceSet Controller pod, so it can cache more objects**. We also increased the rate limiting thresholds between the Controller and API Server, that is the ClientQPS and ClientBurst. We compressed some of the larger fields in the InstanceSet CR to keep it within Kubernetes object size limits. And finally, we changed reconciliation goroutines from a single one to multiple ones.
 

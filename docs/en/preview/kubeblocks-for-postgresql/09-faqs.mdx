@@ -64,7 +64,7 @@ KubeBlocks has ETCD and ZooKeeper Addons in the `kubeblocks-addons` repository. 
 - https://github.com/apecloud/kubeblocks-addons/tree/main/examples/etcd
 - https://github.com/apecloud/kubeblocks-addons/tree/main/examples/zookeeper
 
-You can shell into one of the etcd container to view the etcd data, and view the etcd data with etcdctl.
+You can shell into one of the etcd container to view the etcd data, and view the etcd data with `etcdctl`.
 
 ```bash
 etcdctl get /service --prefix
@@ -106,7 +106,7 @@ spec:
   type: Reconfiguring
 ```
 
-- `log_filename`: Pattern for log filenames (supports strftime specification, default value is 'postgresql-%Y-%m-%d.log')
+- `log_filename`: Pattern for log filenames (supports `strftime` specification, default value is 'postgresql-%Y-%m-%d.log')
 - `log_statement`: Controls which SQL statements are logged (none, ddl, mod, all)
 
 :::note
