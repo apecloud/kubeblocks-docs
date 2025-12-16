@@ -123,8 +123,8 @@ export const ElevationScrollAppBar = (props: AppBarProps) => {
               {t('navigation.blogs')}
             </Button>
             <ContactUs
-              color="inherit"
               size="large"
+              color="inherit"
               title="Trial Account Request"
               sx={{
                 paddingInline: 2,
@@ -133,11 +133,6 @@ export const ElevationScrollAppBar = (props: AppBarProps) => {
                 whiteSpace: 'nowrap',
               }}
               endIcon={<LaunchOutlined />}
-              extra={
-                <Link target="_blank" href="https://console.kubeblocks.io">
-                  Start Your Free Trial
-                </Link>
-              }
             >
               KubeBlocks Enterprise
             </ContactUs>
