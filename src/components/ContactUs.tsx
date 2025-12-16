@@ -25,6 +25,7 @@ type ContactUsProps = {
   company?: string;
   messages?: string;
   url?: string;
+  captcha: string;
 };
 
 type ContactUsResponse = {
@@ -35,6 +36,7 @@ type ContactUsResponse = {
     company?: string[];
     messages?: string[];
     url?: string[];
+    captcha?: string[];
   };
 };
 
@@ -45,12 +47,14 @@ export const ContactUs = ({
   const [open, setOpen] = React.useState(false);
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
+  const [timestamp, setTimestamp] = useState(new Date().getTime());
 
   const [formData, setFormData] = useState<ContactUsProps>({
     username: '',
     email: '',
     company: '',
     messages: '',
+    captcha: '',
   });
   const [isPending, setIsPending] = useState<boolean>(false);
   const [errors, setErrors] = useState<ContactUsResponse['errors']>();
@@ -77,6 +81,7 @@ export const ContactUs = ({
     }
 
     setIsPending(true);
+
     const response = await fetch('/api/contact', {
       method: 'POST',
       headers: {
@@ -168,6 +173,30 @@ export const ContactUs = ({
                   onChange={handleChange}
                 />
                 <FormHelperText>{errors?.messages?.[0]}</FormHelperText>
+              </Stack>
+
+              <Stack spacing={1}>
+                <InputLabel>Code</InputLabel>
+                <OutlinedInput
+                  name="captcha"
+                  value={formData?.captcha}
+                  error={!_.isEmpty(errors?.captcha)}
+                  onChange={handleChange}
+                  endAdornment={
+                    <img
+                      alt=""
+                      src={`/api/captcha?t=${timestamp}`}
+                      width={120}
+                      height={40}
+                      style={{
+                        cursor: 'pointer',
+                        borderRadius: 4,
+                      }}
+                      onClick={() => setTimestamp(new Date().getTime())}
+                    />
+                  }
+                />
+                <FormHelperText>{errors?.captcha?.[0]}</FormHelperText>
               </Stack>
             </Stack>
           </DialogContent>
