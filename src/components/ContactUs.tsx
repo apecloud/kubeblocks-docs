@@ -82,7 +82,7 @@ export const ContactUs = ({
 
     setIsPending(true);
 
-    const response = await fetch('/api/contact', {
+    fetch('/api/contact', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -92,19 +92,22 @@ export const ContactUs = ({
         title: props.title,
         url: window.location.href,
       }),
-    });
-
-    const res: ContactUsResponse = await response.json();
-
-    if (res.success) {
-      message.success(
-        'Your message has been received, and we will respond via email.',
-      );
-      setOpen(false);
-    } else {
-      setErrors(res.errors);
-    }
-    setIsPending(false);
+    })
+      .then((response) => {
+        response.json().then((res: ContactUsResponse) => {
+          if (res.success) {
+            message.success(
+              'Your message has been received, and we will respond via email.',
+            );
+            setOpen(false);
+          } else {
+            setErrors(res.errors);
+          }
+        });
+      })
+      .finally(() => {
+        setIsPending(false);
+      });
   };
 
   return (

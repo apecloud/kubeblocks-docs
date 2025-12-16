@@ -84,3 +84,4 @@ affinity: {}
 # env config
 env:
   FEISHU_WEBHOOK:
+  SESSION_SECRET: 
