@@ -54,10 +54,10 @@ From: ${data.url}`,
   };
 
   try {
-    // await fetch(process.env.FEISHU_WEBHOOK || '', {
-    //   method: 'POST',
-    //   body: JSON.stringify(feishuMessage),
-    // });
+    await fetch(process.env.FEISHU_WEBHOOK || '', {
+      method: 'POST',
+      body: JSON.stringify(feishuMessage),
+    });
   } catch (error) {
     throw error;
   }
