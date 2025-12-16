@@ -13,5 +13,6 @@ export const ConstactUsFields = {
   messages: z.string().max(300).optional(),
   url: z.string().optional(),
   title: z.string().optional(),
+  captcha: z.string().length(4),
 };
 export const ContactUsSchema = z.object(ConstactUsFields);

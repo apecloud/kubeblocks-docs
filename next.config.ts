@@ -19,6 +19,7 @@ const nextConfig: NextConfig = {
   // Configure `pageExtensions` to include markdown and MDX files
   pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx'],
   // Optionally, add any other Next.js config below
+  serverExternalPackages: ['svg-captcha'], // https://github.com/produck/svg-captcha/issues/41
   webpack: (config) => {
     Object.assign(config.resolve.alias, {
       '@theme/Tabs': '@/components/MdxTabs',
