@@ -134,7 +134,7 @@ export const ElevationScrollAppBar = (props: AppBarProps) => {
               }}
               endIcon={<LaunchOutlined />}
             >
-              KubeBlocks Enterprise
+              Enterprise
             </ContactUs>
 
             <Box sx={searchBarStyles.container}>
