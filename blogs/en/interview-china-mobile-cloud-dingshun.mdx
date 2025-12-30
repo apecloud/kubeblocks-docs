@@ -1,0 +1,123 @@
+---
+slug: interview-china-mobile-cloud-dingshun
+title: "Building a Leading DBaaS Platform from 0 to 1: The KubeBlocks Practice of China Mobile Cloud Architect Ding Shun"
+description: Discover how China Mobile Cloud architect Ding Shun leveraged KubeBlocks to build a leading DBaaS platform from 0 to 1. Learn about the challenges they faced and how KubeBlocks helped them overcome them.
+date: 2025-12-30
+authors:
+  name: Ding Shun
+  url: https://github.com/dingshun-cmss
+  image_url: https://avatars.githubusercontent.com/u/163502233?v=4
+tags: [China Mobile Cloud, KubeBlocks, Use Case]
+Keywords: China Mobile Cloud, KubeBlocks, He3DB, DBaaS, Cloud-Native, Database Management, Operator, Database as a Service (DBaaS), Addon, Unified API, Stateful Workloads, Cloud-Native, InstanceSet, Backup and Restore, Lifecycle Management, Multi-Cloud, Low-Code
+image: /img/blogs/thumbnails/blog-interview-china-mobile-cloud-dingshun.png
+---
+
+# Building a Leading DBaaS Platform from 0 to 1: The KubeBlocks Practice of China Mobile Cloud Architect Ding Shun
+
+### **Background:**
+
+Today, as the cloud-native wave sweeps the globe, industries are accelerating digital transformation. For teams building cloud Database as a Service (DBaaS) platforms, a core challenge has become achieving fast iteration and reducing operational complexity while ensuring high performance and high availability. Today, we are honored to invite Ding Shun, the architect of China Mobile Cloud's He3DB Control System. He will share how the China Mobile Cloud team leveraged **KubeBlocks** to efficiently build its core DBaaS service despite constraints in resources and time. His experience not only showcases the powerful value of KubeBlocks in real-world production environments but also offers deep insights into the future development of cloud-native database management.
+
+---
+
+## **Part I: Dialogue with China Mobile Cloud DBaaS Architect Ding Shun**
+
+**Q1: Hello Ding Shun, could you briefly introduce yourself and your work?**
+
+**Ding Shun:** Hello everyone, I am Ding Shun. Currently, I serve as the architect for the China Mobile Cloud He3DB Control System at China Mobile Cloud. My main responsibility is planning and implementing the cloud productization of China Mobile Cloud's self-developed He3DB, providing users with efficient and stable DBaaS services.
+
+**Q2: What role does China Mobile Cloud play in the database field?**
+
+**Ding Shun:** China Mobile Cloud is a cloud computing brand under China Mobile, committed to providing comprehensive cloud services. As a cloud service provider, we primarily focus on the cloud-native database domain. We build the DBaaS service for the He3DB on top of Kubernetes to meet the high-performance, high-reliability database needs of various enterprise customers.
+
+**Q3: You just mentioned China Mobile Cloud's self-developed He3DB. Could you elaborate on what kind of database product this is?**
+
+**Ding Shun:** The He3DB is a self-developed database by China Mobile Cloud, a key self-owned brand cultivated by China Mobile. It features high scalability, high performance, high availability, high security, and low cost. It is fully compatible with mainstream domestic chips and operating systems, aiming to provide the industry with database services that are ready-to-use, secure, and reliable. Notably, in August this year, the He3DB successfully passed the **National Security and Reliability Assessment**, which is a national-level recognition of its product capabilities, corporate qualifications, operational capabilities, and future development.
+
+**Q4: Could you share the current foundational technology stack supporting the China Mobile Cloud DBaaS platform?**
+
+**Ding Shun:** Our core technology stack is entirely built on Kubernetes. As a cloud provider, we leverage the powerful orchestration and management capabilities of Kubernetes to provide a stable, elastic runtime environment for the He3DB. We are currently focused on building and maintaining the DBaaS service for the He3DB, ensuring it can provide industry-leading database management capabilities in the cloud environment.
+
+---
+
+## **Part II: Challenges and Solutions: Why KubeBlocks?**
+
+**Q1: How did you discover KubeBlocks?**
+
+**Ding Shun:** At that time, we were facing the enormous challenge of building the He3DB DBaaS control system from scratch, with tight deadlines and limited manpower. During the technology selection research phase, a colleague recommended KubeBlocks, which opened a new door for us.
+
+**Q2: Before encountering KubeBlocks, what were the core pain points and challenges China Mobile Cloud faced when building database services on Kubernetes?**
+
+**Ding Shun:** The pain points were very evident and can be summarized as internal worries and external threats.
+
+First were the technical issues of **"siloed development"** and **"pseudo-cloud-native."** Previously, introducing a new database type meant writing an Operator and CRDs from scratch every time, not only reinventing the wheel but also leading to inconsistent quality. Many self-developed Operators simply "moved" the database onto K8s superficially without addressing deeper issues like shared memory, ulimit, etc., resulting in unsatisfactory performance.
+
+Second were the **resource challenges** from the project background. At that time, we needed to build the He3DB DBaaS service from zero within an extremely short timeframe and with very limited manpower. Simultaneously, we wanted it not just to solve immediate problems but also to serve as a **universal control foundation** adaptable to multiple engines. For our team back then, this was almost an "impossible triangle."
+
+**Q3: That indeed sounds very challenging. What characteristics of KubeBlocks convinced you that it could solve these difficult problems?**
+
+**Ding Shun:** Mainly, its **"low-code mode,"** **"universal architecture,"** and **"powerful abstraction model"** perfectly aligned with our needs.
+
+First, it abstracts the complex lifecycle management of databases into a unified Operator. We only need to **develop Addons (plugins) by writing configuration files** to quickly integrate a new engine. This directly reduces the complexity dimension of Operator development, greatly alleviating the pressure from our limited manpower.
+
+Second, when designing the architecture for our universal DBaaS control system, we actually compared three architectural options. KubeBlocks' design philosophy (i.e., presenting universal capabilities at the Operator layer) **coincided exactly** with our envisioned ultimate solution. It could not only put out the fire (solving the go-live time issue) but also fit our long-term strategy (building a universal foundation). This high degree of alignment drove our final decision to adopt it as the core foundation.
+
+Third, as an evolving self-developed database product, the He3DB's kernel architecture needs continuous iteration to adapt to new business scenarios. This places extremely high demands on the underlying DBaaS control system: the Operator must possess immense flexibility to accommodate future architectural upgrades and changes. This was also a key reason for choosing KubeBlocks—its powerful **abstraction model** can flexibly adapt to the future architectural evolution of the He3DB, providing a solid foundational guarantee for our continuous iteration and stable cloud services.
+
+---
+
+## **Part III: Practice and Value from 0 to 1**
+
+**Q4: What is the current status of KubeBlocks deployment at China Mobile Cloud? What are its main application scenarios?**
+
+**Ding Shun:** We have already **fully deployed it in the production environment**. Currently, every He3DB deployment region (Region) within China Mobile Cloud has a KubeBlocks deployment, serving as the core **Operator layer** of the He3DB control system.
+
+It supports core functions like **creation, backup/restore, scaling, and high-availability management** for He3DB instances. We are also leveraging its universality to adapt more open-source databases to validate its capability as a universal foundation.
+
+**Q5: What architectural design did your team implement when integrating KubeBlocks into China Mobile Cloud's existing vast cloud management system?**
+
+**Ding Shun:** We positioned KubeBlocks as a **provider of atomic capabilities**, integrating it within our "He3DB Control Platform."
+
+We built a **three-tier control platform architecture**: the top layer is the **unified business service layer**, responsible for handling China Mobile Cloud-specific business logic like billing, authentication, and capacity management; the middle layer is the **control service layer**, providing universal database control capabilities independent of specific underlying foundations; the bottom layer is the **Operator layer**, where we use the KubeBlocks framework and its Addon mechanism to implement core operational capabilities like component orchestration, high-availability failover, and backup for different database engines.
+
+This layered architectural design preserves the flexibility of China Mobile Cloud's business while fully leveraging the technological dividends of the open-source community. This is also a significant practice in our team's DBaaS architecture evolution.
+
+**Q6: What substantial changes did handing the core control layer over to KubeBlocks bring to China Mobile Cloud?**
+
+**Ding Shun:** The most direct change is a **qualitative leap in R&D efficiency**.
+
+Previously, for each product, we needed to assemble a team to develop and maintain an Operator. Now, with fewer personnel invested in developing KubeBlocks Addons compared to before, we gain mature database orchestration capabilities. This allows us to concentrate precious R&D resources on **optimizing the self-developed database kernel** rather than consuming them on repetitive K8s operational logic.
+
+Furthermore, it helped us achieve **reuse of operational expertise**. Because the API models are unified, the operational capabilities we accumulated for the He3DB can be seamlessly migrated to other database products, significantly reducing long-term operational costs.
+
+**Q7: Did you encounter any challenges or pain points during usage?**
+
+**Ding Shun:** Although KubeBlocks has brought tremendous value, we also faced some challenges during use, which we hope to discuss with the community:
+
+1.  **Addon Development and Debugging:** Debugging issues during Addon development is sometimes a challenge. Sometimes error messages are not explicit enough.
+
+2.  **Some Similar API Names:** Our production environment went live relatively early (starting from version KubeBlocks 0.8). In subsequent KubeBlocks versions, due to forward compatibility or other reasons, certain API fields were retained, leading to new version fields having names too similar to these legacy fields. This can cause confusion when using new KubeBlocks interfaces to develop Addons—for example, `cluster.spec.componentSpecs.componentDef` (new version) and `cluster.spec.componentSpecs.componentDefRef` (old version).
+
+**Q8: As a team deeply engaged in cloud-native technology, does China Mobile Cloud also participate in co-building the KubeBlocks community while benefiting from open-source advantages?**
+
+**Ding Shun:** Absolutely. Our team always adheres to the philosophy of "originating from open source, giving back to open source." During the practical adaptation process for the He3DB, we actively organized and provided feedback to the community on deep-seated problems encountered during Addon development and large-scale production operations. Simultaneously, we have contributed numerous PRs, covering **optimizations to the KubeBlocks framework itself** and **functional enhancements to existing open-source Addons**. Through close collaboration with the community, we have not only improved the stability of our own product but also jointly promoted the maturity of the entire open-source ecosystem. This kind of "two-way journey" of technology and ecosystem is a cooperation model we highly value.
+
+---
+
+## **Part IV: Looking Towards the Future**
+
+**Q1: Do you have any other feedback or suggestions to share with the community?**
+
+**Ding Shun:** I have a bold idea. Is it possible to package the development-related processes and best practices for KubeBlocks Addons into a corresponding Claude Skill? This would empower AI agents like Claude Code with the ability to automatically develop, modify, and debug KubeBlocks Addons, which would tremendously boost development efficiency!
+
+**Q2: What advice would you give to peers who are just starting to evaluate KubeBlocks?**
+
+**Ding Shun:** Based on our experience, KubeBlocks is an extremely valuable solution for teams looking to build a universal, high-performance DBaaS platform on Kubernetes.
+
+It can help you **significantly shorten the development cycle, reduce operational costs, and avoid reinventing the wheel**. Although there might be some challenges initially when learning Addon development, the long-term benefits it brings, especially for teams aiming to standardize database operations, are immense. I recommend delving into its design philosophy and referring to existing Addon cases in the community.
+
+---
+
+## **Conclusion:**
+
+Thank you, Ding Shun, for the excellent sharing! China Mobile Cloud's experience in successfully building the He3DB DBaaS platform using KubeBlocks fully demonstrates KubeBlocks' powerful capabilities and immense potential in the cloud-native database management domain. At the same time, the challenges and suggestions raised by Ding Shun also point the way for future optimization in the KubeBlocks community. The KubeBlocks community will continue to listen to user feedback, constantly refine the product, and strive to provide developers with an easier-to-use, more powerful, and more mature cloud-native database management solution. We look forward to working with more pioneers like Ding Shun to jointly advance the development of the cloud-native database ecosystem!
