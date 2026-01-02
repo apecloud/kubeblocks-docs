@@ -100,14 +100,22 @@ spec:
   - componentName: postgresql
     parameters:
       - key: log_filename
-        value: 'postgresql-%u.log' # supports strftime specification, default value is 'postgresql-%Y-%m-%d.log'
+        value: "'postgresql-%u.log'" # supports strftime specification, default value is 'postgresql-%Y-%m-%d.log'
       - key: log_statement
-        value: 'none' # none, ddl, mod, all
+        value: "'none'" # none, ddl, mod, all
   type: Reconfiguring
 ```
 
 - `log_filename`: Pattern for log filenames (supports `strftime` specification, default value is 'postgresql-%Y-%m-%d.log')
 - `log_statement`: Controls which SQL statements are logged (none, ddl, mod, all)
+
+:::caution 
+Due to the interaction between the YAML parser and PostgreSQL’s configuration parser, string values must be enclosed in single quotes 
+and then wrapped again in double quotes. This ensures that the single quotes are preserved.
+
+If this additional quoting is omitted, certain parameters, such as `log_filename`, may be parsed incorrectly, leading to errors like:
+syntax error in file "/home/postgres/conf/postgresql.conf" line 113, near token "%".
+:::
 
 :::note
 Changes to `log_filename` may require a server restart to take effect.
