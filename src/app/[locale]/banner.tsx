@@ -71,7 +71,7 @@ export default function Banner() {
             label={
               <Box>
                 For technical questions, contact us by &nbsp;
-                <Link href="mailto:marcom@apecloud.com" underline="always">
+                <Link href="mailto:marcom@kubeblocks.com" underline="always">
                   Email
                 </Link>
               </Box>
