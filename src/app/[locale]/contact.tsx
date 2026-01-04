@@ -61,7 +61,7 @@ export default function Contact() {
             <Button
               variant="contained"
               size="large"
-              href="mailto:marcom@apecloud.com"
+              href="mailto:marcom@kubeblocks.com"
               component={Link}
               color="warning"
               sx={{
