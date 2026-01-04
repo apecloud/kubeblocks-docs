@@ -9,7 +9,7 @@ export const ContactUs = ({ ...props }: ButtonProps) => {
     // @ts-expect-error props error
     <Button
       LinkComponent={Link}
-      href="https://apecloud.com/get-started"
+      href="https://kubeblocks.com/get-started"
       target="_blank"
       {...props}
     />
