@@ -34,7 +34,7 @@ export default function Footer({ border = true }: { border?: boolean }) {
           </Box>
         </Stack> */}
         <Typography align="center" color="textDisabled">
-          © {new Date().getFullYear()} ApeCloud PTE. Ltd.
+          © {new Date().getFullYear()} KUBEBLOCKS INC
         </Typography>
       </Container>
     </Box>
