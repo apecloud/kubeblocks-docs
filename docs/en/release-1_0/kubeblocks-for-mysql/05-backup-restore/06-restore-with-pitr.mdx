@@ -57,7 +57,7 @@ metadata:
   name: example-mysql-cluster-restored
   namespace: demo
   annotations:
-    kubeblocks.io/restore-from-backup: '{"mysql":{"name":"example-mysql-cluster-xtrabackup-20250305000008","namespace":"demo","volumeRestorePolicy":"Parallel",
+    kubeblocks.io/restore-from-backup: '{"mysql":{"name":"77a788fa-example-mysql-cluster-archive-binlog","namespace":"demo","volumeRestorePolicy":"Parallel",
 "restoreTime":"2025-03-05T02:00:00Z"}}'
 spec:
   terminationPolicy: Delete
@@ -100,7 +100,7 @@ spec:
   clusterName: example-mysql-cluster-restore
   force: false
   restore:
-    backupName: example-mysql-cluster-xtrabackup-20250305000008
+    backupName: 77a788fa-example-mysql-cluster-archive-binlog
     backupNamespace: demo
     restorePointInTime: 2025-03-05T02:00:00Z
   type: Restore
