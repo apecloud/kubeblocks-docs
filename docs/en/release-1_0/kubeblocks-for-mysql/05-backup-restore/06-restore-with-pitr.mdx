@@ -43,6 +43,10 @@ example-mysql-cluster-xtrabackup-20250305000008    example-mysql-cluster-mysql-b
 - '77a788fa-example-mysql-cluster-archive-binlog': Continuous backup (binlog archive).
 - 'example-mysql-cluster-xtrabackup-20250305000008': Full backup.
 
+:::tip
+KubeBlocks automatically selects the most recent qualifying full backup as the base.
+Make sure there is a full backup meets the condition: its `stopTime`/`completionTimestamp` must **AFTER** Continuous backup's `startTime`, otherwise PITR restoration will fail.
+:::
 
 ## Create Restored Cluster
 
