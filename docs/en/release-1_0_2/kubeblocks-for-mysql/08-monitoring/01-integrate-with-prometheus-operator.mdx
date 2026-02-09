@@ -39,7 +39,7 @@ Check the status of deployed pods:
 kubectl get pods -n monitoring
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                                                     READY   STATUS    RESTARTS   AGE
 alertmanager-prometheus-kube-prometheus-alertmanager-0   2/2     Running   0          114s
@@ -60,7 +60,7 @@ KubeBlocks uses a declarative approach for managing MySQL clusters. Below is an 
 
 Apply the following YAML configuration to deploy the cluster:
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -135,7 +135,7 @@ Define a PodMonitor to configure Prometheus to scrape metrics from the MySQL exp
 - `namespaceSelector` must match your MySQL cluster's namespace ('demo')
 - `port` name must match exporter's port name ('http-metrics')
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor

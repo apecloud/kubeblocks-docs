@@ -95,7 +95,7 @@ Use the following command to display the PostgreSQL versions supported by your K
 ```bash
 kubectl get cmpv postgresql
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME         VERSIONS                                              STATUS      AGE
 postgresql   16.4.0,15.7.0,14.8.0,14.7.2,12.15.0,12.14.1,12.14.0   Available   33d
@@ -112,7 +112,7 @@ Run the following command to identify the roles of the cluster instances:
 kubectl get pods -n demo -l app.kubernetes.io/instance=pg-cluster -L kubeblocks.io/role
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                      READY   STATUS    RESTARTS   AGE   ROLE
 pg-cluster-postgresql-0   4/4     Running   0          66m   primary
@@ -233,7 +233,7 @@ During the upgrade, observe the changes in the cluster's Pods:
 ```bash
 kubectl get pods -n demo -w
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                      READY   STATUS    RESTARTS   AGE
 pg-cluster-postgresql-0   4/4     Running   0          97s
@@ -264,7 +264,7 @@ Ensure the cluster is in the Running state:
 ```bash
 kubectl get cluster pg-cluster -n demo -w
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME         CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 pg-cluster   postgresql                Delete               Running   17m

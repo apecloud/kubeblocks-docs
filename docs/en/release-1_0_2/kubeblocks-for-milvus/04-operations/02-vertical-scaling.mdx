@@ -55,7 +55,7 @@ There are five components in Milvus Cluster. To get the list of components,
 kubectl get cluster -n demo milvus-cluster -oyaml | yq '.spec.componentSpecs[].name'
 ```
 
-Expected Output:
+Example Output:
 ```text
 proxy
 mixcoord
@@ -160,7 +160,7 @@ Verify the updated resources by inspecting the cluster configuration or Pod deta
 kbcli cluster describe milvus-cluster -n demo
 ```
 
-Expected Output:
+Example Output:
 ```bash
 Resources Allocation:
 COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS

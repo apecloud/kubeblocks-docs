@@ -36,7 +36,7 @@ namespace/demo created
 1. View the Addon versions.
 ```bash
 # including pre-release versions
-helm search repo kubeblocks/orchestrator --versions
+helm search repo kubeblocks-addons/orchestrator --versions
 ```
 
 2. Install the Addon. Specify a version with '--version'.
@@ -61,7 +61,7 @@ The STATUS is deployed and this Addon is installed successfully.
 KubeBlocks uses a declarative approach for managing MySQL clusters. Below is an example configuration for deploying a MySQL cluster with 3 nodes (1 primary, 2 replicas) in semi-synchronous mode. Additionally, it creates an Orchestrator cluster using the Raft high-availability mode and configure the relationship between the MySQL semi-synchronous cluster and the Orchestrator cluster.
 
 Create an Orchestrator cluster first:
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -103,7 +103,7 @@ EOF
 
 When the Orchestrator cluster is ready, you can deploy the MySQL cluster:
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -373,7 +373,7 @@ After a while, the killed pod will be recreated and will take the secondary role
 ```bash
 kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
-Expected Output:
+Example Output:
 ```bash
 example-semisync-mysql-mysql-0	secondary
 example-semisync-mysql-mysql-1	primary

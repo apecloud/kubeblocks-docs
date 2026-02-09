@@ -59,7 +59,7 @@ If the add-on isn't enabled, choose an installation method:
   # Update helm repo
   helm repo update
   # Search available Add-on versions
-  helm search repo kubeblocks/rabbitmq --versions
+  helm search repo kubeblocks-addons/rabbitmq --versions
   # Install your desired version (replace <VERSION> with your chosen version)
   helm upgrade -i kb-addon-rabbitmq kubeblocks-addons/rabbitmq --version <VERSION> -n kb-system
   ```
@@ -247,6 +247,9 @@ spec:
 ```
 
 For more API fields and descriptions, refer to the [API Reference](../user_docs/references/api-reference/cluster).
+
+> **Tip:**
+> More example manifests and setups for RabbitMQ can be found in the [official KubeBlocks Add-ons RabbitMQ examples directory](https://github.com/apecloud/kubeblocks-addons/tree/main/examples/rabbitmq).
 
 ### Create a Version-Specific RabbitMQ Cluster
 

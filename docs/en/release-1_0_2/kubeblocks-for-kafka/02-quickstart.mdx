@@ -59,7 +59,7 @@ If the add-on isn't enabled, choose an installation method:
   # Update helm repo
   helm repo update
   # Search available Add-on versions
-  helm search repo kubeblocks/kafka --versions
+  helm search repo kubeblocks-addons/kafka --versions
   # Install your desired version (replace <VERSION> with your chosen version)
   helm upgrade -i kb-addon-kafka kubeblocks-addons/kafka --version <VERSION> -n kb-system
   ```
@@ -153,8 +153,9 @@ spec:
   # This field allows for detailed configuration of each Component within the Cluster
   componentSpecs:
     - name: kafka-broker
-      replicas: 1
       serviceVersion: 3.3.2
+      tls: false
+      replicas: 1
       services:
         - name: advertised-listener
           serviceType: ClusterIP # Valid options are: [ClusterIP, NodePort, LoadBalancer]
@@ -167,9 +168,19 @@ spec:
           cpu: "0.5"
           memory: "0.5Gi"
       env:
-        - name: KB_KAFKA_BROKER_HEAP # use this ENV to set BROKER HEAP
+        - name: KB_CLUSTER_VERSION
+          value: "3.3.2"
+        - name: KB_CLUSTER_WITH_ZK
+          value: "false"
+        - name: KB_KAFKA_ENABLE_SASL
+          value: "false"
+        - name: KB_KAFKA_ENABLE_SASL_SCRAM
+          value: "false"
+        - name: KB_KAFKA_SASL_ENABLE
+          value: "false"
+        - name: KB_KAFKA_BROKER_HEAP
           value: "-XshowSettings:vm -XX:MaxRAMPercentage=100 -Ddepth=64"
-        - name: KB_KAFKA_CONTROLLER_HEAP # use this ENV to set CONTOLLER_HEAP
+        - name: KB_KAFKA_CONTROLLER_HEAP
           value: "-XshowSettings:vm -XX:MaxRAMPercentage=100 -Ddepth=64"
           # Whether to enable direct Pod IP address access mode.
           # - If set to 'true', Kafka clients will connect to Brokers using the Pod IP address directly.
@@ -184,7 +195,7 @@ spec:
               - ReadWriteOnce
             resources:
               requests:
-                storage: 20Gi
+                storage: 10Gi
         - name: metadata
           spec:
             storageClassName: ""
@@ -192,9 +203,11 @@ spec:
               - ReadWriteOnce
             resources:
               requests:
-                storage: 1Gi
+                storage: 5Gi
+
     - name: kafka-controller
       serviceVersion: 3.3.2
+      tls: false
       replicas: 1
       resources:
         limits:
@@ -211,10 +224,22 @@ spec:
               - ReadWriteOnce
             resources:
               requests:
-                storage: 1Gi
+                storage: 5Gi
+
     - name: kafka-exporter
       serviceVersion: 1.6.0
       replicas: 1
+      env:
+        - name: KB_CLUSTER_VERSION
+          value: "3.3.2"
+        - name: KB_CLUSTER_WITH_ZK
+          value: "false"
+        - name: KB_KAFKA_ENABLE_SASL
+          value: "false"
+        - name: KB_KAFKA_ENABLE_SASL_SCRAM
+          value: "false"
+        - name: KB_KAFKA_SASL_ENABLE
+          value: "false"
       resources:
         limits:
           cpu: "0.5"
@@ -226,9 +251,40 @@ spec:
 
 For more API fields and descriptions, refer to the [API Reference](../user_docs/references/api-reference/cluster).
 
+> **Tip:**
+> More example manifests and setups for Kafka can be found in the [official KubeBlocks Add-ons Kafka examples directory](https://github.com/apecloud/kubeblocks-addons/tree/main/examples/kafka).
+
 ## Verify Cluster Status
 
-When deploying a Kafka Cluster with 3 replicas:
+There are three Components in the Kafka Cluster, which are:
+- kafka-broker: Kafka Broker
+- kafka-controller: Kafka Controller
+- kafka-exporter: Kafka Exporter
+
+And they will be created in orders of kafka-controller, kafka-broker and kafka-exporter as defined in its `ClusterDefinition`(`kafka` in this case):
+
+```bash
+k get cd kafka -o yaml | yq '.spec.topologies[] | select(.name == "separated_monitor") | .orders'
+```
+Where `separated_monitor` is the selected topology of the Kafka Cluster.
+
+Example Output:
+```yaml
+provision:
+  - kafka-controller
+  - kafka-broker
+  - kafka-exporter
+terminate:
+  - kafka-broker
+  - kafka-controller
+  - kafka-exporter
+update:
+  - kafka-broker
+  - kafka-controller
+  - kafka-exporter
+```
+
+When deploying a Kafka Cluster with 3 replicas, 1 for kafka-broker, 1 for kafka-controller and 1 for kafka-exporter:
 
 Confirm successful deployment by checking:
 
@@ -259,7 +315,7 @@ Check status using either method:
     ```bash
     kbcli cluster describe kafka-separated-cluster -n demo
 
-    Name: kafka-separated-cluster  Created Time: May 19,2025 16:56 UTC+0800
+    Name: kafka-separated-cluster	 Created Time: Feb 09,2026 16:16 UTC+0800
     NAMESPACE   CLUSTER-DEFINITION   TOPOLOGY            STATUS    TERMINATION-POLICY
     demo        kafka                separated_monitor   Running   Delete
 
@@ -268,25 +324,28 @@ Check status using either method:
     kafka-broker   kafka-separated-cluster-kafka-broker-advertised-listener-0.demo.svc.cluster.local:9092   <none>
 
     Topology:
-    COMPONENT          SERVICE-VERSION   INSTANCE                                     ROLE     STATUS    AZ       NODE    CREATED-TIME
-    kafka-broker       3.3.2             kafka-separated-cluster-kafka-broker-0       <none>   Running   zone-x   x.y.z   May 19,2025 16:57 UTC+0800
-    kafka-controller   3.3.2             kafka-separated-cluster-kafka-controller-0   <none>   Running   zone-x   x.y.z   May 19,2025 16:56 UTC+0800
-    kafka-exporter     1.6.0             kafka-separated-cluster-kafka-exporter-0     <none>   Running   zone-x   x.y.z   May 19,2025 16:57 UTC+0800
+    COMPONENT          SERVICE-VERSION   INSTANCE                                     ROLE     STATUS    AZ       NODE                             CREATED-TIME
+    kafka-broker       3.3.2             kafka-separated-cluster-kafka-broker-0       <none>   Running   <none>   kbv10-control-plane/172.19.0.3   Feb 09,2026 16:17 UTC+0800
+    kafka-controller   3.3.2             kafka-separated-cluster-kafka-controller-0   <none>   Running   <none>   kbv10-control-plane/172.19.0.3   Feb 09,2026 16:16 UTC+0800
+    kafka-exporter     1.6.0             kafka-separated-cluster-kafka-exporter-0     <none>   Running   <none>   kbv10-control-plane/172.19.0.3   Feb 09,2026 16:17 UTC+0800
 
     Resources Allocation:
     COMPONENT          INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
-    kafka-controller                       500m / 500m          512Mi / 512Mi           metadata:1Gi   <none>
-    kafka-broker                           500m / 500m          512Mi / 512Mi           data:20Gi
-                                                                                        metadata:1Gi
+    kafka-controller                       500m / 500m          512Mi / 512Mi           metadata:5Gi   <none>
+    kafka-broker                           500m / 500m          512Mi / 512Mi           data:10Gi
+                                                                                        metadata:5Gi
     kafka-exporter                         100m / 500m          214748364800m / 1Gi     <none>         <none>
 
     Images:
-    COMPONENT          COMPONENT-DEFINITION             IMAGE
-    kafka-controller   kafka-controller-1.0.0           docker.io/bitnami/kafka:3.3.2-debian-11-r54
-                                                        docker.io/bitnami/jmx-exporter:0.18.0-debian-11-r20
-    kafka-broker       kafka-broker-1.0.0               docker.io/bitnami/kafka:3.3.2-debian-11-r54
-                                                        docker.io/bitnami/jmx-exporter:0.18.0-debian-11-r20
-    kafka-exporter     kafka-exporter-1.0.0             docker.io/bitnami/kafka-exporter:1.6.0-debian-11-r67
+    COMPONENT          COMPONENT-DEFINITION     IMAGE
+    kafka-controller   kafka-controller-1.0.2   docker.io/apecloud/kafka:3.3.2-debian-11-r54
+                                                docker.io/apecloud/jmx-exporter:0.18.0-debian-11-r20
+    kafka-broker       kafka-broker-1.0.2       docker.io/apecloud/kafka:3.3.2-debian-11-r54
+                                                docker.io/apecloud/jmx-exporter:0.18.0-debian-11-r20
+    kafka-exporter     kafka-exporter-1.0.2     docker.io/apecloud/kafka-exporter:1.6.0-debian-11-r67
+
+    Data Protection:
+    BACKUP-REPO   AUTO-BACKUP   BACKUP-SCHEDULE   BACKUP-METHOD   BACKUP-RETENTION   RECOVERABLE-TIME
 
     Show cluster events: kbcli cluster list-events -n demo kafka-separated-cluster
     ```
@@ -301,7 +360,7 @@ Check status using either method:
 kubectl get svc -l app.kubernetes.io/instance=kafka-separated-cluster  -n demo
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                                                         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
 kafka-separated-cluster-kafka-broker-advertised-listener-0   ClusterIP   10.96.131.175   <none>        9092/TCP   5m8s
@@ -310,46 +369,48 @@ The service name is `kafka-separated-cluster-kafka-broker-advertised-listener-0`
 
 **Step 2. Connect to the Kafka cluster with the port No.**
 
-1. Start client pod.
+Use the following steps to verify your cluster by producing and consuming a test message. The bootstrap server used below is `kafka-separated-cluster-kafka-broker-advertised-listener-0.demo:9092`.
 
-  ```bash
-  kubectl run kafka-producer --restart='Never' --image docker.io/bitnami/kafka:3.3.2-debian-11-r54 --command -- sleep infinity
-  kubectl run kafka-consumer --restart='Never' --image docker.io/bitnami/kafka:3.3.2-debian-11-r54 --command -- sleep infinity
-  ```
+1. **Start client pods** (producer and consumer):
 
-2. Log in to kafka-producer.
+   ```bash
+   kubectl run kafka-producer --restart='Never' --image docker.io/apecloud/kafka:3.3.2-debian-11-r54 --command -- sleep infinity
+   kubectl run kafka-consumer --restart='Never' --image docker.io/apecloud/kafka:3.3.2-debian-11-r54 --command -- sleep infinity
+   ```
 
-  ```bash
-  kubectl exec -ti kafka-producer -- bash
-  ```
+2. **Create a topic** — attach to the producer pod and create the topic:
 
-3. Create topic.
+   ```bash
+   kubectl exec -ti kafka-producer -- bash
+   ```
 
-  ```bash
-  kafka-topics.sh --create --topic quickstart-events --bootstrap-server kafka-separated-cluster-kafka-broker-advertised-listener-0.demo:9092
-  ```
+   Inside the pod:
 
-4. Create producer.
+   ```bash
+   kafka-topics.sh --create --topic quickstart-events --bootstrap-server kafka-separated-cluster-kafka-broker-advertised-listener-0.demo:9092
+   ```
 
-  ```bash
-  kafka-console-producer.sh --topic quickstart-events --bootstrap-server kafka-separated-cluster-kafka-broker-advertised-listener-0.demo:9092
-  ```
+3. **Produce a message** — in the same producer pod, start the console producer:
 
-5. Enter："Hello, KubeBlocks" and press Enter.
+   ```bash
+   kafka-console-producer.sh --topic quickstart-events --bootstrap-server kafka-separated-cluster-kafka-broker-advertised-listener-0.demo:9092
+   ```
 
-6. Start a new terminal session and login to kafka-consumer.
+   Type `Hello, KubeBlocks` and press **Enter**, then exit the producer (e.g. Ctrl+C).
 
-  ```bash
-  kubectl exec -ti kafka-consumer -- bash
-  ```
+4. **Consume the message** — open a new terminal, attach to the consumer pod:
 
-7. Create consumer and specify consuming topic, and consuming message from the beginning.
+   ```bash
+   kubectl exec -ti kafka-consumer -- bash
+   ```
 
-  ```bash
-  kafka-console-consumer.sh --topic quickstart-events --from-beginning --bootstrap-server kafka-separated-cluster-kafka-broker-advertised-listener-0.demo:9092
-  ```
+   Inside the pod, run the console consumer (reading from the beginning of the topic):
 
-  And you get the output 'Hello, KubeBlocks'.
+   ```bash
+   kafka-console-consumer.sh --topic quickstart-events --from-beginning --bootstrap-server kafka-separated-cluster-kafka-broker-advertised-listener-0.demo:9092
+   ```
+
+   You should see the output: `Hello, KubeBlocks`.
 
 
 ## Stop the Kafka Cluster

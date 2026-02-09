@@ -32,7 +32,7 @@ Run the following command to check the backup status:
 kubectl get backup -n demo
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                           POLICY                                      METHOD       REPO      STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
 example-mysql-cluster-backup   example-mysql-cluster-mysql-backup-policy   xtrabackup   s3-repo   Completed   1633717      18s        Delete            2025-03-07T03:25:22Z   2025-03-07T03:25:40Z
@@ -44,7 +44,7 @@ example-mysql-cluster-backup   example-mysql-cluster-mysql-backup-policy   xtrab
 
 Create a new cluster with restoration configuration referencing the backup.
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -111,7 +111,7 @@ Alternatively, use the Ops API to initiate the restoration process:
 
 ### Step 1: Create a Restore Request
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: operations.kubeblocks.io/v1alpha1
 kind: OpsRequest
@@ -134,7 +134,7 @@ Monitor the progress of the restoration operation:
 ```bash
 kubectl get ops example-mysql-cluster-restore -n demo -w
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                            TYPE      CLUSTER                         STATUS    PROGRESS   AGE
 example-mysql-cluster-restore   Restore   example-mysql-cluster-restored   Running   -/-        55s

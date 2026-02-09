@@ -59,7 +59,7 @@ If the add-on isn't enabled, choose an installation method:
   # Update helm repo
   helm repo update
   # Search available Add-on versions
-  helm search repo kubeblocks/elasticsearch --versions
+  helm search repo kubeblocks-addons/elasticsearch --versions
   # Install your desired version (replace <VERSION> with your chosen version)
   helm upgrade -i kb-addon-elasticsearch kubeblocks-addons/elasticsearch --version <VERSION> -n kb-system
   ```
@@ -110,7 +110,7 @@ Always verify that the Elasticsearch Add-on version matches your KubeBlocks majo
 
 :::
 
-## Deploy a Elasticsearch  Cluster
+## Deploy a Elasticsearch Single-Node Cluster
 
 For development and testing purposes, you can deploy a single-node cluster where one node handles all roles.
 
@@ -159,9 +159,14 @@ spec:
 
 For more API fields and descriptions, refer to the [API Reference](../user_docs/references/api-reference/cluster).
 
+
+> **Tip:**
+> More example manifests and setups for Elasticsearch, including multi-node clusters, custom configurations, and advanced scenarios, can be found in the [official KubeBlocks Add-ons Elasticsearch examples directory](https://github.com/apecloud/kubeblocks-addons/tree/main/examples/elasticsearch).
+
+
 ## Verify Cluster Status
 
-When deploying a Elasticsearch Cluster with 1 replicas:
+When deploying a Elasticsearch Single-Node Cluster:
 
 Confirm successful deployment by checking:
 
@@ -222,7 +227,7 @@ Show cluster events: kbcli cluster list-events -n demo es-singlenode
 </Tabs>
 
 
-## Stop the Elasticsearch Cluster
+## Stop the Elasticsearch Single-Node Cluster
 
 Stopping a cluster temporarily suspends operations while preserving all data and configuration:
 
@@ -261,7 +266,7 @@ Stopping a cluster temporarily suspends operations while preserving all data and
   </TabItem>
 </Tabs>
 
-## Start the Elasticsearch Cluster
+## Start the Elasticsearch Single-Node Cluster
 
 Restarting a stopped cluster resumes operations with all data and configuration intact.
 
@@ -299,7 +304,7 @@ Restarting a stopped cluster resumes operations with all data and configuration 
 </Tabs>
 
 
-## Delete Elasticsearch Cluster
+## Delete Elasticsearch Single-Node Cluster
 
 Choose carefully based on your data retention needs:
 

@@ -59,7 +59,7 @@ If the add-on isn't enabled, choose an installation method:
   # Update helm repo
   helm repo update
   # Search available Add-on versions
-  helm search repo kubeblocks/postgresql --versions
+  helm search repo kubeblocks-addons/postgresql --versions
   # Install your desired version (replace <VERSION> with your chosen version)
   helm upgrade -i kb-addon-postgresql kubeblocks-addons/postgresql --version <VERSION> -n kb-system
   ```
@@ -252,6 +252,9 @@ spec:
 ```
 
 For more API fields and descriptions, refer to the [API Reference](../user_docs/references/api-reference/cluster).
+
+> **Tip:**
+> More example manifests and setups for PostgreSQL can be found in the [official KubeBlocks Add-ons PostgreSQL examples directory](https://github.com/apecloud/kubeblocks-addons/tree/main/examples/postgresql).
 
 ### Create a Version-Specific PostgreSQL Cluster
 

@@ -79,6 +79,7 @@ spec:
 ### Step 2. Deploy a minio Cluster
 
 Minio is for object storage
+
 ```yaml
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -111,102 +112,76 @@ spec:
                 storage: 20Gi
 ```
 
-### Step 3. Deploy a Pulsar Cluster
+### Step 3. Deploy a Kafka Cluster
 
-Pulsar is for log storage
+Kafka is for log storage
 ```yaml
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
 metadata:
-  name: pulsarm-cluster
+  name: kafkam-cluster
   namespace: demo
 spec:
   terminationPolicy: Delete
-  # The value must be `pulsar` to create a Pulsar Cluster
-  clusterDef: pulsar
-  topology: pulsar-basic-cluster
-  services:
-    - name: broker-bootstrap
-      serviceName: broker-bootstrap
-      componentSelector: broker
-      spec:
-        type: ClusterIP
-        ports:
-          - name: pulsar
-            port: 6650
-            targetPort: 6650
-          - name: http
-            port: 80
-            targetPort: 8080
-          - name: kafka-client
-            port: 9092
-            targetPort: 9092
-    - name: zookeeper
-      serviceName: zookeeper
-      componentSelector: zookeeper
-      spec:
-        type: ClusterIP
-        ports:
-          - name: client
-            port: 2181
-            targetPort: 2181
+  clusterDef: kafka
+  topology: separated
   componentSpecs:
-    - name: broker
-      serviceVersion: 3.0.2
+    - name: kafka-broker
+      serviceVersion: 3.3.2
       replicas: 1
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
       env:
-        - name: KB_PULSAR_BROKER_NODEPORT
+        - name: KB_KAFKA_BROKER_HEAP
+          value: "-XshowSettings:vm -XX:MaxRAMPercentage=100 -Ddepth=64"
+        - name: KB_KAFKA_CONTROLLER_HEAP
+          value: "-XshowSettings:vm -XX:MaxRAMPercentage=100 -Ddepth=64"
+          # Whether to enable direct Pod IP address access mode.
+          # - If set to 'true', Kafka clients will connect to Brokers using the Pod IP address directly.
+          # - If set to 'false', Kafka clients will connect to Brokers using the Headless Service's FQDN, and service `advertised-listener` must be set with "podService: true".
+        - name: KB_BROKER_DIRECT_POD_ACCESS
           value: "false"
-      resources:
-        limits:
-          cpu: "1"
-          memory: "512Mi"
-        requests:
-          cpu: "200m"
-          memory: "512Mi"
-    - name: bookies
-      serviceVersion: 3.0.2
-      replicas: 4
-      resources:
-        limits:
-          cpu: "1"
-          memory: "512Mi"
-        requests:
-          cpu: "200m"
-          memory: "512Mi"
-      volumeClaimTemplates:
-        - name: ledgers
-          spec:
-            accessModes:
-              - ReadWriteOnce
-            resources:
-              requests:
-                storage: 8Gi
-        - name: journal
-          spec:
-            accessModes:
-              - ReadWriteOnce
-            resources:
-              requests:
-                storage: 8Gi
-    - name: zookeeper
-      serviceVersion: 3.0.2
-      replicas: 1
-      resources:
-        limits:
-          cpu: "1"
-          memory: "512Mi"
-        requests:
-          cpu: "100m"
-          memory: "512Mi"
       volumeClaimTemplates:
         - name: data
           spec:
+            storageClassName: ""
             accessModes:
               - ReadWriteOnce
             resources:
               requests:
-                storage: 8Gi
+                storage: 20Gi
+        - name: metadata
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 1Gi
+    - name: kafka-controller
+      serviceVersion: 3.3.2
+      replicas: 1
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: metadata
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 1Gi
 ```
 
 
@@ -220,7 +195,7 @@ The cluster will be created with the following components:
 - Query Node
 - Mixed Coordinator
 
-And each component will be created with `serviceRef` to the corresponding service: etcd, minio, and pulsar created previously.
+And each component will be created with `serviceRef` to the corresponding service: etcd, minio, and kafka created previously.
 
 ```yaml
 apiVersion: apps.kubeblocks.io/v1
@@ -247,7 +222,7 @@ spec:
       configs:
         - name: config
           variables:
-            mq_type: pulsar # pulsar, kafka as mq
+            mq_type: kafka # pulsar, kafka as mq
             minio_bucket: milvus # a valid bucket name in minio
             minio_root_path: files # root path for milvus data
             minio_use_path_style: "true" # set to true for minio use path style
@@ -265,11 +240,11 @@ spec:
         - name: milvus-log-storage
           namespace: demo
           clusterServiceSelector:
-            cluster: pulsarm-cluster # Pulsar Cluster Name
+            cluster: kafkam-cluster # Kafka Cluster Name
             service:
-              component: broker
+              component: kafka-broker
               service: headless
-              port: pulsar         # port 6650
+              port: kafka-client         # port 9092
         - name: milvus-object-storage
           namespace: demo
           clusterServiceSelector:
@@ -302,11 +277,11 @@ spec:
         - name: milvus-log-storage
           namespace: demo
           clusterServiceSelector:
-            cluster: pulsarm-cluster
+            cluster: kafkam-cluster
             service:
-              component: broker
+              component: kafka-broker
               service: headless
-              port: pulsar
+              port: kafka-client
         - name: milvus-object-storage
           namespace: demo
           clusterServiceSelector:
@@ -322,7 +297,7 @@ spec:
       configs:
         - name: config
           variables:
-            mq_type: pulsar
+            mq_type: kafka
             minio_bucket: milvus
             minio_root_path: files
             minio_use_path_style: "true"
@@ -348,11 +323,11 @@ spec:
         - name: milvus-log-storage
           namespace: demo
           clusterServiceSelector:
-            cluster: pulsarm-cluster
+            cluster: kafkam-cluster
             service:
-              component: broker
+              component: kafka-broker
               service: headless
-              port: pulsar
+              port: kafka-client
         - name: milvus-object-storage
           namespace: demo
           clusterServiceSelector:
@@ -368,7 +343,7 @@ spec:
       configs:
         - name: config
           variables:
-            mq_type: pulsar
+            mq_type: kafka
             minio_bucket: milvus
             minio_root_path: files
             minio_use_path_style: "true"
@@ -394,11 +369,11 @@ spec:
         - name: milvus-log-storage
           namespace: demo
           clusterServiceSelector:
-            cluster: pulsarm-cluster
+            cluster: kafkam-cluster
             service:
-              component: broker
+              component: kafka-broker
               service: headless
-              port: pulsar
+              port: kafka-client
         - name: milvus-object-storage
           namespace: demo
           clusterServiceSelector:
@@ -414,7 +389,7 @@ spec:
       configs:
         - name: config
           variables:
-            mq_type: pulsar
+            mq_type: kafka
             minio_bucket: milvus
             minio_root_path: files
             minio_use_path_style: "true"
@@ -440,11 +415,11 @@ spec:
         - name: milvus-log-storage
           namespace: demo
           clusterServiceSelector:
-            cluster: pulsarm-cluster
+            cluster: kafkam-cluster
             service:
-              component: broker
+              component: kafka-broker
               service: headless
-              port: pulsar
+              port: kafka-client
         - name: milvus-object-storage
           namespace: demo
           clusterServiceSelector:
@@ -460,7 +435,7 @@ spec:
       configs:
         - name: config
           variables:
-            mq_type: pulsar
+            mq_type: kafka
             minio_bucket: milvus
             minio_root_path: files
             minio_use_path_style: "true"
@@ -468,7 +443,7 @@ spec:
 
 :::note
 
-Clusters, such as Pulsar, Minio and ETCD, have multiple ports for different services.
+Clusters, such as Kafka, Minio and ETCD, have multiple ports for different services.
 When creating Cluster with `serviceRef`, you should know which `port` providing corresponding services.
 For instance, in MinIO, there are mainly four ports: 9000, 9001, 3501, and 3502, and they are used for different services or functions.
 
@@ -491,11 +466,11 @@ serviceRefs:
   - name: milvus-log-storage
     namespace: demo
     clusterServiceSelector:
-      cluster: pulsarm-cluster # Pulsar Cluster Name
+      cluster: kafkam-cluster # Kafka Cluster Name
       service:
-        component: broker
+        component: kafka-broker
         service: headless
-        port: pulsar          # NOTE: Refer to port name 'pulsar', for port number '6650'
+        port: kafka-client          # NOTE: Refer to port name 'kafka-client', for port number '9092'
   - name: milvus-object-storage
     namespace: demo
     clusterServiceSelector:
@@ -509,6 +484,15 @@ serviceRefs:
         name: root          # NOTE: the name of the credential (SystemAccount) to reference, using account `root` in this case
 ```
 
+If the `serviceRef` info is invalid, the cluster won't be able to create and you may check KubeBlocks logs to find the error.
+```bash
+k -n kb-system logs deployments/kubeblocks
+```
+
+For example, if the Kafka Cluster Service `kafkam-cluster-kafka-broker-headless` name specified in the `serviceRef` is not found, the error message will be:
+```bash
+build error: requeue after: 1s as: build synthesized component for milvus-cluster-querynode failed: build service references failed: Service "kafkam-cluster-broker-headless" not found
+```
 
 
 ## Verifying the Deployment
@@ -518,7 +502,7 @@ Once the cluster is deployed, check its status:
 ```bash
 kubectl get cluster milvus-cluster  -n demo -w
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 milvus-cluster   milvus               Delete               Running   4m38s
@@ -528,7 +512,7 @@ milvus-cluster   milvus               Delete               Running   4m38s
 ```bash
 kubectl get component -l app.kubernetes.io/instance=milvus-cluster -n demo
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                       DEFINITION                       SERVICE-VERSION   STATUS    AGE
 milvus-cluster-datanode    milvus-datanode-1.0.0            v2.3.2            Running   5m8s
@@ -544,7 +528,7 @@ Check pods:
 kubectl get pods -l app.kubernetes.io/instance=milvus-cluster -n demo
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                         READY   STATUS    RESTARTS   AGE
 milvus-cluster-datanode-0    1/1     Running   0          5m30s
@@ -562,6 +546,6 @@ To remove all resources created during this tutorial:
 kubectl delete cluster milvus-cluster -n demo
 kubectl delete cluster etcdm-cluster -n demo
 kubectl delete cluster miniom-cluster -n demo
-kubectl delete cluster pulsarm--cluster -n demo
+kubectl delete cluster kafkam-cluster -n demo
 kubectl delete ns demo
 ```

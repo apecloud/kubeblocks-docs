@@ -32,7 +32,7 @@ namespace/demo created
 
 Deploy a 2-node semi-sync MySQL cluster (1 primary, 1 secondary):
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -72,7 +72,7 @@ Monitor the cluster status and wait until the STATUS changes to Running:
 ```bash
 kubectl get cluster example-mysql-cluster -n demo -w
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 example-mysql-cluster   mysql                Delete               Creating   17s
@@ -82,7 +82,7 @@ example-mysql-cluster   mysql                Delete               Running   2m33
 
 ## Add a Custom Replica with Different Resource Configurations
 To add a new replica with higher CPU and memory allocations, update the cluster specification as follows:
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -147,7 +147,7 @@ List all the Pods in the cluster:
 ```bash
 kubectl get pods -n demo
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                                   READY   STATUS    RESTARTS   AGE
 example-mysql-cluster-mysql-0          4/4     Running   0          2m49s
@@ -161,7 +161,7 @@ Use the KubeBlocks CLI to check the cluster and verify the resource configuratio
 ```bash
 kbcli cluster describe example-mysql-cluster -n demo
 ```
-Expected Output:
+Example Output:
 ```bash
 Resources Allocation:
 COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
@@ -174,7 +174,7 @@ mysql                           500m / 500m          512Mi / 512Mi           dat
 
 ## Expose the custom Pod as a Service
 To expose the custom Pod via a separate Service, use the following configuration:
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -264,7 +264,7 @@ kubectl get secrets -n demo  example-semisync-mysql-mysql-account-root -o jsonpa
 
 kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
 ```
-Expected Output:
+Example Output:
 ```bash
 root
 

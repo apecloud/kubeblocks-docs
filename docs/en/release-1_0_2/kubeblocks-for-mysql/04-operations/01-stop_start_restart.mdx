@@ -35,7 +35,7 @@ KubeBlocks uses a declarative approach for managing MySQL clusters. Below is an 
 
 Apply the following YAML configuration to deploy the cluster:
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -96,7 +96,7 @@ Option 1: Using OpsRequest
 
 You can stop the cluster using an OpsRequest:
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: operations.kubeblocks.io/v1alpha1
 kind: OpsRequest
@@ -146,7 +146,7 @@ There is no Pods running in the cluster, but the persistent storage is retained.
 ```bash
 kubectl get pods -n demo
 ```
-Expected Output:
+Example Output:
 ```bash
 No resources found in demo namespace.
 ```
@@ -171,7 +171,7 @@ Option 1: Using OpsRequest
 
 You can start the stopped cluster using an OpsRequest:
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: operations.kubeblocks.io/v1alpha1
 kind: OpsRequest
@@ -231,7 +231,7 @@ Restarting the cluster allows you to recreate the pods for specific components w
 
 To restart a specific component (e.g., mysql), use the following OpsRequest:
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: operations.kubeblocks.io/v1alpha1
 kind: OpsRequest
@@ -251,7 +251,7 @@ Monitor the cluster's status to ensure the restart is completed successfully:
 ```bash
 kubectl get opsrequest example-mysql-cluster-restart-ops -n demo -w
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                                TYPE      CLUSTER                 STATUS    PROGRESS   AGE
 example-mysql-cluster-restart-ops   Restart   example-mysql-cluster   Succeed   2/2        3m16s

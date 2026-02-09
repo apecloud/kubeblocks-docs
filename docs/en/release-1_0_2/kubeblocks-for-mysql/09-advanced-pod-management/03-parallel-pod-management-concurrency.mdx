@@ -29,7 +29,7 @@ namespace/demo created
 
 Deploy a 2-node semi-sync MySQL cluster (1 primary, 1 secondary) and set the `parallelPodManagementConcurrency` parameter to 1 to enforce sequential pod creation.
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -114,7 +114,7 @@ example-mysql-cluster-mysql-1   4/4     Running           0          17s
 
 To scale the cluster to 4 replicas, use the following configuration:
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -192,7 +192,7 @@ example-mysql-cluster-mysql-3   4/4     Running           0          21s
 
 To reduce the cluster back to 2 replicas, apply the following configuration:
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster

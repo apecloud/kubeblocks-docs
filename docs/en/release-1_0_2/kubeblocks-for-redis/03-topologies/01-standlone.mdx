@@ -68,7 +68,7 @@ Once the cluster is deployed, check its status:
 ```bash
 kubectl get cluster redis-standalone  -n demo -w
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME               CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 redis-standalone   redis                Delete               Running   34s
@@ -78,7 +78,7 @@ redis-standalone   redis                Delete               Running   34s
 ```bash
 kubectl get component redis-standalone-redis -n demo
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                     DEFINITION              SERVICE-VERSION   STATUS    AGE
 redis-standalone-redis   redis-7-1.0.0           7.2.4             Running   90s

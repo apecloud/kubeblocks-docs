@@ -60,7 +60,7 @@ kubectl get backuppolicy -n demo -l app.kubernetes.io/instance=qdrant-cluster
 kubectl get backupschedule -n demo -l app.kubernetes.io/instance=qdrant-cluster
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                                  BACKUP-REPO   STATUS      AGE
 qdrant-cluster-qdrant-backup-policy                 Available   36m
@@ -168,7 +168,7 @@ Track backup progress in real-time:
 kubectl get ops qdrant-cluster-backup  -n demo -w
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                    TYPE     CLUSTER          STATUS    PROGRESS   AGE
 qdrant-cluster-backup   Backup   qdrant-cluster   Running   -/-        5s

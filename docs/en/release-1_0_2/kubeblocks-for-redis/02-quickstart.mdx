@@ -59,7 +59,7 @@ If the add-on isn't enabled, choose an installation method:
   # Update helm repo
   helm repo update
   # Search available Add-on versions
-  helm search repo kubeblocks/redis --versions
+  helm search repo kubeblocks-addons/redis --versions
   # Install your desired version (replace <VERSION> with your chosen version)
   helm upgrade -i kb-addon-redis kubeblocks-addons/redis --version <VERSION> -n kb-system
   ```
@@ -257,6 +257,9 @@ spec:
 ```
 
 For more API fields and descriptions, refer to the [API Reference](../user_docs/references/api-reference/cluster).
+
+> **Tip:**
+> More example manifests and setups for Redis can be found in the [official KubeBlocks Add-ons Redis examples directory](https://github.com/apecloud/kubeblocks-addons/tree/main/examples/redis).
 
 ### Create a Version-Specific Redis Replication Cluster
 

@@ -1,0 +1,213 @@
+---
+title: Retain PVCs when deleting/scaling down a MySQL Cluster in KubeBlocks
+description: Learn how to configure and perform gradual rolling updates for MySQL clusters in KubeBlocks using the rolling update strategy to ensure minimal disruption during updates.
+keywords: [KubeBlocks, MySQL, Rolling Update, Kubernetes, Cluster Management]
+sidebar_position: 5
+sidebar_label: Gradual Rolling Update
+---
+
+# Retain PVCs when deleting/scaling down a MySQL Cluster in KubeBlocks
+
+This guide demonstrates how to retain PVCs when deleting/scaling down a MySQL cluster in KubeBlocks.
+
+**Key Parameters:**
+- `persistentVolumeClaimRetentionPolicy`: Controls the lifecycle of Persistent Volume Claims (PVCs) created from `volumeClaimTemplates` in a cluster.
+  - This policy allows you to control whether PVCs are kept or deleted after the associated workload (pod) is deleted or scaled down.
+  - **Fields:**
+    - `whenDeleted` (`Retain` | `Delete`): What happens to PVCs when the workload is deleted.
+      - `Retain`: PVCs remain after workload deletion.
+      - `Delete` (default): PVCs are deleted when the workload is deleted.
+    - `whenScaled` (`Retain` | `Delete`): What happens to PVCs when the workload is scaled down (pod removed).
+      - `Retain`: PVCs are not deleted when a pod is scaled down.
+      - `Delete` (default): PVCs for scaled-down pods are deleted.
+
+
+**Example Usage:**
+```yaml
+componentSpecs:
+  - name: mysql
+    persistentVolumeClaimRetentionPolicy:
+      whenDeleted: Retain
+      whenScaled: Retain
+```
+This will ensure PVCs are retained when the cluster is deleted or scaled down.
+
+
+**Important Note:**
+You must carefully manage retained Persistent Volume Claims (PVCs) to avoid unexpected behaviors.
+If PVCs remain after deleting a cluster, you can choose to reuse them or delete them manually as needed.
+**Be cautious:** When creating a new cluster with the same name and namespace, KubeBlocks will automatically reuse existing matching PVCs if any exist.
+Careless handling of retained PVCs could potentially lead to data inconsistencies or unintended data exposure.
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## Deploy a MySQL Semi-Synchronous Cluster
+
+Deploy a 2-node MySQL cluster with semi-synchronous replication (1 primary, 1 secondary) using the following YAML configuration:
+```bash
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      persistentVolumeClaimRetentionPolicy:
+        whenDeleted: Retain
+        whenScaled: Retain
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+## Verifying the Deployment
+Monitor the cluster status until it transitions to the Running state:
+```bash
+kubectl get cluster example-mysql-cluster -n demo -w
+```
+
+Example Output:
+```bash
+NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Creating   6s
+example-mysql-cluster   mysql                Delete               Running    3m47s
+```
+Once the cluster status becomes Running, your MySQL cluster is ready for use.
+
+Verify the PVCs:
+```bash
+kubectl get pvc -n demo -l app.kubernetes.io/instance=example-mysql-cluster
+```
+Where `example-mysql-cluster` is the name of the cluster.
+
+Example Output:
+```bash
+NAME                                 STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+data-example-mysql-cluster-mysql-0   Bound    pvc-755bea2f-8607-4d06-9da0-6146bdb7839a   20Gi       RWO            standard       <unset>                 4m28s
+data-example-mysql-cluster-mysql-1   Bound    pvc-af857f43-628c-49aa-93ca-8b8a67a48222   20Gi       RWO            standard       <unset>                 4m13s
+```
+
+
+## Scale Down the Cluster
+
+Scale down the cluster by setting the `replicas` field to 1:
+```bash
+kubectl patch cluster example-mysql-cluster -n demo --type=json -p='[{"op": "replace", "path": "/spec/componentSpecs/0/replicas", "value": 1}]'
+```
+
+
+### Verify Cluster Status, Component, Pod, and PVC
+
+1. **Check Cluster Status**
+
+Monitor the status of your MySQL cluster to ensure it soon goes running after scaling down:
+```bash
+kubectl get cluster example-mysql-cluster -n demo -w
+```
+
+2. **Check Component and Pod Status**
+
+List the pods for your MySQL component to see which instances are running:
+```bash
+kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster
+```
+
+Example output:
+```bash
+NAME                                READY   STATUS    RESTARTS   AGE
+example-mysql-cluster-mysql-0       4/4     Running   0          10m
+```
+
+3. **Check PVCs**
+
+After scaling down, verify the status of the Persistent Volume Claims (PVCs) for your cluster:
+```bash
+kubectl get pvc -n demo -l app.kubernetes.io/instance=example-mysql-cluster
+```
+
+PVCs for the removed pod should still be **present** and **not deleted**. For example, after scaling down from 2 to 1 replica, you should see two PVCs:
+```bash
+NAME                                 STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+data-example-mysql-cluster-mysql-0   Bound    pvc-23107cc3-1238-46c7-bd56-f3916cc70410   20Gi       RWO            standard       <unset>                 10m44s
+data-example-mysql-cluster-mysql-1   Bound    pvc-2e2f35ca-fdb2-493e-8f22-c3e108baa98f   20Gi       RWO            standard       <unset>                 10m29s
+```
+
+
+## Delete the Cluster
+
+Delete the cluster:
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+```
+
+### Verify Cluster Status, Component, Pod, and PVC
+
+1. **Check Cluster Status**
+
+```bash
+k get cluster,component,po  -n demo -l app.kubernetes.io/instance=example-mysql-cluster
+```
+
+Example output:
+```bash
+No resources found in demo namespace.
+```
+
+
+2. **Check PVCs**
+
+After deleting, verify the status of the Persistent Volume Claims (PVCs) for your cluster:
+```bash
+kubectl get pvc -n demo -l app.kubernetes.io/instance=example-mysql-cluster
+```
+
+PVCs for the removed pod should still be **present** and **not deleted**. For example, after scaling down from 2 to 1 replica, you should see two PVCs:
+```bash
+NAME                                 STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+data-example-mysql-cluster-mysql-0   Bound    pvc-23107cc3-1238-46c7-bd56-f3916cc70410   20Gi       RWO            standard       <unset>                 12m44s
+data-example-mysql-cluster-mysql-1   Bound    pvc-2e2f35ca-fdb2-493e-8f22-c3e108baa98f   20Gi       RWO            standard       <unset>                 12m29s
+```
+
+## Cleanup
+To remove all created resources, delete the MySQL cluster along with its namespace:
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete pvc -n demo -l app.kubernetes.io/instance=example-mysql-cluster
+kubectl delete ns demo
+```
+
+## Summary
+In this guide we demonstrated how to retain PVCs when deleting/scaling down a MySQL cluster in KubeBlocks using the `persistentVolumeClaimRetentionPolicy` API.

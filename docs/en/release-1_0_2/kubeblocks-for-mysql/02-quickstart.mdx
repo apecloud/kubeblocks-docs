@@ -42,7 +42,7 @@ helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
 # Update helm repo
 helm repo update
 # Search versions of the Addon
-helm search repo kubeblocks/mysql --versions
+helm search repo kubeblocks-addons/mysql --versions
 # Install the version you want (replace $version with the one you need)
 helm upgrade -i mysql kubeblocks-addons/mysql --version $version -n kb-system
 ```
@@ -155,6 +155,8 @@ If you want to create a cluster of specified version, set `spec.componentSpecs.c
 
 </Tabs>
 
+> **Tip:**
+> More example manifests and setups for MySQL can be found in the [official KubeBlocks Add-ons MySQL examples directory](https://github.com/apecloud/kubeblocks-addons/tree/main/examples/mysql).
 
 The list of available `componentDef` can be found by following command:
 ```bash
