@@ -1,0 +1,133 @@
+---
+title: v1.0.2
+description: 发行说明 v1.0.2
+keywords: [kubeblocks, 发行说明]
+sidebar_position: 8
+hidden: true
+---
+
+# KubeBlocks 1.0.2 (2026-02-09)
+
+我们很高兴地宣布 KubeBlocks v1.0.2 版本发布。此版本包含多项新功能、缺陷修复以及各种改进。以下是详细的更新内容。
+
+## KubeBlocks
+
+### 新功能
+
+- **支持配置 StorageClass reclaimPolicy** - 部署 KubeBlocks 时，可通过 values.yaml 配置 StorageClass 的 reclaimPolicy。([#10040](https://github.com/apecloud/kubeblocks/pull/10040))
+- **支持为升级操作指定更新策略** - 允许为升级操作指定更新策略。([#9736](https://github.com/apecloud/kubeblocks/pull/9736))
+- **支持在变量中引用服务版本** - 支持在变量中引用服务版本。([#9735](https://github.com/apecloud/kubeblocks/pull/9735))
+
+### 缺陷修复
+
+- **修复 `persistentVolumeClaimRetentionPolicy` 不生效的问题** - 确保在集群被删除或缩容时，PVC 在 `Retain` 策略下被保留。([#10043](https://github.com/apecloud/kubeblocks/pull/10043))
+- **移除工作平面的全局亲和性和容忍度设置** - 移除了工作节点的全局亲和性和容忍度设置。建议通过 `schedulingPolicy` 在集群级别设置亲和性和容忍度。([#9949](https://github.com/apecloud/kubeblocks/pull/9949))
+- **采用已恢复的 PVC** - 从备份恢复时，在 InstanceSet 中采用已恢复的 PVC。([#9882](https://github.com/apecloud/kubeblocks/pull/9882))
+- **改进分片集群恢复** - 增强分片集群恢复功能。([#10026](https://github.com/apecloud/kubeblocks/pull/10026),[#10023](https://github.com/apecloud/kubeblocks/pull/10023),[#9900](https://github.com/apecloud/kubeblocks/pull/9900))
+
+## KubeBlocks 插件
+
+### MySQL
+- 支持 MySQL 小版本 8.0.41、8.0.44 ([#2295](https://github.com/apecloud/kubeblocks-addons/pull/2295))
+- 修复 MySQL `log_output` 参数约束问题 ([#2408](https://github.com/apecloud/kubeblocks-addons/pull/2408))
+- 为 ARM 架构禁用 jemalloc ([#2381](https://github.com/apecloud/kubeblocks-addons/pull/2381)))
+
+### PostgreSQL
+- 支持 PostgreSQL 18.1 ([#2409](https://github.com/apecloud/kubeblocks-addons/pull/2409))
+- 改进 PostgreSQL 配置约束注释 ([#2376](https://github.com/apecloud/kubeblocks-addons/pull/2376))
+- 取消 PostgreSQL `archive_timeout` 的不可变设置 ([#2380](https://github.com/apecloud/kubeblocks-addons/pull/2380))
+- 根据数据磁盘大小设置 `wal_keep_size` ([#2372](https://github.com/apecloud/kubeblocks-addons/pull/2372))
+
+### Redis
+- 支持 Redis 7.2.11/7.4.6/8.0.4/8.2.2 版本，修复 CVE-2025-49844 安全漏洞 ([#2123](https://github.com/apecloud/kubeblocks-addons/pull/2123))
+- 支持更多 Redis 小版本 7.2.12/7.4.7/8.0.5/8.2.3/8.4.0 ([#2347](https://github.com/apecloud/kubeblocks-addons/pull/2347))
+- 改进 Redis `maxmemory` 参数 ([#2392](https://github.com/apecloud/kubeblocks-addons/pull/2392))
+- 修复 Redis 集群切换失败问题 ([#2423](https://github.com/apecloud/kubeblocks-addons/pull/2423))
+- 修复无效的配置 cue 约束 ([#2421](https://github.com/apecloud/kubeblocks-addons/pull/2421))
+- 修复使用负载均衡模式时的水平扩展失败问题 ([#2397](https://github.com/apecloud/kubeblocks-addons/pull/2397))
+- 修复 Redis 集群恢复失败问题 ([#2404](https://github.com/apecloud/kubeblocks-addons/pull/2404))
+- 修复 Redis PITR 无时间范围问题 ([#2204](https://github.com/apecloud/kubeblocks-addons/pull/2204))
+
+### MongoDB
+- 支持 MongoDB 小版本 8.0.17/7.0.28/6.0.27 ([#2382](https://github.com/apecloud/kubeblocks-addons/pull/2382))
+- 支持 MongoDB 审计日志 ([#2111](https://github.com/apecloud/kubeblocks-addons/pull/2111))
+- 修复 MongoDB 备份挂起问题 ([#2387](https://github.com/apecloud/kubeblocks-addons/pull/2387))
+
+### ClickHouse
+- 改进 ClickHouse `memberjoin` ([#2431](https://github.com/apecloud/kubeblocks-addons/pull/2431))
+- 改进 ClickHouse 分片恢复 ([#2357](https://github.com/apecloud/kubeblocks-addons/pull/2357))
+- 修复指定初始集群名称时 ClickHouse 恢复失败问题 ([#2429](https://github.com/apecloud/kubeblocks-addons/pull/2429))
+
+### Elasticsearch
+- 支持 ES 6.x、7.x 和 8.15.5 ([#1998](https://github.com/apecloud/kubeblocks-addons/pull/1998), [#1923](https://github.com/apecloud/kubeblocks-addons/pull/1923), [#2413](https://github.com/apecloud/kubeblocks-addons/pull/2413))
+- 支持 ES 7.10.2 ([#2337](https://github.com/apecloud/kubeblocks-addons/pull/2337))
+- 支持区域感知分片分配 ([#2185](https://github.com/apecloud/kubeblocks-addons/pull/2185))
+- 添加插件 `analysis-pinyin` ([#2285](https://github.com/apecloud/kubeblocks-addons/pull/2285))
+- 修复单节点备份失败问题 ([#2290](https://github.com/apecloud/kubeblocks-addons/pull/2290))
+- 修复 ES 模板渲染兼容性问题 ([#2411](https://github.com/apecloud/kubeblocks-addons/pull/2411))
+
+### Kafka
+- 支持 Kafka 3.7/3.8/3.9 ([#2174](https://github.com/apecloud/kubeblocks-addons/pull/2174))
+- 支持自定义 SASL ([#2259](https://github.com/apecloud/kubeblocks-addons/pull/2259))
+- 支持 Kafka 备份主题 ([#2260](https://github.com/apecloud/kubeblocks-addons/pull/2260))
+- 修复同时启用 SASL 和 TLS 时的 Kafka 备份问题 ([#2289](https://github.com/apecloud/kubeblocks-addons/pull/2289))
+
+### Milvus
+- 支持 Milvus 备份和恢复 ([#2252](https://github.com/apecloud/kubeblocks-addons/pull/2252))
+- 修复恢复 Milvus 时重建索引问题 ([#2331](https://github.com/apecloud/kubeblocks-addons/pull/2331))
+
+### MinIO
+- 支持 MinIO RELEASE.2025-10-15T17-29-55Z ([#2279](https://github.com/apecloud/kubeblocks-addons/pull/2279))
+
+### Nebula
+- 修复 Nebula 备份和恢复失败问题 ([#2435](https://github.com/apecloud/kubeblocks-addons/pull/2435))
+
+### Qdrant
+- 支持新版本 v1.15.4 ([#2037](https://github.com/apecloud/kubeblocks-addons/pull/2037))
+
+### RabbitMQ
+- 支持 RabbitMQ 4.2.1、4.1.6、3.8.34 ([#2319](https://github.com/apecloud/kubeblocks-addons/pull/2319))
+- 支持插件管理 ([#2317](https://github.com/apecloud/kubeblocks-addons/pull/2317))
+- 设置内存限制以防止 OOM ([#2241](https://github.com/apecloud/kubeblocks-addons/pull/2241))
+- 添加 RabbitMQ web stomp 端口 ([#2428](https://github.com/apecloud/kubeblocks-addons/pull/2428))
+
+### RocketMQ
+- 修复 RocketMQ `namesrc` 水平扩展超时问题 ([#2420](https://github.com/apecloud/kubeblocks-addons/pull/2420))
+
+### TiDB
+- 支持 TiDB PITR 恢复 ([#1702](https://github.com/apecloud/kubeblocks-addons/pull/1702))
+- 修复多实例 TiDB PD 缩容问题 ([#2269](https://github.com/apecloud/kubeblocks-addons/pull/2269))
+
+### ZooKeeper
+- 支持 ZooKeeper 3.9.4 ([#2244](https://github.com/apecloud/kubeblocks-addons/pull/2244))
+- 修复 ZooKeeper 水平扩展问题 ([#2216](https://github.com/apecloud/kubeblocks-addons/pull/2216))
+
+## 重大变更
+
+### 变量渲染变更 ([#9935](https://github.com/apecloud/kubeblocks/pull/9935))
+
+在 KB 1.0.2 中，变量渲染机制已修复。此前（KB 1.0.1 及更早版本），渲染变量时错误地传递了 `map[string]string`，导致一些插件不得不使用复杂的方法来构造变量中的表达式，例如：
+
+```
+{{if ne (index . "MSSQL_HADR_ENDPOINT_PORT") ""}}{{.MSSQL_HADR_ENDPOINT_PORT}}{{else}}5022{{end}}
+```
+
+通过此修复，现在正确传递 `map[string]any`，表达式应简化为：
+
+```
+{{if index . "MSSQL_HADR_ENDPOINT_PORT"}}{{.MSSQL_HADR_ENDPOINT_PORT}}{{else}}5022{{end}}
+```
+
+**所需操作**: 将 KB 升级到 v1.0.2 的用户也应相应升级其插件。
+- 请参阅 [PR #2328](https://github.com/apecloud/kubeblocks-addons/pull/2328) 了解所需的变更
+
+**受影响的插件**: OceanBase、MongoDB、Redis、Redis Cluster
+- 更多背景信息请参见 [Issue #9934](https://github.com/apecloud/kubeblocks/issues/9934)
+
+## 升级到 v1.0.2
+
+请参阅 [升级到 KubeBlocks v1.0.x](../../upgrade/upgrade-to-v10x)。
+
+## 完整变更日志
+
+您可以查看 [完整变更日志](https://github.com/apecloud/kubeblocks/compare/v1.0.1...v1.0.2) 了解其他变更，以及 [kubeblocks-addons](https://github.com/apecloud/kubeblocks-addons/compare/v1.0.1...v1.0.2) 了解插件变更。
