@@ -120,8 +120,8 @@ kubectl get cmpv qdrant
 <details open>
 <summary>Example Output</summary>
 ```text
-NAME     VERSIONS                                STATUS      AGE
-qdrant   1.14.0,1.10.0,1.8.4,1.8.1,1.7.3,1.5.0   Available   26d
+NAME     VERSIONS                                       STATUS      AGE
+qdrant   1.15.4,1.13.4,1.10.0,1.8.4,1.8.1,1.7.3,1.5.0   Available   79s
 ```
 </details>
 
@@ -156,7 +156,8 @@ This returns versions compatible with `ComponentDefinition` named `qdrant`:
 1.8.1
 1.8.4
 1.10.0
-1.14.0
+1.13.4
+1.15.4
 ```
 </details>
 
@@ -212,7 +213,7 @@ spec:
     - name: qdrant
       # ServiceVersion specifies the version of the Service expected to be
       # provisioned by this Component.
-      # Valid options are: [1.10.0,1.5.0,1.7.3,1.8.1,1.8.4]
+      # Valid options are: [1.15.4,1.13.4,1.10.0,1.8.4,1.8.1,1.7.3,1.5.0]
       serviceVersion: 1.10.0
       # Update `replicas` to your need.
       # Recommended values are: [3,5,7]
@@ -246,8 +247,9 @@ spec:
 
 For more API fields and descriptions, refer to the [API Reference](../user_docs/references/api-reference/cluster).
 
-> **Tip:**
+:::tip
 > More example manifests and setups for Qdrant can be found in the [official KubeBlocks Add-ons Qdrant examples directory](https://github.com/apecloud/kubeblocks-addons/tree/main/examples/qdrant).
+:::
 
 ### Create a Version-Specific Qdrant Cluster
 
@@ -258,7 +260,7 @@ To create a cluster with a specific version, configure `spec.componentSpecs.serv
   ```yaml
     componentSpecs:
       - name: qdrant
-        serviceVersion: 1.10.0    # Valid options: [1.10.0,1.5.0,1.7.3,1.8.1,1.8.4]
+        serviceVersion: 1.10.0    # Valid options: [1.15.4,1.13.4,1.10.0,1.8.4,1.8.1,1.7.3,1.5.0]
   ```
   </TabItem>
 </Tabs>
@@ -276,6 +278,7 @@ Check status using either method:
 
 <Tabs>
   <TabItem value='kubectl' label='kubectl' default>
+
 ```bash
 kubectl get cluster qdrant-cluster -n demo -w
 NAME             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
@@ -287,6 +290,7 @@ qdrant-cluster-qdrant-0   2/2     Running   0          92s
 qdrant-cluster-qdrant-1   2/2     Running   0          77s
 qdrant-cluster-qdrant-2   2/2     Running   0          63s
 ```
+
   </TabItem>
 
   <TabItem value='kbcli' label='kbcli'>
@@ -317,8 +321,8 @@ qdrant                          500m / 500m          512Mi / 512Mi           dat
 
 Images:
 COMPONENT   COMPONENT-DEFINITION   IMAGE
-qdrant      qdrant-1.0.0           docker.io/qdrant/qdrant:v1.10.0
-                                   docker.io/apecloud/curl-jq:0.1.0
+qdrant      qdrant-1.0.2           docker.io/qdrant/qdrant:v1.10.0
+                                   docker.io/apecloud/qdrant-tools:0.1.0
 
 Data Protection:
 BACKUP-REPO   AUTO-BACKUP   BACKUP-SCHEDULE   BACKUP-METHOD   BACKUP-RETENTION   RECOVERABLE-TIME

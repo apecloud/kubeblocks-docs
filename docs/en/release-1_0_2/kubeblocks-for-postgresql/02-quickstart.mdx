@@ -216,7 +216,7 @@ spec:
     - name: postgresql
       # ServiceVersion specifies the version of the Service expected to be
       # provisioned by this Component.
-      # Valid options are: [12.14.0,12.14.1,12.15.0,12.22.0,14.7.2,14.8.0,14.18.0,15.7.0,15.13.0,16.4.0,16.9.0,17.5.0]
+      # Valid options are: [18.1.0, 17.5.0, 16.9.0, 16.4.0, 15.13.0, 15.7.0, 14.18.0, 14.8.0, 14.7.2, 12.22.0, 12.15.0, 12.14.1, 12.14.0]
       serviceVersion: "14.7.2"
       # Determines whether metrics exporter information is annotated on the
       # Component's headless Service.
@@ -253,27 +253,28 @@ spec:
 
 For more API fields and descriptions, refer to the [API Reference](../user_docs/references/api-reference/cluster).
 
-> **Tip:**
-> More example manifests and setups for PostgreSQL can be found in the [official KubeBlocks Add-ons PostgreSQL examples directory](https://github.com/apecloud/kubeblocks-addons/tree/main/examples/postgresql).
+:::tip
+More example manifests and setups for PostgreSQL can be found in the [official KubeBlocks Add-ons PostgreSQL examples directory](https://github.com/apecloud/kubeblocks-addons/tree/main/examples/postgresql).
+:::
 
 ### Create a Version-Specific PostgreSQL Cluster
 
-To create a cluster with a specific version, configure `spec.componentSpecs.serviceVersion` (major.minor version) fields before applying it:
+To create a cluster with a specific version, set the `spec.componentSpecs.serviceVersion` field (major.minor.patch) before applying:
 
 <Tabs>
   <TabItem value="PostgreSQL 12" label="PostgreSQL 12">
   ```yaml
     componentSpecs:
       - name: postgresql
-        serviceVersion: 12.15.0    # Valid options: [12.15.0,12.14.1,12.14.0]
+        serviceVersion: 12.22.0    # Valid options: [12.22.0, 12.15.0, 12.14.1, 12.14.0]
   ```
-    </TabItem>
+  </TabItem>
 
   <TabItem value="PostgreSQL 14" label="PostgreSQL 14" default>
   ```yaml
     componentSpecs:
       - name: postgresql
-        serviceVersion: 14.7.2     # Valid options: [14.18.0,14.8.0,14.7.2]
+        serviceVersion: 14.18.0    # Valid options: [14.18.0, 14.8.0, 14.7.2]
   ```
   </TabItem>
 
@@ -281,7 +282,7 @@ To create a cluster with a specific version, configure `spec.componentSpecs.serv
   ```yaml
     componentSpecs:
       - name: postgresql
-        serviceVersion: 15.7.0    # Valid options: [15.13.0,15.7.0]
+        serviceVersion: 15.13.0    # Valid options: [15.13.0, 15.7.0]
   ```
   </TabItem>
 
@@ -289,7 +290,7 @@ To create a cluster with a specific version, configure `spec.componentSpecs.serv
   ```yaml
     componentSpecs:
       - name: postgresql
-        serviceVersion: 16.4.0    # Valid options: [16.9.0,16.4.0]
+        serviceVersion: 16.9.0    # Valid options: [16.9.0, 16.4.0]
   ```
   </TabItem>
 
@@ -298,6 +299,14 @@ To create a cluster with a specific version, configure `spec.componentSpecs.serv
     componentSpecs:
       - name: postgresql
         serviceVersion: 17.5.0    # Valid options: [17.5.0]
+  ```
+  </TabItem>
+
+  <TabItem value="PostgreSQL 18" label="PostgreSQL 18">
+  ```yaml
+    componentSpecs:
+      - name: postgresql
+        serviceVersion: 18.1.0    # Valid options: [18.1.0]
   ```
   </TabItem>
 </Tabs>
@@ -311,12 +320,13 @@ kubectl get cmpd -l app.kubernetes.io/name=postgresql
 <details open>
 <summary>Example Output</summary>
 ```bash
-NAME                          SERVICE      SERVICE-VERSION   STATUS      AGE
-postgresql-12-1.0.0           postgresql   12.15.0           Available   22d
-postgresql-14-1.0.0           postgresql   14.8.0            Available   22d
-postgresql-15-1.0.0           postgresql   15.7.0            Available   22d
-postgresql-16-1.0.0           postgresql   16.4.0            Available   22d
-postgresql-17-1.0.0           postgresql   17.5.0            Available   22d
+NAME                  SERVICE      SERVICE-VERSION   STATUS      AGE
+postgresql-12-1.0.2   postgresql   12.22.0           Available   6h2m
+postgresql-14-1.0.2   postgresql   14.18.0           Available   6h2m
+postgresql-15-1.0.2   postgresql   15.13.0           Available   6h2m
+postgresql-16-1.0.2   postgresql   16.9.0            Available   6h2m
+postgresql-17-1.0.2   postgresql   17.5.0            Available   6h2m
+postgresql-18-1.0.2   postgresql   18.1.0            Available   6h2m
 ```
 </details>
 
@@ -328,8 +338,8 @@ kubectl get cmpv -l app.kubernetes.io/name=postgresql
 <summary>Example Output</summary>
 
 ```bash
-NAME         VERSIONS                                              STATUS      AGE
-postgresql   16.4.0,15.7.0,14.8.0,14.7.2,12.15.0,12.14.1,12.14.0   Available   22d
+NAME         VERSIONS                                                                                           STATUS      AGE
+postgresql   18.1.0,17.5.0,16.9.0,16.4.0,15.13.0,15.7.0,14.18.0,14.8.0,14.7.2,12.22.0,12.15.0,12.14.1,12.14.0   Available   6h3m
 ```
 
 </details>

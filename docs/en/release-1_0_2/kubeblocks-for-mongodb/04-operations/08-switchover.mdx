@@ -60,55 +60,29 @@ mongo-cluster-mongodb-2   2/2     Running   0          19m   secondary
 
 To initiate a planned switchover, create an OpsRequest resource as shown below:
 
-<Tabs>
-  <TabItem value="Automatic Switchover" label="Automatic Switchover" default>
-  Option 1: Automatic Switchover (No preferred candidate)
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: mongodb-switchover-targeted
+  namespace: demo
+spec:
+  clusterName: mongo-cluster
+  type: Switchover
+  switchover:
+  - componentName: mongodb
+    # Specifies the instance whose role will be transferred.
+    # A typical usage is to transfer the leader role in a consensus system.
+    instanceName: mongo-cluster-mongodb-0
+    # If CandidateName is specified, the role will be transferred to this instance.
+    # The name must match one of the pods in the component.
+    # Refer to ComponentDefinition's Swtichover lifecycle action for more details.
+    candidateName: mongo-cluster-mongodb-1
+```
 
-  ```yaml
-  apiVersion: operations.kubeblocks.io/v1alpha1
-  kind: OpsRequest
-  metadata:
-    name: mongodb-switchover-ops
-    namespace: demo
-  spec:
-    clusterName: mongo-cluster
-    type: Switchover
-    switchover:
-    - componentName: mongodb
-      instanceName: mongo-cluster-mongodb-0
-  ```
- **Key Parameters:**
-  - `instanceName`: Specifies the instance (Pod) that is primary or leader before a switchover operation.
-
-  </TabItem>
-  <TabItem value="Targeted Switchover" label="Targeted Switchover" >
-  Option 2: Targeted Switchover (Specific candidate)
-
-  ```yaml
-  apiVersion: operations.kubeblocks.io/v1alpha1
-  kind: OpsRequest
-  metadata:
-    name: mongodb-switchover-targeted
-    namespace: demo
-  spec:
-    clusterName: mongo-cluster
-    type: Switchover
-    switchover:
-    - componentName: mongodb
-      # Specifies the instance whose role will be transferred.
-      # A typical usage is to transfer the leader role in a consensus system.
-      instanceName: mongo-cluster-mongodb-0
-      # If CandidateName is specified, the role will be transferred to this instance.
-      # The name must match one of the pods in the component.
-      # Refer to ComponentDefinition's Swtichover lifecycle action for more details.
-      candidateName: mongo-cluster-mongodb-1
-  ```
-
-  **Key Parameters:**
-  - `instanceName`: Specifies the instance (Pod) that is primary or leader before a switchover operation.
-  - `candidateName`: If candidate name is specified, the role will be transferred to this instance.
-  </TabItem>
-</Tabs>
+**Key Parameters:**
+- `instanceName`: Specifies the instance (Pod) that is primary or leader before a switchover operation.
+- `candidateName`: Specifies the candidate instance to promote to primary, the role will be transferred to this instance.
 
 ## Monitoring the Switchover
 

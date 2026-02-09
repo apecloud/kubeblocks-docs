@@ -120,8 +120,8 @@ kubectl get cmpv rabbitmq
 <details open>
 <summary>Example Output</summary>
 ```text
-NAME       VERSIONS                                                    STATUS      AGE
-rabbitmq   4.0.9,3.13.7,3.13.2,3.12.14,3.11.28,3.10.25,3.9.29,3.8.14   Available   26d
+NAME       VERSIONS                                                         STATUS      AGE
+rabbitmq   4.2.1,4.1.6,4.0.9,3.13.7,3.12.14,3.11.28,3.10.25,3.9.29,3.8.34   Available   21s
 ```
 </details>
 
@@ -136,14 +136,14 @@ kubectl get cmpv rabbitmq -ojson | jq -r '.metadata.annotations."componentversio
 <details>
 <summary>Example Output</summary>
 ```text
-rabbitmq-1.0.0
+rabbitmq-1.0.2
 ```
 </details>
 
 **Step 2.** Get the list of `ComponentDefinition` associated with a given `ComponentVersion`
 
 ```bash
-kubectl get cmpv rabbitmq -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("rabbitmq"))) | .releases[]'
+kubectl get cmpv rabbitmq -o json | jq -r '.spec.compatibilityRules[] | select(.compDefs | any(startswith("^rabbitmq"))) | .releases[]'
 ```
 
 This returns versions compatible with `ComponentDefinition` named `rabbitmq`:
@@ -151,14 +151,15 @@ This returns versions compatible with `ComponentDefinition` named `rabbitmq`:
 <details open>
 <summary>Example Output</summary>
 ```text
+4.2.1
+4.1.6
 4.0.9
 3.13.7
-3.13.2
 3.12.14
 3.11.28
 3.10.25
 3.9.29
-3.8.14
+3.8.34
 ```
 </details>
 
@@ -214,7 +215,7 @@ spec:
     - name: rabbitmq
       # ServiceVersion specifies the version of the Service expected to be
       # provisioned by this Component.
-      # Valid options are: [3.10.25,3.11.28,3.12.14,3.13.2,3.13.7,3.8.14,3.9.29]
+      # Valid options are: [4.2.1,4.1.6,4.0.9,3.13.7,3.12.14,3.11.28,3.10.25,3.9.29,3.8.34]
       serviceVersion: 3.13.7
       # Update `replicas` to your need.
       # Recommended values are: [3,5,7]
@@ -248,8 +249,11 @@ spec:
 
 For more API fields and descriptions, refer to the [API Reference](../user_docs/references/api-reference/cluster).
 
-> **Tip:**
-> More example manifests and setups for RabbitMQ can be found in the [official KubeBlocks Add-ons RabbitMQ examples directory](https://github.com/apecloud/kubeblocks-addons/tree/main/examples/rabbitmq).
+:::tip
+
+More example manifests and setups for RabbitMQ can be found in the [official KubeBlocks Add-ons RabbitMQ examples directory](https://github.com/apecloud/kubeblocks-addons/tree/main/examples/rabbitmq).
+
+:::
 
 ### Create a Version-Specific RabbitMQ Cluster
 
