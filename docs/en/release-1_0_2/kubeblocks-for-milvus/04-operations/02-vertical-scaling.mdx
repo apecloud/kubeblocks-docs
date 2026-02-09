@@ -1,0 +1,189 @@
+---
+title: Vertical Scaling in a Milvus  Cluster
+description: Learn how to perform vertical scaling in a Milvus  Cluster managed by KubeBlocks to optimize resource utilization and improve performance.
+keywords: [KubeBlocks, Milvus, Vertical Scaling, Kubernetes, Resources]
+sidebar_position: 2
+sidebar_label: Vertical Scaling
+---
+
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# Vertical Scaling for Milvus Standalone Clusters with KubeBlocks
+
+This guide demonstrates how to vertically scale a Milvus  Cluster managed by KubeBlocks by adjusting compute resources (CPU and memory) while maintaining the same number of replicas.
+
+Vertical scaling modifies compute resources (CPU and memory) for Milvus instances while maintaining replica count. Key characteristics:
+
+- **Non-disruptive**: When properly configured, maintains availability during scaling
+- **Granular**: Adjust CPU, memory, or both independently
+- **Reversible**: Scale up or down as needed
+
+KubeBlocks ensures minimal impact during scaling operations by following a controlled, role-aware update strategy:
+**Role-Aware Replicas (Primary/Secondary Replicas)**
+- Secondary replicas update first – Non-leader pods are upgraded to minimize disruption.
+- Primary updates last – Only after all secondaries are healthy does the primary pod restart.
+- Cluster state progresses from Updating → Running once all replicas are stable.
+
+**Role-Unaware Replicas (Ordinal-Based Scaling)**
+If replicas have no defined roles, updates follow Kubernetes pod ordinal order:
+- Highest ordinal first (e.g., pod-2 → pod-1 → pod-0) to ensure deterministic rollouts.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploy a Milvus Cluster
+
+Please refer to [Deploying a Milvus Cluster with KubeBlocks](../03-topologies/02-cluster) to deploy a milvus cluster.
+
+## Vertical Scale
+
+**Expected Workflow**:
+
+1. Pods are updated in pod ordinal order, from highest to lowest, (e.g., pod-2 → pod-1 → pod-0)
+1. Cluster status transitions from `Updating` to `Running`
+
+**Check Components**
+
+There are five components in Milvus Cluster. To get the list of components,
+```bash
+kubectl get cluster -n demo milvus-cluster -oyaml | yq '.spec.componentSpecs[].name'
+```
+
+Expected Output:
+```text
+proxy
+mixcoord
+datanode
+indexnode
+querynode
+```
+
+<Tabs>
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+  Option 1: Using VerticalScaling OpsRequest
+
+  Apply the following YAML to scale up the resources for the **querynode** component:
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: milvus-cluster-vscale-ops
+    namespace: demo
+  spec:
+    clusterName: milvus-cluster
+    type: VerticalScaling
+    verticalScaling:
+    - componentName: querynode
+      requests:
+        cpu: '1'
+        memory: 1Gi
+      limits:
+        cpu: '1'
+        memory: 1Gi
+  ```
+
+  You can check the progress of the scaling operation with the following command:
+
+  ```bash
+  kubectl -n demo get ops milvus-cluster-vscale-ops -w
+  ```
+
+  Expected Result:
+
+  ```bash
+  NAME                        TYPE              CLUSTER          STATUS    PROGRESS   AGE
+  milvus-cluster-vscale-ops   VerticalScaling   milvus-cluster   Running   0/2        33s
+  milvus-cluster-vscale-ops   VerticalScaling   milvus-cluster   Running   1/2        55s
+  milvus-cluster-vscale-ops   VerticalScaling   milvus-cluster   Running   2/2        88s
+  ```
+
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  Option 2: Direct Cluster API Update
+
+  Alternatively, you may update `spec.componentSpecs.resources` field to the desired resources for vertical scale.
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: querynode
+        replicas: 1
+        resources:
+          requests:
+            cpu: "1"       # Update the resources to your need.
+            memory: "1Gi"  # Update the resources to your need.
+          limits:
+            cpu: "1"       # Update the resources to your need.
+            memory: "1Gi"  # Update the resources to your need.
+    ...
+    ```
+  </TabItem>
+</Tabs>
+
+
+:::note
+
+Milvus Cluster consists of five components. This tutorial shows how to perform changes to one component.
+You may perform changes to other components in the same way.
+
+:::
+
+## Best Practices & Considerations
+
+**Planning:**
+- Scale during maintenance windows or low-traffic periods
+- Verify Kubernetes cluster has sufficient resources
+- Check for any ongoing operations before starting
+
+**Execution:**
+- Maintain balanced CPU-to-Memory ratios
+- Set identical requests/limits for guaranteed QoS
+
+**Post-Scaling:**
+- Monitor resource utilization and application performance
+- Consider adjusting Milvus parameters if needed
+
+## Verification
+Verify the updated resources by inspecting the cluster configuration or Pod details:
+```bash
+kbcli cluster describe milvus-cluster -n demo
+```
+
+Expected Output:
+```bash
+Resources Allocation:
+COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
+milvus                          1 / 1                1Gi / 1Gi               data:20Gi      <none>
+```
+
+## Key Benefits of Vertical Scaling with KubeBlocks
+- Seamless Scaling: Pods are recreated in a specific order to ensure minimal disruption.
+- Dynamic Resource Adjustments: Easily scale CPU and memory based on workload requirements.
+- Flexibility: Choose between OpsRequest for dynamic scaling or direct API updates for precise control.
+- Improved Availability: The cluster remains operational during the scaling process, maintaining high availability.
+
+## Cleanup
+To remove all created resources, delete the Milvus  Cluster along with its namespace:
+```bash
+kubectl delete cluster milvus-cluster -n demo
+kubectl delete ns demo
+```
+
+## Summary
+In this guide, you learned how to:
+1. Deploy a Milvus  Cluster managed by KubeBlocks.
+2. Perform vertical scaling by increasing or decreasing resources for the milvus component.
+3. Use both OpsRequest and direct Cluster API updates to adjust resource allocations.
+
+Vertical scaling is a powerful tool for optimizing resource utilization and adapting to changing workload demands, ensuring your Milvus  Cluster remains performant and resilient.

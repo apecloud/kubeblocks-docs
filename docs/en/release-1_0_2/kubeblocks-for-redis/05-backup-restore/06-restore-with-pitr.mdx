@@ -1,0 +1,201 @@
+---
+title: Restore a Redis Cluster from Backup with Point-In-Time-Recovery(PITR) on KubeBlocks
+description: Learn how to restore a Redis cluster using a full backup and continuous binlog backup for Point-In-Time Recovery (PITR) on KubeBlocks.
+keywords: [Redis, Full Backup, PITR, KubeBlocks]
+sidebar_position: 6
+sidebar_label: Restore with PITR
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Restore a Redis Cluster from Backup with Point-In-Time-Recovery(PITR) on KubeBlocks
+
+This guide demonstrates how to perform Point-In-Time Recovery (PITR) for Redis clusters in KubeBlocks using:
+
+1. A full base backup
+2. Continuous WAL (Write-Ahead Log) backups
+3. Two restoration methods:
+   - Cluster Annotation (declarative approach)
+   - OpsRequest API (operational control)
+
+PITR enables recovery to any moment within the `timeRange` specified.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Prepare for PITR Restoration
+To perform a PITR restoration, both a full backup and continuous backup are required. Refer to the documentation to configure these backups if they are not already set up.
+
+- Completed full backup
+- Active continuous WAL backup
+- Backup repository accessible
+- Sufficient resources for new cluster
+
+To identify the list of full and continuous backups, you may follow the steps:
+
+### 1. Verify Continuous Backup
+Confirm you have a continuous WAL backup, either running or completed:
+
+```bash
+# expect EXACTLY ONE continuous backup per cluster
+kubectl get backup -n demo -l dataprotection.kubeblocks.io/backup-type=Continuous,app.kubernetes.io/instance=redis-replication
+```
+
+### 2. Check Backup Time Range
+Get the valid recovery window:
+
+```bash
+kubectl get backup <continuous-backup-name> -n demo -o yaml | yq '.status.timeRange'
+```
+
+Expected Output:
+```text
+start: "2025-05-07T09:12:47Z"
+end: "2025-05-07T09:22:50Z"
+```
+
+### 3. Identify Full Backup
+Find available full backups that meet:
+- Status: Completed
+- Completion time after continuous backup start time
+
+```bash
+# expect one or more Full backups
+kubectl get backup -n demo -l dataprotection.kubeblocks.io/backup-type=Full,app.kubernetes.io/instance=redis-replication
+```
+
+:::tip
+KubeBlocks automatically selects the most recent qualifying full backup as the base.
+Make sure there is a full backup meets the condition: its `stopTime`/`completionTimestamp` must **AFTER** Continuous backup's `startTime`, otherwise PITR restoration will fail.
+:::
+
+## Option 1: Cluster Annotation Restoration
+
+### Step 1: Create Restored Cluster
+Configure PITR parameters in cluster annotation:
+
+Key parameters:
+- `name`: Continuous backup name
+- `restoreTime`: Target recovery time (within backup `timeRange`)
+
+Apply this YAML configuration:
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: redis-restore-pitr
+  namespace: demo
+  annotations:
+    # NOTE: replace <CONTINUOUS_BACKUP_NAME> with the continuouse backup name
+    # NOTE: replace <RESTORE_POINT_TIME>  with a valid time within the backup timeRange.
+    kubeblocks.io/restore-from-backup: '{"redis":{"name":"<CONTINUOUS_BACKUP_NAME>","namespace":"demo","restoreTime":"<RESTORE_POINT_TIME>","volumeRestorePolicy":"Parallel"}}'
+spec:
+  terminationPolicy: Delete
+  clusterDef: redis
+  topology: replication
+  componentSpecs:
+    - name: redis
+      serviceVersion: "7.2.4"
+      disableExporter: false
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+    - name: redis-sentinel
+      serviceVersion: "7.2.4"
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+### Step 3: Monitor Restoration
+Track restore progress with:
+
+```bash
+# Watch restore status
+kubectl get restore -n demo -w
+
+# Watch cluster status
+kubectl get cluster -n demo -w
+```
+
+## Option 2: OpsRequest API Restoration
+
+For operational control and monitoring, use the OpsRequest API:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: redis-replication-restore
+  namespace: demo
+spec:
+  clusterName: redis-restore-pitr
+  force: false
+  restore:
+    backupName: <CONTINUOUS_BACKUP_NAME>
+    backupNamespace: demo
+    restorePointInTime: <RESTORE_POINT_TIME>
+  type: Restore
+```
+
+### Monitor Restoration
+Track progress with:
+
+```bash
+# Watch restore operation
+kubectl get restore -n demo -w
+
+# Verify cluster status
+kubectl get cluster -n demo -w
+```
+
+## Cleanup
+To remove all created resources, delete the Redis cluster along with its namespace:
+
+```bash
+kubectl delete cluster redis-replication -n demo
+kubectl delete cluster redis-restore-pitr -n demo
+kubectl delete ns demo
+```
+
+## Summary
+This guide demonstrated how to restore a Redis cluster in KubeBlocks using a full backup and continuous backup for Point-In-Time Recovery (PITR). Key steps included:
+- Verifying available backups.
+- Extracting encrypted system account credentials.
+- Creating a new Redis cluster with restoration configuration.
+- Monitoring the restoration process.
+
+With this approach, you can restore a Redis cluster to a specific point in time, ensuring minimal data loss and operational continuity.
+

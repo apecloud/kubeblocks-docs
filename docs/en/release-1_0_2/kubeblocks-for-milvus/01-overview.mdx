@@ -1,0 +1,84 @@
+---
+title: Overview of KubeBlocks Milvus Addon
+description: Learn about the features and capabilities of the KubeBlocks Milvus addon, including deployment topologies, lifecycle management, backup and restore, and supported versions.
+keywords: [Milvus, KubeBlocks, operator, database, features, lifecycle management, backup, restore]
+sidebar_position: 1
+sidebar_label: Overview
+---
+
+# Overview of KubeBlocks Milvus Addon
+
+Milvus is an open source (Apache-2.0 licensed) vector database built to power embedding similarity search and AI applications. Milvus architecture is designed to handle large-scale vector datasets and includes various deployment modes:  Milvus Standalone, and Milvus Distributed, to accommodate different data scale needs.
+
+## Key Features
+
+### Supported Topologies
+
+Milvus supports two deployment modes to accommodate different scale requirements:
+
+#### Standalone Mode
+
+A lightweight deployment suitable for development and testing:
+
+- **Milvus Core**: Provides vector search and database functionality
+- **Metadata Storage (ETCD)**: Stores cluster metadata and configuration
+- **Object Storage (MinIO/S3)**: Persists vector data and indexes
+
+#### Cluster Mode
+
+A distributed deployment for production workloads with multiple specialized components:
+
+**Access Layer**
+
+- Stateless proxies that handle client connections and request routing
+
+**Compute Layer**
+
+- Query Nodes: Execute search operations
+- Data Nodes: Handle data ingestion and compaction
+- Index Nodes: Build and maintain vector indexes
+
+**Coordination Layer**
+
+- Root Coordinator: Manages global metadata
+- Query Coordinator: Orchestrates query execution
+- Data Coordinator: Manages data distribution
+- Index Coordinator: Oversees index building
+
+**Storage Layer**
+
+- Metadata Storage (ETCD): Cluster metadata and configuration
+- Object Storage (MinIO/S3): Persistent vector data storage
+- Log Storage (Pulsar): Message queue for change data capture
+
+
+### Lifecycle Management
+
+KubeBlocks simplifies Milvus operations with comprehensive lifecycle management:
+
+| Feature                      | Description                                                                 |
+|------------------------------|-----------------------------------------------------------------------------|
+| **Horizontal Scaling**       | Scale replicas in/out to adjust capacity                                   |
+| **Vertical Scaling**         | Adjust CPU/memory resources for Milvus instances                       |
+| **Restart Operations**       | Controlled cluster restarts with minimal disruption                        |
+| **Start/Stop**               | Temporarily suspend/resume cluster operations                              |
+| **Custom Services**          | Expose specialized database endpoints                                      |
+| **Replica Management**       | Safely decommission or rebuild specific replicas                          |
+| **Version Upgrades**         | Perform minor version upgrades seamlessly                                  |
+| **Advanced Scheduling**      | Customize pod placement and resource allocation                           |
+| **Monitoring**               | Integrated Prometheus metrics collection                                  |
+| **Logging**                  | Centralized logs via Loki Stack                                           |
+
+### Supported Versions
+
+KubeBlocks Milvus Addon supports these Milvus versions:
+
+| Major Version | Supported Minor Versions       |
+|---------------|--------------------------------|
+| 2.3 | 2.3.2 |
+
+
+The list of supported versions can be found by following command:
+```bash
+kubectl get cmpv milvus
+```

@@ -1,0 +1,567 @@
+---
+title: Deploying a Milvus Cluster with KubeBlocks
+description: Learn how to deploy a Redis Replication cluster using KubeBlocks. This guide covers configuration, verification, failover testing, and timeout configuration.
+keywords: [KubeBlocks, Redis, Kubernetes, High Availability]
+sidebar_position: 1
+sidebar_label: Milvus Cluster
+---
+
+# Deploying a Milvus Cluster with KubeBlocks
+
+Milvus Cluster is a distributed deployment for production workloads with multiple specialized components:
+
+**Access Layer**
+
+- Stateless proxies that handle client connections and request routing
+
+**Compute Layer**
+
+- Query Nodes: Execute search operations
+- Data Nodes: Handle data ingestion and compaction
+- Index Nodes: Build and maintain vector indexes
+
+**Coordination Layer**
+
+- Root Coordinator: Manages global metadata
+- Query Coordinator: Orchestrates query execution
+- Data Coordinator: Manages data distribution
+- Index Coordinator: Oversees index building
+
+**Storage Layer**
+
+- Metadata Storage (ETCD): Cluster metadata and configuration
+- Object Storage (MinIO/S3): Persistent vector data storage
+- Log Storage (Pulsar): Message queue for change data capture
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploying the Milvus Cluster
+
+### Step 1. Deploy an ETCD Cluster
+
+ETCD cluster is for metadata storage
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: etcdm-cluster
+  namespace: demo
+spec:
+  terminationPolicy: WipeOut
+  componentSpecs:
+    - name: etcd
+      componentDef: etcd-3  # Prefix Match Component Definition Name
+      serviceVersion: 3.5.6
+      replicas: 1
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+### Step 2. Deploy a minio Cluster
+
+Minio is for object storage
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: miniom-cluster
+  namespace: demo
+spec:
+  terminationPolicy: WipeOut
+  componentSpecs:
+    - name: minio
+      componentDef: minio  # Prefix Match Component Definition Name
+      env:
+        - name: MINIO_BUCKETS # specify buckets to be created when initializing the cluster
+          value: milvus
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+### Step 3. Deploy a Pulsar Cluster
+
+Pulsar is for log storage
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: pulsarm-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  # The value must be `pulsar` to create a Pulsar Cluster
+  clusterDef: pulsar
+  topology: pulsar-basic-cluster
+  services:
+    - name: broker-bootstrap
+      serviceName: broker-bootstrap
+      componentSelector: broker
+      spec:
+        type: ClusterIP
+        ports:
+          - name: pulsar
+            port: 6650
+            targetPort: 6650
+          - name: http
+            port: 80
+            targetPort: 8080
+          - name: kafka-client
+            port: 9092
+            targetPort: 9092
+    - name: zookeeper
+      serviceName: zookeeper
+      componentSelector: zookeeper
+      spec:
+        type: ClusterIP
+        ports:
+          - name: client
+            port: 2181
+            targetPort: 2181
+  componentSpecs:
+    - name: broker
+      serviceVersion: 3.0.2
+      replicas: 1
+      env:
+        - name: KB_PULSAR_BROKER_NODEPORT
+          value: "false"
+      resources:
+        limits:
+          cpu: "1"
+          memory: "512Mi"
+        requests:
+          cpu: "200m"
+          memory: "512Mi"
+    - name: bookies
+      serviceVersion: 3.0.2
+      replicas: 4
+      resources:
+        limits:
+          cpu: "1"
+          memory: "512Mi"
+        requests:
+          cpu: "200m"
+          memory: "512Mi"
+      volumeClaimTemplates:
+        - name: ledgers
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 8Gi
+        - name: journal
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 8Gi
+    - name: zookeeper
+      serviceVersion: 3.0.2
+      replicas: 1
+      resources:
+        limits:
+          cpu: "1"
+          memory: "512Mi"
+        requests:
+          cpu: "100m"
+          memory: "512Mi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 8Gi
+```
+
+
+### Deploy a Milvus Cluster
+
+The cluster will be created with the following components:
+
+- Proxy
+- Data Node
+- Index Node
+- Query Node
+- Mixed Coordinator
+
+And each component will be created with `serviceRef` to the corresponding service: etcd, minio, and pulsar created previously.
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  namespace: demo
+  name: milvus-cluster
+spec:
+  terminationPolicy: Delete
+  # The value must be `milvus` to create a Milvus Cluster
+  clusterDef: milvus
+  # Valid options are: [standalone,cluster]
+  topology: cluster
+  componentSpecs:
+    - name: proxy
+      replicas: 1
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      configs:
+        - name: config
+          variables:
+            mq_type: pulsar # pulsar, kafka as mq
+            minio_bucket: milvus # a valid bucket name in minio
+            minio_root_path: files # root path for milvus data
+            minio_use_path_style: "true" # set to true for minio use path style
+      # Defines a list of ServiceRef for a Component
+      serviceRefs:
+        - name: milvus-meta-storage # Specifies the identifier of the service reference declaration, defined in `componentDefinition.spec.serviceRefDeclarations[*].name`
+          namespace: demo        # namepspace of referee cluster, update on demand
+          # References a service provided by another KubeBlocks Cluster
+          clusterServiceSelector:
+            cluster: etcdm-cluster  # ETCD Cluster Name, update the cluster name on demand
+            service:
+              component: etcd       # component name, should be etcd
+              service: headless     # Refer to default headless Service
+              port: client          # Refer to port name 'client', port 2379
+        - name: milvus-log-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: pulsarm-cluster # Pulsar Cluster Name
+            service:
+              component: broker
+              service: headless
+              port: pulsar         # port 6650
+        - name: milvus-object-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: miniom-cluster # Minio Cluster Name
+            service:
+              component: minio
+              service: headless
+              port: api            # port 9000
+            credential:            # Specifies the SystemAccount to authenticate and establish a connection with the referenced Cluster.
+              component: minio     # for component 'minio'
+              name: root          # the name of the credential (SystemAccount) to reference, using account 'admin' in this case
+    - name: mixcoord
+      replicas: 1
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      serviceRefs:
+        - name: milvus-meta-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: etcdm-cluster
+            service:
+              component: etcd
+              service: headless
+              port: client
+        - name: milvus-log-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: pulsarm-cluster
+            service:
+              component: broker
+              service: headless
+              port: pulsar
+        - name: milvus-object-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: miniom-cluster
+            service:
+              component: minio
+              service: headless
+              port: api
+            credential:
+              component: minio
+              name: root
+      disableExporter: true
+      configs:
+        - name: config
+          variables:
+            mq_type: pulsar
+            minio_bucket: milvus
+            minio_root_path: files
+            minio_use_path_style: "true"
+    - name: datanode
+      replicas: 1
+      disableExporter: true
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      serviceRefs:
+        - name: milvus-meta-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: etcdm-cluster
+            service:
+              component: etcd
+              service: headless
+              port: client
+        - name: milvus-log-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: pulsarm-cluster
+            service:
+              component: broker
+              service: headless
+              port: pulsar
+        - name: milvus-object-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: miniom-cluster
+            service:
+              component: minio
+              service: headless
+              port: api
+            credential:
+              component: minio
+              name: root
+      disableExporter: true
+      configs:
+        - name: config
+          variables:
+            mq_type: pulsar
+            minio_bucket: milvus
+            minio_root_path: files
+            minio_use_path_style: "true"
+    - name: indexnode
+      replicas: 1
+      disableExporter: true
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      serviceRefs:
+        - name: milvus-meta-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: etcdm-cluster
+            service:
+              component: etcd
+              service: headless
+              port: client
+        - name: milvus-log-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: pulsarm-cluster
+            service:
+              component: broker
+              service: headless
+              port: pulsar
+        - name: milvus-object-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: miniom-cluster
+            service:
+              component: minio
+              service: headless
+              port: api
+            credential:
+              component: minio
+              name: root
+      disableExporter: true
+      configs:
+        - name: config
+          variables:
+            mq_type: pulsar
+            minio_bucket: milvus
+            minio_root_path: files
+            minio_use_path_style: "true"
+    - name: querynode
+      replicas: 1
+      disableExporter: true
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      serviceRefs:
+        - name: milvus-meta-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: etcdm-cluster
+            service:
+              component: etcd
+              service: headless
+              port: client
+        - name: milvus-log-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: pulsarm-cluster
+            service:
+              component: broker
+              service: headless
+              port: pulsar
+        - name: milvus-object-storage
+          namespace: demo
+          clusterServiceSelector:
+            cluster: miniom-cluster
+            service:
+              component: minio
+              service: headless
+              port: api
+            credential:
+              component: minio
+              name: root
+      disableExporter: true
+      configs:
+        - name: config
+          variables:
+            mq_type: pulsar
+            minio_bucket: milvus
+            minio_root_path: files
+            minio_use_path_style: "true"
+```
+
+:::note
+
+Clusters, such as Pulsar, Minio and ETCD, have multiple ports for different services.
+When creating Cluster with `serviceRef`, you should know which `port` providing corresponding services.
+For instance, in MinIO, there are mainly four ports: 9000, 9001, 3501, and 3502, and they are used for different services or functions.
+
+:::
+
+
+Service References are specified using `serviceRefs` as follows, please update cluster names and ports accordingly w.r.t your running environment.
+```yaml
+# Defines a list of ServiceRef for a Component
+serviceRefs:
+  - name: milvus-meta-storage # Specifies the identifier of the service reference declaration, defined in `componentDefinition.spec.serviceRefDeclarations[*].name`
+    namespace: demo        # namepspace of referee cluster, update on demand
+    # References a service provided by another KubeBlocks Cluster
+    clusterServiceSelector:
+      cluster: etcdm-cluster  # ETCD Cluster Name, update the cluster name on demand
+      service:
+        component: etcd       # component name, should be etcd
+        service: headless     # Refer to default headless Service
+        port: client          # NOTE: Refer to port name 'client', for port number '3501'
+  - name: milvus-log-storage
+    namespace: demo
+    clusterServiceSelector:
+      cluster: pulsarm-cluster # Pulsar Cluster Name
+      service:
+        component: broker
+        service: headless
+        port: pulsar          # NOTE: Refer to port name 'pulsar', for port number '6650'
+  - name: milvus-object-storage
+    namespace: demo
+    clusterServiceSelector:
+      cluster: miniom-cluster # Minio Cluster Name
+      service:
+        component: minio
+        service: headless
+        port: http           # NOTE: Refer to port name 'http', for port number '9000'
+      credential:            # Specifies the SystemAccount to authenticate and establish a connection with the referenced Cluster.
+        component: minio     # for component 'minio'
+        name: root          # NOTE: the name of the credential (SystemAccount) to reference, using account `root` in this case
+```
+
+
+
+## Verifying the Deployment
+
+### Check the Cluster Status
+Once the cluster is deployed, check its status:
+```bash
+kubectl get cluster milvus-cluster  -n demo -w
+```
+Expected Output:
+```bash
+NAME             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+milvus-cluster   milvus               Delete               Running   4m38s
+```
+
+### Verify Component and Pod Status
+```bash
+kubectl get component -l app.kubernetes.io/instance=milvus-cluster -n demo
+```
+Expected Output:
+```bash
+NAME                       DEFINITION                       SERVICE-VERSION   STATUS    AGE
+milvus-cluster-datanode    milvus-datanode-1.0.0            v2.3.2            Running   5m8s
+milvus-cluster-indexnode   milvus-indexnode-1.0.0           v2.3.2            Running   5m8s
+milvus-cluster-mixcoord    milvus-mixcoord-1.0.0            v2.3.2            Running   5m8s
+milvus-cluster-proxy       milvus-proxy-1.0.0               v2.3.2            Running   5m8s
+milvus-cluster-querynode   milvus-querynode-1.0.0           v2.3.2            Running   5m8s
+```
+
+Check pods:
+
+```bash
+kubectl get pods -l app.kubernetes.io/instance=milvus-cluster -n demo
+```
+
+Expected Output:
+```bash
+NAME                         READY   STATUS    RESTARTS   AGE
+milvus-cluster-datanode-0    1/1     Running   0          5m30s
+milvus-cluster-indexnode-0   1/1     Running   0          5m31s
+milvus-cluster-mixcoord-0    1/1     Running   0          5m32s
+milvus-cluster-proxy-0       1/1     Running   0          5m32s
+milvus-cluster-querynode-0   1/1     Running   0          5m31s
+milvus-cluster-querynode-1   1/1     Running   0          3m51s
+```
+
+## Cleanup
+To remove all resources created during this tutorial:
+
+```bash
+kubectl delete cluster milvus-cluster -n demo
+kubectl delete cluster etcdm-cluster -n demo
+kubectl delete cluster miniom-cluster -n demo
+kubectl delete cluster pulsarm--cluster -n demo
+kubectl delete ns demo
+```

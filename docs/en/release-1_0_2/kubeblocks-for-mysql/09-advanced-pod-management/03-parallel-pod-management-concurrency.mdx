@@ -1,0 +1,291 @@
+---
+title: Configuring MySQL Cluster with Controlled Pod Creation, Scaling, and Deletion Parallelism in KubeBlocks
+description: Learn how to configure MySQL clusters in KubeBlocks with controlled pod parallelism for creation, scaling, and deletion using the `parallelPodManagementConcurrency` parameter.
+keywords: [KubeBlocks, MySQL, Pod Management, Parallelism, Kubernetes]
+sidebar_position: 3
+sidebar_label: Pod Management Parallelism
+---
+
+# Configuring a MySQL Cluster with Controlled Pod Creation, Scaling, and Deletion Parallelism in KubeBlocks
+
+This guide demonstrates how to control pod creation, scaling, and deletion parallelism for MySQL clusters in KubeBlocks using the `parallelPodManagementConcurrency` parameter. By defining the maximum number of pods that can be managed in parallel, it allows users to balance operational speed and system stability. Unlike the `podManagementPolicy` in StatefulSet, which only provides two fixed options (`OrderedReady` or `Parallel`), `parallelPodManagementConcurrency` offers more flexibility, making it ideal for both resource-sensitive and production environments.
+
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## Deploy a MySQL Semi-Synchronous Cluster
+
+Deploy a 2-node semi-sync MySQL cluster (1 primary, 1 secondary) and set the `parallelPodManagementConcurrency` parameter to 1 to enforce sequential pod creation.
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      parallelPodManagementConcurrency: 1
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+**Key Parameter:**
+- The `parallelPodManagementConcurrency` parameter is set to 1, which ensures that the pods are created sequentially rather than in parallel.
+
+## Monitor Pod Creation
+Run the following command to monitor the creation and initialization of the MySQL pods in the demo namespace:
+
+```bash
+kubectl get pods -n demo -w
+```
+
+Example Output:
+
+Below is an example of the output when deploying the cluster. Notice how the pods are created sequentially due to the `parallelPodManagementConcurrency: 1` setting:
+
+```bash
+NAME                            READY   STATUS    RESTARTS   AGE
+example-mysql-cluster-mysql-0   0/4     Pending   0          1s
+example-mysql-cluster-mysql-0   0/4     Pending   0          3s
+example-mysql-cluster-mysql-0   0/4     Init:0/5   0          3s
+example-mysql-cluster-mysql-0   0/4     Init:1/5   0          9s
+example-mysql-cluster-mysql-0   0/4     Init:2/5   0          10s
+example-mysql-cluster-mysql-0   0/4     Init:3/5   0          11s
+example-mysql-cluster-mysql-0   0/4     Init:4/5   0          12s
+example-mysql-cluster-mysql-0   0/4     PodInitializing   0          13s
+example-mysql-cluster-mysql-0   3/4     Running           0          14s
+example-mysql-cluster-mysql-0   3/4     Running           0          15s
+example-mysql-cluster-mysql-0   3/4     Running           0          18s
+example-mysql-cluster-mysql-0   4/4     Running           0          19s
+example-mysql-cluster-mysql-1   0/4     Pending           0          0s
+example-mysql-cluster-mysql-1   0/4     Pending           0          3s
+example-mysql-cluster-mysql-1   0/4     Init:0/5          0          3s
+example-mysql-cluster-mysql-1   0/4     Init:1/5          0          7s
+example-mysql-cluster-mysql-1   0/4     Init:2/5          0          8s
+example-mysql-cluster-mysql-1   0/4     Init:3/5          0          9s
+example-mysql-cluster-mysql-1   0/4     Init:4/5          0          10s
+example-mysql-cluster-mysql-1   0/4     PodInitializing   0          11s
+example-mysql-cluster-mysql-1   3/4     Running           0          12s
+example-mysql-cluster-mysql-1   3/4     Running           0          13s
+example-mysql-cluster-mysql-0   4/4     Running           0          35s
+example-mysql-cluster-mysql-1   3/4     Running           0          17s
+example-mysql-cluster-mysql-1   4/4     Running           0          17s
+```
+***Key Observations:***
+- 'example-mysql-cluster-mysql-0' completes initialization and enters the Running state before 'example-mysql-cluster-mysql-1' begins its initialization.
+- This sequential behavior is controlled by the `parallelPodManagementConcurrency` parameter.
+
+
+## Scaling Out the Cluster
+
+To scale the cluster to 4 replicas, use the following configuration:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 4
+      parallelPodManagementConcurrency: 1
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+Example Output:
+
+```bash
+kubectl get pods -n demo -w
+NAME                            READY   STATUS     RESTARTS   AGE
+example-mysql-cluster-mysql-0   4/4     Running    0          32m
+example-mysql-cluster-mysql-1   4/4     Running    0          29m
+example-mysql-cluster-mysql-2   0/4     Init:0/5   0          4s
+example-mysql-cluster-mysql-2   0/4     Init:0/5   0          23s
+example-mysql-cluster-mysql-2   0/4     Init:1/5   0          24s
+example-mysql-cluster-mysql-2   0/4     Init:1/5   0          32s
+example-mysql-cluster-mysql-2   0/4     Init:2/5   0          33s
+example-mysql-cluster-mysql-2   0/4     Init:2/5   0          42s
+example-mysql-cluster-mysql-2   0/4     Init:3/5   0          43s
+example-mysql-cluster-mysql-2   0/4     Init:4/5   0          52s
+example-mysql-cluster-mysql-2   0/4     Init:4/5   0          60s
+example-mysql-cluster-mysql-2   0/4     PodInitializing   0          61s
+example-mysql-cluster-mysql-2   3/4     Running           0          93s
+example-mysql-cluster-mysql-2   3/4     Running           0          93s
+example-mysql-cluster-mysql-2   3/4     Running           0          100s
+example-mysql-cluster-mysql-2   4/4     Running           0          101s
+example-mysql-cluster-mysql-3   0/4     Pending           0          0s
+example-mysql-cluster-mysql-3   0/4     Pending           0          3s
+example-mysql-cluster-mysql-3   0/4     Init:0/5          0          3s
+example-mysql-cluster-mysql-3   0/4     Init:1/5          0          12s
+example-mysql-cluster-mysql-3   0/4     Init:2/5          0          13s
+example-mysql-cluster-mysql-3   0/4     Init:3/5          0          14s
+example-mysql-cluster-mysql-3   0/4     Init:4/5          0          15s
+example-mysql-cluster-mysql-3   0/4     PodInitializing   0          16s
+example-mysql-cluster-mysql-3   3/4     Running           0          17s
+example-mysql-cluster-mysql-3   3/4     Running           0          18s
+example-mysql-cluster-mysql-3   3/4     Running           0          21s
+example-mysql-cluster-mysql-3   4/4     Running           0          21s
+```
+**Key Observations:**
+- New Pods ('example-mysql-cluster-mysql-2' and 'example-mysql-cluster-mysql-3') are created sequentially, following the same pattern as the initial deployment.
+- Each Pod completes initialization before the next Pod begins.
+
+
+## Scaling In the Cluster
+
+To reduce the cluster back to 2 replicas, apply the following configuration:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: server
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      parallelPodManagementConcurrency: 1
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+Example Output:
+
+```bash
+kubectl get pods -n demo -w
+NAME                            READY   STATUS    RESTARTS   AGE
+example-mysql-cluster-mysql-0   4/4     Running   0          36m
+example-mysql-cluster-mysql-1   4/4     Running   0          34m
+example-mysql-cluster-mysql-2   4/4     Running   0          48s
+example-mysql-cluster-mysql-3   4/4     Running   0          31s
+example-mysql-cluster-mysql-3   4/4     Terminating   0          51s
+example-mysql-cluster-mysql-3   0/4     Completed     0          53s
+example-mysql-cluster-mysql-3   0/4     Completed     0          54s
+example-mysql-cluster-mysql-3   0/4     Completed     0          54s
+example-mysql-cluster-mysql-2   4/4     Terminating   0          71s
+example-mysql-cluster-mysql-2   0/4     Completed     0          73s
+example-mysql-cluster-mysql-2   0/4     Completed     0          74s
+example-mysql-cluster-mysql-2   0/4     Completed     0          74s
+```
+**Key Observations:**
+- Pods are terminated sequentially, following the same pattern as creation and scaling out.
+
+
+## Cleanup
+To remove all created resources, delete the MySQL cluster along with its namespace:
+
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete ns demo
+```
+
+
+## Explanation of `parallelPodManagementConcurrency`
+The `parallelPodManagementConcurrency` parameter defines the maximum number of Pods that can be created or deleted in parallel.
+
+### Behaviors:
+- When set to 1, it enforces sequential Pod creation, scaling, and deletion. This behavior ensures the primary Pod must be fully initialized before the secondary Pod starts.
+- When set to a higher value (e.g., 2, 3): Multiple Pods can be created or deleted simultaneously, up to the specified concurrency limit.
+- When not set (default behavior): All Pods are created or deleted in parallel without any concurrency limit.
+
+It is similar to the `podManagementPolicy` of StatefulSet. However, `podManagementPolicy` in StatefulSet only provides two options: fully ordered ('OrderedReady') or fully parallel ('Parallel'). In contrast, `parallelPodManagementConcurrency` offers more fine-grained control.
+
+
+### Why Use parallelPodManagementConcurrency?
+This parameter provides fine-grained control over Pod management, allowing you to balance speed and stability based on your application needs. Below are the key benefits:
+
+- **Avoiding Resource Contention**: In resource-limited clusters, creating multiple Pods in parallel can lead to resource competition, causing some Pods to remain in a Pending state. Sequential Pod creation ensures even resource allocation and prevents overwhelming the cluster.
+
+- **Simplifying Debugging**: Sequential creation makes it easier to identify and resolve issues. If a Pod fails to start due to an error, it can be fixed before proceeding, avoiding simultaneous failures and simplifying troubleshooting.
+
+- **Improving Stability**: For scaling or updates, creating Pods one at a time ensures dependencies are respected, reducing the risk of conflicts or instability in stateful applications.
+
+- **Preventing Service Interruptions**: Sequential creation ensures each Pod is fully ready before the next starts, maintaining availability and avoiding downtime, especially for applications with strict readiness requirements.
+
+
+## Summary
+
+Through this guide, we demonstrated:
+- How to configure `parallelPodManagementConcurrency` for sequential pod creation, scaling, and deletion.
+- The benefits of sequential pod management, such as avoiding resource contention, simplifying debugging, and improving system stability.
+- How to scale MySQL clusters both up and down with controlled pod parallelism.
+
+Using `parallelPodManagementConcurrency`, you can optimize pod management to suit your workload's unique requirements while ensuring high availability and efficient resource usage.

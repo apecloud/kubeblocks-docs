@@ -1,0 +1,210 @@
+---
+title: FAQs
+description: How to handle an exception in a cluster
+keywords: [cluster exception]
+sidebar_position: 1
+sidebar_label: FAQs
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# FAQs
+
+### List of K8s Resources created by KubeBlocks when creating a Cluster
+
+To get the full list of associated resources created by KubeBlocks for given cluster:
+
+```bash
+kubectl get cmp,its,po -l app.kubernetes.io/instance=<CLUSTER_NAME> -n demo # cluster and worload
+kubectl get backuppolicy,backupschedule,backup -l app.kubernetes.io/instance=<CLUSTER_NAME> -n demo # data protection resources
+kubectl get componentparameter,parameter -l app.kubernetes.io/instance=<CLUSTER_NAME> -n demo # configuration resources
+kubectl get opsrequest -l app.kubernetes.io/instance=<CLUSTER_NAME> -n demo # opsrequest resources
+kubectl get svc,secret,cm,pvc -l app.kubernetes.io/instance=<CLUSTER_NAME> -n demo # k8s native resources
+```
+
+For troubleshooting,
+
+1. describe resource such as Cluster, Component, e.g.
+```bash
+kubectl describe TYPE NAME
+```
+
+2. check database instance logs
+```bash
+kubectl logs <podName> -c <containerName>
+```
+
+3. check KubeBlocks logs
+```bash
+kubectl -n kb-system logs deployments/kubeblocks -f
+```
+
+### How to get the detail of each backup method
+
+Details of each backup method are defined in `ActionSet` in KubeBlocks.
+
+For example, To get the `ActionSet` which defines the behavior of backup method named `wal-g-archive` in PostgreSQL, for instance:
+
+```bash
+kubectl -n demo get bp pg-cluster-postgresql-backup-policy -oyaml | yq '.spec.backupMethods[] | select(.name=="wal-g-archive") | .actionSetName'
+```
+
+ActionSet defined:
+
+- backup type
+- both backup and restore procedures
+- environment variables used in procedures
+
+And you may check details of each ActionSet to find out how backup and restore will be performed.
+
+
+### How to Check Compatible versions
+
+Versions and it compatibility rules are embedded in `ComponentVersion` CR in KubeBlocks.
+To the the list of compatible versions:
+
+```bash
+kubectl get cmpv postgresql -ojson | jq '.spec.compatibilityRules'
+```
+
+<details open>
+
+<summary>Example Output</summary>
+
+```json
+[
+  {
+    "compDefs": [
+      "postgresql-12-"
+    ],
+    "releases": [
+      "12.14.0",
+      "12.14.1",
+      "12.15.0"
+    ]
+  },
+  {
+    "compDefs": [
+      "postgresql-14-"
+    ],
+    "releases": [
+      "14.7.2",
+      "14.8.0"
+    ]
+  }
+]
+```
+
+</details>
+
+Releases are grouped by component definitions, and each group has a list of compatible releases.
+In this example, it shows you can upgrade from version `12.14.0` to `12.14.1` or `12.15.0`, and upgrade from `14.7.2` to `14.8.0`.
+But cannot upgrade from `12.14.0` to `14.8.0`.
+
+
+### ComponentDefinition status is Unavailable
+
+If you made some changes to the ComponentDefinition, the status of ComponentDefinition may turn to `Unavailable`.
+KubeBlocks sets the ComponentDefinition as `Unavailable` to prevent the changes from affecting existing clusters.
+
+By describing the ComponentDefinition, you can see following message:
+
+```text
+Status:
+  Message:              immutable fields can't be updated
+  Observed Generation:  3
+  Phase:                Unavailable
+```
+
+If the changes made are on-purpose, you can annotate the ComponentDefinition by running the following command:
+
+```bash
+kubectl annotate componentdefinition <COMPONENT_DEFINITION_NAME> apps.kubeblocks.io/skip-immutable-check=true
+```
+
+
+### Failed to Install KubeBlocks on K8s \<\= 1.23
+
+If you are using K8s \<\= 1.23, you may encounter the following error when installing KubeBlocks:
+
+```bash
+unknown field "x-kubernetes-validations" .... if you choose to ignore these errors, turn validation off with --validate\=false
+```
+
+This is because the `x-kubernetes-validations` field is not supported in K8s \<\= 1.23.
+
+You can fix this by running the following command:
+
+```bash
+kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/v1.0.0/kubeblocks_crds.yaml --validate\=false
+```
+
+### How to cancel a running OpsRequest
+
+KubeBlocks supports to `cancel`  OpsRequest meets the following conditions:
+
+- The OpsRequest is in `Running` state
+- The OpsRequest type is `VerticalScaling`, `HorizontalScaling`
+
+To cancel a running OpsRequest, you can run the following command:
+
+```bash
+kubectl patch opsrequest <OPSREQUEST_NAME> -p '{"spec":{"cancel":true}}' --type=merge
+```
+
+### Cluster/Component stuck in `Updating` status
+
+If you find that a cluster/component is stuck in `Updating` status:
+
+
+1. check if all pods are in `Running` status
+2. check pod logs to see if there are any errors
+3. check if each Pod has expected `roles` if required, to check the `roles` of a Pod, you can run the following command:
+```bash
+kubectl get po <POD_NAME> -L kubeblocks.io/role
+```
+4. check for Pods, if the container status image matches the pod spec image
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name:
+spec:
+  containers:
+  - image: repo/image:tag  # <==== image in spec
+    name: c1
+status:
+  containerStatuses:
+    containerID: containerd://123456
+    image: repo/image:tag # <====== image in status
+    imageID: repo/image:tag@sha256:123456
+    name: c1
+```
+If the two fields are not match, please check if there are two or more images share the same `IMAGG ID` but of different `IMAGE` tags.
+
+If so, please remove those images on your node and create a new Cluster.
+
+
+### Cluster stuck in `Deleting` status, and KubeBlocks logs: `has no pods to running the pre-terminate action`
+
+When deleting a cluster, one may find the cluster stuck in `Deleting` status, and the following error in KubeBlocks logs:
+
+```bash
+kubectl -n kb-system logs deployments/kubeblocks -f
+```
+And you may see the following error in KubeBlocks logs:
+
+```bash
+> INFO	build error: has no pods to running the pre-terminate action
+```
+
+This is because KubeBlocks will run the `pre-terminate` lifecycle action if defined in corresponding `ComponentDefinition`.
+If there are no pods to run the pre-terminate action, the cluster will stuck in `Deleting` status until the pre-terminate action is completed.
+To skip the pre-terminate action, you can annotate the Component by running the following command:
+
+```bash
+kubectl annotate component <COMPONENT_NAME> apps.kubeblocks.io/skip-pre-terminate-action=true
+```
+
+This case happens when you create a cluster but for some reason, it failed to create any pod (e.g. failed to pull the image or network issue or not enough resources).

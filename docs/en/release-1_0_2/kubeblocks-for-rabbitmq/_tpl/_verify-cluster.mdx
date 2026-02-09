@@ -1,0 +1,33 @@
+Monitor the cluster status until it transitions to the Running state:
+```bash
+kubectl get cluster rabbitmq-cluster -n demo -w
+```
+
+Expected Output:
+
+```bash
+kubectl get cluster rabbitmq-cluster -n demo
+NAME               CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+rabbitmq-cluster   rabbitmq             Delete               Creating   15s
+rabbitmq-cluster   rabbitmq             Delete               Running    83s
+```
+
+Check the pod status and roles:
+```bash
+kubectl get pods -l app.kubernetes.io/instance=rabbitmq-cluster -n demo
+```
+
+Expected Output:
+```bash
+NAME                          READY   STATUS    RESTARTS   AGE
+rabbitmq-cluster-rabbitmq-0   2/2     Running   0          106s
+rabbitmq-cluster-rabbitmq-1   2/2     Running   0          82s
+rabbitmq-cluster-rabbitmq-2   2/2     Running   0          47s
+```
+
+Once the cluster status becomes Running, your RabbitMQ cluster is ready for use.
+
+:::tip
+If you are creating the cluster for the very first time, it may take some time to pull images before running.
+
+:::

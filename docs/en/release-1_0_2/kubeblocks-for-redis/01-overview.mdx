@@ -1,0 +1,72 @@
+---
+title: Overview of KubeBlocks Redis Addon
+description: Learn about the features and capabilities of the KubeBlocks Redis addon, including deployment topologies, lifecycle management, backup and restore, and supported versions.
+keywords: [Redis, KubeBlocks, operator, database, features, lifecycle management, backup, restore]
+sidebar_position: 1
+sidebar_label: Overview
+---
+
+# Overview of KubeBlocks Redis Addon
+
+Redis is an open source (BSD licensed), in-memory data structure store, used as a database, cache and message broker. This example shows how it can be managed in Kubernetes with KubeBlocks.
+
+
+## Key Features
+
+### Supported Topologies
+
+| Topology      | Data Distribution | Scalability | High Availability | Use Cases                     |
+|---------------|-------------------|-------------|--------------------|-------------------------------|
+| **Standalone**| Single node       | No          | No                 | Development/testing, small datasets |
+| **Replication** with sentinel     | Primary-Secondary replication | Read scaling | Yes | Read-heavy workloads, data redundancy needed |
+| **Cluster**   | Sharded storage   | Read/write scaling | Yes | Large datasets, high-concurrency production environments |
+
+### Lifecycle Management
+
+KubeBlocks simplifies Redis operations with comprehensive lifecycle management:
+
+| Feature                      | Description                                                                 |
+|------------------------------|-----------------------------------------------------------------------------|
+| **Horizontal Scaling**       | Scale replicas in/out to adjust capacity                                   |
+| **Vertical Scaling**         | Adjust CPU/memory resources for Redis instances                       |
+| **Volume Expansion**         | Dynamically increase storage capacity without downtime                     |
+| **Restart Operations**       | Controlled cluster restarts with minimal disruption                        |
+| **Start/Stop**               | Temporarily suspend/resume cluster operations                              |
+| **Password Management**      | Ability to set and manage custom root password for the Redis cluster during creation |
+| **Dynamic Configuration**    | Modify Redis parameters without restarting                            |
+| **Custom Services**          | Expose specialized database endpoints                                      |
+| **Switchover**               | Planned primary-replica role changes                                       |
+| **Replica Management**       | Safely decommission or rebuild specific replicas                          |
+| **Version Upgrades**         | Perform minor version upgrades seamlessly                                  |
+| **Advanced Scheduling**      | Customize pod placement and resource allocation                           |
+| **Monitoring**               | Integrated Prometheus metrics collection                                  |
+| **Logging**                  | Centralized logs via Loki Stack                                           |
+
+
+### Backup and Restore
+
+KubeBlocks supports multiple backup strategies for Redis:
+
+| Feature           | Method          | Description |
+|-------------|--------|------------|
+| Full Backup | datafile  | Uses `redis-cli BGSAVE` command to backup data |
+| Continuous Backup | aof | Continuously perform incremental backups by archiving Append-Only Files (AOF) |
+
+### Supported Versions
+
+KubeBlocks Redis Addon supports these Redis versions:
+
+| Major Version | Supported Minor Versions       |
+|---------------|--------------------------------|
+| 8.2           | 8.2.1 |
+| 8.0           | 8.0.3, 8.0.1 |
+| 7.4           | 7.4.5, 7.4.2 |
+| 7.2           | 7.2.10, 7.2.7, 7.2.4 |
+| 7.0           | 7.0.6 |
+| 6.2           | 6.2.17, 6.2.14 |
+| 5.0           | 5.0.12 |
+
+The list of supported versions can be found by following command:
+```bash
+kubectl get cmpv redis
+```

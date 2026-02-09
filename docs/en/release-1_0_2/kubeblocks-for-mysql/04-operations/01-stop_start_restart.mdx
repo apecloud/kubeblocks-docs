@@ -1,0 +1,267 @@
+---
+title: Managing MySQL Cluster Lifecycle (Stop, Start, and Restart)
+description: Learn how to manage the lifecycle of a MySQL cluster in KubeBlocks, including stopping, starting, and restarting clusters to optimize resource usage and maintain flexibility.
+keywords: [KubeBlocks, MySQL, Cluster Management, Stop, Start, Restart]
+sidebar_position: 1
+sidebar_label: Lifecycle Management
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# Managing MySQL Cluster Lifecycle
+
+This guide demonstrates how to manage the lifecycle of a MySQL cluster in **KubeBlocks**, including stopping, starting, and restarting the cluster. Proper lifecycle management helps optimize resource usage, reduce operational costs, and ensure flexibility in your Kubernetes environment.
+
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## Deploy a MySQL Semi-Synchronous Cluster
+
+KubeBlocks uses a declarative approach for managing MySQL clusters. Below is an example configuration for deploying a MySQL cluster with 2 nodes (1 primary, 1 replicas) in semi-synchronous mode.
+
+Apply the following YAML configuration to deploy the cluster:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+## Verifying the Deployment
+Monitor the cluster status until it transitions to the Running state:
+```bash
+kubectl get cluster example-mysql-cluster -n demo -w
+```
+Example Output:
+```bash
+NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Creating   7s
+example-mysql-cluster   mysql                Delete               Running   63s
+```
+Once the cluster status becomes Running, your MySQL cluster is ready for use.
+
+## Managing the Cluster Lifecycle
+
+### Stop the Cluster
+
+Stopping the cluster terminates all its running pods but retains the persistent storage. This is useful when you want to temporarily suspend the cluster to save costs.
+
+    <Tabs>
+
+    <TabItem value="opsRequest" label="OPSREQUEST API" default>
+
+Option 1: Using OpsRequest
+
+You can stop the cluster using an OpsRequest:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-cluster-stop-ops
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  type: Stop
+EOF
+```
+    </TabItem>
+
+    <TabItem value="ClusterAPI" label="CLUSTER API">
+
+Option 2: Using the Declarative Cluster API
+
+Alternatively, you may stop the cluster by setting the `spec.componentSpecs.stop` field to `true`  in the cluster configuration:
+
+```bash
+kubectl patch cluster example-mysql-cluster -n demo --type='json' -p='[
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/0/stop",
+    "value": true
+  }
+]'
+```
+
+    </TabItem>
+
+    </Tabs>
+
+### Verifying Cluster Stop
+Monitor the cluster's status to ensure it transitions to the Stopped state:
+```bash
+kubectl get cluster -n demo -w
+```
+Example Output:
+```bash
+NAME                       CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster   mysql                Delete               Stopping   93s
+example-mysql-cluster   mysql                Delete               Stopped    101s
+```
+
+There is no Pods running in the cluster, but the persistent storage is retained.
+```bash
+kubectl get pods -n demo
+```
+Expected Output:
+```bash
+No resources found in demo namespace.
+```
+
+```bash
+kubectl get pvc -n demo
+```
+```bash
+NAME                                 STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS    VOLUMEATTRIBUTESCLASS   AGE
+data-example-mysql-cluster-mysql-0   Bound    pvc-98ce87ab-acc6-4f95-8638-16e8052f98d8   20Gi       RWO            kb-default-sc   <unset>                 16m
+data-example-mysql-cluster-mysql-1   Bound    pvc-5bb87b23-7c38-45de-bf04-f2822051d897   20Gi       RWO            kb-default-sc   <unset>                 16m
+```
+
+### Start the Cluster
+
+Starting the cluster recreates the pods and brings the cluster back online.
+    <Tabs>
+
+    <TabItem value="opsRequest" label="OPSREQUEST API" default>
+
+Option 1: Using OpsRequest
+
+You can start the stopped cluster using an OpsRequest:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-cluster-start-ops
+  namespace: demo
+spec:
+  # Specifies the name of the Cluster resource that this operation is targeting.
+  clusterName: example-mysql-cluster
+  type: Start
+EOF
+```
+
+    </TabItem>
+
+    <TabItem value="ClusterAPI" label="CLUSTER API">
+
+Option 1: Using the Declarative Cluster API
+
+Alternatively, you can start the cluster by:
+- Setting the `spec.componentSpecs.stop` field to false, or
+- Removing the `spec.componentSpecs.stop` field entirely.
+
+```bash
+kubectl patch cluster example-mysql-cluster -n demo --type='json' -p='[
+  {
+    "op": "remove",
+    "path": "/spec/componentSpecs/0/stop"
+  }
+]'
+```
+    </TabItem>
+
+    </Tabs>
+
+### Verifying Cluster Start
+
+Monitor the cluster's status to ensure it transitions back to the Running state:
+
+```bash
+kubectl get cluster -n demo -w
+```
+
+Example Output:
+```bash
+NAME                       CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster   mysql                Delete               Updating   5m54s
+example-mysql-cluster   mysql                Delete               Running    6m6s
+```
+
+
+### Restart the Cluster
+
+Restarting the cluster allows you to recreate the pods for specific components without deleting or stopping the entire cluster.
+
+#### Using OpsRequest
+
+To restart a specific component (e.g., mysql), use the following OpsRequest:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: example-mysql-cluster-restart-ops
+  namespace: demo
+spec:
+  clusterName: example-mysql-cluster
+  type: Restart
+  restart:
+  - componentName: mysql
+EOF
+```
+
+#### Verifying Cluster Restart
+Monitor the cluster's status to ensure the restart is completed successfully:
+```bash
+kubectl get opsrequest example-mysql-cluster-restart-ops -n demo -w
+```
+Expected Output:
+```bash
+NAME                                TYPE      CLUSTER                 STATUS    PROGRESS   AGE
+example-mysql-cluster-restart-ops   Restart   example-mysql-cluster   Succeed   2/2        3m16s
+```
+Once the operation is complete, the cluster will return to the Running state.
+
+## Summary
+In this guide, you learned how to:
+1. Stop a MySQL cluster to suspend operations while retaining persistent storage.
+2. Start a stopped cluster to bring it back online.
+3. Restart specific cluster components to recreate their Pods without stopping the entire cluster.
+
+By managing the lifecycle of your MySQL cluster, you can optimize resource utilization, reduce costs, and maintain flexibility in your Kubernetes environment. KubeBlocks provides a seamless way to perform these operations, ensuring high availability and minimal disruption.

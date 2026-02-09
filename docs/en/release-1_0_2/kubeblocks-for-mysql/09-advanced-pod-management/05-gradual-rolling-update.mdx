@@ -1,0 +1,205 @@
+---
+title: Configuring a MySQL Cluster with Gradual Rolling Update in KubeBlocks
+description: Learn how to configure and perform gradual rolling updates for MySQL clusters in KubeBlocks using the rolling update strategy to ensure minimal disruption during updates.
+keywords: [KubeBlocks, MySQL, Rolling Update, Kubernetes, Cluster Management]
+sidebar_position: 5
+sidebar_label: Gradual Rolling Update
+---
+
+# Configuring a MySQL Cluster with Gradual Rolling Update in KubeBlocks
+
+This guide demonstrates how to configure gradual rolling updates for MySQL clusters in KubeBlocks using the rolling update strategy. Gradual rolling updates allow you to control the number of Pods updated at a time, ensuring minimal disruption during updates.
+**Key Parameters:**
+- `rollingUpdate.replicas`: Specifies the number of instances to update during each step of the rolling update. The remaining instances stay unaffected.
+  - The value can be an absolute number (e.g., 5) or a percentage of desired instances (e.g., 10%).
+  - Absolute numbers are calculated by rounding up percentages.
+  - The default is the total number of replicas, meaning all instances are updated.
+- `rollingUpdate.maxUnavailable`: Limits the maximum number of instances that can be unavailable during the update.
+  - The value can also be an absolute number (e.g., 5) or a percentage (e.g., 10%).
+  - This value cannot be 0. The default is 1.
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## Deploy a MySQL Semi-Synchronous Cluster
+
+Deploy a 2-node MySQL cluster with semi-synchronous replication (1 primary, 1 secondary) using the following YAML configuration:
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-mysql-cluster
+  namespace: demo
+spec:
+  clusterDef: mysql
+  topology: semisync
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: mysql
+      serviceVersion: 8.0.35
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+## Verifying the Deployment
+Monitor the cluster status until it transitions to the Running state:
+```bash
+kubectl get cluster example-mysql-cluster -n demo -w
+```
+Example Output:
+```bash
+NAME                     CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Creating   6s
+example-mysql-cluster   mysql                Delete               Running    3m47s
+```
+Once the cluster status becomes Running, your MySQL cluster is ready for use.
+
+
+## Performing Gradual Rolling Updates
+This section demonstrates how to gradually update Pods in the MySQL cluster.
+### Step 1. Trigger Resource Update
+Update the resource requests and limits for the MySQL cluster while setting `rollingUpdate.replicas` to 1. This ensures only one Pod gets updated at a time.
+```bash
+kubectl patch cluster example-mysql-cluster -n demo --type='json' -p='[
+  {
+    "op": "add",
+    "path": "/spec/componentSpecs/0/instanceUpdateStrategy",
+    "value": {
+      "rollingUpdate": {
+        "replicas": 1
+      }
+    }
+  },
+  {
+    "op": "replace",
+    "path": "/spec/componentSpecs/0/resources/limits/cpu",
+    "value": "1.0"
+  },
+  {
+    "op": "replace",
+    "path": "/spec/componentSpecs/0/resources/limits/memory",
+    "value": "1.0Gi"
+  },
+  {
+    "op": "replace",
+    "path": "/spec/componentSpecs/0/resources/requests/cpu",
+    "value": "1.0"
+  },
+  {
+    "op": "replace",
+    "path": "/spec/componentSpecs/0/resources/requests/memory",
+    "value": "1.0Gi"
+  }
+]'
+```
+
+### Step 2. Observe the Update Process
+Check the cluster status after applying the patch:
+```bash
+kubectl get cluster example-mysql-cluster -n demo
+```
+Example Output:
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+example-mysql-cluster   mysql                Delete               Updating   5m57s
+```
+The cluster status shows Updating, and one Pod will restart to apply the changes.
+
+Monitor the Pod update process:
+```bash
+kubectl get pods -n demo -w
+```
+Example Output:
+```
+NAME                            READY   STATUS     RESTARTS   AGE
+example-mysql-cluster-mysql-0   4/4     Running    0          3m3s
+example-mysql-cluster-mysql-1   0/4     Init:1/6   0          10s
+example-mysql-cluster-mysql-1   0/4     Init:2/6   0          24s
+example-mysql-cluster-mysql-1   0/4     Init:3/6   0          25s
+example-mysql-cluster-mysql-1   0/4     Init:4/6   0          26s
+example-mysql-cluster-mysql-1   0/4     Init:5/6   0          27s
+example-mysql-cluster-mysql-1   0/4     PodInitializing   0          28s
+example-mysql-cluster-mysql-1   3/4     Running           0          29s
+example-mysql-cluster-mysql-1   4/4     Running           0          34s
+```
+
+### Step 3. Gradually Update the Remaining Pods
+
+After the first Pod is updated, increase `rollingUpdate.replicas` to 2 to update the next Pod.
+```bash
+kubectl patch cluster example-mysql-cluster -n demo --type='json' -p='[
+  {
+    "op": "replace",
+    "path": "/spec/componentSpecs/0/instanceUpdateStrategy/rollingUpdate/replicas",
+    "value": 2
+  }
+]'
+```
+Monitor the rest pod is updated:
+```bash
+kubectl get pods -n demo  -w
+```
+Example Output:
+```
+example-mysql-cluster-mysql-0   4/4     Terminating       0          8m7s
+example-mysql-cluster-mysql-0   0/4     Pending           0          0s
+example-mysql-cluster-mysql-0   0/4     Init:0/6          0          0s
+example-mysql-cluster-mysql-0   0/4     Init:1/6          0          7s
+example-mysql-cluster-mysql-0   0/4     Init:1/6          0          8s
+example-mysql-cluster-mysql-0   0/4     Init:2/6          0          20s
+example-mysql-cluster-mysql-0   0/4     Init:3/6          0          21s
+example-mysql-cluster-mysql-0   0/4     Init:4/6          0          22s
+example-mysql-cluster-mysql-0   0/4     Init:5/6          0          23s
+example-mysql-cluster-mysql-0   0/4     PodInitializing   0          24s
+example-mysql-cluster-mysql-0   3/4     Running           0          25s
+example-mysql-cluster-mysql-0   4/4     Running           0          26s
+```
+
+Once all Pods are running, the cluster status will update to 'Running':
+```bash
+kubectl get cluster example-mysql-cluster -n demo -w
+```
+Example Output:
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+example-mysql-cluster   mysql                Delete               Running   9m26s
+```
+
+## Cleanup
+To remove all created resources, delete the MySQL cluster along with its namespace:
+```bash
+kubectl delete cluster example-mysql-cluster -n demo
+kubectl delete ns demo
+```
+
+## Summary
+In this guide, we demonstrated how to configure and perform gradual rolling updates for a MySQL cluster in KubeBlocks. By customizing the `rollingUpdate.replicas` parameter, you can control the number of Pods updated at a time, ensuring a seamless update process with minimal disruption to your workload.
+

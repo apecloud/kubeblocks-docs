@@ -1,0 +1,181 @@
+---
+title: Setting Up a MongoDB Cluster with Scheduled Continuous Backup in KubeBlocks
+description: Learn how to set up a MongoDB cluster with scheduled full backups and continuous incremental backups enabled in KubeBlocks.
+keywords: [MongoDB, Backup, PITR, KubeBlocks, Kubernetes]
+sidebar_position: 4
+sidebar_label: Scheduled Continuous Backup
+---
+
+# Setting Up a MongoDB Cluster with Scheduled Continuous Backup Enabled in KubeBlocks
+
+This guide demonstrates how to configure a MongoDB cluster on KubeBlocks with:
+
+- Scheduled full backups (base backups)
+- Continuous WAL (Write-Ahead Log) archiving
+- Point-In-Time Recovery (PITR) capabilities
+
+This combination provides comprehensive data protection with minimal recovery point objectives (RPO).
+
+## What is PITR?
+Point-In-Time Recovery (PITR) allows you to restore a database to a specific moment in time by combining full backups with continuous binlog/wal/archive log backups.
+
+For details on restoring data from both full backups and continuous binlog backups, refer to the [Restore From PITR](restore-with-pitr.mdx)  guide.
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## Prerequisites for Backup
+
+1. Backup Repository Configured:
+   - Configured `BackupRepo`
+   - Network connectivity between cluster and repo, `BackupRepo` status is `Ready`
+
+2. Cluster is Running:
+   - Cluster must be in `Running` state
+   - No ongoing operations (scaling, upgrades etc.)
+
+## List of Backup methods
+
+KubeBlocks MongoDB supports these backup methods:
+
+| Feature           | Method          | Description |
+|-------------|--------|------------|
+| Full Backup | dump   | Uses `mongodump`, a MongoDB utility used to create a binary export of the contents of a database  |
+| Full Backup | datafile | Backup the data files of the database |
+| Continuous Backup | archive-oplog | Continuously archives MongoDB oplog using `wal-g` |
+
+## Deploy a MongoDB ReplicaSet Cluster with Backup APIs
+
+Deploy a MongoDB ReplicaSet Cluster with 3 replicas and specify backup information:
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: mongo-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: mongodb
+  topology: replicaset
+  componentSpecs:
+    - name: mongodb
+      serviceVersion: "6.0.21"
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+  backup:
+    retentionPeriod: 7d
+    # for full backup
+    method: datafile # full backup methnod name
+    enabled: true
+    cronExpression: 0 18 * * * # full backup scheuler
+    # for continuous backup
+    continuousMethod: archive-oplog # continuous backup method, paired with method wal-g
+    pitrEnabled: true # enable continous method or not
+    repoName: s3-repo # specify backuprepo, if not specified, the BackupRepo annotated as `default` will be used.
+```
+
+**Key Configuration Fields Explained**
+
+| Field | Value | Description |
+|-------|-------|-------------|
+| `backup.enabled` | `true` | Enables scheduled backups |
+| `method` | `datafile` | Full backup method using PostgreSQL's native utility |
+| `cronExpression` | `0 18 * * *` | Daily full backup at 6PM UTC |
+| `retentionPeriod` | `7d` | Retains backups for 7 days |
+| `repoName` | `s3-repo` | Backup repository name (S3-compatible storage) |
+| `pitrEnabled` | `true` | Enables continuous WAL archiving for PITR |
+| `continuousMethod` | `archive-oplog` | Method for continuous WAL archiving |
+
+
+## Verifying the Deployment
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+## Monitoring Continuous Backups
+
+Verify continuous backup operation with these commands:
+```bash
+# get continuous backup
+kubectl get backup -l app.kubernetes.io/instance=mongo-cluster,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
+# get pod working for continuous backup
+kubectl get pod -l app.kubernetes.io/instance=mongo-cluster,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
+```
+
+## Verifying Backup Configuration
+
+KubeBlocks automatically creates a `BackupSchedule` resource. Inspect the configuration:
+
+```bash
+kubectl get backupschedule pg-cluster-postgresql-backup-schedule  -n demo -oyaml
+```
+
+Example Output:
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: BackupSchedule
+...
+spec:
+  backupPolicyName: mongo-cluster-mongodb-backup-schedule
+  schedules:
+  - backupMethod: datafile
+    cronExpression: 0 18 * * *
+    enabled: true #
+    retentionPeriod: 7d
+  - backupMethod: archive-oplog
+    cronExpression: '*/5 * * * *'
+    enabled: true  # set to `true` to enable continuous backup
+    retentionPeriod: 8d # set the retention period to your need
+```
+
+1. **Full Backups** (datafile):
+  - Backup the data files of mongodb
+  - Runs on configured schedule (daily by default)
+  - Serves as base for PITR
+
+2. **Continuous Backups** (archive-oplog):
+  - Continuously archives MongoDB oplog using wal-g
+  - Uses datasafed as storage backend with zstd compression
+  - Maintains backup metadata including size and time ranges
+  - Automatically purges expired backups
+  - Verifies MongoDB primary status and process health
+
+## Summary
+
+This guide covered:
+1. Configuring scheduled full backups with pg-basebackup
+2. Enabling continuous WAL archiving with wal-g-archive
+3. Setting up Point-In-Time Recovery (PITR) capabilities
+4. Monitoring backup operations
+
+Key Benefits:
+- Scheduled full backups ensure regular recovery points
+- Continuous WAL archiving minimizes potential data loss
+- PITR enables recovery to any moment in time

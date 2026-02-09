@@ -1,0 +1,52 @@
+---
+title: Install MinIO
+description: Complete guide to installing MinIO for KubeBlocks cluster management
+keywords: [MinIO, installation, configuration, command-line]
+sidebar_position: 10
+sidebar_label: Install MinIO
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+# Install MinIO
+
+If you don't have an object storage service from a cloud provider, you can deploy the open-source service MinIO in Kubernetes and use it to configure BackupRepo.
+
+1. Install MinIO in the `kb-system` namespace.
+
+   ```bash
+   helm install minio oci://registry-1.docker.io/bitnamicharts/minio --namespace kb-system --create-namespace --set "extraEnvVars[0].name=MINIO_BROWSER_LOGIN_ANIMATION" --set "extraEnvVars[0].value=off" --version 14.10.5
+   ```
+
+   Get the initial username and password:
+
+   ```bash
+   # Initial username
+   echo $(kubectl get secret --namespace kb-system minio -o jsonpath="{.data.root-user}" | base64 -d)
+
+   # Initial password
+   echo $(kubectl get secret --namespace kb-system minio -o jsonpath="{.data.root-password}" | base64 -d)
+   ```
+
+2. Generate credentials.
+
+   Access the login page by running `kubectl port-forward --namespace kb-system svc/minio 9001:9001` and then accessing `127.0.0.1:9001`.
+
+   Once you are logged in to the dashboard, you can generate an `access key` and `secret key`.
+
+   ![backup-and-restore-backup-repo-1](/img/docs/en/backup-and-restore-backup-repo-1.png)
+
+3. Create a bucket.
+
+   Create a bucket named `test-minio` for the test.
+
+   ![backup-and-restore-backup-repo-2](/img/docs/en/backup-and-restore-backup-repo-2.png)
+   ![backup-and-restore-backup-repo-3](/img/docs/en/backup-and-restore-backup-repo-3.png)
+
+  :::note
+
+  The access address (endpoint) for the installed MinIO is `http://minio.kb-system.svc.cluster.local:9000`. In this case, `kb-system` is the name of the namespace where MinIO is installed.
+
+  :::

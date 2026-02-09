@@ -1,0 +1,236 @@
+---
+title: Deploying a Redis Sharding Cluster with KubeBlocks
+description: Learn how to deploy a Redis Sharding cluster using KubeBlocks. This guide covers configuration, verification, failover testing, and timeout configuration.
+keywords: [KubeBlocks, Redis, Kubernetes, High Availability]
+sidebar_position: 1
+sidebar_label: Redis Sharding Cluster
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Deploying a Redis Sharding Cluster (Cluster Mode) with KubeBlocks
+
+Redis Cluster distributes data across multiple nodes (shards) using hash-based partitioning, allowing horizontal scaling for both reads and writes.
+
+**Use Cases**
+- Large-scale applications requiring high throughput.
+- Distributed caching and session storage.
+- Write-heavy workloads (e.g., real-time analytics).
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploying the Redis Sharding Cluster
+
+To create a redis sharding cluster (cluster mode)  with 3 shards, and 2 replica for each shard:
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: redis-sharding
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  shardings:
+  - name: shard  # the name of the shard
+    shards: 3  # the number of shards to create for the cluster
+    template:
+      name: redis
+      componentDef: redis-cluster-7 # the name of the component definition for each shard
+      replicas: 2 # replicas is the number of replicas to create for each shard
+      resources:
+        limits:
+          cpu: '1'
+          memory: 1Gi
+        requests:
+          cpu: '1'
+          memory: 1Gi
+      serviceVersion: 7.2.4
+      volumeClaimTemplates:
+      - name: data
+        spec:
+          accessModes:
+          - ReadWriteOnce
+          resources:
+            requests:
+              storage: 20Gi
+      services:
+      # The service `redis-advertised` is defined in `ComponentDefinition`
+      # and it is used to parse the advertised endpoints of the Redis pods.
+      - name: redis-advertised # This is a per-pod svc, and will be used to parse advertised endpoints
+        podService: true
+        #  - NodePort
+        #  - LoadBalancer
+        serviceType: NodePort
+```
+
+**Key Configuration Details**:
+- `shardings`: Specifies a list of `ShardingSpec` objects that configure the sharding topology for components of a Cluster.
+- `shards`: Specifies the number of shards to create for the cluster.
+- `serviceType`: Specifies the service type of `redis-advertised` service, which is used to parse the advertised endpoints of the Redis pods.
+   By default, the service type is `NodePort`. If you want to expose the service to the outside of the cluster, you can override the service type to `NodePort` or `LoadBalancer` depending on your need.
+
+:::tip
+
+A Redis cluster needs a minimum of **three** master nodes to ensure high availability and prevent data inconsistency.
+
+A production-ready Redis Cluster is typically recommended to have at least six nodes: three masters for sharding and failover consensus, and three replicas to act as backups for each master.
+
+When creating or scaling-in redis clusters, make sure the `shards` is greater than or equal to **3**.
+:::
+
+## Verifying the Deployment
+
+### Check the Cluster Status
+Once the cluster is deployed, check its status:
+```bash
+kubectl get cluster redis-sharding  -n demo -w
+```
+Expected Output:
+```bash
+NAME             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+redis-sharding                        Delete               Running   103s
+```
+
+### Verify Component and Pod Status
+
+Get all components working for this cluster:
+```bash
+kubectl get cmp -l app.kubernetes.io/instance=redis-sharding -n demo
+```
+
+Expected Output:
+```bash
+NAME                       DEFINITION                      SERVICE-VERSION   STATUS    AGE
+redis-sharding-shard-5cd   redis-cluster-7-1.0.0           7.2.4             Running   2m34s
+redis-sharding-shard-drg   redis-cluster-7-1.0.0           7.2.4             Running   2m34s
+redis-sharding-shard-tgf   redis-cluster-7-1.0.0           7.2.4             Running   2m34s
+```
+Each component stands for a shard, with hash id as suffix.
+
+Check pods and their roles
+
+```bash
+kubectl get pods -l app.kubernetes.io/instance=redis-sharding -L  kubeblocks.io/role -n demo
+```
+
+Expected Output:
+```bash
+NAME                         READY   STATUS    RESTARTS   AGE     ROLE
+redis-sharding-shard-5cd-0   2/2     Running   0          3m55s   primary
+redis-sharding-shard-5cd-1   2/2     Running   0          3m35s   secondary
+redis-sharding-shard-drg-0   2/2     Running   0          3m53s   primary
+redis-sharding-shard-drg-1   2/2     Running   0          3m35s   secondary
+redis-sharding-shard-tgf-0   2/2     Running   0          3m54s   primary
+redis-sharding-shard-tgf-1   2/2     Running   0          3m36s   secondary
+```
+There are in-total six replicas in the cluster, two (one primarily and one secondary) for each component.
+
+## Scaling Shards
+
+### Scaling-Out Shards (Add Shards)
+**Expected Workflow**:
+
+1. A new Component is provisioned with two replicas, one primary and one secondary.
+2. Cluster status changes from `Updating` to `Running` when all the components are ready (status is `Running`).
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  Option 1: Using Horizontal Scaling OpsRequest
+
+  To increase the number of shards to `4`, you can use the following OpsRequest:
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: redis-sharding-scale-out-ops
+    namespace: demo
+  spec:
+    clusterName: redis-sharding
+    type: HorizontalScaling
+    horizontalScaling:
+    - componentName: shard
+      shards: 4
+  ```
+
+  Monitor the progress of the scaling operation:
+
+  ```bash
+  kubectl get ops redis-sharding-scale-out-ops -n demo -w
+  ```
+
+  Expected Result:
+  ```bash
+  NAME                           TYPE                CLUSTER          STATUS    PROGRESS   AGE
+  redis-sharding-scale-out-ops   HorizontalScaling   redis-sharding   Running   0/1          35s
+  redis-sharding-scale-out-ops   HorizontalScaling   redis-sharding   Succeed   1/1        2m35s
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  Option 2: Direct Cluster API Update
+
+  Alternatively, you can perform a direct update to the `shards` field in the Cluster resource:
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  spec:
+    componentSpecs:
+      - name: shard
+        shards: 4
+  # remaining fields are the same as the original cluster CR, omited for brevity
+  ...
+  ```
+
+  Or you can patch the cluster CR with command:
+
+  ```bash
+  kubectl patch cluster redis-sharding -n demo --type=json -p='[{"op": "replace", "path": "/spec/shardings/0/shards", "value": 4}]'
+  ```
+
+  </TabItem>
+</Tabs>
+
+Similar to scaling-out, you can also scale-in the cluster by decreasing the `shards` field in the Cluster resource. But make sure the `shards` is greater than or equal to 3.
+
+## Switchover
+
+To switchover a shard, named `redis-sharding-shard-5cd` for example, you can use the following OpsRequest:
+
+```yaml
+kind: OpsRequest
+metadata:
+  name: redis-sharding-switchover-ops
+  namespace: demo
+spec:
+  clusterName: redis-sharding  # redis-sharding is the name of the cluster
+  switchover:
+  - componentObjectName: redis-sharding-shard-5cd  # componentObjectName is the name of one of the shards
+    candidateName: redis-sharding-shard-5cd-0  # candidateName is the name of the candidate instance
+    instanceName: redis-sharding-shard-5cd-1  # instanceName is the name of the primary instance
+  type: Switchover
+```
+
+:::note
+
+`componentObjectName` is the name of one of the shards, which is the full name of the component object.
+
+:::
+
+## Cleanup
+To remove all resources created during this tutorial:
+
+```bash
+kubectl delete cluster redis-sharding -n demo
+kubectl delete ns demo
+```
