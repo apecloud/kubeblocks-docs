@@ -3,7 +3,7 @@ Monitor the cluster status until it transitions to the Running state:
 kubectl get cluster kafka-separated-cluster -n demo -w
 ```
 
-Expected Output:
+Example Output:
 
 ```bash
 kubectl get cluster kafka-separated-cluster -n demo
@@ -17,7 +17,7 @@ Check the pod status and roles:
 kubectl get pods -l app.kubernetes.io/instance=kafka-separated-cluster -n demo
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                                         READY   STATUS    RESTARTS   AGE
 kafka-separated-cluster-kafka-broker-0       2/2     Running   0          13m

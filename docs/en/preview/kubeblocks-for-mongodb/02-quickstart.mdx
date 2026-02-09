@@ -59,7 +59,7 @@ If the add-on isn't enabled, choose an installation method:
   # Update helm repo
   helm repo update
   # Search available Add-on versions
-  helm search repo kubeblocks/mongodb --versions
+  helm search repo kubeblocks-addons/mongodb --versions
   # Install your desired version (replace <VERSION> with your chosen version)
   helm upgrade -i kb-addon-mongodb kubeblocks-addons/mongodb --version <VERSION> -n kb-system
   ```
@@ -121,7 +121,7 @@ kubectl get cmpv mongodb
 <summary>Example Output</summary>
 ```text
 NAME      VERSIONS                            STATUS      AGE
-mongodb   8.0.8,7.0.18,6.0.21,5.0.29,4.4.29   Available   26d
+mongodb   8.0.17,7.0.28,6.0.27,5.0.29,4.4.29   Available   26d
 ```
 </details>
 
@@ -151,9 +151,9 @@ This returns versions compatible with `ComponentDefinition` named `mongodb`:
 <details open>
 <summary>Example Output</summary>
 ```text
-8.0.8
-7.0.18
-6.0.21
+8.0.17
+7.0.28
+6.0.27
 5.0.29
 4.4.29
 ```
@@ -182,7 +182,7 @@ kubectl apply -f https://raw.githubusercontent.com/apecloud/kubeblocks-addons/re
 ```
 
 This creates:
-- A MongoDB ReplicaSet Cluster with one component, MongoDB(3 replicas)..
+- A MongoDB ReplicaSet Cluster with one component, MongoDB(3 replicas).
 - Default resource allocations (0.5 CPU, 0.5Gi memory)
 - 20Gi persistent storage
 - Automatic primary-replica configuration
@@ -215,8 +215,8 @@ spec:
     - name: mongodb
       # ServiceVersion specifies the version of the Service expected to be
       # provisioned by this Component.
-      # Valid options are: [8.0.8,7.0.18,6.0.21,5.0.29,4.4.29]
-      serviceVersion: "6.0.21"
+      # Valid options are: [8.0.17,7.0.28,6.0.27,5.0.29,4.4.29]
+      serviceVersion: "6.0.27"
       # Specifies the desired number of replicas in the Component
       replicas: 3
       # Specifies the resources required by the Component.
@@ -248,6 +248,10 @@ spec:
 
 For more API fields and descriptions, refer to the [API Reference](../user_docs/references/api-reference/cluster).
 
+:::tip
+More example manifests and setups for MongoDB can be found in the [official KubeBlocks Add-ons MongoDB examples directory](https://github.com/apecloud/kubeblocks-addons/tree/main/examples/mongodb).
+:::
+
 ### Create a Version-Specific MongoDB ReplicaSet Cluster
 
 To create a cluster with a specific version, configure `spec.componentSpecs.serviceVersion` (major.minor version) fields before applying it:
@@ -271,21 +275,21 @@ To create a cluster with a specific version, configure `spec.componentSpecs.serv
   ```yaml
     componentSpecs:
       - name: mongodb
-        serviceVersion: 6.0.21
+        serviceVersion: 6.0.27
   ```
   </TabItem>
   <TabItem value="mongodb7" label="MongoDB 7">
   ```yaml
     componentSpecs:
       - name: mongodb
-        serviceVersion: 7.0.18
+        serviceVersion: 7.0.28
   ```
   </TabItem>
   <TabItem value="mongodb8" label="MongoDB 8">
   ```yaml
     componentSpecs:
       - name: mongodb
-        serviceVersion: 8.0.8
+        serviceVersion: 8.0.17
   ```
   </TabItem>
 
@@ -313,9 +317,9 @@ mongo-cluster   mongodb              Delete               Running    62s
 
 kubectl get pods -l app.kubernetes.io/instance=mongo-cluster -L  kubeblocks.io/role -n demo
 NAME                      READY   STATUS    RESTARTS   AGE   ROLE
-mongo-cluster-mongodb-0   2/2     Running   0          78s   primary
-mongo-cluster-mongodb-1   2/2     Running   0          63s   secondary
-mongo-cluster-mongodb-2   2/2     Running   0          48s   secondary
+mongodb-cluster-mongodb-0   4/4     Running   0          3m7s    primary
+mongodb-cluster-mongodb-1   4/4     Running   0          2m13s   secondary
+mongodb-cluster-mongodb-2   4/4     Running   0          119s    secondary
 ```
   </TabItem>
 
@@ -338,19 +342,19 @@ mongodb     mongo-cluster-mongodb.demo.svc.cluster.local:27017              <non
 
 Topology:
 COMPONENT   SERVICE-VERSION   INSTANCE                  ROLE        STATUS    AZ       NODE    CREATED-TIME
-mongodb     6.0.21            mongo-cluster-mongodb-0   primary     Running   zone-x   x.y.z   May 18,2025 21:16 UTC+0800
-mongodb     6.0.21            mongo-cluster-mongodb-1   secondary   Running   zone-x   x.y.z   May 18,2025 21:16 UTC+0800
-mongodb     6.0.21            mongo-cluster-mongodb-2   secondary   Running   zone-x   x.y.z   May 18,2025 21:17 UTC+0800
+mongodb     6.0.27            mongo-cluster-mongodb-0   primary     Running   zone-x   x.y.z   May 18,2025 21:16 UTC+0800
+mongodb     6.0.27            mongo-cluster-mongodb-1   secondary   Running   zone-x   x.y.z   May 18,2025 21:16 UTC+0800
+mongodb     6.0.27            mongo-cluster-mongodb-2   secondary   Running   zone-x   x.y.z   May 18,2025 21:17 UTC+0800
 
 Resources Allocation:
 COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
 mongodb                         500m / 500m          512Mi / 512Mi           data:20Gi      <none>
 
 Images:
-COMPONENT   COMPONENT-DEFINITION    IMAGE
-mongodb     mongodb-1.0.1           docker.io/apecloud/percona-server-mongodb:6.0.21
-                                    docker.io/apecloud/percona-backup-mongodb:2.9.1
-                                    docker.io/apecloud/mongodb_exporter:0.44.0
+COMPONENT   COMPONENT-DEFINITION   IMAGE
+mongodb     mongodb-1.0.2          docker.io/apecloud/percona-server-mongodb:6.0.27
+                                   docker.io/apecloud/percona-backup-mongodb:2.10.0
+                                   docker.io/apecloud/mongodb_exporter:0.44.0
 
 Data Protection:
 BACKUP-REPO   AUTO-BACKUP   BACKUP-SCHEDULE   BACKUP-METHOD   BACKUP-RETENTION   RECOVERABLE-TIME

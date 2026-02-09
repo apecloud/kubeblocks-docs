@@ -34,7 +34,7 @@ List available backups with the following command:
 kubectl get backup -n demo
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                                               POLICY                                      METHOD           REPO      STATUS      TOTAL-SIZE   DURATION   DELETION-POLICY   CREATION-TIME          COMPLETION-TIME        EXPIRATION-TIME
 77a788fa-example-mysql-cluster-archive-binlog      example-mysql-cluster-mysql-backup-policy   archive-binlog   s3-repo   Running     2110030                 Delete            2025-03-04T02:28:55Z                          2025-04-03T02:28:55Z
@@ -53,7 +53,7 @@ Make sure there is a full backup meets the condition: its `stopTime`/`completion
 Create a new cluster with restoration configuration referencing the backup.
 
 Apply the following YAML configuration:
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -93,7 +93,7 @@ EOF
 
 Alternatively, use the Ops API to initiate the restoration process:
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: operations.kubeblocks.io/v1alpha1
 kind: OpsRequest

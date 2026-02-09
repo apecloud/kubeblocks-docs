@@ -36,7 +36,7 @@ KubeBlocks uses a declarative approach for managing MySQL clusters. Below is an 
 
 Deploy the cluster using the following YAML manifest:
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -121,7 +121,7 @@ Dynamic parameters can be modified without restarting the database. For example,
 The expected behavior is that after modifying the configuration, the new settings take effect immediately, without the need to restart the database.
 
 To update the 'max_connections' parameter from 83 to 100, apply the following Reconfiguring OpsRequest:
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: operations.kubeblocks.io/v1alpha1
 kind: OpsRequest
@@ -175,7 +175,7 @@ Static parameters, such as 'performance_schema', require a database restart to t
 
 Create a Reconfigure OpsRequest. Apply the following OpsRequest YAML to update the 'performance_schema':
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: operations.kubeblocks.io/v1alpha1
 kind: OpsRequest

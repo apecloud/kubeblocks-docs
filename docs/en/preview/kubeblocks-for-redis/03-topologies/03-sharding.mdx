@@ -91,7 +91,7 @@ Once the cluster is deployed, check its status:
 ```bash
 kubectl get cluster redis-sharding  -n demo -w
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME             CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 redis-sharding                        Delete               Running   103s
@@ -104,7 +104,7 @@ Get all components working for this cluster:
 kubectl get cmp -l app.kubernetes.io/instance=redis-sharding -n demo
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                       DEFINITION                      SERVICE-VERSION   STATUS    AGE
 redis-sharding-shard-5cd   redis-cluster-7-1.0.0           7.2.4             Running   2m34s
@@ -119,7 +119,7 @@ Check pods and their roles
 kubectl get pods -l app.kubernetes.io/instance=redis-sharding -L  kubeblocks.io/role -n demo
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                         READY   STATUS    RESTARTS   AGE     ROLE
 redis-sharding-shard-5cd-0   2/2     Running   0          3m55s   primary

@@ -197,7 +197,7 @@ Verify the updated cluster configuration:
 ```bash
 kbcli cluster describe pg-cluster -n demo
 ```
-Expected Output:
+Example Output:
 ```bash
 Resources Allocation:
 COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
@@ -209,7 +209,7 @@ Confirm PVC resizing completion:
 ```bash
 kubectl get pvc -l app.kubernetes.io/instance=pg-cluster -n demo
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                                     STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS          AGE
 pg-cluster-postgresql-data-0             Bound    pvc-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx   30Gi       RWO            <STORAGE_CLASS_NAME>  33m

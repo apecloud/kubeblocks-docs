@@ -36,7 +36,7 @@ namespace/demo created
 KubeBlocks uses a declarative approach for managing MySQL clusters. Below is an example configuration for deploying a MySQL cluster with 2 nodes (1 primary, 1 replicas) in semi-synchronous mode.
 
 Cluster Configuration
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -100,7 +100,7 @@ kubectl get backuppolicy -n demo
 kubectl get backupschedule -n demo
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                                            BACKUP-REPO   STATUS      AGE
 example-mysql-cluster-mysql-backup-policy                      Available   58m
@@ -128,7 +128,7 @@ The following sections demonstrate how to perform a full backup using the 'xtrab
 
 Execute a full backup using the 'xtrabackup' method defined in the backup policy:
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: dataprotection.kubeblocks.io/v1alpha1
 kind: Backup
@@ -185,7 +185,7 @@ Example Output:
 
 Execute a full backup using the 'xtrabackup' method defined in the backup policy:
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: operations.kubeblocks.io/v1alpha1
 kind: OpsRequest
@@ -212,7 +212,7 @@ Execute the following command to monitor the backup operation status in real-tim
 ```bash
 kubectl get ops example-mysql-cluster-backup  -n demo -w
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                           TYPE     CLUSTER                 STATUS    PROGRESS   AGE
 example-mysql-cluster-backup   Backup   example-mysql-cluster   Succeed   -/-        3m34s

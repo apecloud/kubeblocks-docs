@@ -34,7 +34,7 @@ Our Kubernetes cluster (EKS) consists of 9 nodes distributed across 3 availabili
 ```bash
 kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | while read node; do echo -n "Node: $node, Zone: "; kubectl get node "$node" -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}'; echo; done
 ```
-Expected Output:
+Example Output:
 ```bash
 ip-10-0-1-107.ap-southeast-1.compute.internal   Ready    <none>   91m     v1.31.5-eks-5d632ec
 ip-10-0-1-183.ap-southeast-1.compute.internal   Ready    <none>   71m     v1.31.5-eks-5d632ec
@@ -53,7 +53,7 @@ From the output, we can see there are three nodes in each AZ: `ap-southeast-1a, 
 
 ### Creating a MySQL Cluster
 To deploy a 3-node semi-synchronous MySQL cluster (1 primary, 2 secondary) across different AZs, use the following YAML configuration:
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -127,7 +127,7 @@ To verify that the MySQL Pods are distributed across different availability zone
 ```bash
 kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster -o=jsonpath='{range .items[*]}{"Pod: "}{.metadata.name}{"\tZone: "}{.spec.nodeName}{"\n"}{end}' | while read line; do pod=$(echo $line | awk '{print $2}'); node=$(echo $line | awk '{print $4}'); zone=$(kubectl get node $node -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}'); echo "Pod: $pod, Zone: $zone"; done
 ```
-Expected Output:
+Example Output:
 ```bash
 Pod: example-mysql-cluster-mysql-0, Zone: ap-southeast-1c
 Pod: example-mysql-cluster-mysql-1, Zone: ap-southeast-1b
@@ -142,7 +142,7 @@ Pod: example-mysql-cluster-mysql-2, Zone: ap-southeast-1a
 ### Creating a MySQL Cluster
 
 To deploy Pods in the same AZ to optimize for low latency, use the following configuration:
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -217,7 +217,7 @@ example-mysql-cluster2   mysql                Delete               Running   2m4
 ```bash
 kubectl get pods -n demo -l app.kubernetes.io/instance=example-mysql-cluster2 -o=jsonpath='{range .items[*]}{"Pod: "}{.metadata.name}{"\tZone: "}{.spec.nodeName}{"\n"}{end}' | while read line; do pod=$(echo $line | awk '{print $2}'); node=$(echo $line | awk '{print $4}'); zone=$(kubectl get node $node -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}'); echo "Pod: $pod, Zone: $zone"; done
 ```
-Expected Output:
+Example Output:
 ```bash
 Pod: example-mysql-cluster-mysql-0, Zone: ap-southeast-1c
 Pod: example-mysql-cluster-mysql-1, Zone: ap-southeast-1c

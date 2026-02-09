@@ -1,0 +1,284 @@
+---
+title: Deploying a MongoDB Sharding Cluster with KubeBlocks
+description: Learn how to deploy a MongoDB Sharding cluster using KubeBlocks. This guide covers configuration, verification, scaling, and switchover.
+keywords: [KubeBlocks, MongoDB, Sharding, Kubernetes, High Availability]
+sidebar_position: 2
+sidebar_label: MongoDB Sharding Cluster
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Deploying a MongoDB Sharding Cluster with KubeBlocks
+
+MongoDB Sharding distributes data across multiple shards (each shard is a replica set). Config servers store cluster metadata, and mongos routers route queries to the appropriate shards, enabling horizontal scaling for large datasets and high throughput.
+
+**Use Cases**
+- Large-scale applications requiring horizontal scaling.
+- Workloads that exceed the storage or throughput of a single replica set.
+- High write throughput and large data volume (e.g., time-series or analytical data).
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploying the MongoDB Sharding Cluster
+
+To create a MongoDB sharding cluster with 3 shards (3 replicas per shard), 3 config servers, and 3 mongos routers:
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: mongodb-sharding
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: mongodb
+  topology: sharding
+  shardings:
+    - name: shard
+      shards: 3
+      template:
+        name: shard
+        serviceVersion: 6.0.27
+        replicas: 3
+        disableExporter: false
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "0.5Gi"
+          requests:
+            cpu: "0.5"
+            memory: "0.5Gi"
+        volumeClaimTemplates:
+          - name: data
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 20Gi
+  componentSpecs:
+    - name: config-server
+      replicas: 3
+      disableExporter: false
+      systemAccounts:
+      - name: root
+        passwordConfig:
+          length: 16
+          numDigits: 8
+          numSymbols: 0
+          letterCase: MixedCases
+          seed: mongodb-sharding
+      serviceVersion: 6.0.27
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 10Gi
+    - name: mongos
+      replicas: 3
+      disableExporter: false
+      serviceVersion: 6.0.27
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+```
+
+**Key Configuration Details**:
+- `clusterDef: mongodb`: Specifies the ClusterDefinition for MongoDB.
+- `topology: sharding`: Configures the cluster to use sharding topology.
+- `shardings`: Specifies a list of `ShardingSpec` objects that define shard components. Each shard is a replica set.
+- `shards`: Specifies the number of shards to create for the cluster.
+- `componentSpecs`: Defines the config-server (metadata store) and mongos (query router) components. Use `systemAccounts` on config-server to set the root password.
+
+:::tip
+A production MongoDB sharding cluster typically uses **three** config servers for metadata high availability, one or more mongos routers for application connections, and at least **two** replicas per shard for failover. When scaling in, ensure you retain enough shards and replicas for your availability requirements.
+:::
+
+## Verifying the Deployment
+
+### Check the Cluster Status
+Once the cluster is deployed, check its status:
+```bash
+kubectl get cluster mongodb-sharding -n demo -w
+```
+Example Output:
+```bash
+NAME               CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+mongodb-sharding   mongodb              Delete               Running   103s
+```
+
+### Verify Component and Pod Status
+
+Get all components for this cluster:
+```bash
+kubectl get component -n demo -l app.kubernetes.io/instance=mongodb-sharding
+```
+
+Example Output:
+```bash
+NAME                             DEFINITION                  SERVICE-VERSION   STATUS    AGE
+mongodb-sharding-config-server   mongo-config-server-1.0.2   6.0.27            Running   4m15s
+mongodb-sharding-mongos          mongo-mongos-1.0.2          6.0.27            Running   4m15s
+mongodb-sharding-shard-8z2       mongo-shard-1.0.2           6.0.27            Running   4m15s
+mongodb-sharding-shard-c5b       mongo-shard-1.0.2           6.0.27            Running   4m15s
+mongodb-sharding-shard-spm       mongo-shard-1.0.2           6.0.27            Running   4m15s
+```
+The cluster has one config-server component, one mongos component, and three components for shards (one component per shard).
+
+Check shards pods and their roles:
+```bash
+k get pods -l apps.kubeblocks.io/sharding-name=shard,app.kubernetes.io/instance=mongodb-sharding  -L kubeblocks.io/role -n demo
+```
+
+Example Output:
+```bash
+NAME                           READY   STATUS    RESTARTS   AGE     ROLE
+mongodb-sharding-shard-8z2-0   4/4     Running   0          7m29s   primary
+mongodb-sharding-shard-8z2-1   4/4     Running   0          7m16s   secondary
+mongodb-sharding-shard-8z2-2   4/4     Running   0          7m1s    secondary
+mongodb-sharding-shard-c5b-0   4/4     Running   0          7m29s   primary
+mongodb-sharding-shard-c5b-1   4/4     Running   0          7m14s   secondary
+mongodb-sharding-shard-c5b-2   4/4     Running   0          6m59s   secondary
+mongodb-sharding-shard-spm-0   4/4     Running   0          7m29s   primary
+mongodb-sharding-shard-spm-1   4/4     Running   0          7m14s   secondary
+mongodb-sharding-shard-spm-2   4/4     Running   0          6m59s   secondary
+```
+
+## Scaling Shards
+
+### Scaling-Out Shards (Add Shards)
+**Expected Workflow**:
+
+1. A new shard component is provisioned with the configured number of replicas (e.g., 3: one primary and two secondaries).
+2. Cluster status changes from `Updating` to `Running` when all components are ready (status is `Running`).
+
+<Tabs>
+
+  <TabItem value="opsRequest" label="OpsRequest API" default>
+
+  Option 1: Using Horizontal Scaling OpsRequest
+
+  To increase the number of shards to `4`, you can use the following OpsRequest:
+
+  ```yaml
+  apiVersion: operations.kubeblocks.io/v1alpha1
+  kind: OpsRequest
+  metadata:
+    name: mongodb-sharding-scale-out-ops
+    namespace: demo
+  spec:
+    clusterName: mongodb-sharding
+    type: HorizontalScaling
+    horizontalScaling:
+    - componentName: shard
+      shards: 4
+  ```
+
+  Monitor the progress of the scaling operation:
+
+  ```bash
+  kubectl get ops mongodb-sharding-scale-out-ops -n demo -w
+  ```
+
+  Expected Result:
+  ```bash
+  NAME                              TYPE                CLUSTER            STATUS    PROGRESS   AGE
+  mongodb-sharding-scale-out-ops    HorizontalScaling   mongodb-sharding   Running   0/1        35s
+  mongodb-sharding-scale-out-ops    HorizontalScaling   mongodb-sharding   Succeed   1/1        2m35s
+  ```
+  </TabItem>
+
+  <TabItem value="ClusterAPI" label="Cluster API">
+
+  Option 2: Direct Cluster API Update
+
+  Alternatively, you can update the `shards` field under `spec.shardings[]` in the Cluster resource:
+
+  ```yaml
+  apiVersion: apps.kubeblocks.io/v1
+  kind: Cluster
+  metadata:
+    name: mongodb-sharding
+    namespace: demo
+  spec:
+    shardings:
+      - name: shard
+        shards: 4
+    # remaining fields are the same as the original cluster CR, omitted for brevity
+  ...
+  ```
+
+  Or patch the cluster with:
+
+  ```bash
+  kubectl patch cluster mongodb-sharding -n demo --type=json -p='[{"op": "replace", "path": "/spec/shardings/0/shards", "value": 4}]'
+  ```
+
+  </TabItem>
+</Tabs>
+
+Similar to scaling-out, you can scale in by decreasing the `shards` field in the Cluster resource. Ensure you retain enough shards for your data and availability requirements.
+
+## Switchover
+
+To perform a switchover on a shard (e.g., promote a secondary to primary within that shard's replica set), use an OpsRequest. For shard `mongodb-sharding-shard-8z2`:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: mongodb-sharding-switchover-ops
+  namespace: demo
+spec:
+  clusterName: mongodb-sharding
+  type: Switchover
+  switchover:
+  - componentObjectName: mongodb-sharding-shard-8z2  # full name of the shard component
+    instanceName: mongodb-sharding-shard-8z2-0       # current primary instance
+    candidateName: mongodb-sharding-shard-8z2-1      # secondary to promote
+```
+
+:::note
+
+`componentObjectName` is the full name of the shard component (or config-server). Use the same value as shown in `kubectl get component` for that shard.
+
+:::
+
+Once the OpsRequest is applied, the secondary `mongodb-sharding-shard-8z2-1` will be promoted to primary. And one can verify the switchover with:
+```bash
+k get pods -l apps.kubeblocks.io/component-name=shard-8z2  -L kubeblocks.io/role -n demo
+```
+Example Output:
+```bash
+NAME                           READY   STATUS    RESTARTS   AGE   ROLE
+mongodb-sharding-shard-8z2-0   4/4     Running   0          12m   secondary  # (was primary before switchover)
+mongodb-sharding-shard-8z2-1   4/4     Running   0          12m   primary    # (was secondary before switchover)
+mongodb-sharding-shard-8z2-2   4/4     Running   0          11m   secondary
+```
+
+## Cleanup
+To remove all resources created during this tutorial:
+
+```bash
+kubectl delete cluster mongodb-sharding -n demo
+kubectl delete ns demo
+```

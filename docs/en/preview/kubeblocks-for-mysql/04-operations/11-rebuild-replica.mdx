@@ -35,7 +35,7 @@ namespace/demo created
 KubeBlocks uses a declarative approach for managing MySQL clusters. Below is an example configuration for deploying a MySQL cluster with 2 nodes (1 primary, 1 replicas) in semi-synchronous mode.
 
 Cluster Configuration
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -97,7 +97,7 @@ When creating a MySQL Cluster, KubeBlocks creates a Secret named "mysql-cluster-
 ```bash
 kubectl get secret -n demo -l app.kubernetes.io/instance=example-mysql-cluster
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                                       TYPE     DATA   AGE
 example-mysql-cluster-mysql-account-root   Opaque   2      12m
@@ -111,7 +111,7 @@ kubectl get secret example-mysql-cluster-mysql-account-root -n demo -o jsonpath=
 kubectl get secret example-mysql-cluster-mysql-account-root -n demo -o jsonpath='{.data.password}' | base64 --decode
 ```
 
-Expected Output:
+Example Output:
 ```bash
 root
 
@@ -168,7 +168,7 @@ Fetch the HA configuration:
 ```bash
 kubectl get configmap -n demo example-mysql-cluster-mysql-haconfig -o yaml
 ```
-Expected Output:
+Example Output:
 ```yaml
 apiVersion: v1
 kind: ConfigMap

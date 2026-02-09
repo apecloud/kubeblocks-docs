@@ -33,7 +33,7 @@ namespace/demo created
 
 Deploy a 2-node MySQL cluster (1 primary, 1 replica) with semi-synchronous replication:
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -90,7 +90,7 @@ Once the cluster status becomes Running, your MySQL cluster is ready for use.
 ### Option 1.: Using OpsRequest
 Scale out the MySQL cluster by adding 1 replica:
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: operations.kubeblocks.io/v1alpha1
 kind: OpsRequest
@@ -181,7 +181,7 @@ example-mysql-cluster-mysql-2	secondary
 
 Option 1: Using OpsRequest
 Scale in the MySQL cluster by removing 1 replica:
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: operations.kubeblocks.io/v1alpha1
 kind: OpsRequest

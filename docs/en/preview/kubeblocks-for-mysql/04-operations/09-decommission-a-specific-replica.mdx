@@ -39,7 +39,7 @@ namespace/demo created
 
 Deploy a 3-node MySQL semi-synchronous cluster (1 primary, 2 replicas):
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -113,7 +113,7 @@ To decommission a specific Pod (e.g., 'example-mysql-cluster-mysql-1'), you can 
 ### Option 1.: Using OpsRequest
 Create an OpsRequest to mark the Pod as offline:
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: operations.kubeblocks.io/v1alpha1
 kind: OpsRequest
@@ -153,7 +153,7 @@ Status:
 ### Option 2.: Using Cluster API
 Alternatively, update the Cluster resource directly to decommission the Pod:
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster

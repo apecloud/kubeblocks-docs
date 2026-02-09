@@ -3,7 +3,7 @@ Monitor the cluster status until it transitions to the Running state:
 kubectl get cluster rabbitmq-cluster -n demo -w
 ```
 
-Expected Output:
+Example Output:
 
 ```bash
 kubectl get cluster rabbitmq-cluster -n demo
@@ -17,7 +17,7 @@ Check the pod status and roles:
 kubectl get pods -l app.kubernetes.io/instance=rabbitmq-cluster -n demo
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                          READY   STATUS    RESTARTS   AGE
 rabbitmq-cluster-rabbitmq-0   2/2     Running   0          106s

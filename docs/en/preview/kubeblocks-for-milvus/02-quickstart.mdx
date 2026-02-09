@@ -59,7 +59,7 @@ If the add-on isn't enabled, choose an installation method:
   # Update helm repo
   helm repo update
   # Search available Add-on versions
-  helm search repo kubeblocks/milvus --versions
+  helm search repo kubeblocks-addons/milvus --versions
   # Install your desired version (replace <VERSION> with your chosen version)
   helm upgrade -i kb-addon-milvus kubeblocks-addons/milvus --version <VERSION> -n kb-system
   ```
@@ -234,6 +234,10 @@ spec:
 ```
 
 For more API fields and descriptions, refer to the [API Reference](../user_docs/references/api-reference/cluster).
+
+:::tip
+More example manifests and setups for Milvus can be found in the [official KubeBlocks Add-ons Milvus examples directory](https://github.com/apecloud/kubeblocks-addons/tree/main/examples/milvus).
+:::
 
 ## Verify Cluster Status
 

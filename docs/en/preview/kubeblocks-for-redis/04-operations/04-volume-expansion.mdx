@@ -198,7 +198,7 @@ Verify the updated cluster configuration:
 ```bash
 kbcli cluster describe redis-replication -n demo
 ```
-Expected Output:
+Example Output:
 ```bash
 Resources Allocation:
 COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS
@@ -210,7 +210,7 @@ Confirm PVC resizing completion:
 ```bash
 kubectl get pvc -l app.kubernetes.io/instance=redis-replication -n demo
 ```
-Expected Output:
+Example Output:
 ```bash
 NAME                                     STATUS   VOLUME        CAPACITY   ACCESS MODES   STORAGECLASS          AGE
 redis-replication-redis-data-0           Bound    pvc-xxxxxxxx  30Gi       RWO            <STORAGE_CLASS_NAME>  33m

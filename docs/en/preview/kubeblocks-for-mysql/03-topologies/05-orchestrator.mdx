@@ -36,7 +36,7 @@ namespace/demo created
 1. View the Addon versions.
 ```bash
 # including pre-release versions
-helm search repo kubeblocks/orchestrator --devel --versions
+helm search repo kubeblocks-addons/orchestrator --versions
 ```
 
 2. Install the Addon. Specify a version with '--version'.
@@ -46,11 +46,13 @@ helm install kb-addon-orc kubeblocks/orchestrator --namespace kb-system --create
 
 3. Verify whether this Addon is installed.
 ```bash
-helm list -A
+helm list -n kb-system| grep orchestrator
 ```
-Expected Output:
+
+Example Output:
 ```bash
-orchestrator           	kb-system  	1       	2025-02-14 11:12:32.286516 +0800 CST   deployed	orchestrator-1.0.0          	3.2.6
+NAME                        	NAMESPACE  	REVISION	UPDATED                                	STATUS  	CHART                       	APP VERSION
+kb-addon-orc                	kb-system  	1       	2026-02-09 11:12:32.286516 +0800 CST 	deployed	orchestrator-1.0.0          	3.2.6
 ```
 The STATUS is deployed and this Addon is installed successfully.
 
@@ -58,8 +60,50 @@ The STATUS is deployed and this Addon is installed successfully.
 
 KubeBlocks uses a declarative approach for managing MySQL clusters. Below is an example configuration for deploying a MySQL cluster with 3 nodes (1 primary, 2 replicas) in semi-synchronous mode. Additionally, it creates an Orchestrator cluster using the Raft high-availability mode and configure the relationship between the MySQL semi-synchronous cluster and the Orchestrator cluster.
 
-Cluster Configuration
-```yaml
+Create an Orchestrator cluster first:
+```bash
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-orc-cluster
+  namespace: demo
+spec:
+  clusterDef: orchestrator
+  topology: raft
+  terminationPolicy: Delete
+  services:
+    - name: orchestrator
+      componentSelector: orchestrator
+      spec:
+        ports:
+          - name: orc-http
+            port: 80
+  componentSpecs:
+    - name: orchestrator
+      disableExporter: true
+      replicas: 3
+      resources:
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+When the Orchestrator cluster is ready, you can deploy the MySQL cluster:
+
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -102,44 +146,9 @@ spec:
             resources:
               requests:
                 storage: 20Gi
----
-apiVersion: apps.kubeblocks.io/v1
-kind: Cluster
-metadata:
-  name: example-orc-cluster
-  namespace: demo
-spec:
-  clusterDef: orchestrator
-  topology: raft
-  terminationPolicy: Delete
-  services:
-    - name: orchestrator
-      componentSelector: orchestrator
-      spec:
-        ports:
-          - name: orc-http
-            port: 80
-  componentSpecs:
-    - name: orchestrator
-      disableExporter: true
-      replicas: 3
-      resources:
-        requests:
-          cpu: '0.5'
-          memory: 0.5Gi
-        limits:
-          cpu: '0.5'
-          memory: 0.5Gi
-      volumeClaimTemplates:
-        - name: data
-          spec:
-            accessModes:
-              - ReadWriteOnce
-            resources:
-              requests:
-                storage: 20Gi
 EOF
 ```
+
 **Explanation of Key Fields:**
 MySQL Semi-Synchronous Cluster Configuration
 - `clusterDef`: Specifies the ClusterDefinition CR for the cluster. The ClusterDefinition 'mysql' contains multiple topologies, such as 'semisync', 'semisync-proxysql', 'mgr', 'mgr-proxysql', 'orc', 'orc-proxysql'.
@@ -167,6 +176,22 @@ The serviceRefs in the MySQL cluster configuration establishes the connection be
 - Orchestrator will monitor the MySQL cluster's topology and handle failover when the primary node fails.
 - The 'orc-http' port is used by Orchestrator to communicate with the MySQL cluster.
 
+:::note
+If you encounter the Warning event message in MySQL Component, such as
+```
+Warning  Warning                   4m11s (x17 over 6m14s)  component-controller  config/script template has no template specified: mysql-replication-config
+```
+you can resolve this by annotating the corresponding `ComponentParameter` resource to trigger an on-demand reconcile.
+
+For example:
+
+```bash
+kubectl annotate componentparameter example-mysql-cluster-mysql 'apps.kubeblocks.io/reconcile-now=' --overwrite -n demo
+```
+
+Replace `example-mysql-cluster-mysql` with the actual name of your `ComponentParameter` resource.
+This annotation will prompt the KubeBlocks Operator to reconcile the resource and resolve the template issue.
+:::
 
 ## Verifying the Deployment
 
@@ -348,7 +373,7 @@ After a while, the killed pod will be recreated and will take the secondary role
 ```bash
 kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
-Expected Output:
+Example Output:
 ```bash
 example-semisync-mysql-mysql-0	secondary
 example-semisync-mysql-mysql-1	primary

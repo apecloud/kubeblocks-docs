@@ -34,7 +34,7 @@ namespace/demo created
 KubeBlocks uses a declarative approach for managing MySQL clusters. Below is an example configuration for deploying a MySQL cluster with 2 nodes (1 primary, 1 replicas) in semi-synchronous mode.
 
 Cluster Configuration
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -117,7 +117,7 @@ External addresses allow public internet access to the MySQL service, while inte
 
 To expose the MySQL service externally using a LoadBalancer, create an OpsRequest resource:
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: operations.kubeblocks.io/v1alpha1
 kind: OpsRequest
@@ -164,7 +164,7 @@ example-mysql-cluster-expose-enable-ops   Expose   example-mysql-cluster   Succe
 ### Option 2.: Using Cluster API
 
 Alternatively, update the `spec.services` section in the Cluster resource to include a LoadBalancer service:
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -331,7 +331,7 @@ mysql -h a1d37733683d244e0bebad8559cbf24d-3728431cad3e24b5.elb.ap-southeast-1.am
 
 ### Option 1.: Using OpsRequest
 To disable external access, create an OpsRequest:
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: operations.kubeblocks.io/v1alpha1
 kind: OpsRequest

@@ -76,6 +76,7 @@ To initiate a planned switchover, create an OpsRequest resource as shown below:
     - componentName: redis
       instanceName: redis-replication-redis-0
   ```
+
  **Key Parameters:**
   - `instanceName`: Specifies the instance (Pod) that is primary or leader before a switchover operation.
 
@@ -130,7 +131,7 @@ After the switchover is executed, the specified instance will be promoted to the
 kubectl get pods -n demo -l app.kubernetes.io/instance=redis-replication,apps.kubeblocks.io/component-name=redis -L kubeblocks.io/role
 ```
 
-Expected Output:
+Example Output:
 
 ```text
 NAME                      READY   STATUS    RESTARTS   AGE     ROLE

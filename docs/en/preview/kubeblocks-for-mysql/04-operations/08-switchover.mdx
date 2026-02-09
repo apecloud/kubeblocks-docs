@@ -45,7 +45,7 @@ namespace/demo created
 
 Deploy a 2-node semi-sync MySQL cluster (1 primary, 1 secondary):
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -109,7 +109,7 @@ example-mysql-cluster-mysql-1	secondary
 
 To initiate a planned switchover, create an OpsRequest resource as shown below:
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: operations.kubeblocks.io/v1alpha1
 kind: OpsRequest

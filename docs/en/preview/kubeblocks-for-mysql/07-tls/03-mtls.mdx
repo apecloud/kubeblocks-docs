@@ -76,7 +76,7 @@ Verify that the server certificate is valid and signed by the CA:
 # Verify the server certificate
 openssl verify -CAfile ca.pem server-cert.pem
 ```
-Expected Output:
+Example Output:
 ```bash
 server-cert.pem: OK
 ```
@@ -85,7 +85,7 @@ server-cert.pem: OK
 # Verify the client certificate
 openssl verify -CAfile ca.pem client-cert.pem
 ```
-Expected Output:
+Example Output:
 ```bash
 client-cert.pem: OK
 ```
@@ -106,7 +106,7 @@ This secret contains the CA, server certificate, and private key required to ena
 
 KubeBlocks uses a declarative approach for managing MySQL clusters. Below is an example configuration for deploying a MySQL cluster with 2 nodes (1 primary, 1 replicas) in semi-synchronous mode with user-provided TLS certificates:
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -157,7 +157,7 @@ Check cluster status until it reaches Running state:
 kubectl get cluster -n demo
 ```
 
-Expected Output:
+Example Output:
 ```bash
 NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
 example-mysql-cluster   mysql                Delete               Running   11m
@@ -173,7 +173,7 @@ KubeBlocks automatically creates a secret containing the MySQL root credentials.
 ```bash
 kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.username}' | base64 -d
 ```
-Expected Output:
+Example Output:
 ```bash
 root
 ```
@@ -182,7 +182,7 @@ root
 ```bash
 kubectl get secrets -n demo example-mysql-cluster-mysql-account-root -o jsonpath='{.data.password}' | base64 -d
 ```
-Expected Output:
+Example Output:
 ```bash
 D0o5P43S8G
 ```
@@ -224,7 +224,7 @@ If connecting without client certificates, you will see an error:
 ```bash
 mysql -h 127.0.0.1 -umtls_user -pkni676X2W1 --ssl-mode=REQUIRED
 ```
-Expected Output:
+Example Output:
 ```bash
 ERROR 1045 (28000): Access denied for user 'mtls_user'@'127.0.0.1' (using password: YES)
 ```

@@ -46,7 +46,7 @@ namespace/demo created
 
 Deploy a 2-node semi-sync MySQL cluster (1 primary, 1 secondary):
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -98,7 +98,7 @@ Option 1: Using VerticalScaling OpsRequest
 
 Apply the following YAML to scale up the resources for the mysql component:
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: operations.kubeblocks.io/v1alpha1
 kind: OpsRequest
@@ -143,7 +143,7 @@ Option 2: Direct Cluster API Update
 
 Alternatively, you may update `spec.componentSpecs.resources` field to the desired resources for vertical scale.
 
-```yaml
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -185,7 +185,7 @@ Verify the updated resources by inspecting the cluster configuration or Pod deta
 ```bash
 kbcli cluster describe example-mysql-cluster -n demo
 ```
-Expected Output:
+Example Output:
 ```bash
 Resources Allocation:
 COMPONENT   INSTANCE-TEMPLATE   CPU(REQUEST/LIMIT)   MEMORY(REQUEST/LIMIT)   STORAGE-SIZE   STORAGE-CLASS

@@ -45,7 +45,16 @@ BRANCH ?= main
 .PHONY: sync-kbcli-docs
 sync-kbcli-docs: ## Sync kbcli docs, call scripts/sync-kbcli-docs.sh
 	@./scripts/sync-kbcli-docs.sh $(BRANCH)
+
+# sync KubeBlocks API reference docs
+KUBEBLOCKS_API_DOCS_BRANCH ?= main
+.PHONY: sync-api-docs
+sync-api-docs: ## Sync KubeBlocks API reference docs
+	@./scripts/sync-kubeblocks-api-docs.sh $(KUBEBLOCKS_API_DOCS_BRANCH)
 	$(YARN) format-md-to-mdx
+	$(YARN) format-api-reference-docs
+
+
 
 # spell check
 SPELLCHECK_VERSION ?= 0.54.0

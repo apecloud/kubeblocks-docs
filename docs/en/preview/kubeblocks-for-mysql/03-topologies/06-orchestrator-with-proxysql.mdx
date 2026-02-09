@@ -48,7 +48,7 @@ namespace/demo created
 1. View the Addon versions.
 ```bash
 # including pre-release versions
-helm search repo kubeblocks/orchestrator --devel --versions
+helm search repo kubeblocks-addons/orchestrator --devel --versions
 ```
 
 2. Install the Addon. Specify a version with '--version'.
@@ -60,7 +60,7 @@ helm install kb-addon-orc kubeblocks/orchestrator --namespace kb-system --create
 ```bash
 helm list -A
 ```
-Expected Output:
+Example Output:
 ```bash
 orchestrator           	kb-system  	1       	2025-02-14 11:12:32.286516 +0800 CST   deployed	orchestrator-1.0.0          	3.2.6
 ```
@@ -70,8 +70,50 @@ The STATUS is deployed and this Addon is installed successfully.
 
 KubeBlocks provides a declarative approach to deploying MySQL clusters. Below is an example configuration for deploying a MySQL cluster with 2 nodes (1 primary and 1 replica) in semi-synchronous mode. This configuration also integrates Orchestrator (3 nodes) for failover management and ProxySQL (2 nodes) for query routing and load balancing.
 
-Cluster Configuration
-```yaml
+Create an Orchestrator cluster first:
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: example-orc-cluster
+  namespace: demo
+spec:
+  clusterDef: orchestrator
+  topology: raft
+  terminationPolicy: Delete
+  services:
+    - name: orchestrator
+      componentSelector: orchestrator
+      spec:
+        ports:
+          - name: orc-http
+            port: 80
+  componentSpecs:
+    - name: orchestrator
+      disableExporter: true
+      replicas: 3
+      resources:
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+EOF
+```
+
+When the Orchestrator cluster is ready, you can deploy the MySQL cluster with ProxySQL:
+```bash
 kubectl apply -f - <<EOF
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
@@ -119,42 +161,6 @@ spec:
         - name: data
           spec:
             storageClassName: ""
-            accessModes:
-              - ReadWriteOnce
-            resources:
-              requests:
-                storage: 20Gi
----
-apiVersion: apps.kubeblocks.io/v1
-kind: Cluster
-metadata:
-  name: example-orc-cluster
-  namespace: demo
-spec:
-  clusterDef: orchestrator
-  topology: raft
-  terminationPolicy: Delete
-  services:
-    - name: orchestrator
-      componentSelector: orchestrator
-      spec:
-        ports:
-          - name: orc-http
-            port: 80
-  componentSpecs:
-    - name: orchestrator
-      disableExporter: true
-      replicas: 3
-      resources:
-        requests:
-          cpu: '0.5'
-          memory: 0.5Gi
-        limits:
-          cpu: '0.5'
-          memory: 0.5Gi
-      volumeClaimTemplates:
-        - name: data
-          spec:
             accessModes:
               - ReadWriteOnce
             resources:
@@ -353,7 +359,7 @@ After a while, the killed pod will be recreated and will take the secondary role
 ```bash
 kubectl get pods -n demo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.kubeblocks\.io/role}{"\n"}{end}'
 ```
-Expected Output:
+Example Output:
 ```bash
 example-semisync-mysql-mysql-0	secondary
 example-semisync-mysql-mysql-1	primary
