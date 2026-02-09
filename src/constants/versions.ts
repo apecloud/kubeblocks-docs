@@ -22,9 +22,10 @@ export const versionOptions = [
 
 // Document path to version mapping
 export const docPathToVersion: Record<string, string> = {
-  preview: 'v1.0.2-beta.15',
+  preview: 'v1.0.2',
   'release-1_0': 'v1.0.0',
   'release-1_0_1': 'v1.0.1',
+  'release-1_0_2': 'v1.0.2',
   'release-0_9': 'v0.9.5', // Add other path mappings
 };
 
