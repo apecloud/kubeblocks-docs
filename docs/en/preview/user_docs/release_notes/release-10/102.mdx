@@ -59,8 +59,7 @@ We are delighted to announce the release of KubeBlocks v1.0.2. This release incl
 - Fix ClickHouse restore failed when specified the init cluster name ([#2429](https://github.com/apecloud/kubeblocks-addons/pull/2429))
 
 ### Elasticsearch
-- Support ES 6.x, 7.x and 8.15.5 ([#1998](https://github.com/apecloud/kubeblocks-addons/pull/1998), [#1923](https://github.com/apecloud/kubeblocks-addons/pull/1923), [#2413](https://github.com/apecloud/kubeblocks-addons/pull/2413))
-- Support ES 7.10.2 ([#2337](https://github.com/apecloud/kubeblocks-addons/pull/2337))
+- Support ES 6.x, ES 7.10.2 ([#1998](https://github.com/apecloud/kubeblocks-addons/pull/1998),[#2337](https://github.com/apecloud/kubeblocks-addons/pull/2337))
 - Support zone awareness shard allocation ([#2185](https://github.com/apecloud/kubeblocks-addons/pull/2185))
 - Add plugin `analysis-pinyin` ([#2285](https://github.com/apecloud/kubeblocks-addons/pull/2285))
 - Fix single node backup failed ([#2290](https://github.com/apecloud/kubeblocks-addons/pull/2290))
@@ -104,26 +103,25 @@ We are delighted to announce the release of KubeBlocks v1.0.2. This release incl
 
 ## Breaking Changes
 
-### Variable Rendering Changes ([#9935](https://github.com/apecloud/kubeblocks/pull/9935))
+### Variable Rendering Fix ([#9935](https://github.com/apecloud/kubeblocks/pull/9935))
 
-In KB 1.0.2, the variable rendering mechanism has been fixed. Previously (KB 1.0.1 and before), when rendering vars, `map[string]string` was incorrectly passed, causing some addons to use convoluted methods to construct expressions in vars, such as:
+Variable rendering now passes `map[string]any` instead of `map[string]string`. Addons that relied on the old behavior may need template updates.
 
-```
-{{if ne (index . "MSSQL_HADR_ENDPOINT_PORT") ""}}{{.MSSQL_HADR_ENDPOINT_PORT}}{{else}}5022{{end}}
-```
+**Before (KB 1.0.1 and earlier)** — workaround for string-only vars:
 
-With this fix, `map[string]any` is now correctly passed, and the expression should be simplified to:
-
-```
-{{if index . "MSSQL_HADR_ENDPOINT_PORT"}}{{.MSSQL_HADR_ENDPOINT_PORT}}{{else}}5022{{end}}
+```text
+{{if ne (index . "ENDPOINT_PORT") ""}}{{.ENDPOINT_PORT}}{{else}}5022{{end}}
 ```
 
-**Action Required**: Users upgrading KB to v1.0.2 should also upgrade their Addons accordingly.
-- Refer to [PR #2328](https://github.com/apecloud/kubeblocks-addons/pull/2328) for the required changes
+**After (KB 1.0.2)** — simplified expression:
 
+```text
+{{if index . "ENDPOINT_PORT"}}{{.ENDPOINT_PORT}}{{else}}5022{{end}}
+```
 
-**Affected Addons**: OceanBase, MongoDB, Redis, Redis Cluster
-- See [Issue #9934](https://github.com/apecloud/kubeblocks/issues/9934) for more context
+**Affected addons**: OceanBase, MongoDB, Redis, Redis Cluster. See [Issue #9934](https://github.com/apecloud/kubeblocks/issues/9934) for context.
+
+**Action required**: Upgrade addons when upgrading KubeBlocks to v1.0.2. See [PR #2328](https://github.com/apecloud/kubeblocks-addons/pull/2328) for required changes.
 
 ## Upgrade to v1.0.2
 
