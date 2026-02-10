@@ -1,0 +1,103 @@
+---
+title: Deploying a MongoDB ReplicaSet Cluster with KubeBlocks
+description: Learn how to deploy a MongoDB ReplicaSet Cluster using KubeBlocks. This guide covers configuration, verification, and cluster management.
+keywords: [KubeBlocks, MongoDB, ReplicaSet, Kubernetes, High Availability]
+sidebar_position: 1
+sidebar_label: MongoDB ReplicaSet Cluster
+---
+
+# Deploying a MongoDB ReplicaSet Cluster with KubeBlocks
+
+A ReplicaSet provides high availability with one primary and multiple secondary replicas. Data is replicated asynchronously from the primary to the secondaries.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploying the MongoDB ReplicaSet Cluster
+
+KubeBlocks uses a declarative approach for managing MongoDB Replication Clusters.
+Below is an example configuration for deploying a MongoDB ReplicaSet Cluster with one primary replica and two secondary replicas.
+
+Apply the following YAML configuration to deploy the cluster:
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: mongodb-replicaset
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: mongodb
+  topology: replicaset
+  componentSpecs:
+    - name: mongodb
+      serviceVersion: 6.0.27
+      replicas: 3
+      disableExporter: false
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+**Key Configuration Details**:
+- `clusterDef: mongodb`: Specifies the ClusterDefinition CR for the cluster.
+- `topology: replicaset`: Configures the cluster to use replicaset topology.
+- `componentSpecs`: Defines the components in the cluster
+
+
+## Verifying the Deployment
+
+### Check the Cluster Status
+Once the cluster is deployed, check its status:
+```bash
+kubectl get cluster mongodb-replicaset -n demo -w
+```
+Example Output:
+```bash
+NAME                CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS     AGE
+mongodb-replicaset  mongodb              Delete               Creating   40s
+mongodb-replicaset  mongodb              Delete               Creating   71s
+mongodb-replicaset  mongodb              Delete               Creating   71s
+mongodb-replicaset  mongodb              Delete               Updating   71s
+mongodb-replicaset  mongodb              Delete               Running    2m55s
+```
+
+### Verify Component and Pod Status
+```bash
+kubectl get component -n demo -l app.kubernetes.io/instance=mongodb-replicaset
+kubectl get pod -n demo -l app.kubernetes.io/instance=mongodb-replicaset -L kubeblocks.io/role
+```
+Example Output:
+```bash
+NAME                       DEFINITION                        SERVICE-VERSION   STATUS    AGE
+mongodb-replicaset-mongodb mongodb-replicaset-1.0.0          6.0.27            Running   3m5s
+NAME                         READY   STATUS    RESTARTS   AGE
+NAME                           READY   STATUS    RESTARTS   AGE     ROLE
+mongodb-replicaset-mongodb-0   4/4     Running   0          3m7s    primary
+mongodb-replicaset-mongodb-1   4/4     Running   0          2m13s   secondary
+mongodb-replicaset-mongodb-2   4/4     Running   0          119s    secondary
+```
+
+## Cleanup
+To remove all resources created during this tutorial:
+
+```bash
+kubectl delete cluster mongodb-replicaset -n demo
+kubectl delete ns demo
+```

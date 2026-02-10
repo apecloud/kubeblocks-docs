@@ -1,0 +1,180 @@
+---
+title: Restore a Redis Cluster from Backup
+description: Learn how to restore a new Redis cluster from an existing backup in KubeBlocks using the Cluster Annotation or OpsRequest API.
+keywords: [Redis, Restore, Backup, KubeBlocks, Kubernetes]
+sidebar_position: 5
+sidebar_label: Restore Redis Cluster
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Restore a Redis Cluster from Backup
+
+This guide demonstrates two methods to restore a Redis cluster from backup in KubeBlocks:
+
+1. **Cluster Annotation Method** - Simple declarative approach using YAML annotations
+2. **OpsRequest API Method** - Enhanced operational control with progress monitoring
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Preparing for Restoration: Locate one Full Backup
+Before restoring, ensure that there is a full backup available. The restoration process will use this backup to create a new Redis cluster.
+
+- Backup repository accessible from new cluster
+- Valid full backup in `Completed` state
+- Adequate CPU/memory resources
+- Sufficient storage capacity
+
+Find available full backups:
+
+```bash
+kubectl get backup -n demo -l dataprotection.kubeblocks.io/backup-type=Full,app.kubernetes.io/instance=redis-replication # get the list of full backups
+```
+
+Pick ONE of the Backups whose status is `Completed`.
+
+## Option 1: Cluster Annotation Restoration
+
+### Step 1: Create Restored Cluster
+Create a new cluster with restore configuration:
+
+Key parameters:
+- `kubeblocks.io/restore-from-backup` annotation
+- Backup name and namespace located from the previous steps
+
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: redis-replication-restore
+  namespace: demo
+  annotations:
+    kubeblocks.io/restore-from-backup: '{"redis":{"name":"<FULL_BACKUP_NAME>","namespace":"demo","volumeRestorePolicy":"Parallel"}}'
+spec:
+  terminationPolicy: Delete
+  clusterDef: redis
+  topology: replication
+  componentSpecs:
+    - name: redis
+      serviceVersion: "7.2.4"
+      disableExporter: false
+      replicas: 2
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+    - name: redis-sentinel
+      serviceVersion: "7.2.4"
+      replicas: 3
+      resources:
+        limits:
+          cpu: '0.5'
+          memory: 0.5Gi
+        requests:
+          cpu: '0.5'
+          memory: 0.5Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```
+
+### Step 2: Monitor Restoration
+Track restore progress with:
+
+```bash
+# Watch restore status
+kubectl get restore -n demo -w
+
+# Watch cluster status
+kubectl get cluster -n demo -w
+```
+
+## Option 2: OpsRequest API Restoration
+
+### Step 1: Initiate Restore Operation
+Create restore request via OpsRequest API:
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: redis-replication-restore
+  namespace: demo
+spec:
+  clusterName: pg-restored
+  force: false
+  restore:
+    backupName: <FULL_BACKUP_NAME>
+    backupNamespace: demo
+  type: Restore
+```
+
+### Step 2: Track Operation Progress
+Monitor restore status:
+
+```bash
+# Watch restore status
+kubectl get restore -n demo -w
+
+# Watch cluster status
+kubectl get cluster -n demo -w
+```
+
+### Step 3: Validate Restored Cluster
+Confirm successful restoration:
+```bash
+kubectl get cluster redis-replication-restored -n demo
+```
+Example Output:
+```bash
+NAME                    CLUSTER-DEFINITION   TERMINATION-POLICY   STATUS    AGE
+redis-replication-restored     redis           Delete               Running   3m2s
+```
+
+
+## Cleanup
+To remove all created resources, delete the Redis cluster along with its namespace:
+
+```bash
+kubectl delete cluster redis-replication -n demo
+kubectl delete cluster redis-replication-restored -n demo
+kubectl delete ns demo
+```
+
+## Summary
+
+This guide covered two restoration methods:
+
+1. **Cluster Annotation** - Simple YAML-based approach
+   - Retrieve system credentials
+   - Create cluster with restore annotation
+   - Monitor progress
+
+2. **OpsRequest API** - Enhanced operational control
+   - Create restore request
+   - Track operation status
+   - Verify completion

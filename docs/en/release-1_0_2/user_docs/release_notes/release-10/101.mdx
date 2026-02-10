@@ -1,0 +1,62 @@
+---
+title: v1.0.1
+description: Release Notes v1.0.1
+keywords: [kubeblocks, release notes]
+sidebar_position: 9
+---
+
+# KubeBlocks 1.0.1 (2025-09-12)
+We are delighted to announce the release of KubeBlocks v1.0.1. This release includes several new features, bug fixes, and various improvements. Here are the detailed update contents.
+
+## KubeBlocks
+
+### Features
+
+- **Improve the settings of the manager** - Improves performance, stability, and configurability of KubeBlocks Operator. ([#9587](https://github.com/apecloud/kubeblocks/pull/9587))
+- **Support user-defined environment variables in lifecycle actions** - Allows customization of environment variables for lifecycle actions. ([#9514](https://github.com/apecloud/kubeblocks/pull/9514))
+- **OpsDefinition supports image mapping for multi service version** - Enables image mapping for different service versions in operations definitions. ([#9605](https://github.com/apecloud/kubeblocks/pull/9605))
+- **Specify allowed symbols in password generation** - Allows customization of symbols used in generated passwords. [#9480](https://github.com/apecloud/kubeblocks/pull/9480)
+- **Support HTTP and gRPC actions** - Supports HTTP and gRPC in lifecycle actions. ([#9656](https://github.com/apecloud/kubeblocks/pull/9656))
+- **Scale out replicas from backup** - Supports to scale out replicas from backup in OpsRequest. ([#9623](https://github.com/apecloud/kubeblocks/pull/9623))
+- **Improves resource resizing handling** - Support resize subresource in InPlacePodVerticalScaling when supported. ([#9532](https://github.com/apecloud/kubeblocks/pull/9532),[#9545](https://github.com/apecloud/kubeblocks/pull/9545))
+- **Add azureblob storage provider** - Adds Azure Blob storage provider support.([#9492](https://github.com/apecloud/kubeblocks/pull/9492))
+
+
+## KubeBlocks Addons
+
+### PostgreSQL
+- Improve PostgreSQL dcs mode ([#1874](https://github.com/apecloud/kubeblocks-addons/pull/1874))
+- Support synchronous mode ([#1941](https://github.com/apecloud/kubeblocks-addons/pull/1941))
+- Update patroni scope value and dcs scope ([#2005](https://github.com/apecloud/kubeblocks-addons/pull/2005),[#1997](https://github.com/apecloud/kubeblocks-addons/pull/1997))
+
+### Redis
+- Support new Redis verions 8.2,8.0.3, 7.2.10 and 7.4.5/([#1968](https://github.com/apecloud/kubeblocks-addons/pull/1968), [#1785](https://github.com/apecloud/kubeblocks-addons/pull/1785), [#1710](https://github.com/apecloud/kubeblocks-addons/pull/1710))
+- Fixed Redis memory leak when loading redisgears module ([#1855](https://github.com/apecloud/kubeblocks-addons/pull/1855))
+- Support reconfiguration of `client-output-buffer-limit` ([#1973](https://github.com/apecloud/kubeblocks-addons/pull/1973))
+
+### Clickhouse
+- Support Horizontal Scale for keeper ([#1713](https://github.com/apecloud/kubeblocks-addons/pull/1713))
+
+### Elasticsearch
+- Support new ES version 8.15.5 ([#1923](https://github.com/apecloud/kubeblocks-addons/pull/1923))
+- Split master and data component to be more flexible ([#1971](https://github.com/apecloud/kubeblocks-addons/pull/1971))
+
+### Etcd
+- Support new Etcd version 3.6.1 ([#1709](https://github.com/apecloud/kubeblocks-addons/pull/1709))
+
+### MinIO
+- Add dashboard for MinIO ([#1833](https://github.com/apecloud/kubeblocks-addons/pull/1833))
+- Improve MinIO for metrics collection ([#1836](https://github.com/apecloud/kubeblocks-addons/pull/1836))
+
+### RocketMQ
+- Support RocketMQ Addon, for RocketMQ 4.9.6 ([#1883](https://github.com/apecloud/kubeblocks-addons/pull/1883))
+
+### Neo4j
+- Support Neo4j Addon, for Neo4j 4.4.42/5.26.5 ([#1649](https://github.com/apecloud/kubeblocks-addons/pull/1649))
+
+## Upgrade to v1.0.1
+
+Refer to [Upgrade to KubeBlocks v1.0.x](../../upgrade/upgrade-to-v10x).
+
+## Full Changelog
+You can check the [full changelog](https://github.com/apecloud/kubeblocks/compare/v1.0.0...v1.0.1) for additional changes.

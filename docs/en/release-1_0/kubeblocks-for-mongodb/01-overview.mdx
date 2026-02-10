@@ -45,16 +45,6 @@ KubeBlocks simplifies MongoDB operations with comprehensive lifecycle management
 | **Logging**                  | Centralized logs via Loki Stack                                           |
 
 
-### Backup and Restore
-
-KubeBlocks supports multiple backup strategies for MongoDB:
-
-| Feature           | Method          | Description |
-|-------------|--------|------------|
-| Full Backup | dump   | Uses `mongodump`, a MongoDB utility used to create a binary export of the contents of a database  |
-| Full Backup | datafile | Backup the data files of the database |
-| Continuous Backup | archive-oplog | Continuously archives MongoDB oplog using `wal-g` |
-
 ### Supported Versions
 
 KubeBlocks MongoDB Addon supports these MongoDB versions:

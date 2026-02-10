@@ -1,0 +1,36 @@
+KubeBlocks uses a declarative approach for managing RabbitMQ  Clusters.
+Below is an example configuration for deploying a RabbitMQ  Cluster with 3 replicas.
+
+Apply the following YAML configuration to deploy the cluster:
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: rabbitmq-cluster
+  namespace: demo
+spec:
+  terminationPolicy: Delete
+  clusterDef: rabbitmq
+  topology: clustermode
+  componentSpecs:
+    - name: rabbitmq
+      serviceVersion: 3.13.7
+      replicas: 3
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: "0.5Gi"
+        requests:
+          cpu: "0.5"
+          memory: "0.5Gi"
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: ""
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+```

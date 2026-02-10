@@ -1,0 +1,160 @@
+---
+title: Setting Up a Redis Cluster with Scheduled Continuous Backup in KubeBlocks
+description: Learn how to set up a Redis cluster with scheduled full backups and continuous incremental backups enabled in KubeBlocks.
+keywords: [Redis, Backup, PITR, KubeBlocks, Kubernetes]
+sidebar_position: 4
+sidebar_label: Scheduled Continuous Backup
+---
+
+# Setting Up a Redis Cluster with Scheduled Continuous Backup Enabled in KubeBlocks
+
+This guide demonstrates how to configure a Redis cluster on KubeBlocks with:
+
+- Scheduled full backups (base backups)
+- Continuous WAL (Write-Ahead Log) archiving
+- Point-In-Time Recovery (PITR) capabilities
+
+This combination provides comprehensive data protection with minimal recovery point objectives (RPO).
+
+## What is PITR?
+Point-In-Time Recovery (PITR) allows you to restore a database to a specific moment in time by combining full backups with continuous binlog/wal/archive log backups.
+
+For details on restoring data from both full backups and continuous binlog backups, refer to the [Restore From PITR](restore-with-pitr.mdx)  guide.
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+- Environment Setup:
+    - A Kubernetes cluster is up and running.
+    - The kubectl CLI tool is configured to communicate with your cluster.
+    - [KubeBlocks CLI](../../user_docs/references/install-kbcli) and [KubeBlocks Operator](../../user_docs/overview/install-kubeblocks) are installed. Follow the installation instructions here.
+- Namespace Preparation: To keep resources isolated, create a dedicated namespace for this tutorial:
+
+```bash
+kubectl create ns demo
+namespace/demo created
+```
+
+## Prerequisites for Backup
+
+1. Backup Repository Configured:
+   - Configured `BackupRepo`
+   - Network connectivity between cluster and repo, `BackupRepo` status is `Ready`
+
+2. Cluster is Running:
+   - Cluster must be in `Running` state
+   - No ongoing operations (scaling, upgrades etc.)
+
+## List of Backup methods
+
+KubeBlocks Redis supports these backup methods:
+
+| Feature           | Method          | Description |
+|-------------|--------|------------|
+| Full Backup | datafile  | Uses `redis-cli BGSAVE` command to backup data |
+| Continuous Backup | aof | Continuously perform incremental backups by archiving Append-Only Files (AOF) |
+
+## Deploy a Redis Cluster
+
+import CreateCluster from '../_tpl/_create-redis-replication-cluster.mdx'
+
+<CreateCluster />
+
+## Verifying the Deployment
+
+import VerifyCluster from '../_tpl/_verify-redis-replication-cluster.mdx'
+
+<VerifyCluster />
+
+## Enable Continuous Backup
+
+### Preparation: set `aof-timestamp-enabled` to `yes`
+Redis Append Only Files(AOFs) record every write operation received by the server, in the order they were processed, which allows Redis to reconstruct the dataset by replaying these commands.
+KubeBlocks supports continuous backup for the Redis component by archiving Append-Only Files (AOF). It will process incremental AOF files, update base AOF file, purge expired files and save backup status (records metadata about the backup process, such as total size and timestamps, to the `Backup` resource).
+
+Before enabling a continuous backup, you must set variable `aof-timestamp-enabled` to `yes`.
+
+```yaml
+# cat examples/redis/reconfigure-aof.yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: redis-reconfigure-aof
+  namespace: demo
+spec:
+  clusterName: redis-replication
+  reconfigures:
+  - componentName: redis
+    parameters:
+      # Represents the name of the parameter that is to be updated.
+    - key: aof-timestamp-enabled
+      value: 'yes'
+  type: Reconfiguring
+```
+
+:::note
+Once `aof-timestamp-enabled` is on, Redis will include timestamp in the AOF file.
+It may have following side effects: storage overhead, performance overhead (write latency).
+It is not recommended to enable this feature when you have high write throughput, or you have limited storage space.
+:::
+
+### Update BackupSchedule
+
+Update `BackupSchedule` to schedule enable(`enabled`) backup methods and set the time (`cronExpression`) to your need:
+
+```yaml
+apiVersion: dataprotection.kubeblocks.io/v1alpha1
+kind: BackupSchedule
+spec:
+  backupPolicyName: redis-replication-redis-backup-policy
+  schedules:
+  - backupMethod: datafile
+    # ┌───────────── minute (0-59)
+    # │ ┌───────────── hour (0-23)
+    # │ │ ┌───────────── day of month (1-31)
+    # │ │ │ ┌───────────── month (1-12)
+    # │ │ │ │ ┌───────────── day of week (0-6) (Sunday=0)
+    # │ │ │ │ │
+    # 0 18 * * *
+    # schedule this job every day at 6:00 PM (18:00).
+    cronExpression: 0 18 * * * # update the cronExpression to your need
+    enabled: true # set to `true` to schedule base backup periodically
+    retentionPeriod: 7d # set the retention period to your need
+  - backupMethod: aof
+    cronExpression: '*/30 * * * *'
+    enabled: true   # set to `true` to enable continuous backup
+    name: aof
+    retentionPeriod: 8d # by default, retentionPeriod of continuous backup is 1d more than that of a full backup.
+```
+
+1. **Full Backups** (datafile):
+  - Use redis `BGSAVE` command to perform a full backup
+  - Runs on configured schedule (daily by default)
+  - Serves as base for PITR
+
+2. **Continuous Backups** (archive-oplog):
+  - Continuously processing incremental AOF files, update base AOF file, purge expired files
+  - Maintains backup metadata including size and time ranges
+
+## Monitoring Continuous Backups
+
+Verify continuous backup operation with these commands:
+```bash
+# get continuous backup
+kubectl get backup -l app.kubernetes.io/instance=redis-replication,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
+# get pod working for continuous backup
+kubectl get pod -l app.kubernetes.io/instance=redis-replication,dataprotection.kubeblocks.io/backup-type=Continuous -n demo
+```
+
+## Summary
+
+This guide covered:
+1. Configuring scheduled full backups with pg-basebackup
+2. Enabling continuous WAL archiving with wal-g-archive
+3. Setting up Point-In-Time Recovery (PITR) capabilities
+4. Monitoring backup operations
+
+Key Benefits:
+- Scheduled full backups ensure regular recovery points
+- Continuous WAL archiving minimizes potential data loss
+- PITR enables recovery to any moment in time

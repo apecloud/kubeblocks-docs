@@ -1,0 +1,132 @@
+---
+title: Modify MongoDB Parameters
+description: Learn how to modify dynamic and static MongoDB parameters in KubeBlocks using Reconfiguring OpsRequest to optimize database performance and availability.
+keywords: [MongoDB, KubeBlocks, OpsRequest, dynamic parameters, static parameters, database configuration]
+sidebar_position: 7
+sidebar_label: Modify MongoDB Parameters
+---
+
+# Modify MongoDB Parameters
+
+Database reconfiguration involves modifying parameters, settings, or configurations to optimize performance, security, or availability. Parameter changes fall into two categories:
+
+For static parameters, KubeBlocks minimizes downtime by:
+1. Modifying and restarting replica nodes first
+2. Performing a switchover to promote the updated replica as primary (typically completes in milliseconds)
+3. Restarting the original primary node
+
+This guide demonstrates how to modify both dynamic and static parameters of a MongoDB cluster managed by KubeBlocks using a Reconfiguring OpsRequest.
+
+## Prerequisites
+
+import Prerequisites from '../_tpl/_prerequisites.mdx'
+
+<Prerequisites />
+
+## Deploy a MongoDB Cluster
+
+import CreateCluster from '../_tpl/_create-cluster.mdx'
+
+<CreateCluster />
+
+## Verifying the Deployment
+
+import VerifyCluster from '../_tpl/_verify-cluster.mdx'
+
+<VerifyCluster />
+
+## Check Parameter Values
+
+### Retrieve Credentials
+KubeBlocks automatically creates a secret containing the MongoDB root credentials. Retrieve the credentials with the following commands:
+```bash
+NAME=`kubectl get secrets -n demo mongo-cluster-mongodb-account-root -o jsonpath='{.data.username}' | base64 -d`
+PASSWD=`kubectl get secrets -n demo mongo-cluster-mongodb-account-root -o jsonpath='{.data.password}' | base64 -d`
+```
+
+### Access MongoDB Cluster
+To connect to the cluster's primary node, use the MongoDB client:
+```bash
+kubectl exec -it -n demo mongo-cluster-mongodb-0 -c mongodb --  mongosh "mongodb://${NAME}:${PASSWD}@mongo-cluster-mongodb-mongodb.demo.svc.cluster.local:27017/admin"
+```
+
+### Query Parameter Values
+
+Once connected, you can query current command line options:
+```sql
+admin>  db.adminCommand('getCmdLineOpts')
+{
+  "systemLog" : {
+    "verbosity" : 0,
+    "quiet" : false
+  },
+  ...
+}
+```
+
+## Static Parameter Example: Modifying shared_buffers
+
+Change parameters like `systemLog.verbosity` require a restart. This example increases the verbosity to 1 and set the quiet option to true.
+
+Create a Reconfigure OpsRequest. Apply the following OpsRequest YAML to update the options.
+
+```yaml
+apiVersion: operations.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: mongo-reconfiguring
+  namespace: demo
+spec:
+  clusterName: mongo-cluster
+  reconfigures:
+  - componentName: mongodb
+    parameters:
+    - key: systemLog.verbosity
+      value: "1"
+    - key: systemLog.quiet
+      value: "true"
+  type: Reconfiguring
+```
+
+Check the status of the OpsRequest until it completes:
+
+```bash
+kubectl get ops mongo-reconfiguring -n demo -w
+```
+Example Output:
+```bash
+NAME                  TYPE            CLUSTER         STATUS    PROGRESS   AGE
+mongo-reconfiguring   Reconfiguring   mongo-cluster   Running   -/-        13s
+mongo-reconfiguring   Reconfiguring   mongo-cluster   Succeed   -/-        82s
+mongo-reconfiguring   Reconfiguring   mongo-cluster   Succeed   -/-        82s
+```
+
+Secondary replicas will be restarted first, then the primary replica will be restarted. When restarting the primary replica, a switchover will be performed to promote the updated replica as primary to reduce downtime.
+
+**Verify the Configuration Change**
+
+Log into the MongoDB instance and confirm that the `systemLog.verbosity` and `systemLog.quiet` options have been updated:
+
+```sql
+admin> db.adminCommand('getCmdLineOpts')
+{
+  "systemLog" : {
+    "verbosity" : 1,
+    "quiet" : true
+  },
+  ...
+}
+```
+
+## Cleanup
+To remove all created resources, delete the MongoDB cluster along with its namespace:
+```bash
+kubectl delete cluster mongo-cluster -n demo
+kubectl delete ns demo
+```
+
+## Summary
+This guide covered modifying MongoDB parameters through KubeBlocks:
+- Static changes (e.g., `systemLog.verbosity`) require restart but with minimal downtime
+- All changes are validated before application
+- Configuration follows declarative management principles

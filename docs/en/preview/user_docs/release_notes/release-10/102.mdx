@@ -1,0 +1,132 @@
+---
+title: v1.0.2
+description: Release Notes v1.0.2
+keywords: [kubeblocks, release notes]
+sidebar_position: 8
+hidden: true
+---
+
+# KubeBlocks 1.0.2 (2026-02-09)
+We are delighted to announce the release of KubeBlocks v1.0.2. This release includes several new features, bug fixes, and various improvements. Here are the detailed update contents.
+
+## KubeBlocks
+
+### Features
+
+- **Make StorageClass reclaimPolicy configurable** - Allows configuring StorageClass reclaimPolicy via values.yaml when deploying KubeBlocks. ([#10040](https://github.com/apecloud/kubeblocks/pull/10040))
+- **Support specifying an update policy for the upgrade operation** - Allows specifying update policies for upgrade operations. ([#9736](https://github.com/apecloud/kubeblocks/pull/9736))
+- **Support referencing the service version in vars** - Enables referencing service versions in variables. ([#9735](https://github.com/apecloud/kubeblocks/pull/9735))
+
+### Bug Fixes
+
+- **Fix `persistentVolumeClaimRetentionPolicy` not working** - Ensures PVCs are kept on `Retain` policy when the cluster is deleted or scaled down. ([#10043](https://github.com/apecloud/kubeblocks/pull/10043))
+- **Remove global affinity and tolerations for worker plane** - Removed global settings of affinity and tolerations for worker nodes. It's recommended to set affinity and tolerations at the cluster level through `schedulingPolicy` instead. ([#9949](https://github.com/apecloud/kubeblocks/pull/9949))
+- **Adopt Restored PVC** - Adopt restored PVCs in InstanceSet when restoring from backup. ([#9882](https://github.com/apecloud/kubeblocks/pull/9882))
+- **Improve sharding restore** - Enhances the sharding cluster restore functionality. ([#10026](https://github.com/apecloud/kubeblocks/pull/10026),[#10023](https://github.com/apecloud/kubeblocks/pull/10023),[#9900](https://github.com/apecloud/kubeblocks/pull/9900))
+
+
+## KubeBlocks Addons
+
+
+### MySQL
+- Support MySQL minor versions 8.0.41, 8.0.44 ([#2295](https://github.com/apecloud/kubeblocks-addons/pull/2295))
+- Fix MySQL `log_output` parameter constraint ([#2408](https://github.com/apecloud/kubeblocks-addons/pull/2408))
+- Disable jemalloc for ARM ([#2381](https://github.com/apecloud/kubeblocks-addons/pull/2381)))
+
+### PostgreSQL
+- Support PostgreSQL 18.1 ([#2409](https://github.com/apecloud/kubeblocks-addons/pull/2409))
+- Improve PostgreSQL config constraint comment ([#2376](https://github.com/apecloud/kubeblocks-addons/pull/2376))
+- Unset `archive_timeout` immutable for PostgreSQL ([#2380](https://github.com/apecloud/kubeblocks-addons/pull/2380))
+- Set `wal_keep_size` by data disk size ([#2372](https://github.com/apecloud/kubeblocks-addons/pull/2372))
+
+### Redis
+- Support 7.2.11/7.4.6/8.0.4/8.2.2 for redis CVE-2025-49844 issue ([#2123](https://github.com/apecloud/kubeblocks-addons/pull/2123))
+- Support more minor versions of Redis 7.2.12/7.4.7/8.0.5/8.2.3/8.4.0 ([#2347](https://github.com/apecloud/kubeblocks-addons/pull/2347))
+- Improve Redis `maxmemory` parameter ([#2392](https://github.com/apecloud/kubeblocks-addons/pull/2392))
+- Fix redis cluster switchover failed ([#2423](https://github.com/apecloud/kubeblocks-addons/pull/2423))
+- Fix invalid config cue constraint ([#2421](https://github.com/apecloud/kubeblocks-addons/pull/2421))
+- Fix hscale failed when using loadBalance mode ([#2397](https://github.com/apecloud/kubeblocks-addons/pull/2397))
+- Fix redis cluster restore failed ([#2404](https://github.com/apecloud/kubeblocks-addons/pull/2404))
+- Fix redis pitr no time range ([#2204](https://github.com/apecloud/kubeblocks-addons/pull/2204))
+
+### MongoDB
+- Support MongoDB minor versions 8.0.17/7.0.28/6.0.27 ([#2382](https://github.com/apecloud/kubeblocks-addons/pull/2382))
+- Support MongoDB audit log ([#2111](https://github.com/apecloud/kubeblocks-addons/pull/2111))
+- Fix MongoDB backup hang ([#2387](https://github.com/apecloud/kubeblocks-addons/pull/2387))
+
+### ClickHouse
+- Improve ClickHouse `memberjoin` ([#2431](https://github.com/apecloud/kubeblocks-addons/pull/2431))
+- Improve ClickHouse sharding restore ([#2357](https://github.com/apecloud/kubeblocks-addons/pull/2357))
+- Fix ClickHouse restore failed when specified the init cluster name ([#2429](https://github.com/apecloud/kubeblocks-addons/pull/2429))
+
+### Elasticsearch
+- Support ES 6.x, ES 7.10.2 ([#1998](https://github.com/apecloud/kubeblocks-addons/pull/1998),[#2337](https://github.com/apecloud/kubeblocks-addons/pull/2337))
+- Support zone awareness shard allocation ([#2185](https://github.com/apecloud/kubeblocks-addons/pull/2185))
+- Add plugin `analysis-pinyin` ([#2285](https://github.com/apecloud/kubeblocks-addons/pull/2285))
+- Fix single node backup failed ([#2290](https://github.com/apecloud/kubeblocks-addons/pull/2290))
+- Fix ES render tpl compatibility ([#2411](https://github.com/apecloud/kubeblocks-addons/pull/2411))
+
+### Kafka
+- Support Kafka 3.7/3.8/3.9 ([#2174](https://github.com/apecloud/kubeblocks-addons/pull/2174))
+- Support custom SASL ([#2259](https://github.com/apecloud/kubeblocks-addons/pull/2259))
+- Support Kafka backup topics ([#2260](https://github.com/apecloud/kubeblocks-addons/pull/2260))
+- Fix Kafka backup when both SASL and TLS enabled ([#2289](https://github.com/apecloud/kubeblocks-addons/pull/2289))
+
+### Milvus
+- Support Milvus backup and restore ([#2252](https://github.com/apecloud/kubeblocks-addons/pull/2252))
+- Fix rebuild index when restoring Milvus ([#2331](https://github.com/apecloud/kubeblocks-addons/pull/2331))
+
+### MinIO
+- Support MinIO RELEASE.2025-10-15T17-29-55Z ([#2279](https://github.com/apecloud/kubeblocks-addons/pull/2279))
+
+### Nebula
+- Fix Nebula backup and restore failed ([#2435](https://github.com/apecloud/kubeblocks-addons/pull/2435))
+
+### Qdrant
+- Support new version v1.15.4 ([#2037](https://github.com/apecloud/kubeblocks-addons/pull/2037))
+
+### RabbitMQ
+- Support RabbitMQ 4.2.1, 4.1.6, 3.8.34([#2319](https://github.com/apecloud/kubeblocks-addons/pull/2319))
+- Support plugins management ([#2317](https://github.com/apecloud/kubeblocks-addons/pull/2317))
+- Set memory limit to prevent OOMs ([#2241](https://github.com/apecloud/kubeblocks-addons/pull/2241))
+- Add RabbitMQ web stomp port ([#2428](https://github.com/apecloud/kubeblocks-addons/pull/2428))
+
+### RocketMQ
+- Fix RocketMQ `namesrc` hscale timeout ([#2420](https://github.com/apecloud/kubeblocks-addons/pull/2420))
+
+### TiDB
+- Support TiDB PITR restore ([#1702](https://github.com/apecloud/kubeblocks-addons/pull/1702))
+- Fix tidb pd scale in multiple instances ([#2269](https://github.com/apecloud/kubeblocks-addons/pull/2269))
+
+### ZooKeeper
+- Support ZooKeeper 3.9.4 ([#2244](https://github.com/apecloud/kubeblocks-addons/pull/2244))
+- Fix ZooKeeper hscale ([#2216](https://github.com/apecloud/kubeblocks-addons/pull/2216))
+
+## Breaking Changes
+
+### Variable Rendering Fix ([#9935](https://github.com/apecloud/kubeblocks/pull/9935))
+
+Variable rendering now passes `map[string]any` instead of `map[string]string`. Addons that relied on the old behavior may need template updates.
+
+**Before (KB 1.0.1 and earlier)** — workaround for string-only vars:
+
+```text
+{{if ne (index . "ENDPOINT_PORT") ""}}{{.ENDPOINT_PORT}}{{else}}5022{{end}}
+```
+
+**After (KB 1.0.2)** — simplified expression:
+
+```text
+{{if index . "ENDPOINT_PORT"}}{{.ENDPOINT_PORT}}{{else}}5022{{end}}
+```
+
+**Affected addons**: OceanBase, MongoDB, Redis, Redis Cluster. See [Issue #9934](https://github.com/apecloud/kubeblocks/issues/9934) for context.
+
+**Action required**: Upgrade addons when upgrading KubeBlocks to v1.0.2. See [PR #2328](https://github.com/apecloud/kubeblocks-addons/pull/2328) for required changes.
+
+## Upgrade to v1.0.2
+
+Refer to [Upgrade to KubeBlocks v1.0.x](../../upgrade/upgrade-to-v10x).
+
+## Full Changelog
+You can check the [full changelog](https://github.com/apecloud/kubeblocks/compare/v1.0.1...v1.0.2) for additional changes and [kubeblocks-addons](https://github.com/apecloud/kubeblocks-addons/compare/v1.0.1...v1.0.2) for addons changes.
