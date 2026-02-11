@@ -1,0 +1,180 @@
+---
+title: Migrate Existing Clusters to a New Addon Version
+description: Step-by-step guide to upgrade Addons and migrate existing clusters to the new Addon version
+keywords: [addon, upgrade, migration, componentDef, cluster]
+sidebar_position: 5
+sidebar_label: Migrate Clusters to New Addon
+---
+
+# Migrate Existing Clusters to a New Addon Version
+
+You may need to migrate existing clusters to a new Addon version in cases such as:
+- (1) after upgrading KubeBlocks Operator (e.g., to v1.0.2), when the new Operator requires Addons like OceanBase, MongoDB, Redis, or Redis Cluster to be on a compatible version; or
+- (2) when a new Addon release provides new features or bugfixes that you want to adopt.
+
+This guide describes the end-to-end process: upgrading the Addon to the target version, then migrating each existing cluster to use the new `componentDef` version.
+
+:::note
+This process does **not** include upgrading the KubeBlocks Operator itself. Ensure the Operator has already been upgraded to the target version before following this guide.
+:::
+
+## Overview
+
+1. **Upgrade the Addon** – Install or upgrade the Addon (e.g., Redis) to the target version compatible with your KubeBlocks version using Helm.
+2. **Migrate existing clusters** – For each cluster that still references an old `componentDef` (e.g., `redis-7-1.0.1`), update its `componentDef` to the new version (e.g., `redis-7-1.0.2`). Other cluster configurations can remain unchanged.
+
+The following example uses the **Redis** Addon. Replace the Addon name and version numbers with those for your Addon and target version.
+
+:::warning
+**Production use**
+Test the migration carefully in a non-production environment before applying changes in production. Migrating clusters to a new Addon version may trigger pod recreation, rolling restarts, or other runtime changes that can affect availability.
+:::
+
+---
+
+## Step 1: Upgrade the Addon to the Target Version
+
+1. Add or update the KubeBlocks Helm repo and refresh the index:
+
+   ```bash
+   helm repo add kubeblocks-addons https://apecloud.github.io/helm-charts
+   helm repo update
+   ```
+
+2. List available versions for the Addon:
+
+   ```bash
+   helm search repo kubeblocks-addons/redis --versions
+   ```
+
+3. Upgrade the Addon to the desired version (e.g., `1.0.2`). Use the version that matches your KubeBlocks release:
+
+   ```bash
+   helm upgrade -i kb-addon-redis kubeblocks-addons/redis --version 1.0.2 -n kb-system
+   ```
+
+   :::tip
+   Replace `redis` and `1.0.2` with your Addon name and target Addon version. For other Addons (e.g., MongoDB, OceanBase), use the corresponding chart name and version from `helm search repo kubeblocks-addons/<addon-name> --versions`.
+   :::
+
+4. **Verify the Addon upgrade** – After running `helm upgrade`, confirm the Addon is installed and running the target version:
+
+    ```bash
+    helm list -n kb-system
+    ```
+
+    Look for your Addon (e.g., `kb-addon-redis`) in the output, and ensure its `CHART` column matches the version you specified (such as `redis-1.0.2`). For example:
+
+    ```bash
+    NAME            	NAMESPACE   REVISION UPDATED                   STATUS   CHART         APP VERSION
+    kb-addon-redis  	kb-system   2        2026-02-09 23:59:59.000   deployed redis-1.0.2   7.x.x
+    ```
+
+    If the version is correct and the status is `deployed`, you have successfully upgraded the Addon.
+
+    :::tip
+    If you do **not** see the updated version, double-check the upgrade command, repo, and chart name, then rerun the upgrade if needed.
+    :::
+
+5. **Confirm available `componentDef` versions** – Ensure the new version (e.g., `redis-7-1.0.2`) is listed:
+
+    ```bash
+    kubectl get cmpd -l app.kubernetes.io/name=redis
+    ```
+    <details open>
+    <summary>Example Output</summary>
+    ```text
+    redis-5-1.0.1               redis             5.0.12            Available   40m
+    redis-5-1.0.2               redis             5.0.12            Available   22m
+    redis-6-1.0.1               redis             6.2.17            Available   40m
+    redis-6-1.0.2               redis             6.2.17            Available   22m
+    redis-7-1.0.1               redis             7.2.10            Available   40m
+    redis-7-1.0.2               redis             7.2.11            Available   22m
+    redis-8-1.0.1               redis             8.2.1             Available   40m
+    redis-8-1.0.2               redis             8.2.2             Available   22m
+    ```
+    </details>
+---
+
+## Step 2: Migrate Existing Clusters to the New Addon Version
+
+:::tip
+**Apply the change one cluster at a time** rather than in batch. This reduces the risk of service disruption and makes troubleshooting easier if issues occur during migration.
+:::
+
+### What to change
+
+- **Only** update the `componentDef` field in each `componentSpecs` entry to the new Addon version (e.g., from `redis-7-1.0.1` to `redis-7-1.0.2`).
+
+### Example: Redis Replication Cluster
+
+**Before (old `componentDef`):**
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: redis-replication
+  namespace: demo
+spec:
+  clusterDef: redis
+  terminationPolicy: Delete
+  topology: replication
+  componentSpecs:
+  - componentDef: redis-7-1.0.1
+    name: redis
+    replicas: 2
+    serviceVersion: 7.2.4
+  # other fields are omitted for brevity
+  - componentDef: redis-sentinel-7-1.0.1
+    name: redis-sentinel
+    replicas: 3
+    serviceVersion: 7.2.4
+  # other fields are omitted for brevity
+```
+
+**After (new `componentDef`):**
+
+```yaml
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: redis-replication
+  namespace: demo
+spec:
+  clusterDef: redis
+  terminationPolicy: Delete
+  topology: replication
+  componentSpecs:
+  - componentDef: redis-7-1.0.2   # set componentDef to the new version
+    name: redis
+    replicas: 2
+    serviceVersion: 7.2.4
+  # other fields are omitted for brevity
+  - componentDef: redis-sentinel-7-1.0.2   # set componentDef to the new version
+    name: redis-sentinel
+    replicas: 3
+    serviceVersion: 7.2.4
+  # other fields are omitted for brevity
+```
+
+### How to apply change
+
+- **Edit in place:** Run `kubectl edit cluster <cluster-name> -n <namespace>`, update each `componentDef` to the new version, then save.
+
+- **Or apply a manifest:** Update the cluster YAML as in the example above, then run:
+
+  ```bash
+  kubectl apply -f your-cluster.yaml
+  ```
+
+Repeat for every cluster that uses the old `componentDef` version. After the update, the controller reconciles the cluster to the new Addon version. You do not need to change replicas, resources, or `serviceVersion` unless you intend to.
+
+## Getting help
+
+If you run into issues during migration, you can open an issue in the community:
+
+- **KubeBlocks (Operator):** [GitHub Issues](https://github.com/apecloud/kubeblocks/issues)
+- **Addons:** [KubeBlocks Addons GitHub Issues](https://github.com/apecloud/kubeblocks-addons/issues)
+
+Please include your environment details, Addon and cluster version, and steps to reproduce so the community can help you more effectively.
