@@ -122,7 +122,29 @@ Variable rendering now passes `map[string]any` instead of `map[string]string`. A
 
 **Affected addons**: OceanBase, MongoDB, Redis, Redis Cluster. See [Issue #9934](https://github.com/apecloud/kubeblocks/issues/9934) for context.
 
-**Action required**: Upgrade addons when upgrading KubeBlocks to v1.0.2. See [PR #2328](https://github.com/apecloud/kubeblocks-addons/pull/2328) for required changes.
+**Symptoms**
+
+After upgrading to KubeBlocks v1.0.2, existing clusters that use the OceanBase, MongoDB, Redis, or Redis Cluster addons may show:
+
+1. When you run `kubectl describe component`, events similar to:
+
+    ```bash
+    template: vars:1:50: executing "vars" at <.REDIS_HOST_NETWORK_PORT>: map has no entry for key "REDIS_HOST_NETWORK_PORT"
+    ```
+
+2. In the KubeBlocks operator logs, errors similar to:
+
+    ```bash
+    INFO	ComponentParameterReconciler	failed to create task context: template: vars:1:50: executing "vars" at <.REDIS_HOST_NETWORK_PORT>: map has no entry for key "REDIS_HOST_NETWORK_PORT"	{"controller": "componentparameter", "controllerGroup": "parameters.kubeblocks.io", "controllerKind"
+    ```
+
+**Resolution**
+
+- **Option 1 — In-place fix**: Follow the approach in [PR #2328](https://github.com/apecloud/kubeblocks-addons/pull/2328) and update the variable rendering logic in the affected ComponentDefinition locally. If `ComponentDefinition` goes `UNAVAILABLE`, pls annotate the `ComponentDefinition` CR to allow the changes.
+    ```bash
+    kubectl annotate cmpd <COMPONENT_DEFINITION_NAME> apps.kubeblocks.io/skip-immutable-check=true
+    ```
+- **Option 2 — Upgrade addon and migrate clusters**: Upgrade the affected addon, then migrate existing clusters to the new addon version one by one. See [Migrate Existing Clusters to a New Addon Version](../../upgrade/migrate-clusters-to-new-addon).
 
 ## Upgrade to v1.0.2
 
