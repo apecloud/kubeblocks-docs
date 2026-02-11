@@ -52,14 +52,14 @@ Before installation, verify your environment meets these requirements:
 
 ```bash
 # Step 1: Install CRDs
-kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/{{VERSION}}/kubeblocks_crds.yaml
+kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/{VERSION}/kubeblocks_crds.yaml
 
 # Step 2: Configure Helm Repository
 helm repo add kubeblocks https://apecloud.github.io/helm-charts
 helm repo update
 
 # Step 3: Deploy KubeBlocks
-helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace --version={{VERSION}}
+helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace --version={VERSION}
 ```
 
 
@@ -73,7 +73,7 @@ unknown field "x-kubernetes-validations".... if you choose to ignore these error
 
 You can fix this by running the following command:
 ```bash
-kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/{{VERSION}}/kubeblocks_crds.yaml --validate\=false
+kubectl create -f https://github.com/apecloud/kubeblocks/releases/download/{VERSION}/kubeblocks_crds.yaml --validate\=false
 ```
 :::
 
@@ -99,7 +99,7 @@ curl -s https://api.github.com/repos/apecloud/kubeblocks/tags | jq -r '.[0].name
 - Ensure kubectl is configured with cluster access
 
 ```bash
-kbcli kubeblocks install --version={{VERSION}} --create-namespace
+kbcli kubeblocks install --version={VERSION} --create-namespace
 ```
 
 **Need a different version?**
@@ -131,7 +131,7 @@ Mismatched major versions may cause unexpected behavior or errors.
 By default, KubeBlocks installs in the `kb-system` namespace. To specify a different namespace:
 
 ```bash
-kbcli kubeblocks install --version={{VERSION}} --create-namespace --namespace my-namespace
+kbcli kubeblocks install --version={VERSION} --create-namespace --namespace my-namespace
 ```
 
 💡 *Remember to replace `my-namespace` with your desired namespace name.*
@@ -178,7 +178,7 @@ kbcli kubeblocks status
 If the KubeBlocks Workloads are all ready, KubeBlocks has been installed successfully.
 
 ```bash
-KubeBlocks is deployed in namespace: kb-system,version: {{VERSION}}
+KubeBlocks is deployed in namespace: kb-system,version: {VERSION}
 
 Kubernetes Cluster:
 VERSION   PROVIDER   REGION   AVAILABLE ZONES
@@ -215,7 +215,7 @@ Specify image repository by specifying the following parameters.
 
 ```bash
 helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace \
---version {{VERSION}} \
+--version {VERSION} \
 --set image.registry=docker.io \
 --set dataProtection.image.registry=docker.io \
 --set addonChartsImage.registry=docker.io
@@ -226,7 +226,7 @@ helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-nam
 <TabItem value="kbcli" label="kbcli">
 
 ```bash
-kbcli kubeblocks upgrade --version {{VERSION}} \
+kbcli kubeblocks upgrade --version {VERSION} \
 --set image.registry=docker.io \
 --set dataProtection.image.registry=docker.io \
 --set addonChartsImage.registry=docker.io
@@ -256,7 +256,7 @@ If you want to install KubeBlocks with custom tolerations, you can use the follo
 
 ```bash
 helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace \
---version {{VERSION}} \
+--version {VERSION} \
 --set-json 'tolerations=[ { "key": "control-plane-taint", "operator": "Equal", "effect": "NoSchedule", "value": "true" } ]' \
 --set-json 'dataPlane.tolerations=[{ "key": "data-plane-taint", "operator": "Equal", "effect": "NoSchedule", "value": "true"}]'
 ```
@@ -266,7 +266,7 @@ helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-nam
 <TabItem value="kbcli" label="kbcli">
 
 ```bash
-kbcli kubeblocks install --version {{VERSION}} --create-namespace \
+kbcli kubeblocks install --version {VERSION} --create-namespace \
 --set image.registry=docker.io \
 --set dataProtection.image.registry=docker.io \
 --set addonChartsImage.registry=docker.io
@@ -280,7 +280,7 @@ kbcli kubeblocks install --version {{VERSION}} --create-namespace \
 
 ```bash
 helm install kubeblocks kubeblocks/kubeblocks --namespace kb-system --create-namespace \
---version {{VERSION}} \
+--version {VERSION} \
 --set autoInstalledAddons="{}"
 ```
 
@@ -300,7 +300,7 @@ featureGates.inPlacePodVerticalScaling.enabled=true
 helm install kubeblocks kubeblocks/kubeblocks \
   --namespace kb-system \
   --create-namespace \
-  --version {{VERSION}} \
+  --version {VERSION} \
   --set featureGates.inPlacePodVerticalScaling.enabled=true
 ```
 
@@ -308,7 +308,7 @@ helm install kubeblocks kubeblocks/kubeblocks \
 ```bash
 helm upgrade kubeblocks kubeblocks/kubeblocks \
   --namespace kb-system \
-  --version {{VERSION}} \
+  --version {VERSION} \
   --set featureGates.inPlacePodVerticalScaling.enabled=true
 ```
 
@@ -319,7 +319,7 @@ helm upgrade kubeblocks kubeblocks/kubeblocks \
 1. Installation
 ```bash
 kbcli kubeblocks install \
-  --version={{VERSION}} \
+  --version={VERSION} \
   --create-namespace \
   --set featureGates.inPlacePodVerticalScaling.enabled=true
 ```
@@ -327,7 +327,7 @@ kbcli kubeblocks install \
 1. Upgrade
 ```bash
 kbcli kubeblocks upgrade \
-  --version={{VERSION}} \
+  --version={VERSION} \
   --set featureGates.inPlacePodVerticalScaling.enabled=true
 ```
 

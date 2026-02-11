@@ -1,6 +1,6 @@
 ---
-title: KubeBlocks Options and Roles
-description: KubeBlocks Options and Roles
+title: KubeBlocks Options
+description: KubeBlocks Options
 keywords: [kubeblocks, options, roles]
 sidebar_position: 8
 ---
@@ -8,11 +8,15 @@ sidebar_position: 8
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# KubeBlocks Options and Roles
+# KubeBlocks Options
 
-## KubeBlocks Options
+To get full list of options, you can use the following command:
 
-### KubeBlocks  Options
+```bash
+helm show values kubeblocks/kubeblocks --version {VERSION}
+```
+
+### KubeBlocks Options
 | Parameter | Description | Default |
 |----------|------|--------|
 | image.registry | KubeBlocks image repository | apecloud-registry.cn-zhangjiakou.cr.aliyuncs.com |
@@ -104,7 +108,7 @@ To update the options, you can use the following command:
 helm install kubeblocks kubeblocks/kubeblocks \
   --namespace kb-system \
   --create-namespace \
-  --version {{VERSION}} \
+  --version {VERSION} \
   --set optionName=optionValue
 ```
 
@@ -112,7 +116,7 @@ helm install kubeblocks kubeblocks/kubeblocks \
 ```bash
 helm upgrade kubeblocks kubeblocks/kubeblocks \
   --namespace kb-system \
-  --version {{VERSION}} \
+  --version {VERSION} \
   --set optionName=optionValue
 ```
 
@@ -123,7 +127,7 @@ helm upgrade kubeblocks kubeblocks/kubeblocks \
 1. Installation
 ```bash
 kbcli kubeblocks install \
-  --version={{VERSION}} \
+  --version={VERSION} \
   --create-namespace \
   --set optionName=optionValue
 ```
@@ -131,87 +135,9 @@ kbcli kubeblocks install \
 1. Upgrade
 ```bash
 kbcli kubeblocks upgrade \
-  --version={{VERSION}} \
+  --version={VERSION} \
   --set optionName=optionValue
 ```
 
 </TabItem>
 </Tabs>
-
-
-## KubeBlocks Operator RBAC Permissions
-KubeBlocks operator requires the following permissions to work properly.
-
-### 1. Kubernetes Resource Permissions
-**Main permissions include:**
-
-#### Core Cluster Permissions:
-- **Node**: `list`, `watch`
-- **Pod**: `create`, `delete`, `deletecollection`, `get`, `list`, `patch`, `update`, `watch`, `exec`, `log`
-- **Service**: `create`, `delete`, `deletecollection`, `get`, `list`, `patch`, `update`, `watch`
-- **ConfigMap**: `create`, `delete`, `deletecollection`, `get`, `list`, `patch`, `update`, `watch`
-- **Secret**: `create`, `delete`, `deletecollection`, `get`, `list`, `patch`, `update`, `watch`
-- **ServiceAccount**: `create`, `delete`, `get`, `list`, `patch`, `update`, `watch`
-- **PersistentVolumeClaim**: `create`, `delete`, `get`, `list`, `patch`, `update`, `watch`
-- **PersistentVolume**: `get`, `list`, `patch`, `update`, `watch`
-- **Event**: `create`, `get`, `list`, `patch`, `watch`
-
-#### Application Resource Permissions:
-- **Deployment**: `get`, `list`, `watch`
-- **StatefulSet**: `create`, `delete`, `deletecollection`, `get`, `list`, `patch`, `update`, `watch`
-- **Job**: `create`, `delete`, `deletecollection`, `get`, `list`, `patch`, `update`, `watch`
-- **CronJob**: `create`, `delete`, `get`, `list`, `patch`, `update`, `watch`
-
-#### Storage Related Permissions:
-- **StorageClass**: `create`, `delete`, `get`, `list`, `watch`
-- **CSIDriver**: `get`, `list`, `watch`
-- **VolumeSnapshot**: `create`, `delete`, `get`, `list`, `patch`, `update`, `watch`
-- **VolumeSnapshotClass**: `create`, `delete`, `get`, `list`, `patch`, `update`, `watch`
-
-#### RBAC Permissions:
-- **Role**: `get`, `list`, `watch`
-- **RoleBinding**: `create`, `delete`, `get`, `list`, `patch`, `update`, `watch`
-
-#### Coordination Mechanism Permissions:
-- **Lease**: `create`, `get`, `list`, `patch`, `update`, `watch`
-
-#### Authentication Proxy Permissions
-
-- **TokenReview**: `create`
-- **SubjectAccessReview**: `create`
-
-### 2. KubeBlocks Custom Resource Permissions
-
-- **apps.kubeblocks.io** API Groups: **ClusterDefinition**, **Cluster**, **ComponentDefinition**, **Component**, **ComponentVersion**, **Rollout**, - **ServiceDescriptor**, **ShardingDefinition**, **SidecarDefinition**
-- **dataprotection.kubeblocks.io** API Groups: **ActionSet**, **BackupPolicy**, **BackupPolicyTemplate**, **BackupRepo**, **Backup**, **BackupSchedule**, - **Restore**, **StorageProvider**
-- **operations.kubeblocks.io** API Groups: **OpsDefinition**, **OpsRequest**
-- **parameters.kubeblocks.io** API Groups: **ComponentParameter**, **ParamConfigRenderer**, **Parameter**, **ParameterDefinition**
-- **experimental.kubeblocks.io** API Groups: **NodeCountScaler**
-- **extensions.kubeblocks.io** API Groups: **Addon**
-- **trace.kubeblocks.io** API Groups: **ReconciliationTrace**
-- **workloads.kubeblocks.io** API Groups: **InstanceSet**
-
-### 3. Conditional Permissions
-
-**Data Protection Feature (dataProtection.enabled=true):**
-- backup-related permissions
-
-**Webhook Conversion Feature (webhooks.conversionEnabled=true):**
-- **CustomResourceDefinition**: `create`, `get`, `list`, `patch`, `update`, `watch`
-- **Deployment**: Additional deployment management permissions
-
-**Addon Controller (addonControllerEnabled=true):**
-- **cluster-admin**: Full cluster administrator permissions
-
-:::note
-
-Addon Controller requires `cluster-admin` ClusterRole.
-If you don't want to grant this permission, you can set `addonController.enabled=false` when installing KubeBlocks.
-
-Once disabled, one can still install addons through the `helm` way [install addons](../install_addons).
-
-:::
-
-
-
-

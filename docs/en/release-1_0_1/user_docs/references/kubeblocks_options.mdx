@@ -104,7 +104,7 @@ To update the options, you can use the following command:
 helm install kubeblocks kubeblocks/kubeblocks \
   --namespace kb-system \
   --create-namespace \
-  --version {{VERSION}} \
+  --version {VERSION} \
   --set optionName=optionValue
 ```
 
@@ -112,7 +112,7 @@ helm install kubeblocks kubeblocks/kubeblocks \
 ```bash
 helm upgrade kubeblocks kubeblocks/kubeblocks \
   --namespace kb-system \
-  --version {{VERSION}} \
+  --version {VERSION} \
   --set optionName=optionValue
 ```
 
@@ -123,7 +123,7 @@ helm upgrade kubeblocks kubeblocks/kubeblocks \
 1. Installation
 ```bash
 kbcli kubeblocks install \
-  --version={{VERSION}} \
+  --version={VERSION} \
   --create-namespace \
   --set optionName=optionValue
 ```
@@ -131,7 +131,7 @@ kbcli kubeblocks install \
 1. Upgrade
 ```bash
 kbcli kubeblocks upgrade \
-  --version={{VERSION}} \
+  --version={VERSION} \
   --set optionName=optionValue
 ```
 

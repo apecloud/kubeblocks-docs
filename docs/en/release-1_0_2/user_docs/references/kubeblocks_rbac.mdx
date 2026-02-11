@@ -1,0 +1,232 @@
+---
+title: KubeBlocks RBAC Permissions
+description: KubeBlocks RBAC Permissions
+keywords: [kubeblocks, options, rbac]
+sidebar_position: 9
+---
+
+# KubeBlocks Operator RBAC Permissions
+
+KubeBlocks operator requires different permissions based on configuration parameters.
+
+**Generated:** Tue Feb 10 18:27:35 CST 2026
+
+## Base Configuration
+
+**Configuration:** `webhooks.conversionEnabled=false` and `rbac.enabled=false`
+
+### Kubernetes Resource Permissions
+
+#### Core API Group
+
+* **configmaps**: create, delete, deletecollection, get, list, patch, update, watch
+* **configmaps/finalizers**: update
+* **events**: create, get, list, patch, update, watch
+* **nodes**: list, watch
+* **persistentvolumeclaims**: create, delete, get, list, patch, update, watch
+* **persistentvolumeclaims/finalizers**: update
+* **persistentvolumeclaims/status**: get, patch, update
+* **persistentvolumes**: get, list, patch, update, watch
+* **pods**: create, delete, deletecollection, get, list, patch, update, watch
+* **pods/exec**: create
+* **pods/finalizers**: update
+* **pods/log**: get, list
+* **pods/resize**: update
+* **pods/status**: get
+* **secrets**: create, delete, deletecollection, get, list, patch, update, watch
+* **secrets/finalizers**: update
+* **serviceaccounts**: create, delete, get, list, patch, update, watch
+* **serviceaccounts/status**: get
+* **services**: create, delete, deletecollection, get, list, patch, update, watch
+* **services/finalizers**: update
+* **services/status**: get
+
+#### apps
+
+* **deployments**: get, list, watch
+* **statefulsets**: create, delete, deletecollection, get, list, patch, update, watch
+* **statefulsets/finalizers**: update
+* **statefulsets/status**: get
+
+#### authentication.k8s.io
+
+* **tokenreviews**: create
+
+#### authorization.k8s.io
+
+* **subjectaccessreviews**: create
+
+#### batch
+
+* **cronjobs**: create, delete, get, list, patch, update, watch
+* **cronjobs/finalizers**: patch, update
+* **cronjobs/status**: get
+* **jobs**: create, delete, deletecollection, get, list, patch, update, watch
+* **jobs/finalizers**: update
+* **jobs/status**: get
+
+#### coordination.k8s.io
+
+* **leases**: create, delete, get, list, patch, update, watch
+
+#### rbac.authorization.k8s.io
+
+* **rolebindings**: create, delete, get, list, patch, update, watch
+* **rolebindings/status**: get
+* **roles**: create, delete, get, list, patch, update, watch
+* **roles/status**: get, patch, update
+
+#### snapshot.storage.k8s.io
+
+* **volumesnapshotclasses**: create, delete, get, list, patch, update, watch
+* **volumesnapshotclasses/finalizers**: patch, update
+* **volumesnapshots**: create, delete, get, list, patch, update, watch
+* **volumesnapshots/finalizers**: patch, update
+
+#### storage.k8s.io
+
+* **csidrivers**: get, list, watch
+* **storageclasses**: create, delete, get, list, watch
+
+#### Non-Resource URLs
+
+* **/metrics**: get
+
+### KubeBlocks Custom Resources
+
+#### apps.kubeblocks.io
+
+* **clusterdefinitions**: create, delete, get, list, patch, update, watch
+* **clusterdefinitions/finalizers**: update
+* **clusterdefinitions/status**: get, patch, update
+* **clusters**: create, delete, get, list, patch, update, watch
+* **clusters/finalizers**: update
+* **clusters/status**: get, patch, update
+* **componentdefinitions**: create, delete, get, list, patch, update, watch
+* **componentdefinitions/finalizers**: update
+* **componentdefinitions/status**: get, patch, update
+* **components**: create, delete, deletecollection, get, list, patch, update, watch
+* **components/finalizers**: update
+* **components/status**: get, patch, update
+* **componentversions**: create, delete, get, list, patch, update, watch
+* **componentversions/finalizers**: update
+* **componentversions/status**: get, patch, update
+* **configconstraints**: create, delete, get, list, patch, update, watch
+* **configconstraints/status**: get, patch, update
+* **servicedescriptors**: create, delete, get, list, patch, update, watch
+* **servicedescriptors/finalizers**: update
+* **servicedescriptors/status**: get, patch, update
+* **shardingdefinitions**: create, delete, get, list, patch, update, watch
+* **shardingdefinitions/finalizers**: update
+* **shardingdefinitions/status**: get, patch, update
+* **sidecardefinitions**: create, delete, get, list, patch, update, watch
+* **sidecardefinitions/finalizers**: update
+* **sidecardefinitions/status**: get, patch, update
+
+#### dataprotection.kubeblocks.io
+
+* **actionsets**: create, delete, get, list, patch, update, watch
+* **actionsets/finalizers**: update
+* **actionsets/status**: get, patch, update
+* **backuppolicies**: create, delete, get, list, patch, update, watch
+* **backuppolicies/finalizers**: update
+* **backuppolicies/status**: get, patch, update
+* **backuppolicytemplates**: create, delete, get, list, patch, update, watch
+* **backuppolicytemplates/finalizers**: update
+* **backuppolicytemplates/status**: get, patch, update
+* **backuprepos**: create, delete, get, list, patch, update, watch
+* **backuprepos/finalizers**: update
+* **backuprepos/status**: get, patch, update
+* **backups**: create, delete, deletecollection, get, list, patch, update, watch
+* **backups/finalizers**: update
+* **backups/status**: get, patch, update
+* **backupschedules**: create, delete, get, list, patch, update, watch
+* **backupschedules/finalizers**: update
+* **backupschedules/status**: get, patch, update
+* **restores**: create, delete, get, list, patch, update, watch
+* **restores/finalizers**: update
+* **restores/status**: get, patch, update
+* **storageproviders**: create, delete, get, list, patch, update, watch
+* **storageproviders/finalizers**: update
+* **storageproviders/status**: get, patch, update
+
+#### experimental.kubeblocks.io
+
+* **nodecountscalers**: create, delete, get, list, patch, update, watch
+* **nodecountscalers/finalizers**: update
+* **nodecountscalers/status**: get, patch, update
+
+#### extensions.kubeblocks.io
+
+* **addons**: create, delete, get, list, patch, update, watch
+* **addons/finalizers**: update
+* **addons/status**: get, patch, update
+
+#### operations.kubeblocks.io
+
+* **opsdefinitions**: create, delete, get, list, patch, update, watch
+* **opsdefinitions/finalizers**: update
+* **opsdefinitions/status**: get, patch, update
+* **opsrequests**: create, delete, get, list, patch, update, watch
+* **opsrequests/finalizers**: update
+* **opsrequests/status**: get, patch, update
+
+#### parameters.kubeblocks.io
+
+* **componentparameters**: create, delete, get, list, patch, update, watch
+* **componentparameters/finalizers**: update
+* **componentparameters/status**: get, patch, update
+* **paramconfigrenderers**: create, delete, get, list, patch, update, watch
+* **paramconfigrenderers/finalizers**: update
+* **paramconfigrenderers/status**: get, patch, update
+* **parameters**: create, delete, get, list, patch, update, watch
+* **parameters/finalizers**: update
+* **parameters/status**: get, patch, update
+* **parametersdefinitions**: create, delete, get, list, patch, update, watch
+* **parametersdefinitions/finalizers**: update
+* **parametersdefinitions/status**: get, patch, update
+
+#### trace.kubeblocks.io
+
+* **reconciliationtraces**: create, delete, get, list, patch, update, watch
+* **reconciliationtraces/finalizers**: update
+* **reconciliationtraces/status**: get, patch, update
+
+#### workloads.kubeblocks.io
+
+* **instancesets**: create, delete, get, list, patch, update, watch
+* **instancesets/finalizers**: update
+* **instancesets/status**: get, patch, update
+
+## Additional Permissions for Different Configurations
+
+### webhooks.conversionEnabled=true
+
+**Additional permissions required:**
+
+#### apiextensions.k8s.io
+
+* **customresourcedefinitions**: create, get, list, patch, update, watch
+
+#### apps
+
+* **deployments**: create, delete, patch, update
+* **deployments/status**: get
+
+### rbac.enabled=true
+
+**Additional permissions required:**
+
+#### Core API Group
+
+* **endpoints**: create, delete, get, list, patch, update, watch
+* **serviceaccounts/finalizers**: update
+* **serviceaccounts/status**: patch, update
+
+#### rbac.authorization.k8s.io
+
+* **clusterrolebindings**: create, delete, get, list, patch, update
+* **clusterrolebindings/finalizers**: update
+* **clusterrolebindings/status**: get, patch, update
+* **rolebindings/finalizers**: update
+* **rolebindings/status**: patch, update
