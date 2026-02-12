@@ -223,16 +223,16 @@ function extractMetadata(filePath, frontmatter) {
 }
 
 async function main() {
-  // 只匹配 docs/en/preview 和 blogs/en 下的 md/mdx 文件，排除 CLI 和 release notes
+  // Match all locales in docs and blogs, exclude CLI and release notes
   const files = await fg(
     [
-      'docs/en/preview/**/*.md',
-      'docs/en/preview/**/*.mdx',
-      'blogs/en/**/*.md',
-      'blogs/en/**/*.mdx',
-      '!docs/en/preview/**/cli/**',
-      '!docs/en/preview/**/release_notes/**',
-      '!docs/en/release-*/**', // 明确排除所有release版本目录
+      'docs/*/**/*.md',
+      'docs/*/**/*.mdx',
+      'blogs/*/**/*.md',
+      'blogs/*/**/*.mdx',
+      '!docs/*/release-*/**',
+      '!docs/**/cli/**',
+      '!docs/**/release_notes/**',
     ],
     { cwd: ROOT_DIR, absolute: true },
   );
@@ -243,11 +243,18 @@ async function main() {
     const raw = fs.readFileSync(file, 'utf-8');
     const { data, content } = matter(raw);
 
-    // 替换 path 中的 blogs/en 和 docs/en，并去除 .md/.mdx 后缀
+    // Extract locale from path (e.g., docs/en/preview -> en, blogs/zh -> zh)
+    const localeMatch = relPath.match(/^docs\/([^/]+)\//) || relPath.match(/^blogs\/([^/]+)\//);
+    const locale = localeMatch ? localeMatch[1] : 'en';
+
+    // Normalize path and preserve locale prefix for non-default locales
     let normPath = relPath
-      .replace(/^blogs\/en\//, 'blog/')
-      .replace(/^docs\/en\//, 'docs/');
+      .replace(/^blogs\/[^/]+\//, 'blog/')
+      .replace(/^docs\/[^/]+\//, 'docs/');
     normPath = normPath.replace(/\.(md|mdx)$/, '');
+    if (locale !== 'en') {
+      normPath = `${locale}/${normPath}`;
+    }
 
     // 过滤掉 mdx 的 import/export 语句和宏/JSX函数
     const filteredContent = content
@@ -284,6 +291,7 @@ async function main() {
 
     return {
       id: relPath.replace(/\//g, '_').replace(/\.(md|mdx)$/, ''),
+      locale,
       title:
         data.title ||
         data.sidebar_label ||

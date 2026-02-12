@@ -1,5 +1,24 @@
 :root {
   --container-min-height: calc(100vh - 151px);
+  
+  /* Search Modal CSS Variables */
+  --background: #23262f;
+  --text-primary: #fff;
+  --text-secondary: #b0b8c1;
+  --text-muted: #888;
+  --border: #333;
+  --primary: #6CB6FF;
+  --hover-bg: #2a3956;
+  --kbd-bg: #3a3f4b;
+  --button-secondary-bg: #3a3f4b;
+  --footer-bg: #1a1d26;
+}
+
+/* Spinner Animation for Search */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* code hightlight */
