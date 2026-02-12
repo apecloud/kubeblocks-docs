@@ -10,15 +10,21 @@ import {
   Typography,
 } from '@mui/material';
 import _ from 'lodash';
+import type { Metadata } from 'next';
 import Image from 'next/image';
 import { BlogList } from './BlogList';
 export async function generateStaticParams() {
   return getStaticParams();
 }
 
-export async function generateMetadata() {
+export async function generateMetadata(): Promise<Metadata> {
   return {
     title: 'Kubeblocks blogs',
+    description:
+      'Technical blogs, release highlights, and engineering guides for running databases on Kubernetes with KubeBlocks.',
+    alternates: {
+      canonical: '/blog',
+    },
   };
 }
 

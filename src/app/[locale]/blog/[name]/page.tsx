@@ -1,6 +1,7 @@
 import { getStaticParams } from '@/locales/server';
 import { BLOGS_DIR, getMarkDownMetaData } from '@/utils/markdown';
 import fs from 'fs';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import path from 'path';
 
@@ -28,15 +29,40 @@ export async function generateMetadata({
   params,
 }: {
   params: Promise<ParamsProps>;
-}) {
+}): Promise<Metadata> {
   const { locale, name } = await params;
   const mdxPath = path.join(BLOGS_DIR, locale, `${name}.mdx`);
   const defaultMdxEnPath = path.join(BLOGS_DIR, 'en', `${name}.mdx`);
+  const canonicalPath = `/blog/${name}`;
 
   if (fs.existsSync(mdxPath)) {
-    return await getMarkDownMetaData(mdxPath);
+    const metadata = (await getMarkDownMetaData(mdxPath)) as Metadata;
+    return {
+      ...metadata,
+      alternates: {
+        ...metadata.alternates,
+        canonical: canonicalPath,
+      },
+      openGraph: {
+        ...metadata.openGraph,
+        url: canonicalPath,
+        type: 'article',
+      },
+    };
   } else {
-    return await getMarkDownMetaData(defaultMdxEnPath);
+    const metadata = (await getMarkDownMetaData(defaultMdxEnPath)) as Metadata;
+    return {
+      ...metadata,
+      alternates: {
+        ...metadata.alternates,
+        canonical: canonicalPath,
+      },
+      openGraph: {
+        ...metadata.openGraph,
+        url: canonicalPath,
+        type: 'article',
+      },
+    };
   }
 }
 

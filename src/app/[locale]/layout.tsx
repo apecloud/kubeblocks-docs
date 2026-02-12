@@ -9,6 +9,7 @@ import { GoogleAnalytics } from '@next/third-parties/google';
 import type { Metadata } from 'next';
 import { setStaticParamsLocale } from 'next-international/server';
 import { Geist } from 'next/font/google';
+import { getSiteUrl } from '@/utils/site';
 import { ElevationScrollAppBar } from './ElevationScrollAppBar';
 
 import 'highlight.js/styles/github-dark.css';
@@ -20,9 +21,17 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: 'KubeBlocks',
+  metadataBase: new URL(getSiteUrl()),
+  title: {
+    default: 'KubeBlocks',
+    template: '%s | KubeBlocks',
+  },
   description:
     'Meet KubeBlocks, the open-source, unified database operator for Kubernetes. Simplify cloud-native data management with a single API for MySQL, PostgreSQL, MongoDB, Kafka, and more. Tame operator sprawl and streamline Day-2 operations.',
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default async function RootLayout({

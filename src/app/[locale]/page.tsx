@@ -2,6 +2,7 @@ import Footer from '@/components/Footer';
 import { getStaticParams } from '@/locales/server';
 import { getBlogs } from '@/utils/markdown';
 import { Box, Divider } from '@mui/material';
+import type { Metadata } from 'next';
 import Banner from './banner';
 import BlogsPreview from './blogs-preview';
 import Contact from './contact';
@@ -12,6 +13,14 @@ import WhyNeedKubeBlocks from './why-need-kubeblocks';
 
 export async function generateStaticParams() {
   return getStaticParams();
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    alternates: {
+      canonical: '/',
+    },
+  };
 }
 
 export default async function HomePage({
