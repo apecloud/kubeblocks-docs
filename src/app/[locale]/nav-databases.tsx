@@ -14,7 +14,7 @@ import {
 } from '@/components/icons';
 import { Link } from '@/components/Link';
 import { useI18n } from '@/locales/client';
-import { ExpandMore } from '@mui/icons-material';
+import { ExpandMore, GitHub } from '@mui/icons-material';
 import {
   Box,
   Button,
@@ -79,6 +79,12 @@ export default function DatabasesNav() {
       icon: <ElasticSearchIcon {...iconProps} />,
       href: '/docs/preview/kubeblocks-for-elasticsearch',
     },
+    {
+      title: 'More Add-ons',
+      icon: <GitHub {...iconProps} />,
+      href: 'https://github.com/apecloud/kubeblocks-addons/',
+      external: true,
+    },
   ];
 
   return (
@@ -122,6 +128,10 @@ export default function DatabasesNav() {
                 dense
                 component={Link}
                 href={item.href}
+                {...(('external' in item && item.external) && {
+                  target: '_blank',
+                  rel: 'noopener noreferrer',
+                })}
                 sx={{ borderRadius: 1 }}
               >
                 <Stack direction="row" spacing={2} alignItems="center">
