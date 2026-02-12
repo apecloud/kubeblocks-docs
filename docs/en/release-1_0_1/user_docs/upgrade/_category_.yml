@@ -1,5 +1,4 @@
-position: 100
-label: Upgrade KubeBlocks
+position: 71
+label: Upgrade & Migration
 collapsible: true
 collapsed: true
-hidden: true
