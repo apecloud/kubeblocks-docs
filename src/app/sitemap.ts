@@ -1,57 +1,110 @@
-import { BLOGS_DIR } from '@/utils/markdown';
+import { BLOGS_DIR, DOCS_DIR } from '@/utils/markdown';
+import { getSiteUrl } from '@/utils/site';
 import fs from 'fs';
 import type { MetadataRoute } from 'next';
-
-const lastModified = new Date();
+import path from 'path';
 
 import { getStaticParams } from '@/locales/server';
-import path from 'path';
 export default function sitemap(): MetadataRoute.Sitemap {
+  const siteUrl = getSiteUrl();
   const sitemap: MetadataRoute.Sitemap = [];
 
-  const docsDir = path.join(process.cwd(), 'docs');
-  const getPaths = (dir: string, initData: string[] = []): string[] => {
-    fs.readdirSync(dir).forEach((f) => {
-      const d = path.join(dir, f);
-      const stat = fs.statSync(d);
-      if (stat.isDirectory()) {
-        getPaths(d, initData);
-      }
-      if (stat.isFile() && f.endsWith('.mdx')) {
-        initData.push(d);
-      }
-    });
-    return initData;
+  const withLocalePath = (locale: string, routePath: string) => {
+    if (locale === 'en') {
+      return routePath;
+    }
+    return `/${locale}${routePath}`;
   };
 
+  const addStaticRoute = (
+    routePath: string,
+    locale = 'en',
+    priority = 0.7,
+    changeFrequency: MetadataRoute.Sitemap[number]['changeFrequency'] = 'weekly',
+  ) => {
+    sitemap.push({
+      url: `${siteUrl}${withLocalePath(locale, routePath)}`,
+      lastModified: new Date(),
+      changeFrequency,
+      priority,
+    });
+  };
+
+  const getMdxFiles = (dir: string, files: string[] = []): string[] => {
+    if (!fs.existsSync(dir)) {
+      return files;
+    }
+
+    fs.readdirSync(dir).forEach((entryName) => {
+      if (entryName.startsWith('_')) {
+        return;
+      }
+      const entryPath = path.join(dir, entryName);
+      const stat = fs.statSync(entryPath);
+      if (stat.isDirectory()) {
+        getMdxFiles(entryPath, files);
+        return;
+      }
+      if (stat.isFile() && entryName.endsWith('.mdx')) {
+        files.push(entryPath);
+      }
+    });
+
+    return files;
+  };
+
+  addStaticRoute('/', 'en', 1, 'daily');
+  addStaticRoute('/blog', 'en', 0.8, 'daily');
+
   getStaticParams().forEach((item) => {
-    // locals
-    const localeDir = path.join(docsDir, item.locale);
+    const localeDir = path.join(DOCS_DIR, item.locale);
 
-    fs.readdirSync(localeDir).forEach((version) => {
-      // versions
+    if (!fs.existsSync(localeDir)) {
+      return;
+    }
+
+    if (item.locale !== 'en') {
+      addStaticRoute('/', item.locale, 0.9, 'daily');
+      addStaticRoute('/blog', item.locale, 0.7, 'weekly');
+    }
+
+    const versions = fs.readdirSync(localeDir);
+
+    versions.forEach((version) => {
       const versionDir = path.join(localeDir, version);
-      fs.readdirSync(versionDir).forEach((category) => {
-        // categories
-        const cateDir = path.join(versionDir, category);
-        const paths: string[] = getPaths(cateDir).map((item) =>
-          item.replace(cateDir + '/', '').replace('.mdx', ''),
-        );
+      if (!fs.statSync(versionDir).isDirectory()) {
+        return;
+      }
+      const categories = fs.readdirSync(versionDir);
 
-        // ignore some category
-        if (['release_notes'].includes(category)) {
+      categories.forEach((category) => {
+        if (category.startsWith('_') || category === 'release_notes') {
           return;
         }
 
-        paths.forEach((p) => {
-          const items = p.split('/');
+        const categoryDir = path.join(versionDir, category);
+        if (!fs.statSync(categoryDir).isDirectory()) {
+          return;
+        }
+
+        const files = getMdxFiles(categoryDir);
+        files.forEach((filePath) => {
+          const relative = filePath
+            .replace(`${categoryDir}/`, '')
+            .replace(/\.mdx$/, '');
+
+          if (relative.split('/').some((segment) => segment.startsWith('_'))) {
+            return;
+          }
+
+          const routePath = `/docs/${version}/${category}/${relative}`;
+          const fileLastModified = fs.statSync(filePath).mtime;
+
           sitemap.push({
-            url: `https://kubeblocks.io/docs/${version}/${category}/${items?.join(
-              '/',
-            )}`,
-            lastModified,
+            url: `${siteUrl}${withLocalePath(item.locale, routePath)}`,
+            lastModified: fileLastModified,
             changeFrequency: 'weekly',
-            priority: 0.5,
+            priority: 0.6,
           });
         });
       });
@@ -60,19 +113,29 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   getStaticParams().forEach((item) => {
     const dir = path.join(BLOGS_DIR, item.locale);
-    if (fs.existsSync(dir)) {
-      fs.readdirSync(dir)
-        .filter((f) => f.endsWith('.mdx'))
-        .forEach((f) => {
-          sitemap.push({
-            url: `https://kubeblocks.io/blog/${f.replace(/\.mdx/, '')}`,
-            lastModified,
-            changeFrequency: 'weekly',
-            priority: 0.5,
-          });
-        });
+    if (!fs.existsSync(dir)) {
+      return;
     }
+
+    fs.readdirSync(dir)
+      .filter((f) => f.endsWith('.mdx'))
+      .forEach((f) => {
+        const filePath = path.join(dir, f);
+        const fileLastModified = fs.statSync(filePath).mtime;
+        const slug = f.replace(/\.mdx/, '');
+        const routePath = `/blog/${slug}`;
+
+        sitemap.push({
+          url: `${siteUrl}${withLocalePath(item.locale, routePath)}`,
+          lastModified: fileLastModified,
+          changeFrequency: 'weekly',
+          priority: 0.5,
+        });
+      });
   });
+
+  addStaticRoute('/llms.txt', 'en', 0.5, 'weekly');
+  addStaticRoute('/llms-full.txt', 'en', 0.4, 'weekly');
 
   return sitemap;
 }
