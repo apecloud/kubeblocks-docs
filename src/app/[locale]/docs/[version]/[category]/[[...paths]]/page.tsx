@@ -11,6 +11,7 @@ import {
 import fs from 'fs';
 import _ from 'lodash';
 import matter from 'gray-matter';
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import path from 'path';
 
@@ -133,7 +134,7 @@ export async function generateMetadata({
   params,
 }: {
   params: Promise<MarkdownPageParams>;
-}) {
+}): Promise<Metadata> {
   const { locale, version, category, paths = [] } = await params;
   const mdxPath =
     path.join(DOCS_DIR, locale, version, category, ...paths) + '.mdx';
@@ -141,9 +142,35 @@ export async function generateMetadata({
   const defaultDdxEnPath =
     path.join(DOCS_DIR, 'en', version, category, ...paths) + '.mdx';
 
+  const canonicalPath = `/docs/${version}/${category}/${paths.join('/')}`;
+
   if (fs.existsSync(mdxPath)) {
-    return await getMarkDownMetaData(mdxPath);
+    const metadata = (await getMarkDownMetaData(mdxPath)) as Metadata;
+    return {
+      ...metadata,
+      alternates: {
+        ...metadata.alternates,
+        canonical: canonicalPath,
+      },
+      openGraph: {
+        ...metadata.openGraph,
+        url: canonicalPath,
+        type: 'article',
+      },
+    };
   } else {
-    return await getMarkDownMetaData(defaultDdxEnPath);
+    const metadata = (await getMarkDownMetaData(defaultDdxEnPath)) as Metadata;
+    return {
+      ...metadata,
+      alternates: {
+        ...metadata.alternates,
+        canonical: canonicalPath,
+      },
+      openGraph: {
+        ...metadata.openGraph,
+        url: canonicalPath,
+        type: 'article',
+      },
+    };
   }
 }
